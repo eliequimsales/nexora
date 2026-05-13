@@ -1,0 +1,641 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── organizations ───────────────────────────────────────────────────────────
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String   @db.VarChar(255)
+  slug      String   @unique @db.VarChar(100)
+  niche     String   @db.VarChar(50)
+  status    String   @default("active") @db.VarChar(20)
+  // status: active | suspended | deleted
+  aiPrompts Json     @default("{}") @map("ai_prompts")
+  formToken String   @unique @map("form_token") @db.VarChar(64)
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  users                         User[]
+  pipelineStages                PipelineStage[]
+  leads                         Lead[]
+  tasks                         Task[]
+  activityLogs                  ActivityLog[]
+  aiExecutions                  AiExecution[]
+  workflows                     Workflow[]
+  workflowExecutions            WorkflowExecution[]
+  proposals                     Proposal[]
+  auditLogs                     AuditLog[]
+  outboundWebhooks              OutboundWebhook[]
+  integrationConfigs            IntegrationConfig[]
+  integrationLogs               IntegrationLog[]
+  subscription                  Subscription?
+  assisteFinanceiroSubscription AssisteFinanceiroSubscription?
+
+  @@map("organizations")
+}
+
+// ─── users ───────────────────────────────────────────────────────────────────
+
+model User {
+  id           String    @id @default(uuid())
+  orgId        String    @map("org_id")
+  email        String    @db.VarChar(255)
+  name         String    @db.VarChar(255)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  role         String    @default("member") @db.VarChar(20)
+  // role: admin | member
+  status       String    @default("active") @db.VarChar(20)
+  // status: active | inactive
+  avatarUrl    String?   @map("avatar_url") @db.VarChar(500)
+  lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization     Organization  @relation(fields: [orgId], references: [id])
+  assignedLeads    Lead[]        @relation("AssignedLeads")
+  createdTasks     Task[]        @relation("CreatedTasks")
+  assignedTasks    Task[]        @relation("AssignedTasks")
+  activityLogs     ActivityLog[]
+  createdProposals Proposal[]    @relation("CreatedProposals")
+
+  @@unique([orgId, email])
+  @@index([email])
+  @@index([orgId])
+  @@map("users")
+}
+
+// ─── pipeline_stages ─────────────────────────────────────────────────────────
+
+model PipelineStage {
+  id        String   @id @default(uuid())
+  orgId     String   @map("org_id")
+  name      String   @db.VarChar(100)
+  position  Int
+  color     String   @default("#6B7280") @db.VarChar(7)
+  stageType String   @default("active") @map("stage_type") @db.VarChar(20)
+  // stageType: active | won | lost
+  isDefault Boolean  @default(false) @map("is_default")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  leads        Lead[]
+
+  @@unique([orgId, position])
+  @@index([orgId, position])
+  // NOTE: PARTIAL UNIQUE (org_id) WHERE is_default = true deve ser adicionado
+  // manualmente na migration SQL — Prisma não suporta partial unique indexes.
+  @@map("pipeline_stages")
+}
+
+// ─── leads ───────────────────────────────────────────────────────────────────
+
+model Lead {
+  id               String    @id @default(uuid())
+  orgId            String    @map("org_id")
+  name             String    @db.VarChar(255)
+  email            String?   @db.VarChar(255)
+  phone            String?   @db.VarChar(50)
+  source           String    @default("manual") @db.VarChar(20)
+  // source: manual | form | import
+  status           String    @default("new") @db.VarChar(30)
+  // status: new | contacted | qualified | disqualified | closed_won | closed_lost
+  pipelineStageId  String?   @map("pipeline_stage_id")
+  assignedTo       String?   @map("assigned_to")
+  aiScore          Int?      @map("ai_score") @db.SmallInt
+  aiClassification String?   @map("ai_classification") @db.VarChar(10)
+  // aiClassification: hot | warm | cold
+  followUpCount    Int       @default(0) @map("follow_up_count") @db.SmallInt
+  nicheData        Json      @default("{}") @map("niche_data")
+  archivedAt       DateTime? @map("archived_at") @db.Timestamptz
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization  Organization   @relation(fields: [orgId], references: [id])
+  pipelineStage PipelineStage? @relation(fields: [pipelineStageId], references: [id])
+  assignedUser  User?          @relation("AssignedLeads", fields: [assignedTo], references: [id])
+  tasks         Task[]
+  activityLogs  ActivityLog[]
+  aiExecutions  AiExecution[]
+  proposals     Proposal[]
+
+  @@index([orgId, status])
+  @@index([orgId, pipelineStageId])
+  @@index([orgId, assignedTo])
+  @@index([orgId, createdAt(sort: Desc)])
+  @@index([orgId, aiClassification])
+  // NOTE: Os índices acima devem ser convertidos para PARTIAL WHERE archived_at IS NULL
+  // na migration SQL — Prisma não suporta partial indexes.
+  // NOTE: CHECK (ai_score >= 0 AND ai_score <= 100) deve ser adicionado via SQL raw.
+  @@map("leads")
+}
+
+// ─── tasks ───────────────────────────────────────────────────────────────────
+
+model Task {
+  id          String    @id @default(uuid())
+  orgId       String    @map("org_id")
+  leadId      String    @map("lead_id")
+  createdBy   String?   @map("created_by")
+  assignedTo  String?   @map("assigned_to")
+  title       String    @db.VarChar(500)
+  status      String    @default("pending") @db.VarChar(20)
+  // status: pending | done
+  dueDate     DateTime? @map("due_date") @db.Timestamptz
+  completedAt DateTime? @map("completed_at") @db.Timestamptz
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  lead         Lead         @relation(fields: [leadId], references: [id])
+  creator      User?        @relation("CreatedTasks", fields: [createdBy], references: [id])
+  assignedUser User?        @relation("AssignedTasks", fields: [assignedTo], references: [id])
+
+  @@index([orgId, status])
+  @@index([leadId])
+  @@index([assignedTo, status])
+  @@index([orgId, dueDate])
+  @@map("tasks")
+}
+
+// ─── activity_log ─────────────────────────────────────────────────────────────
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  orgId     String   @map("org_id")
+  leadId    String   @map("lead_id")
+  userId    String?  @map("user_id")
+  // userId null = ação executada pela IA
+  type      String   @db.VarChar(50)
+  // type: lead_created | lead_classified | note | ai_response | ai_follow_up
+  //       stage_changed | task_created | task_done | lead_archived | lead_assigned
+  content   String   @db.Text
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  lead         Lead         @relation(fields: [leadId], references: [id])
+  user         User?        @relation(fields: [userId], references: [id])
+
+  @@index([leadId, createdAt(sort: Desc)])
+  @@index([orgId, createdAt(sort: Desc)])
+  @@index([orgId, type, createdAt(sort: Desc)])
+  // NOTE: CHECK (length(content) <= 10000) deve ser adicionado via SQL raw na migration.
+  @@map("activity_log")
+}
+
+// ─── ai_executions ────────────────────────────────────────────────────────────
+
+model AiExecution {
+  id                String   @id @default(uuid())
+  orgId             String   @map("org_id")
+  leadId            String   @map("lead_id")
+  triggerType       String   @map("trigger_type") @db.VarChar(100)
+  // triggerType: manual | workflow:<workflowId>
+  actionType        String   @map("action_type") @db.VarChar(20)
+  // actionType: classify | respond | follow_up
+  promptVersion     String   @map("prompt_version") @db.VarChar(50)
+  leadVariablesUsed Json     @map("lead_variables_used")
+  llmResponse       String?  @map("llm_response") @db.Text
+  status            String   @default("pending") @db.VarChar(20)
+  // status: pending | success | failed
+  tokensInput       Int?     @map("tokens_input")
+  tokensOutput      Int?     @map("tokens_output")
+  latencyMs         Int?     @map("latency_ms")
+  errorMessage      String?  @map("error_message") @db.Text
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  lead         Lead         @relation(fields: [leadId], references: [id])
+
+  @@index([orgId, leadId])
+  @@index([orgId, status])
+  @@index([orgId, createdAt(sort: Desc)])
+  @@index([leadId, actionType])
+  @@map("ai_executions")
+}
+
+// ─── workflows ────────────────────────────────────────────────────────────────
+
+model Workflow {
+  id                String   @id @default(uuid())
+  orgId             String   @map("org_id")
+  name              String   @db.VarChar(150)
+  description       String?  @db.VarChar(500)
+  isActive          Boolean  @default(true) @map("is_active")
+  triggerType       String   @map("trigger_type") @db.VarChar(50)
+  // triggerType: lead_created | lead_status_changed | lead_stage_changed | lead_classified
+  triggerConditions Json     @default("{}") @map("trigger_conditions")
+  // e.g. { "toStatus": "qualified" } or { "classification": "hot" }
+  actionType        String   @map("action_type") @db.VarChar(50)
+  // actionType: ai_classify | ai_respond | create_task | move_stage | update_status
+  actionConfig      Json     @default("{}") @map("action_config")
+  // e.g. { "promptKey": "classify_v1" } or { "title": "Follow-up", "dueDaysFromNow": 1 }
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization        @relation(fields: [orgId], references: [id])
+  executions   WorkflowExecution[]
+
+  @@index([orgId, isActive])
+  @@index([orgId, triggerType])
+  @@index([orgId, triggerType, isActive])
+  @@map("workflows")
+}
+
+// ─── workflow_executions ──────────────────────────────────────────────────────
+
+model WorkflowExecution {
+  id           String   @id @default(uuid())
+  orgId        String   @map("org_id")
+  workflowId   String   @map("workflow_id")
+  leadId       String   @map("lead_id")
+  status       String   @default("pending") @db.VarChar(20)
+  // status: pending | success | failed | skipped
+  triggeredBy  String   @map("triggered_by") @db.VarChar(100)
+  result       Json     @default("{}")
+  errorMessage String?  @map("error_message") @db.Text
+  executedAt   DateTime @default(now()) @map("executed_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  workflow     Workflow     @relation(fields: [workflowId], references: [id])
+
+  @@index([workflowId, executedAt(sort: Desc)])
+  @@index([orgId, status, executedAt(sort: Desc)])
+  @@index([leadId, executedAt(sort: Desc)])
+  @@map("workflow_executions")
+}
+
+// ─── proposals ───────────────────────────────────────────────────────────────
+
+model Proposal {
+  id          String    @id @default(uuid())
+  orgId       String    @map("org_id")
+  leadId      String    @map("lead_id")
+  createdBy   String    @map("created_by")
+  title       String    @db.VarChar(255)
+  status      String    @default("draft") @db.VarChar(20)
+  // status: draft | sent | viewed | accepted | rejected | expired
+  token       String?   @unique @db.VarChar(64)
+  note        String?   @db.Text
+  validUntil  DateTime? @map("valid_until") @db.Timestamptz
+  totalAmount Decimal   @default(0) @map("total_amount") @db.Decimal(12, 2)
+  sentAt      DateTime? @map("sent_at") @db.Timestamptz
+  viewedAt    DateTime? @map("viewed_at") @db.Timestamptz
+  respondedAt DateTime? @map("responded_at") @db.Timestamptz
+  archivedAt  DateTime? @map("archived_at") @db.Timestamptz
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization   @relation(fields: [orgId], references: [id])
+  lead         Lead           @relation(fields: [leadId], references: [id])
+  creator      User           @relation("CreatedProposals", fields: [createdBy], references: [id])
+  items        ProposalItem[]
+  views        ProposalView[]
+
+  @@index([orgId, status])
+  @@index([orgId, leadId])
+  @@index([orgId, createdAt(sort: Desc)])
+  @@map("proposals")
+}
+
+model ProposalItem {
+  id          String  @id @default(uuid())
+  proposalId  String  @map("proposal_id")
+  orgId       String  @map("org_id")
+  description String  @db.VarChar(500)
+  quantity    Decimal @db.Decimal(10, 3)
+  unitPrice   Decimal @map("unit_price") @db.Decimal(12, 2)
+  total       Decimal @db.Decimal(12, 2)
+  position    Int     @db.SmallInt
+
+  proposal Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  @@index([proposalId])
+  @@map("proposal_items")
+}
+
+// ─── integrations ─────────────────────────────────────────────────────────────
+
+model OutboundWebhook {
+  id            String   @id @default(uuid())
+  orgId         String   @map("org_id")
+  url           String   @db.VarChar(500)
+  events        String[]
+  // events: lead.created | lead.status_changed | proposal.accepted | proposal.rejected
+  signingSecret String   @map("signing_secret") @db.VarChar(64)
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization     @relation(fields: [orgId], references: [id])
+  logs         IntegrationLog[]
+
+  @@index([orgId, isActive])
+  @@map("outbound_webhooks")
+}
+
+model IntegrationConfig {
+  id        String   @id @default(uuid())
+  orgId     String   @map("org_id")
+  channel   String   @db.VarChar(30)
+  // channel: whatsapp | email
+  config    String   @db.Text
+  // AES-256-GCM encrypted JSON: iv:authTag:ciphertext
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [orgId], references: [id])
+
+  @@unique([orgId, channel])
+  @@index([orgId])
+  @@map("integration_configs")
+}
+
+model IntegrationLog {
+  id         String   @id @default(uuid())
+  orgId      String   @map("org_id")
+  channel    String   @db.VarChar(30)
+  // channel: webhook | whatsapp | email | ingest
+  direction  String   @db.VarChar(10)
+  // direction: inbound | outbound
+  status     String   @default("pending") @db.VarChar(20)
+  // status: success | failed | pending
+  webhookId  String?  @map("webhook_id")
+  targetUrl  String?  @map("target_url") @db.VarChar(500)
+  httpStatus Int?     @map("http_status") @db.SmallInt
+  payload    Json     @default("{}")
+  errorMsg   String?  @map("error_msg") @db.Text
+  attempts   Int      @default(1) @db.SmallInt
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization     @relation(fields: [orgId], references: [id])
+  webhook      OutboundWebhook? @relation(fields: [webhookId], references: [id], onDelete: SetNull)
+
+  @@index([orgId, createdAt(sort: Desc)])
+  @@index([webhookId])
+  @@map("integration_logs")
+}
+
+// ─── audit_logs ───────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  orgId        String   @map("org_id")
+  actorId      String?  @map("actor_id")
+  // actorEmail/Role desnormalizados: o ator pode ser deletado, o log não pode
+  actorEmail   String   @map("actor_email") @db.VarChar(255)
+  actorRole    String   @map("actor_role") @db.VarChar(20)
+  action       String   @db.VarChar(100)
+  // action: user.role_changed | user.deactivated | workflow.created | workflow.toggled | workflow.deleted | ...
+  resourceType String   @map("resource_type") @db.VarChar(50)
+  resourceId   String?  @map("resource_id") @db.VarChar(36)
+  resourceName String?  @map("resource_name") @db.VarChar(255)
+  metadata     Json     @default("{}")
+  ipAddress    String?  @map("ip_address") @db.VarChar(45)
+  userAgent    String?  @map("user_agent") @db.VarChar(500)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId, createdAt(sort: Desc)])
+  @@index([orgId, action])
+  @@index([orgId, actorId])
+  @@map("audit_logs")
+}
+
+// ─── subscriptions ────────────────────────────────────────────────────────────
+
+model Subscription {
+  id               String   @id @default(uuid())
+  orgId            String   @unique @map("org_id")
+  stripeCustomerId String   @map("stripe_customer_id")
+  stripeSubId      String?  @map("stripe_sub_id")
+  plan             String   @db.VarChar(20)
+  status           String   @db.VarChar(20)
+  // status: active | trialing | past_due | canceled | incomplete
+  currentPeriodEnd DateTime @map("current_period_end") @db.Timestamptz
+  limits           Json
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [orgId], references: [id])
+
+  @@index([status])
+  @@map("subscriptions")
+}
+
+model ProposalView {
+  id         String   @id @default(uuid())
+  proposalId String   @map("proposal_id")
+  orgId      String   @map("org_id")
+  ip         String?  @db.VarChar(45)
+  userAgent  String?  @map("user_agent") @db.VarChar(500)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  proposal Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  @@index([proposalId])
+  @@map("proposal_views")
+}
+
+// ─── assistente_financeiro ───────────────────────────────────────────────────
+
+model AssisteFinanceiroSubscription {
+  id                  String    @id @default(uuid())
+  organizationId      String    @unique @map("organization_id")
+  tier                String    @default("starter") @db.VarChar(50)
+  // tier: starter | pro | enterprise
+  status              String    @default("active") @db.VarChar(50)
+  // status: active | trial | inactive
+  trialStartedAt      DateTime? @map("trial_started_at") @db.Timestamptz
+  trialExpiresAt      DateTime? @map("trial_expires_at") @db.Timestamptz
+  recoveryActionsUsed Int       @default(0) @map("recovery_actions_used")
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization    Organization                      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customers       AssisteFinanceiroCustomer[]
+  recoveryActions AssisteFinanceiroRecoveryAction[]
+  aiMetrics       AssisteFinanceiroAiMetrics?
+  integrations    AssisteFinanceiroIntegration[]
+  monthlyMetrics  AssisteFinanceiroMonthlyMetrics[]
+
+  @@index([organizationId])
+  @@map("assistente_financeiro_subscriptions")
+}
+
+model AssisteFinanceiroCustomer {
+  id                  String    @id @default(uuid())
+  subscriptionId      String    @map("subscription_id")
+  crmId               String    @db.VarChar(255)
+  crmSource           String    @db.VarChar(50)
+  // crmSource: pipedrive | agendor | rd_station
+  name                String    @db.VarChar(255)
+  email               String?   @db.VarChar(255)
+  phone               String?   @db.VarChar(50)
+  lastActivityDate    DateTime? @map("last_activity_date") @db.Date
+  totalRevenue        Decimal   @default(0) @map("total_revenue") @db.Decimal(12, 2)
+  lastTransactionDate DateTime? @map("last_transaction_date") @db.Date
+  churnRiskScore      Decimal?  @map("churn_risk_score") @db.Decimal(5, 2)
+  // 0-100, higher = more likely to churn
+  churnRiskPrediction Boolean?  @map("churn_risk_prediction")
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  subscription       AssisteFinanceiroSubscription        @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  recoveryActions    AssisteFinanceiroRecoveryAction[]
+  messageSuggestions AssisteFinanceiroMessageSuggestion[]
+
+  @@unique([subscriptionId, crmId, crmSource])
+  @@index([subscriptionId, churnRiskPrediction])
+  @@index([lastActivityDate])
+  @@map("assistente_financeiro_customers")
+}
+
+model AssisteFinanceiroRecoveryAction {
+  id                String    @id @default(uuid())
+  customerId        String    @map("customer_id")
+  subscriptionId    String    @map("subscription_id")
+  actionType        String    @db.VarChar(50)
+  // actionType: email | whatsapp | sms
+  suggestedMessage  String?   @map("suggested_message") @db.Text
+  actualMessage     String?   @map("actual_message") @db.Text
+  // what was actually sent (if customized)
+  sentAt            DateTime? @map("sent_at") @db.Timestamptz
+  sentBy            String?   @map("sent_by") @db.VarChar(50)
+  // sentBy: ai_automatic | user_approved | user_manual
+  discountOffered   Decimal?  @map("discount_offered") @db.Decimal(5, 2)
+  customerResponded Boolean?  @map("customer_responded")
+  responseAt        DateTime? @map("response_at") @db.Timestamptz
+  customerReturned  Boolean?  @map("customer_returned")
+  returnedAt        DateTime? @map("returned_at") @db.Timestamptz
+  revenueRecovered  Decimal?  @map("revenue_recovered") @db.Decimal(12, 2)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  customer     AssisteFinanceiroCustomer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  subscription AssisteFinanceiroSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId, createdAt(sort: Desc)])
+  @@index([customerReturned])
+  @@map("assistente_financeiro_recovery_actions")
+}
+
+model AssisteFinanceiroAiMetrics {
+  id                    String    @id @default(uuid())
+  subscriptionId        String    @unique @map("subscription_id")
+  customersAnalyzed     Int       @default(0) @map("customers_analyzed")
+  totalSuggestions      Int       @default(0) @map("total_suggestions")
+  successfulSuggestions Int       @default(0) @map("successful_suggestions")
+  accuracyScore         Decimal?  @map("accuracy_score") @db.Decimal(5, 2)
+  // 0-100
+  lastRetrainingAt      DateTime? @map("last_retraining_at") @db.Timestamptz
+  modelVersion          Int       @default(1) @map("model_version")
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  subscription AssisteFinanceiroSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@map("assistente_financeiro_ai_metrics")
+}
+
+model AssisteFinanceiroIntegration {
+  id               String    @id @default(uuid())
+  subscriptionId   String    @map("subscription_id")
+  integrationType  String    @db.VarChar(50)
+  // integrationType: pipedrive | email | whatsapp
+  isActive         Boolean   @default(true) @map("is_active")
+  accessToken      String?   @map("access_token") @db.Text
+  // encrypted in production
+  refreshToken     String?   @map("refresh_token") @db.Text
+  // encrypted in production
+  lastSyncAt       DateTime? @map("last_sync_at") @db.Timestamptz
+  syncStatus       String    @default("idle") @map("sync_status") @db.VarChar(50)
+  // syncStatus: idle | syncing | error
+  syncErrorMessage String?   @map("sync_error_message") @db.Text
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  subscription AssisteFinanceiroSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, integrationType])
+  @@index([subscriptionId])
+  @@map("assistente_financeiro_integrations")
+}
+
+model AssisteFinanceiroMonthlyMetrics {
+  id                  String   @id @default(uuid())
+  subscriptionId      String   @map("subscription_id")
+  monthYear           String   @map("month_year") @db.VarChar(7)
+  // YYYY-MM format
+  goalAmount          Decimal? @map("goal_amount") @db.Decimal(12, 2)
+  revenueActual       Decimal? @map("revenue_actual") @db.Decimal(12, 2)
+  revenueProjected    Decimal? @map("revenue_projected") @db.Decimal(12, 2)
+  customersLost       Int?     @map("customers_lost")
+  customersRecovered  Int?     @map("customers_recovered")
+  recoverySuccessRate Decimal? @map("recovery_success_rate") @db.Decimal(5, 2)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  subscription AssisteFinanceiroSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, monthYear])
+  @@index([subscriptionId])
+  @@map("assistente_financeiro_monthly_metrics")
+}
+
+model AssisteFinanceiroMessageSuggestion {
+  id                  String   @id @default(uuid())
+  customerId          String   @map("customer_id")
+  channel             String   @db.VarChar(20)
+  // channel: whatsapp | email
+  baseMessage         String   @db.Text
+  personalizedMessage String   @map("personalized_message") @db.Text
+  confidence          Int      @default(50) @db.SmallInt
+  // 0-100, how confident AI is in this suggestion
+  contextData         Json?    @map("context_data")
+  // flexible structure with daysSinceLastPurchase, totalRevenue, recoveryProbability, etc.
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  customer  AssisteFinanceiroCustomer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  feedbacks AssisteFinanceiroMessageFeedback[]
+
+  @@index([customerId])
+  @@index([channel])
+  @@index([createdAt(sort: Desc)])
+  @@map("assistente_financeiro_message_suggestions")
+}
+
+// ─── message_feedback ────────────────────────────────────────────────────────
+
+model AssisteFinanceiroMessageFeedback {
+  id                  String    @id @default(uuid())
+  messageSuggestionId String    @map("message_suggestion_id")
+  customerResponded   Boolean?  @map("customer_responded")
+  // null = not yet known, true/false = customer responded or not
+  responseAt          DateTime? @map("response_at") @db.Timestamptz
+  // when the customer responded
+  customerReturned    Boolean?  @map("customer_returned")
+  // null = not yet known, true/false = customer made a return purchase
+  returnedAt          DateTime? @map("returned_at") @db.Timestamptz
+  // when the customer made the return purchase
+  revenueRecovered    Decimal   @default(0) @map("revenue_recovered") @db.Decimal(12, 2)
+  // how much revenue was recovered from this recovery action
+  notes               String?   @db.Text
+  // admin notes about this feedback
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  messageSuggestion AssisteFinanceiroMessageSuggestion @relation(fields: [messageSuggestionId], references: [id], onDelete: Cascade)
+
+  @@index([messageSuggestionId])
+  @@index([createdAt(sort: Desc)])
+  @@map("assistente_financeiro_message_feedbacks")
+}

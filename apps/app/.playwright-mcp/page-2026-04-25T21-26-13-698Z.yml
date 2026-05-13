@@ -1,0 +1,54 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e6]: B
+    - generic [ref=e7]: B'reshit
+  - generic [ref=e8]:
+    - heading "Crie sua conta" [level=1] [ref=e9]
+    - paragraph [ref=e10]: Configure seu workspace em menos de 1 minuto
+    - generic [ref=e11]:
+      - generic [ref=e12]:
+        - generic [ref=e13]: Nome completo
+        - generic [ref=e14]:
+          - generic:
+            - img
+          - textbox "Nome completo" [ref=e15]:
+            - /placeholder: João Silva
+      - generic [ref=e16]:
+        - generic [ref=e17]: Email
+        - generic [ref=e18]:
+          - generic:
+            - img
+          - textbox "Email" [ref=e19]:
+            - /placeholder: voce@empresa.com
+      - generic [ref=e20]:
+        - generic [ref=e21]: Senha
+        - generic [ref=e22]:
+          - generic:
+            - img
+          - textbox "Senha" [ref=e23]:
+            - /placeholder: ••••••••
+          - button "Mostrar senha" [ref=e24] [cursor=pointer]:
+            - img [ref=e25]
+      - generic [ref=e28]:
+        - generic [ref=e29]: Nome da empresa
+        - generic [ref=e30]:
+          - generic:
+            - img
+          - textbox "Nome da empresa" [ref=e31]:
+            - /placeholder: Minha Empresa
+      - generic [ref=e32]:
+        - generic [ref=e33]: Segmento de negócio
+        - combobox [ref=e34]:
+          - option "Selecione seu segmento..." [disabled] [selected]
+          - option "Vendas Geral"
+          - option "E-commerce / Social"
+          - option "Construção Civil"
+          - option "Gastronomia"
+          - option "Beleza & Bem-estar"
+          - option "Serviços Profissionais"
+          - option "Imobiliária"
+      - button "Criar conta" [ref=e35] [cursor=pointer]
+    - paragraph [ref=e36]:
+      - text: Já tem uma conta?
+      - link "Entrar" [ref=e37] [cursor=pointer]:
+        - /url: /login
