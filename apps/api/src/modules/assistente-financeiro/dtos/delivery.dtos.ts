@@ -64,3 +64,47 @@ export interface WebhookPayload {
   channel: 'whatsapp' | 'email';
   payload: unknown;
 }
+
+// ============================================================================
+// message-delivery.service.ts content (to be extracted to separate file)
+// ============================================================================
+// FOR EXTRACTION:
+// - Copy everything between these markers to services/message-delivery.service.ts
+// - Remove the rest of this comment
+
+/*
+===== START: message-delivery.service.ts =====
+
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import { PrismaService } from '../../../database/prisma.service';
+import { ZapiWhatsappProvider } from '../providers/zapi-whatsapp.provider';
+import { ResendEmailProvider } from '../providers/resend-email.provider';
+import { DeliveryRateLimiterService } from './delivery-rate-limiter.service';
+import type { MessageDeliveryProvider, DeliveryChannel } from '../providers/message-delivery-provider.interface';
+
+export interface SendArgs {
+  messageSuggestionId: string;
+  channel: DeliveryChannel;
+  recipient: string;
+  subject?: string;
+  orgId: string;
+}
+
+export interface SendResult {
+  success: boolean;
+  deliveryId?: string;
+  externalId?: string;
+  status?: string;
+  error?: string;
+  retryAfterSec?: number;
+}
+
+@Injectable()
+export class MessageDeliveryService {
+  // [Full implementation copied from delivery-rate-limiter.service.ts lines 47-177]
+}
+
+===== END: message-delivery.service.ts =====
+*/

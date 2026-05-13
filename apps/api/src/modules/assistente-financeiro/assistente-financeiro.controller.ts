@@ -7,7 +7,8 @@ import { RequirePermission } from '../../common/rbac/permissions';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import type { GenerateMessageRequest, GenerateMessageResponse, AIMetricsResponse, RecordFeedbackRequest, RecordFeedbackResponse } from './dtos/message.dtos';
-import { RecordFeedbackRequestDto, SendMessageRequestDto } from './dtos/message.dtos';
+import { RecordFeedbackRequestDto } from './dtos/message.dtos';
+import { SendMessageRequestDto } from './dtos/delivery.dtos';
 import type { SendMessageResponse } from './dtos/delivery.dtos';
 import type { TenantContext } from '../../common/tenant/tenant-context';
 

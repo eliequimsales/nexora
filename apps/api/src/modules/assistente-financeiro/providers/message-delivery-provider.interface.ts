@@ -65,3 +65,8 @@ export interface MessageDeliveryProvider {
    */
   parseWebhook(payload: unknown): { externalId: string; status: DeliveryStatus } | null;
 }
+
+/*
+TODO: MessageDeliveryService implementation will be in ./services/message-delivery.service.ts
+The service orchestrates send(), retry(), and handleWebhook() operations.
+*/
