@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 
 const prisma = new PrismaClient();
 
@@ -424,7 +423,7 @@ describe('Assistente Financeiro Database Schema', () => {
         });
         throw new Error('Should have thrown unique constraint error');
       } catch (e) {
-        expect(e.code).toBe('P2002');
+        expect((e as any).code).toBe('P2002');
       }
 
       // Cleanup

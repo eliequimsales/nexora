@@ -17,16 +17,15 @@ export class DeliveryRateLimiterService {
     max: number,
     windowSec: number,
   ): Promise<RateLimitResult> {
-    const client = this.redis.getClient();
     const key = `af:delivery-limit:${orgId}:${channel}`;
 
-    const count = await client.incr(key);
+    const count = await this.redis.incr(key);
     if (count === 1) {
-      await client.expire(key, windowSec);
+      await this.redis.expire(key, windowSec);
     }
 
     if (count > max) {
-      const ttl = await client.ttl(key);
+      const ttl = await this.redis.ttl(key);
       return { allowed: false, remaining: 0, retryAfterSec: ttl > 0 ? ttl : windowSec };
     }
 

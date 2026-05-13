@@ -37,7 +37,7 @@ export function calculateSuccessRate(
  */
 export function needsRetraining(metrics: AssisteFinanceiroAiMetrics): boolean {
   // Retrain if accuracy below threshold
-  if (metrics.accuracyScore && metrics.accuracyScore < AI_METRICS_THRESHOLDS.minAccuracy) {
+  if (metrics.accuracyScore && Number(metrics.accuracyScore) < AI_METRICS_THRESHOLDS.minAccuracy) {
     return true;
   }
 
