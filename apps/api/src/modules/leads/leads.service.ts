@@ -17,6 +17,18 @@ export class LeadsService {
   ) {}
 
   async create(dto: CreateLeadDto, ctx: TenantContext) {
+    // If pipelineStageId not provided, default to first stage of the org's pipeline
+    // This ensures new leads appear in the Pipeline view immediately
+    let pipelineStageId = dto.pipelineStageId ?? null;
+    if (!pipelineStageId) {
+      const firstStage = await this.prisma.pipelineStage.findFirst({
+        where: { orgId: ctx.orgId },
+        orderBy: { position: 'asc' },
+        select: { id: true },
+      });
+      pipelineStageId = firstStage?.id ?? null;
+    }
+
     const lead = await this.prisma.lead.create({
       data: {
         orgId: ctx.orgId,
@@ -25,7 +37,7 @@ export class LeadsService {
         phone: dto.phone ?? null,
         source: dto.source ?? 'manual',
         status: 'new',
-        pipelineStageId: dto.pipelineStageId ?? null,
+        pipelineStageId,
       },
     });
 
