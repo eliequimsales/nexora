@@ -605,13 +605,40 @@ model AssisteFinanceiroMessageSuggestion {
   createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  customer  AssisteFinanceiroCustomer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  feedbacks AssisteFinanceiroMessageFeedback[]
+  customer   AssisteFinanceiroCustomer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  feedbacks  AssisteFinanceiroMessageFeedback[]
+  deliveries AssisteFinanceiroMessageDelivery[]
 
   @@index([customerId])
   @@index([channel])
   @@index([createdAt(sort: Desc)])
   @@map("assistente_financeiro_message_suggestions")
+}
+
+// ─── message_delivery ────────────────────────────────────────────────────
+
+model AssisteFinanceiroMessageDelivery {
+  id                   String   @id @default(uuid()) @db.Uuid
+  messageSuggestionId  String   @map("message_suggestion_id") @db.Uuid
+  channel              String   @db.VarChar(20)
+  recipient            String   @db.VarChar(200)
+  externalId           String?  @map("external_id") @db.VarChar(200)
+  status               String   @default("pending") @db.VarChar(20)
+  errorMessage         String?  @map("error_message") @db.Text
+  attemptCount         Int      @default(0) @map("attempt_count")
+  lastAttemptAt        DateTime? @map("last_attempt_at") @db.Timestamptz
+  deliveredAt          DateTime? @map("delivered_at") @db.Timestamptz
+  readAt               DateTime? @map("read_at") @db.Timestamptz
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  messageSuggestion AssisteFinanceiroMessageSuggestion @relation(fields: [messageSuggestionId], references: [id], onDelete: Cascade)
+
+  @@index([messageSuggestionId])
+  @@index([externalId])
+  @@index([status])
+  @@index([createdAt(sort: Desc)])
+  @@map("assistente_financeiro_message_deliveries")
 }
 
 // ─── message_feedback ────────────────────────────────────────────────────────
