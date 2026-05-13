@@ -85,7 +85,7 @@ export class WorkflowsService {
           SELECT DISTINCT ON (workflow_id)
             workflow_id, status, result, error_message, executed_at
           FROM workflow_executions
-          WHERE org_id = ${ctx.orgId}
+          WHERE org_id = ${ctx.orgId}::uuid
             AND workflow_id = ANY(${workflowIds}::uuid[])
           ORDER BY workflow_id, executed_at DESC
         `
