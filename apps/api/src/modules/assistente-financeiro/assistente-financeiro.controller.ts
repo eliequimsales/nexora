@@ -2,10 +2,13 @@ import { randomUUID } from 'crypto';
 import { Controller, Post, Get, Body, Param, ParseUUIDPipe } from '@nestjs/common';
 import { MessageGenerationService } from './services/message-generation.service';
 import { AIMetricsService } from './services/ai-metrics.service';
+import { MessageDeliveryService } from './services/message-delivery.service';
 import { RequirePermission } from '../../common/rbac/permissions';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import type { GenerateMessageRequest, GenerateMessageResponse, AIMetricsResponse, RecordFeedbackRequest, RecordFeedbackResponse } from './dtos/message.dtos';
-import { RecordFeedbackRequestDto } from './dtos/message.dtos';
+import { RecordFeedbackRequestDto, SendMessageRequestDto } from './dtos/message.dtos';
+import type { SendMessageResponse } from './dtos/delivery.dtos';
 import type { TenantContext } from '../../common/tenant/tenant-context';
 
 /**
@@ -19,6 +22,7 @@ export class AssistenteFinanceiroController {
   constructor(
     private readonly messageGenerationService: MessageGenerationService,
     private readonly aiMetricsService: AIMetricsService,
+    private readonly messageDeliveryService: MessageDeliveryService,
   ) {}
 
   /**
@@ -83,5 +87,49 @@ export class AssistenteFinanceiroController {
       success: true,
       feedbackId: randomUUID(), // Placeholder - will be actual feedback ID from DB in Task 8
     };
+  }
+
+  /**
+   * Send an AI-generated message to a customer via WhatsApp or Email
+   * POST /assistente-financeiro/send-message
+   */
+  @Post('send-message')
+  @RequirePermission('assistente-financeiro:send-message')
+  async sendMessage(
+    @Body() request: SendMessageRequestDto,
+    @CurrentUser() ctx: TenantContext,
+  ): Promise<SendMessageResponse> {
+    const result = await this.messageDeliveryService.send({
+      messageSuggestionId: request.messageSuggestionId,
+      channel: request.channel,
+      recipient: request.recipient,
+      subject: request.subject,
+      orgId: ctx.orgId,
+    });
+    return result;
+  }
+
+  /**
+   * Webhook receiver for Z-API status updates
+   * POST /assistente-financeiro/webhooks/whatsapp
+   * Public endpoint — no auth required
+   */
+  @Public()
+  @Post('webhooks/whatsapp')
+  async whatsappWebhook(@Body() payload: unknown): Promise<{ ok: true }> {
+    await this.messageDeliveryService.handleWebhook('whatsapp', payload);
+    return { ok: true };
+  }
+
+  /**
+   * Webhook receiver for Resend status updates
+   * POST /assistente-financeiro/webhooks/email
+   * Public endpoint — no auth required
+   */
+  @Public()
+  @Post('webhooks/email')
+  async emailWebhook(@Body() payload: unknown): Promise<{ ok: true }> {
+    await this.messageDeliveryService.handleWebhook('email', payload);
+    return { ok: true };
   }
 }

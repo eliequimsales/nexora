@@ -30,6 +30,7 @@ export const PERMISSIONS = {
   'assistente-financeiro:generate-message': 'member',
   'assistente-financeiro:read-metrics': 'member',
   'assistente-financeiro:record-feedback': 'admin',
+  'assistente-financeiro:send-message': 'member',
 } as const satisfies Record<string, Role>;
 
 export type Permission = keyof typeof PERMISSIONS;
