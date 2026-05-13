@@ -42,6 +42,12 @@ export const configuration = () => ({
     token: process.env.ZAPI_TOKEN || '',
     clientToken: process.env.ZAPI_CLIENT_TOKEN || '',
   },
+
+  resend: {
+    apiKey: process.env.RESEND_API_KEY || '',
+    fromEmail: process.env.RESEND_FROM_EMAIL || '',
+    fromName: process.env.RESEND_FROM_NAME || 'Assistente Financeiro',
+  },
 });
 
 export type AppConfig = ReturnType<typeof configuration>;
