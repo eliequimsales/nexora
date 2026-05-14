@@ -25,7 +25,7 @@ const MOCK_LEAD = {
 };
 
 const mockPrisma = {
-  lead: { findUnique: jest.fn(), update: jest.fn(), create: jest.fn() },
+  lead: { findUnique: jest.fn(), update: jest.fn(), create: jest.fn(), findMany: jest.fn() },
   pipelineStage: { findUnique: jest.fn() },
   user: { findUnique: jest.fn() },
   activityLog: { create: jest.fn() },
@@ -111,6 +111,120 @@ describe('LeadsService — update guards (C1 regression)', () => {
 
       expect(result.id).toBe('lead-1');
       expect(mockPrisma.lead.update).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('findInactive', () => {
+    const buildInactiveLead = (overrides: Partial<{
+      id: string;
+      name: string;
+      email: string | null;
+      phone: string | null;
+      updatedAt: Date;
+      status: string;
+      aiClassification: string | null;
+    }> = {}) => ({
+      id: 'lead-X',
+      name: 'Customer X',
+      email: 'x@example.com',
+      phone: null,
+      updatedAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000), // 45 days ago
+      status: 'contacted',
+      aiClassification: null,
+      ...overrides,
+    });
+
+    it('returns clients inactive for more than 30 days with derived fields', async () => {
+      const lead = buildInactiveLead({
+        id: 'lead-old',
+        name: 'João Old',
+        updatedAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000),
+      });
+      mockPrisma.lead.findMany.mockResolvedValueOnce([lead]);
+
+      const result = await service.findInactive(CTX, 30);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('lead-old');
+      expect(result[0].name).toBe('João Old');
+      expect(result[0].daysSinceLastActivity).toBeGreaterThanOrEqual(44);
+      expect(result[0].daysSinceLastActivity).toBeLessThanOrEqual(46);
+      expect(result[0].estimatedValue).toBe(80);
+    });
+
+    it('queries with default 30-day cutoff when no parameter is passed', async () => {
+      mockPrisma.lead.findMany.mockResolvedValueOnce([]);
+
+      const before = Date.now();
+      await service.findInactive(CTX);
+      const after = Date.now();
+
+      expect(mockPrisma.lead.findMany).toHaveBeenCalledTimes(1);
+      const callArgs = mockPrisma.lead.findMany.mock.calls[0][0];
+      const cutoff: Date = callArgs.where.updatedAt.lt;
+      const expectedMin = before - 30 * 24 * 60 * 60 * 1000 - 1000;
+      const expectedMax = after - 30 * 24 * 60 * 60 * 1000 + 1000;
+      expect(cutoff.getTime()).toBeGreaterThanOrEqual(expectedMin);
+      expect(cutoff.getTime()).toBeLessThanOrEqual(expectedMax);
+    });
+
+    it('accepts a custom day threshold', async () => {
+      mockPrisma.lead.findMany.mockResolvedValueOnce([]);
+
+      const before = Date.now();
+      await service.findInactive(CTX, 60);
+      const after = Date.now();
+
+      const callArgs = mockPrisma.lead.findMany.mock.calls[0][0];
+      const cutoff: Date = callArgs.where.updatedAt.lt;
+      const expectedMin = before - 60 * 24 * 60 * 60 * 1000 - 1000;
+      const expectedMax = after - 60 * 24 * 60 * 60 * 1000 + 1000;
+      expect(cutoff.getTime()).toBeGreaterThanOrEqual(expectedMin);
+      expect(cutoff.getTime()).toBeLessThanOrEqual(expectedMax);
+    });
+
+    it('excludes leads with closed_won and closed_lost status', async () => {
+      mockPrisma.lead.findMany.mockResolvedValueOnce([]);
+
+      await service.findInactive(CTX, 30);
+
+      const callArgs = mockPrisma.lead.findMany.mock.calls[0][0];
+      expect(callArgs.where.status).toEqual({ notIn: ['closed_lost', 'closed_won'] });
+    });
+
+    it('excludes archived leads', async () => {
+      mockPrisma.lead.findMany.mockResolvedValueOnce([]);
+
+      await service.findInactive(CTX, 30);
+
+      const callArgs = mockPrisma.lead.findMany.mock.calls[0][0];
+      expect(callArgs.where.archivedAt).toBeNull();
+    });
+
+    it('scopes the query to the current orgId (multi-tenant isolation)', async () => {
+      mockPrisma.lead.findMany.mockResolvedValueOnce([]);
+
+      await service.findInactive(CTX, 30);
+
+      const callArgs = mockPrisma.lead.findMany.mock.calls[0][0];
+      expect(callArgs.where.orgId).toBe('org-1');
+    });
+
+    it('orders results oldest-first (most abandoned customers come first)', async () => {
+      mockPrisma.lead.findMany.mockResolvedValueOnce([]);
+
+      await service.findInactive(CTX, 30);
+
+      const callArgs = mockPrisma.lead.findMany.mock.calls[0][0];
+      expect(callArgs.orderBy).toEqual({ updatedAt: 'asc' });
+    });
+
+    it('returns an empty list when no leads are inactive', async () => {
+      mockPrisma.lead.findMany.mockResolvedValueOnce([]);
+
+      const result = await service.findInactive(CTX, 30);
+
+      expect(result).toEqual([]);
     });
   });
 });

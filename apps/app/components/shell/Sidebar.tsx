@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -14,6 +15,7 @@ import {
   Plug,
   ClipboardList,
   CreditCard,
+  ChevronDown,
 } from 'lucide-react';
 import { UserDropdown } from './UserDropdown';
 import { useOrg } from '@/lib/hooks/org/useOrg';
@@ -27,11 +29,16 @@ interface NavItem {
   exact?: boolean;
 }
 
+// Top-level items — the Nexora core surface: Dashboard, Clientes (recovery), Tarefas, Settings.
 const MAIN_NAV: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, href: 'dashboard', exact: true },
-  { label: 'Leads', icon: Users, href: 'leads' },
-  { label: 'Pipeline', icon: GitBranch, href: 'pipeline' },
+  { label: 'Clientes', icon: Users, href: 'clientes' },
   { label: 'Tarefas', icon: ClipboardList, href: 'tasks' },
+];
+
+// Collapsed under "Avançado" — power features kept available but out of the way.
+const ADVANCED_NAV: NavItem[] = [
+  { label: 'Pipeline', icon: GitBranch, href: 'pipeline' },
   { label: 'Workflows', icon: Zap, href: 'workflows' },
   { label: 'Propostas', icon: FileText, href: 'proposals' },
   { label: 'Analytics', icon: BarChart2, href: 'analytics' },
@@ -69,6 +76,13 @@ export function Sidebar() {
   const pathname = usePathname();
   const basePath = `/${slug}`;
 
+  // Auto-expand "Avançado" if the user is currently inside one of its routes,
+  // so they don't lose visual context after navigating.
+  const isOnAdvancedRoute = ADVANCED_NAV.some((item) =>
+    pathname.startsWith(`${basePath}/${item.href}`),
+  );
+  const [advancedOpen, setAdvancedOpen] = useState(isOnAdvancedRoute);
+
   return (
     <aside
       className="fixed inset-y-0 left-0 flex flex-col bg-sidebar-bg border-r border-sidebar-border z-30"
@@ -99,6 +113,37 @@ export function Sidebar() {
             pathname={pathname}
           />
         ))}
+
+        {/* Advanced — collapsible, closed by default */}
+        <div className="pt-3">
+          <button
+            type="button"
+            onClick={() => setAdvancedOpen((v) => !v)}
+            aria-expanded={advancedOpen}
+            className="w-full flex items-center justify-between px-2 mb-1 text-2xs font-semibold text-text-muted uppercase tracking-widest hover:text-text-secondary transition-colors"
+          >
+            <span>Avançado</span>
+            <ChevronDown
+              size={12}
+              className={cn(
+                'transition-transform duration-150',
+                advancedOpen && 'rotate-180',
+              )}
+            />
+          </button>
+          {advancedOpen && (
+            <div className="space-y-0.5 animate-fade-in">
+              {ADVANCED_NAV.map((item) => (
+                <SidebarNavItem
+                  key={item.href}
+                  item={item}
+                  basePath={basePath}
+                  pathname={pathname}
+                />
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Manage section */}
         <div className="pt-4">

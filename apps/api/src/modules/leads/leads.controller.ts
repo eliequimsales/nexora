@@ -28,6 +28,22 @@ export class LeadsController {
     return this.leadsService.findAll(params, ctx);
   }
 
+  /**
+   * List inactive clients (leads not touched in the last N days, excluding closed/archived).
+   * Used by the Nexora recovery screen.
+   * Must come before `:id` route so "inactive" isn't matched as a UUID param.
+   */
+  @Get('inactive')
+  @RequirePermission('leads:read')
+  async getInactiveClients(
+    @CurrentUser() ctx: TenantContext,
+    @Query('days') days?: string,
+  ) {
+    const parsed = Number(days);
+    const threshold = Number.isFinite(parsed) && parsed > 0 ? parsed : 30;
+    return this.leadsService.findInactive(ctx, threshold);
+  }
+
   @Get(':id')
   @RequirePermission('leads:read')
   findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() ctx: TenantContext) {

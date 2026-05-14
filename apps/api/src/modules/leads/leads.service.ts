@@ -62,6 +62,51 @@ export class LeadsService {
     return mapLead(lead);
   }
 
+  /**
+   * Find inactive clients (leads with no activity beyond `inactiveDays` threshold).
+   *
+   * Excludes:
+   * - archived leads
+   * - leads with terminal status (closed_won / closed_lost)
+   *
+   * Returns oldest-first (most "abandoned" customers prioritized for recovery).
+   * Each entry includes derived fields:
+   *  - daysSinceLastActivity: days since `updatedAt`
+   *  - estimatedValue: per-customer ticket estimate (default R$80 for barbershop niche)
+   */
+  async findInactive(ctx: TenantContext, inactiveDays: number = 30) {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - inactiveDays);
+
+    const inactive = await this.prisma.lead.findMany({
+      where: {
+        orgId: ctx.orgId,
+        archivedAt: null,
+        status: { notIn: ['closed_lost', 'closed_won'] },
+        updatedAt: { lt: cutoffDate },
+      },
+      orderBy: { updatedAt: 'asc' }, // oldest first — most abandoned customers come first
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        updatedAt: true,
+        status: true,
+        aiClassification: true,
+      },
+    });
+
+    const now = Date.now();
+    return inactive.map((lead) => ({
+      ...lead,
+      daysSinceLastActivity: Math.floor(
+        (now - lead.updatedAt.getTime()) / (1000 * 60 * 60 * 24),
+      ),
+      estimatedValue: 80, // R$80 barbershop average ticket — TODO: read from org config
+    }));
+  }
+
   async findAll(params: ListLeadsDto, ctx: TenantContext) {
     const { skip, take, page, limit } = parsePagination(params);
     const { orgId } = ctx;

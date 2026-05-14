@@ -52,3 +52,22 @@ export interface ListLeadsParams {
   search?: string;
   assignedTo?: string;
 }
+
+/**
+ * Inactive client — a lead that hasn't been touched in N days,
+ * surfaced by the Nexora recovery screen.
+ *
+ * Mirrors the backend `findInactive()` output: a minimal lead projection plus
+ * derived `daysSinceLastActivity` and `estimatedValue` (R$80 default ticket).
+ */
+export interface InactiveClient {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  status: LeadStatus;
+  aiClassification: LeadClassification | null;
+  updatedAt: string;
+  daysSinceLastActivity: number;
+  estimatedValue: number;
+}
