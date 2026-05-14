@@ -6,7 +6,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { getSupportedNiches } from '@reshit/shared';
+import { getSupportedNiches } from '@nexora/shared';
 
 export class RegisterDto {
   @IsString()

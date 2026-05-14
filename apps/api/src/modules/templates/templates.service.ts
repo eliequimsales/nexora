@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { listTemplates, getTemplate } from '@reshit/shared';
-import type { TemplateDefinition } from '@reshit/shared';
+import { listTemplates, getTemplate } from '@nexora/shared';
+import type { TemplateDefinition } from '@nexora/shared';
 
 @Injectable()
 export class TemplatesService {

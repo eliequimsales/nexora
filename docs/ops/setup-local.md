@@ -1,4 +1,4 @@
-# Setup Local — B'reshit SaaS
+# Setup Local — Nexora SaaS
 
 Guia completo para rodar o projeto do zero em ambiente local.
 

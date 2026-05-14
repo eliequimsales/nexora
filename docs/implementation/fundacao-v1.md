@@ -1,4 +1,4 @@
-# Fundação B'reshit — Documentação Técnica v1
+# Fundação Nexora — Documentação Técnica v1
 
 > **Status:** Implementada e revisada  
 > **Data:** 2026-04-22  

@@ -141,7 +141,7 @@ function AiActivityPreview() {
         <span className="w-2.5 h-2.5 rounded-full bg-[#FFBD2E]/80" />
         <span className="w-2.5 h-2.5 rounded-full bg-[#27C93F]/80" />
         <span className="ml-3 text-xs text-text-muted font-mono">
-          B&apos;reshit · IA em execução
+          Nexora · IA em execução
         </span>
         <span className="ml-auto flex items-center gap-1.5 text-xs text-status-success">
           <span className="w-1.5 h-1.5 rounded-full bg-status-success animate-pulse" />

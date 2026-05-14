@@ -7,7 +7,7 @@ import { QueueStatsController } from './queue-stats.controller';
 import { WorkflowsModule } from '../modules/workflows/workflows.module';
 import { IntegrationsModule } from '../modules/integrations/integrations.module';
 import { AiActionsModule } from '../modules/ai-actions/ai-actions.module';
-import { QUEUE_NAMES } from '@reshit/shared';
+import { QUEUE_NAMES } from '@nexora/shared';
 
 @Module({
   imports: [

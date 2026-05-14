@@ -5,7 +5,7 @@ import { LlmService } from './llm.service';
 import { PromptService, type AssistantPersona } from './prompt.service';
 import { ResponseParser } from './response-parser';
 import type { TenantContext } from '../../common/tenant/tenant-context';
-import type { AiPromptsConfig } from '@reshit/shared';
+import type { AiPromptsConfig } from '@nexora/shared';
 
 export type AiActionType = 'ai_classify' | 'ai_respond' | 'ai_follow_up';
 

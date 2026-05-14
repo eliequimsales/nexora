@@ -1,4 +1,4 @@
-import type { ClassifyResult, AiClassification } from '@reshit/shared';
+import type { ClassifyResult, AiClassification } from '@nexora/shared';
 
 export interface RespondResult {
   message: string;

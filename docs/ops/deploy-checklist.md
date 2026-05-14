@@ -1,4 +1,4 @@
-# Deploy Checklist — B'reshit SaaS
+# Deploy Checklist — Nexora SaaS
 
 Checklist de produção. Marque cada item antes de publicar.
 

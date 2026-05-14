@@ -8,7 +8,7 @@ import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../database/prisma.service';
 import { TokenService } from './token.service';
-import { getNicheConfig } from '@reshit/shared';
+import { getNicheConfig } from '@nexora/shared';
 import type { RegisterDto } from './dto/register.dto';
 import type { LoginDto } from './dto/login.dto';
 import type { AuthResponseDto, AuthUserDto, AuthOrgDto } from './dto/auth-response.dto';

@@ -1,11 +1,11 @@
 export const homeContent = {
   hero: {
-    label: 'Plataforma de automação com IA',
-    headline: ['Sua operação', 'rodando.', 'Com inteligência.'],
-    accentWord: 'Em escala.',
+    label: 'IA de recuperação de clientes',
+    headline: ['Quantos clientes', 'você perdeu', 'esse mês?'],
+    accentWord: 'A Nexora traz de volta.',
     subline:
-      'B\'reshit centraliza leads, pipeline, mensagens, tarefas e automações numa plataforma onde a IA trabalha em cada etapa do fluxo comercial e operacional.',
-    ctaPrimary: { label: 'Começar agora — é gratuito', href: '/cadastro' },
+      'A Nexora identifica clientes que pararam de voltar e traz eles de volta automaticamente — enquanto você cuida do seu negócio.',
+    ctaPrimary: { label: 'Recuperar meus clientes', href: '/cadastro' },
     ctaSecondary: { label: 'Ver como funciona', href: '#como-funciona' },
     socialProof: 'Sem cartão de crédito. Configuração em menos de 10 minutos.',
   },

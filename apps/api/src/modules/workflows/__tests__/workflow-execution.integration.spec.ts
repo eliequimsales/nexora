@@ -6,7 +6,7 @@ import { WorkflowsService } from '../workflows.service';
 import { PrismaService } from '../../../database/prisma.service';
 import { AiActionsService } from '../../ai-actions/ai-actions.service';
 import { AuditLogService } from '../../audit-logs/audit-log.service';
-import { QUEUE_NAMES, JOB_NAMES } from '@reshit/shared';
+import { QUEUE_NAMES, JOB_NAMES } from '@nexora/shared';
 
 /**
  * I2 - Workflow End-to-End Integration Tests

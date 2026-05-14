@@ -48,10 +48,10 @@ export function Header() {
             onClick={() => setMobileOpen(false)}
           >
             <span className="w-7 h-7 rounded-lg bg-brand-amber flex items-center justify-center text-text-inverse font-bold text-sm transition-all duration-200 group-hover:shadow-glow-amber-sm">
-              B
+              N
             </span>
             <span className="font-semibold text-text-primary tracking-tight">
-              B&apos;reshit
+              Nexora
             </span>
           </Link>
 

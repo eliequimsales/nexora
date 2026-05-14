@@ -4,4 +4,4 @@ export {
   hasPermission,
   type Permission,
   type Role,
-} from '@reshit/shared';
+} from '@nexora/shared';

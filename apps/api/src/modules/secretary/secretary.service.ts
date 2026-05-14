@@ -3,7 +3,7 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { PrismaService } from '../../database/prisma.service';
 import { AiActionsService } from '../ai-actions/ai-actions.service';
 import type { LeadEvent } from '../workflows/workflow.engine';
-import type { AiPromptsConfig } from '@reshit/shared';
+import type { AiPromptsConfig } from '@nexora/shared';
 
 type ClassifiedEvent = LeadEvent & { classification: string };
 

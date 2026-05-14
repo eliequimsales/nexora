@@ -8,7 +8,7 @@ import { User, Mail, Lock, Building2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/lib/hooks/auth/useAuth';
-import { getSupportedNiches, getNicheConfig } from '@reshit/shared';
+import { getSupportedNiches, getNicheConfig } from '@nexora/shared';
 
 const NICHE_OPTIONS = getSupportedNiches().map((key) => ({
   value: key,

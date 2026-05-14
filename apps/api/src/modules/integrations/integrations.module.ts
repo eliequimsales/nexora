@@ -8,7 +8,7 @@ import { IntegrationCryptoService } from './integration-crypto.service';
 import { WebhookDispatcherService } from './webhook-dispatcher.service';
 import { EmailAdapter } from './adapters/email.adapter';
 import { WhatsAppAdapter } from './adapters/whatsapp.adapter';
-import { QUEUE_NAMES } from '@reshit/shared';
+import { QUEUE_NAMES } from '@nexora/shared';
 import { PlanLimitsService } from '../../common/billing/plan-limits.service';
 
 @Module({

@@ -69,7 +69,7 @@ export default function PublicProposalPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="w-10 h-10 rounded-xl bg-brand-amber flex items-center justify-center mx-auto mb-3">
-            <span className="text-brand-bg text-sm font-bold">B</span>
+            <span className="text-brand-bg text-sm font-bold">N</span>
           </div>
           <p className="text-sm text-text-muted">{proposal.orgName}</p>
         </div>
@@ -181,7 +181,7 @@ export default function PublicProposalPage() {
         </div>
 
         <p className="text-center text-2xs text-text-muted mt-6">
-          Powered by B&apos;reshit
+          Powered by Nexora
         </p>
       </div>
     </div>

@@ -77,10 +77,10 @@ export function Sidebar() {
       {/* Logo + org */}
       <div className="flex items-center gap-2.5 px-4 py-4 border-b border-sidebar-border">
         <div className="w-7 h-7 rounded-lg bg-brand-amber flex items-center justify-center shrink-0">
-          <span className="text-brand-bg text-xs font-bold">B</span>
+          <span className="text-brand-bg text-xs font-bold">N</span>
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-text-primary truncate">B&apos;reshit</p>
+          <p className="text-sm font-semibold text-text-primary truncate">Nexora</p>
           <p className="text-2xs text-text-muted truncate">{org.name}</p>
         </div>
       </div>

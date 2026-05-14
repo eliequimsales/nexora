@@ -7,7 +7,7 @@ module.exports = {
   coverageDirectory: '../coverage',
   testEnvironment: 'node',
   moduleNameMapper: {
-    '^@reshit/shared$': '<rootDir>/../../../packages/shared/src/index.ts',
-    '^@reshit/shared/(.*)$': '<rootDir>/../../../packages/shared/src/$1',
+    '^@nexora/shared$': '<rootDir>/../../../packages/shared/src/index.ts',
+    '^@nexora/shared/(.*)$': '<rootDir>/../../../packages/shared/src/$1',
   },
 };

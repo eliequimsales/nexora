@@ -37,7 +37,7 @@ export class ChannelService {
       await this.whatsapp.send(cfg as unknown as WhatsAppConfig, to, content);
     } else {
       await this.email.send(cfg as unknown as EmailConfig, to, {
-        subject: subject ?? "Mensagem da B'reshit",
+        subject: subject ?? "Mensagem da Nexora",
         text: content,
       });
     }

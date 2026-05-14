@@ -70,7 +70,7 @@ Três sub-sistemas:
 | `@Public()` | Apenas ingest e página pública de proposta |
 | Adapter pattern | `EmailAdapter` + `WhatsAppAdapter` com interface uniforme via `ChannelService` |
 | AES-256-GCM | Criptografia de credenciais de integração (`IntegrationCryptoService`) |
-| HMAC-SHA256 | Assinatura de webhooks de saída (`X-Reshit-Signature`) |
+| HMAC-SHA256 | Assinatura de webhooks de saída (`X-Nexora-Signature`) |
 
 ### Fluxo de eventos
 
@@ -218,7 +218,7 @@ INTEGRATION_ENCRYPTION_KEY=<64 chars hex>
 
 ### Dependências técnicas para próxima fase
 - Redis já está no stack (`RedisModule` presente) — BullMQ pode ser adicionado sem infraestrutura nova
-- `@reshit/shared` existe mas não exporta RBAC — mover o mapa de permissões antes de qualquer nova feature que dependa de roles
+- `@nexora/shared` existe mas não exporta RBAC — mover o mapa de permissões antes de qualquer nova feature que dependa de roles
 - Template System depende de nenhum módulo novo — pode ser implementado como configuração sobre módulos existentes
 
 ---

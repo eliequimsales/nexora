@@ -9,10 +9,10 @@ export default function SelectOrgPage() {
         {/* Logo */}
         <div className="flex items-center justify-center gap-2.5 mb-8">
           <div className="w-8 h-8 rounded-lg bg-brand-amber flex items-center justify-center">
-            <span className="text-brand-bg text-sm font-bold">B</span>
+            <span className="text-brand-bg text-sm font-bold">N</span>
           </div>
           <span className="text-text-primary font-semibold text-lg">
-            B&apos;reshit
+            Nexora
           </span>
         </div>
 

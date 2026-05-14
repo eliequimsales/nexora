@@ -2,7 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { RequirePermission } from '../common/rbac/permissions';
-import { QUEUE_NAMES } from '@reshit/shared';
+import { QUEUE_NAMES } from '@nexora/shared';
 
 @Controller('admin')
 export class QueueStatsController {

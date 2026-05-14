@@ -5,7 +5,7 @@
 Preparar o contrato tecnico do bloco 8 para introduzir o `Template System v1` sem reinventar o fluxo atual de cadastro, onboarding ou organizacoes.
 
 O bloco deve fechar:
-- catalogo estatico de templates multi-nicho em `@reshit/shared`
+- catalogo estatico de templates multi-nicho em `@nexora/shared`
 - leitura autenticada desses templates no backend
 - aplicacao explicita de template em uma organizacao existente
 - base de frontend para consumo posterior no onboarding do bloco 9
@@ -146,7 +146,7 @@ Criar:
 - `apps/api/src/modules/templates/templates.module.ts`
 
 Responsabilidade:
-- ler templates de `@reshit/shared`
+- ler templates de `@nexora/shared`
 - expor:
   - `GET /templates`
   - `GET /templates/:id`
@@ -167,7 +167,7 @@ Criar novo metodo no service:
 - `applyTemplate(ctx, templateId)` ou `applyTemplate(orgId, templateId, actorCtx)`
 
 Fluxo obrigatorio:
-1. validar se o template existe em `@reshit/shared`
+1. validar se o template existe em `@nexora/shared`
 2. buscar organizacao atual
 3. contar leads da organizacao
 4. executar transaction
@@ -357,7 +357,7 @@ Documentacao:
 ## Sequencia minima recomendada para Claude
 
 1. criar `packages/shared/src/templates/` e migrar `real_estate`
-2. exportar `getTemplate()` e `listTemplates()` em `@reshit/shared`
+2. exportar `getTemplate()` e `listTemplates()` em `@nexora/shared`
 3. adaptar `auth.service.ts` e, se necessario, `register.dto.ts` para consumir templates sem quebrar o cadastro atual
 4. criar `TemplatesModule` backend com `GET /templates` e `GET /templates/:id`
 5. adicionar `applyTemplate` em `OrganizationsService` com transaction + audit + evento
@@ -368,7 +368,7 @@ Documentacao:
 ## Definition of Done deste contrato
 
 O bloco 8 pode ser considerado fechado quando:
-- `@reshit/shared` passa a expor templates multi-nicho reais
+- `@nexora/shared` passa a expor templates multi-nicho reais
 - `AuthService` deixa de depender de `getNicheConfig()` no caminho ativo
 - backend expoe leitura de templates sem persistencia propria
 - organizacao consegue aplicar template com transaction, audit e evento

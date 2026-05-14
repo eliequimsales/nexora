@@ -49,7 +49,7 @@ function StepWelcome({ org, userName, onNext }: { org: OrgResponse; userName: st
       </div>
       <div>
         <h2 className="text-xl font-bold text-text-primary mb-2">
-          Bem-vindo à B&apos;reshit, {userName.split(' ')[0]}!
+          Bem-vindo à Nexora, {userName.split(' ')[0]}!
         </h2>
         <p className="text-sm text-text-muted max-w-sm">
           Vamos configurar <strong className="text-text-primary">{org.name}</strong> em menos de

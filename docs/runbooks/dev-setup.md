@@ -1,4 +1,4 @@
-# Dev Setup — B'reshit API
+# Dev Setup — Nexora API
 
 Execute nesta ordem exata. Cada etapa depende da anterior.
 

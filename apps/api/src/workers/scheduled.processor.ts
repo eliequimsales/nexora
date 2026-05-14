@@ -4,7 +4,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { Job, Queue } from 'bullmq';
 import { PrismaService } from '../database/prisma.service';
 import { AiActionsService } from '../modules/ai-actions/ai-actions.service';
-import { JOB_NAMES, QUEUE_NAMES } from '@reshit/shared';
+import { JOB_NAMES, QUEUE_NAMES } from '@nexora/shared';
 
 const FOLLOW_UP_DAYS = 3;
 

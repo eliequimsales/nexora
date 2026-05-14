@@ -3,7 +3,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditLogService } from '../audit-logs/audit-log.service';
 import { mapOrg } from './dto/org-response.dto';
-import { getTemplate } from '@reshit/shared';
+import { getTemplate } from '@nexora/shared';
 import type { UpdateOrgDto } from './dto/update-org.dto';
 import type { UpdateOnboardingDto } from './dto/update-onboarding.dto';
 import type { OrgResponseDto } from './dto/org-response.dto';

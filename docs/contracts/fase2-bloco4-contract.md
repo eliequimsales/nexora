@@ -76,8 +76,8 @@ Contrato:
 - manter no backend apenas o que depende de Nest:
   - `REQUIRE_PERMISSION_KEY`
   - `RequirePermission`
-- backend passa a importar `PERMISSIONS` e `Role` de `@reshit/shared`
-- frontend passa a importar `Permission`, `PERMISSIONS`, `ROLE_HIERARCHY` e `hasPermission` de `@reshit/shared`
+- backend passa a importar `PERMISSIONS` e `Role` de `@nexora/shared`
+- frontend passa a importar `Permission`, `PERMISSIONS`, `ROLE_HIERARCHY` e `hasPermission` de `@nexora/shared`
 
 Observacao:
 - o frontend nao usa `useCan`; usa [usePermissions.ts](/C:/Users/eli/Downloads/Documents/saas-platform/apps/app/lib/hooks/auth/usePermissions.ts)

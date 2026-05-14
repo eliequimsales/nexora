@@ -4,7 +4,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { createHmac } from 'crypto';
 import { PrismaService } from '../../database/prisma.service';
-import { JOB_NAMES, QUEUE_NAMES } from '@reshit/shared';
+import { JOB_NAMES, QUEUE_NAMES } from '@nexora/shared';
 
 @Injectable()
 export class WebhookDispatcherService {
@@ -71,7 +71,7 @@ export class WebhookDispatcherService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Reshit-Signature': `sha256=${signature}`,
+          'X-Nexora-Signature': `sha256=${signature}`,
         },
         body,
         signal: AbortSignal.timeout(5000),

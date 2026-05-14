@@ -68,7 +68,7 @@ export default function SettingsPage() {
           Token de formulário
         </h2>
         <p className="text-xs text-text-muted mb-3">
-          Use este token para integrar formulários externos com a B&apos;reshit.
+          Use este token para integrar formulários externos com a Nexora.
         </p>
         <code className="block w-full rounded-lg border border-brand-border bg-brand-surface-2 px-3 py-2 text-xs font-mono text-text-secondary break-all select-all">
           {org.formToken}

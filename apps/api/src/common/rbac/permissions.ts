@@ -1,5 +1,5 @@
 import { SetMetadata } from '@nestjs/common';
-import { PERMISSIONS, type Permission, type Role } from '@reshit/shared';
+import { PERMISSIONS, type Permission, type Role } from '@nexora/shared';
 
 export { PERMISSIONS };
 export type { Permission, Role };

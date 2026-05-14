@@ -2,7 +2,7 @@
   "name": "app",
   "version": "0.1.0",
   "private": true,
-  "description": "B'reshit App — Internal SaaS application",
+  "description": "Nexora App — Internal SaaS application",
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
@@ -13,7 +13,7 @@
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-slot": "^1.2.4",
-    "@reshit/shared": "workspace:*",
+    "@nexora/shared": "workspace:*",
     "@tanstack/react-query": "^5.56.0",
     "axios": "^1.7.0",
     "class-variance-authority": "^0.7.1",

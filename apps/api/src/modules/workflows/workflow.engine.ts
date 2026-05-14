@@ -5,7 +5,7 @@ import { Queue } from 'bullmq';
 import { WorkflowsService } from './workflows.service';
 import { PrismaService } from '../../database/prisma.service';
 import { AiActionsService } from '../ai-actions/ai-actions.service';
-import { JOB_NAMES, QUEUE_NAMES } from '@reshit/shared';
+import { JOB_NAMES, QUEUE_NAMES } from '@nexora/shared';
 import type { AiActionType } from '../ai-actions/ai-actions.service';
 
 const DEDUPE_WINDOW_MS = 60_000;

@@ -34,7 +34,7 @@ Fechar 6 melhorias pendentes sem inflar escopo: zero migrations, zero dependênc
   - `WorkflowWithStatsDto` ganha campos opcionais: `latestExecutionStatus`, `latestExecutionErrorMessage`, `latestExecutionResult`, `latestExecutionAt`.
 
 ### Frontend
-- `apps/app/lib/rbac/permissions.ts` — reduzido a re-export de `@reshit/shared` (zero duplicação).
+- `apps/app/lib/rbac/permissions.ts` — reduzido a re-export de `@nexora/shared` (zero duplicação).
 - `apps/app/types/domain/workflows.ts` — `WorkflowExecutionStatus` exportado; `WorkflowWithStats` ganha os mesmos `latestExecution*` opcionais.
 - `apps/app/components/modules/workflows/WorkflowRow.tsx`
   - Helper `isPromptMissing(workflow)` — retorna `true` quando `latestExecutionStatus === 'failed'` e `latestExecutionResult.errorReason === 'ai_prompt_not_configured'`.
@@ -110,7 +110,7 @@ Renderiza apenas quando o workflow falhou por prompt ausente na última execuç�
 
 ### Integration
 - `GET /workflows` retorna `latestExecutionStatus`, `latestExecutionResult`, etc. quando há execuções; retorna sem esses campos quando não há.
-- RBAC: `@RequirePermission('workflows:manage')` em endpoint bloqueia `member` e aceita `admin` — exercita o mapa vindo de `@reshit/shared`.
+- RBAC: `@RequirePermission('workflows:manage')` em endpoint bloqueia `member` e aceita `admin` — exercita o mapa vindo de `@nexora/shared`.
 
 ### E2E UI
 - Workflow com `latestExecutionResult.errorReason === 'ai_prompt_not_configured'` renderiza link "Configurar IA" apontando para `/{slug}/settings`.
@@ -125,7 +125,7 @@ Renderiza apenas quando o workflow falhou por prompt ausente na última execuç�
 
 ## Definition of Done — estado final
 
-- [x] Mapa `PERMISSIONS` não duplicado (fonte única em `@reshit/shared`).
+- [x] Mapa `PERMISSIONS` não duplicado (fonte única em `@nexora/shared`).
 - [x] Dedupe `duplicate_recent_execution` em janela de 60s.
 - [x] Motivo canônico `ai_prompt_not_configured` estável em `result.errorReason`.
 - [x] UI consegue renderizar "Configurar IA" usando campos do `GET /workflows` sem endpoint novo.

@@ -2,7 +2,7 @@
   "name": "saas-platform",
   "version": "0.1.0",
   "private": true,
-  "description": "B'reshit — Global AI automation SaaS platform",
+  "description": "Nexora — IA que recupera clientes perdidos automaticamente",
   "scripts": {
     "dev:api": "pnpm --filter api dev",
     "dev:web": "pnpm --filter web dev",

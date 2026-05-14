@@ -1,13 +1,13 @@
-# Guia B'reshit — Para o Codex
+# Guia Nexora — Para o Codex
 
-> Este arquivo é o ponto de entrada para qualquer IA que queira entender o projeto B'reshit.
+> Este arquivo é o ponto de entrada para qualquer IA que queira entender o projeto Nexora.
 > Atualizado em: 2026-04-23
 > Autor do projeto: Eli
 > IAs ativas no projeto: Claude Code (implementação), Obsidian (memória), Codex (guia estratégico)
 
 ---
 
-## O que é a B'reshit
+## O que é a Nexora
 
 Plataforma SaaS B2B de automação comercial com IA, multi-nicho e multi-tenant.
 

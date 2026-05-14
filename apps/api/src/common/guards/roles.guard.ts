@@ -1,6 +1,6 @@
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { PERMISSIONS, ROLE_HIERARCHY, type Role } from '@reshit/shared';
+import { PERMISSIONS, ROLE_HIERARCHY, type Role } from '@nexora/shared';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { REQUIRE_PERMISSION_KEY } from '../rbac/permissions';
 import type { TenantContext } from '../tenant/tenant-context';

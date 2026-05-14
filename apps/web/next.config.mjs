@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ['@reshit/shared'],
+  transpilePackages: ['@nexora/shared'],
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [],

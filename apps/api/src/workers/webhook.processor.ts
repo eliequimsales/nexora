@@ -2,7 +2,7 @@ import { Logger } from '@nestjs/common';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { WebhookDispatcherService } from '../modules/integrations/webhook-dispatcher.service';
-import { JOB_NAMES, QUEUE_NAMES } from '@reshit/shared';
+import { JOB_NAMES, QUEUE_NAMES } from '@nexora/shared';
 
 interface WebhookJobData {
   orgId: string;

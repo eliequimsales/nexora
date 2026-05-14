@@ -4,7 +4,7 @@ import { WorkflowsService } from './workflows.service';
 import { PrismaService } from '../../database/prisma.service';
 import { AiActionsService } from '../ai-actions/ai-actions.service';
 import { getQueueToken } from '@nestjs/bullmq';
-import { QUEUE_NAMES } from '@reshit/shared';
+import { QUEUE_NAMES } from '@nexora/shared';
 
 const mockWorkflowsService = {
   findActiveByTrigger: jest.fn(),

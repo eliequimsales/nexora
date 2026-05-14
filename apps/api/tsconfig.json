@@ -8,8 +8,8 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "paths": {
-      "@reshit/shared": ["../../packages/shared/src/index.ts"],
-      "@reshit/shared/*": ["../../packages/shared/src/*"]
+      "@nexora/shared": ["../../packages/shared/src/index.ts"],
+      "@nexora/shared/*": ["../../packages/shared/src/*"]
     }
   },
   "include": ["src/**/*"],

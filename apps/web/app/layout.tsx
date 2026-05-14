@@ -4,31 +4,32 @@ import { GeistMono } from 'geist/font/mono';
 import './globals.css';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://reshit.com'),
+  metadataBase: new URL('https://nexora.com.br'),
   title: {
-    default: "B'reshit — Operação inteligente com IA",
-    template: "%s | B'reshit",
+    default: "Nexora — A IA que recupera seus clientes perdidos",
+    template: "%s | Nexora",
   },
   description:
-    'Plataforma SaaS de automação empresarial com IA. Leads, pipeline, mensagens, tarefas e workflows num sistema que pensa junto com sua equipe.',
-  keywords: ['automação empresarial', 'CRM com IA', 'plataforma SaaS', 'gestão de leads', 'workflows de IA'],
-  authors: [{ name: "B'reshit" }],
-  creator: "B'reshit",
+    'A Nexora identifica clientes que pararam de voltar e traz eles de volta automaticamente — enquanto você cuida do seu negócio.',
+  keywords: ['recuperação de clientes', 'IA para barbearias', 'automação de clientes', 'retenção automática', 'churn de clientes'],
+  authors: [{ name: "Nexora" }],
+  creator: "Nexora",
   openGraph: {
     type: 'website',
     locale: 'pt_BR',
-    url: 'https://reshit.com',
-    siteName: "B'reshit",
-    title: "B'reshit — Operação inteligente com IA",
+    url: 'https://nexora.com.br',
+    siteName: "Nexora",
+    title: "Nexora — A IA que recupera seus clientes perdidos",
     description:
-      'Plataforma SaaS de automação empresarial com IA. Do lead ao fechamento, com inteligência em cada etapa.',
-    images: [{ url: '/og/default.png', width: 1200, height: 630, alt: "B'reshit" }],
+      'A Nexora identifica clientes que pararam de voltar e traz eles de volta automaticamente — enquanto você cuida do seu negócio.',
+    images: [{ url: '/og/default.png', width: 1200, height: 630, alt: "Nexora" }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: "B'reshit — Operação inteligente com IA",
-    description: 'Automação empresarial com IA. Multi-nicho. Escalável.',
+    title: "Nexora — A IA que recupera seus clientes perdidos",
+    description: 'A IA que recupera seus clientes perdidos no automático.',
     images: ['/og/default.png'],
+    creator: '@nexora',
   },
   robots: {
     index: true,

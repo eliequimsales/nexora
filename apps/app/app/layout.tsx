@@ -6,10 +6,10 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: "B'reshit",
-    template: "%s — B'reshit",
+    default: "Nexora",
+    template: "%s — Nexora",
   },
-  description: 'Plataforma de operação comercial com IA.',
+  description: 'A IA que recupera seus clientes perdidos no automático.',
   robots: { index: false, follow: false },
 };
 

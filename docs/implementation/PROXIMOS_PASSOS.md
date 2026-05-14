@@ -41,7 +41,7 @@
 - **H10** — `move_stage` no workflow engine sem validação de tenant do `targetStageId`
 - **H1** — `@MaxLength(72)` na senha (bcrypt trunca silenciosamente acima disso)
 - **H2** — throttle específico em `/auth/login` e `/auth/register` (5/min por IP)
-- **M7** — RBAC map duplicado frontend ↔ backend, deveria vir de `@reshit/shared`
+- **M7** — RBAC map duplicado frontend ↔ backend, deveria vir de `@nexora/shared`
 - **M9** — Loop potencial no WorkflowEngine (classify → workflow → classify)
 - **M12** — UX quando org não configurou `aiPrompts`: workflow falha silenciosa
 - **I1, I2** — Partial indexes + CHECK constraints via migration SQL raw
@@ -243,7 +243,7 @@ Escopo backend (apps/api):
 1. src/modules/templates/:
    - templates.service.ts: list(), getById(id).
    - templates.controller.ts: GET /templates (público ou member), GET /templates/:id.
-   - Não há persistência — templates vêm de @reshit/shared.
+   - Não há persistência — templates vêm de @nexora/shared.
 
 2. Novo método em OrganizationsService: applyTemplate(orgId, templateId):
    - Valida template existe.

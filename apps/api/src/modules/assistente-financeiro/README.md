@@ -2,7 +2,7 @@
 
 ## Overview
 
-The **Assistente Financeiro** module is a core component of the B'reshit SaaS platform that helps organizations recover lost customers and prevent missing revenue goals through AI-powered recommendations.
+The **Assistente Financeiro** module is a core component of the Nexora SaaS platform that helps organizations recover lost customers and prevent missing revenue goals through AI-powered recommendations.
 
 ## Database Schema
 

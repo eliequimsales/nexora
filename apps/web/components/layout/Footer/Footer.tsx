@@ -38,12 +38,12 @@ export function Footer() {
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center gap-2 mb-4 group w-fit">
               <span className="w-7 h-7 rounded-lg bg-brand-amber flex items-center justify-center text-text-inverse font-bold text-sm transition-all duration-200 group-hover:shadow-glow-amber-sm">
-                B
+                N
               </span>
-              <span className="font-semibold text-text-primary">B&apos;reshit</span>
+              <span className="font-semibold text-text-primary">Nexora</span>
             </Link>
             <p className="text-sm text-text-muted leading-relaxed">
-              Operação inteligente começa aqui.
+              A IA que recupera seus clientes perdidos.
             </p>
           </div>
 
@@ -74,7 +74,7 @@ export function Footer() {
         {/* Bottom bar */}
         <div className="mt-12 pt-6 border-t border-brand-border/60 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-text-muted">
-            © {new Date().getFullYear()} B&apos;reshit. Todos os direitos reservados.
+            © {new Date().getFullYear()} Nexora. Todos os direitos reservados.
           </p>
           <p className="text-xs text-text-muted">
             Construído com IA. Operado por humanos.

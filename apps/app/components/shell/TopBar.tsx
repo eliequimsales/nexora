@@ -17,7 +17,7 @@ const SECTION_TITLES: Record<string, string> = {
 
 function getSection(pathname: string, slug: string): string {
   const relative = pathname.replace(`/${slug}/`, '').split('/')[0];
-  return SECTION_TITLES[relative] ?? 'B\'reshit';
+  return SECTION_TITLES[relative] ?? 'Nexora';
 }
 
 export function TopBar() {

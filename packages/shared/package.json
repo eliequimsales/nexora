@@ -1,8 +1,8 @@
 {
-  "name": "@reshit/shared",
+  "name": "@nexora/shared",
   "version": "0.1.0",
   "private": true,
-  "description": "B'reshit — shared types, constants and niche configs",
+  "description": "Nexora — shared types, constants and niche configs",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {

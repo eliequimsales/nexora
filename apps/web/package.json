@@ -2,14 +2,14 @@
   "name": "web",
   "version": "0.1.0",
   "private": true,
-  "description": "B'reshit Web — Next.js frontend",
+  "description": "Nexora Web — Next.js frontend",
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start"
   },
   "dependencies": {
-    "@reshit/shared": "workspace:*",
+    "@nexora/shared": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",

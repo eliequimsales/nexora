@@ -19,6 +19,8 @@ const config: Config = {
           amber: '#F59E0B',
           gold: '#EAB308',
           'amber-muted': '#F59E0B26',
+          purple: '#7C3AED',
+          purpleHover: '#6D28D9',
         },
         text: {
           primary: '#F8F8FF',

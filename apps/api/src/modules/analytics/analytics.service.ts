@@ -286,7 +286,7 @@ export class AnalyticsService {
   async generateAiSummary(summary: AnalyticsSummary, period: string): Promise<string> {
     const { leads, proposals, ai, workflows } = summary;
 
-    const prompt = `Você é um analista de negócios da B'reshit, plataforma de automação comercial.
+    const prompt = `Você é um analista de negócios da Nexora, plataforma de automação comercial.
 Analise os dados abaixo do período "${period}" e produza um resumo executivo em português.
 
 LEADS:
