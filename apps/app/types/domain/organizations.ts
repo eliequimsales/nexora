@@ -21,6 +21,16 @@ export interface AppliedTemplateInfo {
   version: string;
 }
 
+export interface IntegrationSettings {
+  zapiApiKey?: string;
+  zapiWebhookUrl?: string;
+  resendApiKey?: string;
+}
+
+export interface NexoraSettings {
+  inactivityDays?: number; // Default: 30
+}
+
 export interface OrgSettings {
   timezone?: string;
   language?: 'pt-BR' | 'en-US';
@@ -33,6 +43,8 @@ export interface OrgSettings {
   onboarding?: OnboardingSettings;
   appliedTemplate?: AppliedTemplateInfo;
   aiPrompts?: Record<string, string>;
+  integrations?: IntegrationSettings;
+  nexora?: NexoraSettings;
 }
 
 // Full org response from GET /organizations/me and PATCH /organizations/me
