@@ -29,4 +29,13 @@ export class DashboardController {
   getNexoraMetrics(@CurrentUser() ctx: TenantContext) {
     return this.service.getNexoraMetrics(ctx);
   }
+
+  /**
+   * Analytics completa para Nexora — inclui tendências, canais e insights.
+   */
+  @Get('nexora-analytics')
+  @RequirePermission('leads:read')
+  getNexoraAnalytics(@CurrentUser() ctx: TenantContext) {
+    return this.service.getNexoraAnalytics(ctx);
+  }
 }

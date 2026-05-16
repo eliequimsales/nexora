@@ -1,6 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import type { DashboardSummaryDto, DashboardActivityDto, NexoraMetricsDto } from './dto/dashboard-response.dto';
+import type {
+  DashboardSummaryDto,
+  DashboardActivityDto,
+  NexoraMetricsDto,
+  NexoraAnalyticsDto,
+  TrendPointDto,
+  ChannelStatsDto,
+} from './dto/dashboard-response.dto';
 import type { TenantContext } from '../../common/tenant/tenant-context';
 
 @Injectable()
@@ -153,6 +160,120 @@ export class DashboardService {
         recoveredThisMonth,
         successRate,
         estimatedRevenue,
+      },
+    };
+  }
+
+  /**
+   * Analytics completa para Nexora — inclui tendências de 30 dias, estatísticas por canal e insights.
+   */
+  async getNexoraAnalytics(ctx: TenantContext): Promise<NexoraAnalyticsDto> {
+    const { orgId } = ctx;
+
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    const inactiveThreshold = new Date();
+    inactiveThreshold.setDate(inactiveThreshold.getDate() - 30);
+
+    // KPIs atuais
+    const metrics = await this.getNexoraMetrics(ctx);
+    const kpis = metrics.recovery;
+
+    // Recuperações dos últimos 30 dias agrupadas por dia
+    const last30Days = new Date();
+    last30Days.setDate(last30Days.getDate() - 30);
+
+    const dailyRecoveries = await this.prisma.$queryRaw<
+      Array<{ date: Date; count: bigint; success: bigint }>
+    >`
+      SELECT
+        DATE(created_at) as date,
+        COUNT(*) as count,
+        COUNT(CASE WHEN metadata->>'success' = 'true' THEN 1 END) as success
+      FROM activity_log
+      WHERE org_id = ${orgId}
+        AND type = 'recovery_sent'
+        AND created_at >= ${last30Days}
+      GROUP BY DATE(created_at)
+      ORDER BY date ASC
+    `;
+
+    // Construir trends de recuperações
+    const recoveryTrends: TrendPointDto[] = dailyRecoveries.map((d) => ({
+      date: d.date.toISOString().split('T')[0],
+      value: Number(d.count),
+    }));
+
+    // Construir trends de receita (basado em recuperações bem-sucedidas × R$80)
+    const revenueTrends: TrendPointDto[] = dailyRecoveries.map((d) => ({
+      date: d.date.toISOString().split('T')[0],
+      value: Number(d.success) * 80,
+    }));
+
+    // Estatísticas por canal
+    const channelStats = await this.prisma.$queryRaw<
+      Array<{ channel: string; sent: bigint; responded: bigint }>
+    >`
+      SELECT
+        metadata->>'channel' as channel,
+        COUNT(*) as sent,
+        COUNT(CASE WHEN metadata->>'success' = 'true' THEN 1 END) as responded
+      FROM activity_log
+      WHERE org_id = ${orgId}
+        AND type = 'recovery_sent'
+        AND created_at >= ${monthStart}
+      GROUP BY metadata->>'channel'
+    `;
+
+    const channels: ChannelStatsDto[] = (channelStats || []).map((cs) => {
+      const sent = Number(cs.sent);
+      const responded = Number(cs.responded);
+      return {
+        channel: (cs.channel || 'whatsapp') as 'whatsapp' | 'email',
+        sent,
+        responded,
+        successRate: sent > 0 ? Math.round((responded / sent) * 100) : 0,
+      };
+    });
+
+    // Calcular insights
+    let bestDay = 'N/A';
+    let maxRecoveries = 0;
+    dailyRecoveries.forEach((d) => {
+      const count = Number(d.count);
+      if (count > maxRecoveries) {
+        maxRecoveries = count;
+        bestDay = d.date.toISOString().split('T')[0];
+      }
+    });
+
+    const bestChannel =
+      channels.length > 0
+        ? channels.reduce((prev, curr) =>
+            curr.successRate > prev.successRate ? curr : prev,
+          ).channel
+        : 'whatsapp';
+
+    // Placeholder: topMessage (em produção, agregar dados de feedback)
+    const topMessage = null;
+
+    // Estimativa de dias até reativação (baseado em responseTime médio)
+    const avgTimeToReactivation = 2; // placeholder
+
+    return {
+      kpis,
+      trends: {
+        recoveries: recoveryTrends,
+        revenue: revenueTrends,
+      },
+      channels,
+      insights: {
+        bestDay,
+        bestChannel,
+        topMessage,
+        avgTimeToReactivation,
       },
     };
   }
