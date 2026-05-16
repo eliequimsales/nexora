@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Required for Docker production builds — emits a self-contained server bundle.
+  output: 'standalone',
   transpilePackages: ['@nexora/shared'],
   images: {
     formats: ['image/avif', 'image/webp'],
