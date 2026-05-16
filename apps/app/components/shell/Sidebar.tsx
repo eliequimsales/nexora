@@ -16,6 +16,7 @@ import {
   ClipboardList,
   CreditCard,
   ChevronDown,
+  MessageSquare,
 } from 'lucide-react';
 import { UserDropdown } from './UserDropdown';
 import { useOrg } from '@/lib/hooks/org/useOrg';
@@ -34,6 +35,13 @@ const MAIN_NAV: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, href: 'dashboard', exact: true },
   { label: 'Clientes', icon: Users, href: 'clientes' },
   { label: 'Tarefas', icon: ClipboardList, href: 'tasks' },
+];
+
+// Nexora-specific navigation (shown only for barbershop niche)
+const NEXORA_NAV: NavItem[] = [
+  { label: 'Analytics', icon: BarChart2, href: 'nexora/analytics' },
+  { label: 'Respostas', icon: MessageSquare, href: 'nexora/responses' },
+  { label: 'Configuração', icon: Settings, href: 'settings/nexora' },
 ];
 
 // Collapsed under "Avançado" — power features kept available but out of the way.
@@ -76,11 +84,21 @@ export function Sidebar() {
   const pathname = usePathname();
   const basePath = `/${slug}`;
 
+  // Check if org is in Nexora mode (barbershop niche)
+  const isNexoraMode = org.niche === 'barbearia';
+
+  // Auto-expand "Nexora" section if currently viewing Nexora routes
+  const isOnNexoraRoute = isNexoraMode && NEXORA_NAV.some((item) =>
+    pathname.startsWith(`${basePath}/${item.href}`),
+  );
+
   // Auto-expand "Avançado" if the user is currently inside one of its routes,
   // so they don't lose visual context after navigating.
   const isOnAdvancedRoute = ADVANCED_NAV.some((item) =>
     pathname.startsWith(`${basePath}/${item.href}`),
   );
+
+  const [nexoraOpen, setNexoraOpen] = useState(isOnNexoraRoute);
   const [advancedOpen, setAdvancedOpen] = useState(isOnAdvancedRoute);
 
   return (
@@ -113,6 +131,39 @@ export function Sidebar() {
             pathname={pathname}
           />
         ))}
+
+        {/* Nexora section — visible only for barbershop niche */}
+        {isNexoraMode && (
+          <div className="pt-3">
+            <button
+              type="button"
+              onClick={() => setNexoraOpen((v) => !v)}
+              aria-expanded={nexoraOpen}
+              className="w-full flex items-center justify-between px-2 mb-1 text-2xs font-semibold text-text-muted uppercase tracking-widest hover:text-text-secondary transition-colors"
+            >
+              <span>Nexora</span>
+              <ChevronDown
+                size={12}
+                className={cn(
+                  'transition-transform duration-150',
+                  nexoraOpen && 'rotate-180',
+                )}
+              />
+            </button>
+            {nexoraOpen && (
+              <div className="space-y-0.5 animate-fade-in">
+                {NEXORA_NAV.map((item) => (
+                  <SidebarNavItem
+                    key={item.href}
+                    item={item}
+                    basePath={basePath}
+                    pathname={pathname}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Advanced — collapsible, closed by default */}
         <div className="pt-3">
