@@ -19,6 +19,59 @@ import type {
 export type RecoveryChannel = 'whatsapp' | 'email';
 
 /**
+ * Stop-keywords. When an inbound customer reply matches any of these (as a
+ * whole word, case-insensitive), we register the lead as opted-out and stop
+ * sending recovery messages.
+ *
+ * Conservative list — covers explicit Portuguese opt-out phrasings + the
+ * universal English "stop". We deliberately avoid ambiguous words like "não"
+ * alone (could be a legitimate "não posso hoje" reply).
+ */
+const OPT_OUT_KEYWORDS = [
+  'parar',
+  'pare',
+  'sair',
+  'cancelar',
+  'remover',
+  'descadastrar',
+  'desinscrever',
+  'stop',
+  'unsubscribe',
+  // Common short phrases — checked as substrings of the trimmed reply
+] as const;
+
+const OPT_OUT_PHRASES = [
+  'nao quero mais',
+  'não quero mais',
+  'nao envie mais',
+  'não envie mais',
+  'parar de receber',
+  'pare de receber',
+] as const;
+
+/**
+ * Returns true when `text` looks like a customer opt-out reply.
+ * - Word-level keywords match when they appear as a standalone word.
+ * - Phrase patterns match as case-insensitive substrings.
+ */
+export function isOptOutMessage(text: string): boolean {
+  if (!text) return false;
+  const normalized = text.toLowerCase().trim();
+
+  // Phrase match (substring)
+  for (const phrase of OPT_OUT_PHRASES) {
+    if (normalized.includes(phrase)) return true;
+  }
+
+  // Word-boundary match — split on non-letter chars so "PARAR." or "Sair!" hits.
+  const words = normalized.split(/[^a-záàâãéèêíïóôõöúüç]+/i).filter(Boolean);
+  for (const word of words) {
+    if ((OPT_OUT_KEYWORDS as readonly string[]).includes(word)) return true;
+  }
+  return false;
+}
+
+/**
  * Result returned to the controller after a recovery attempt.
  *
  * The activity log entry is always persisted (success or failure), so the
@@ -85,6 +138,14 @@ export class ClientRecoveryService {
       throw new NotFoundException('Cliente não encontrado');
     }
     assertSameTenant(lead.orgId, ctx.orgId);
+
+    // Hard guard — never send to customers who asked to stop.
+    // This protects the org's WhatsApp/email reputation and complies with LGPD.
+    if (lead.optedOutAt) {
+      throw new BadRequestException(
+        'Cliente solicitou parar de receber mensagens (opt-out)',
+      );
+    }
 
     const targetChannel: RecoveryChannel =
       channel ?? (lead.phone ? 'whatsapp' : 'email');
@@ -192,10 +253,17 @@ export class ClientRecoveryService {
     leadIds: string[],
     ctx: TenantContext,
     channels?: RecoveryChannel[],
-  ): Promise<{ sent: number; failed: number; total: number; results: RecoveryResult[] }> {
+  ): Promise<{
+    sent: number;
+    failed: number;
+    skipped: number;
+    total: number;
+    results: RecoveryResult[];
+  }> {
     const results: RecoveryResult[] = [];
     let sent = 0;
     let failed = 0;
+    let skipped = 0;
 
     // Pre-validate: get all leads at once and filter by tenant
     const leads = await this.prisma.lead.findMany({
@@ -219,6 +287,21 @@ export class ClientRecoveryService {
           message: '',
           sentTo: '',
           error: 'Lead não encontrado ou não pertence a esta organização',
+        });
+        continue;
+      }
+
+      // Skip opt-outs silently — counted separately so the UI can show a
+      // "N skipped (opt-out)" message instead of treating them as failures.
+      if (lead.optedOutAt) {
+        skipped++;
+        results.push({
+          success: false,
+          leadId,
+          channel: 'whatsapp',
+          message: '',
+          sentTo: '',
+          error: 'opted_out',
         });
         continue;
       }
@@ -272,6 +355,7 @@ export class ClientRecoveryService {
     return {
       sent,
       failed,
+      skipped,
       total: leadIds.length,
       results,
     };
@@ -298,7 +382,7 @@ export class ClientRecoveryService {
     fromIdentifier: string; // phone or email of the responding customer
     responseText: string;
     receivedAt?: Date;
-  }): Promise<{ matched: boolean; leadId: string | null }> {
+  }): Promise<{ matched: boolean; leadId: string | null; optedOut: boolean }> {
     const receivedAt = input.receivedAt ?? new Date();
 
     // Find a lead with this phone/email (across all tenants — webhook context)
@@ -314,7 +398,35 @@ export class ClientRecoveryService {
       this.logger.debug(
         `No lead matched for ${input.channel} from ${input.fromIdentifier}`,
       );
-      return { matched: false, leadId: null };
+      return { matched: false, leadId: null, optedOut: false };
+    }
+
+    // Opt-out detection — runs BEFORE the success-marking branch so a stop
+    // reply doesn't get counted as a positive response in analytics.
+    const optedOut = isOptOutMessage(input.responseText);
+    if (optedOut && !lead.optedOutAt) {
+      await this.prisma.lead.update({
+        where: { id: lead.id },
+        data: { optedOutAt: receivedAt },
+      });
+      // Also write an audit entry so the timeline shows the opt-out event.
+      await this.prisma.activityLog.create({
+        data: {
+          orgId: lead.orgId,
+          leadId: lead.id,
+          userId: null,
+          type: 'recovery_opt_out',
+          content: 'Cliente solicitou parar de receber mensagens',
+          metadata: {
+            channel: input.channel,
+            from: input.fromIdentifier,
+            replyText: input.responseText,
+          },
+        },
+      });
+      this.logger.log(
+        `Lead ${lead.id} opted out via ${input.channel}: "${input.responseText}"`,
+      );
     }
 
     // Find the most recent recovery_sent log NOT yet marked as responded,
@@ -336,14 +448,21 @@ export class ClientRecoveryService {
       this.logger.debug(
         `No recent recovery_sent log for lead ${lead.id}; webhook ignored`,
       );
-      return { matched: false, leadId: lead.id };
+      return { matched: false, leadId: lead.id, optedOut };
+    }
+
+    // Opt-out replies are NOT successful recoveries — never mark them as such.
+    // We've already persisted the opt-out itself above; here we just leave the
+    // original recovery_sent record untouched (success stays false).
+    if (optedOut) {
+      return { matched: true, leadId: lead.id, optedOut: true };
     }
 
     // Patch metadata to record the response
     const existing = (log.metadata as Record<string, unknown>) ?? {};
     if (existing.success === true) {
       // Already marked — idempotency for noisy webhooks
-      return { matched: true, leadId: lead.id };
+      return { matched: true, leadId: lead.id, optedOut: false };
     }
 
     await this.prisma.activityLog.update({
@@ -358,7 +477,7 @@ export class ClientRecoveryService {
       },
     });
 
-    return { matched: true, leadId: lead.id };
+    return { matched: true, leadId: lead.id, optedOut: false };
   }
 
   /**

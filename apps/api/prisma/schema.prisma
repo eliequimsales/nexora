@@ -114,6 +114,13 @@ model Lead {
   followUpCount    Int       @default(0) @map("follow_up_count") @db.SmallInt
   nicheData        Json      @default("{}") @map("niche_data")
   archivedAt       DateTime? @map("archived_at") @db.Timestamptz
+  // Nexora — recovery tracking
+  optedOutAt       DateTime? @map("opted_out_at") @db.Timestamptz
+  // ^ set when the customer replies with stop-keywords ("parar", "sair", "cancelar"…)
+  recoveredAt      DateTime? @map("recovered_at") @db.Timestamptz
+  // ^ set when the barbershop confirms the customer actually returned/paid
+  recoveredValue   Decimal?  @map("recovered_value") @db.Decimal(10, 2)
+  // ^ real value the customer spent when returning (used in "receita recuperada")
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 

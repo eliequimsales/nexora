@@ -1,6 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { ClientRecoveryService } from './client-recovery.service';
+import { ClientRecoveryService, isOptOutMessage } from './client-recovery.service';
 import { PrismaService } from '../../../database/prisma.service';
 import { LlmService } from '../../ai-actions/llm.service';
 import { ZapiWhatsappProvider } from '../../assistente-financeiro/providers/zapi-whatsapp.provider';
@@ -555,6 +555,128 @@ describe('ClientRecoveryService', () => {
           where: { email: 'maria@example.com' },
         }),
       );
+    });
+  });
+
+  describe('isOptOutMessage (keyword detector)', () => {
+    it.each([
+      ['parar', true],
+      ['PARAR', true],
+      ['Parar.', true],
+      ['Pare!', true],
+      ['sair', true],
+      ['cancelar', true],
+      ['stop', true],
+      ['Não quero mais receber mensagens', true],
+      ['nao envie mais', true],
+      ['Quero parar de receber', true],
+      // Not opt-outs
+      ['ok', false],
+      ['Quero voltar sim', false],
+      ['Tudo bem', false],
+      ['', false],
+      ['nao posso hoje', false], // "não" alone is NOT opt-out
+      ['quero saber mais', false], // "saber" must not match "sair"
+    ])('isOptOutMessage(%j) → %s', (text, expected) => {
+      expect(isOptOutMessage(text as string)).toBe(expected);
+    });
+  });
+
+  describe('opt-out enforcement', () => {
+    it('recover() throws BadRequestException when lead has optedOutAt set', async () => {
+      prismaMock.lead.findUnique.mockResolvedValueOnce(
+        buildLead({ optedOutAt: new Date('2026-05-01') } as any),
+      );
+
+      await expect(service.recover('lead-1', CTX)).rejects.toThrow(BadRequestException);
+      expect(whatsappMock.send).not.toHaveBeenCalled();
+      expect(emailMock.send).not.toHaveBeenCalled();
+    });
+
+    it('batchRecover() counts opt-outs as skipped, not failed', async () => {
+      const optedOut = buildLead({ id: 'lead-out', optedOutAt: new Date() } as any);
+      const ok = buildLead({ id: 'lead-ok' });
+
+      prismaMock.lead.findMany.mockResolvedValueOnce([optedOut, ok]);
+      prismaMock.lead.findUnique.mockResolvedValueOnce(ok);
+      whatsappMock.send.mockResolvedValueOnce({
+        success: true,
+        externalId: 'wa-1',
+        status: 'sent',
+      });
+
+      const result = await service.batchRecover(['lead-out', 'lead-ok'], CTX);
+
+      expect(result.sent).toBe(1);
+      expect(result.skipped).toBe(1);
+      expect(result.failed).toBe(0);
+      expect(result.total).toBe(2);
+      const skippedResult = result.results.find((r) => r.leadId === 'lead-out');
+      expect(skippedResult?.error).toBe('opted_out');
+    });
+
+    it('markResponseReceived() flags lead as opted out when reply matches stop-keyword', async () => {
+      const lead = buildLead();
+      prismaMock.lead.findFirst.mockResolvedValueOnce(lead);
+      // No recovery_sent log needed — opt-out is independent
+      prismaMock.activityLog.findFirst.mockResolvedValueOnce(null);
+
+      const result = await service.markResponseReceived({
+        channel: 'whatsapp',
+        fromIdentifier: '5511999998888',
+        responseText: 'PARAR',
+      });
+
+      expect(result.optedOut).toBe(true);
+      expect(prismaMock.lead.update).toHaveBeenCalledWith({
+        where: { id: lead.id },
+        data: { optedOutAt: expect.any(Date) },
+      });
+      // Audit log entry of type recovery_opt_out should be created
+      expect(prismaMock.activityLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ type: 'recovery_opt_out' }),
+        }),
+      );
+    });
+
+    it('opt-out reply does NOT mark the recovery_sent log as successful', async () => {
+      const lead = buildLead();
+      const log = {
+        id: 'log-1',
+        metadata: { channel: 'whatsapp', success: false },
+        createdAt: new Date(),
+      };
+      prismaMock.lead.findFirst.mockResolvedValueOnce(lead);
+      prismaMock.activityLog.findFirst.mockResolvedValueOnce(log);
+
+      await service.markResponseReceived({
+        channel: 'whatsapp',
+        fromIdentifier: '5511999998888',
+        responseText: 'parar',
+      });
+
+      // The activity_log.update should NOT have been called with success: true
+      const updateCalls = prismaMock.activityLog.update.mock.calls;
+      const successCalls = updateCalls.filter(
+        (c: any[]) => c[0]?.data?.metadata?.success === true,
+      );
+      expect(successCalls).toHaveLength(0);
+    });
+
+    it('does not re-record opt-out when lead is already opted out (idempotent)', async () => {
+      const lead = buildLead({ optedOutAt: new Date('2026-05-01') } as any);
+      prismaMock.lead.findFirst.mockResolvedValueOnce(lead);
+      prismaMock.activityLog.findFirst.mockResolvedValueOnce(null);
+
+      await service.markResponseReceived({
+        channel: 'whatsapp',
+        fromIdentifier: '5511999998888',
+        responseText: 'parar',
+      });
+
+      expect(prismaMock.lead.update).not.toHaveBeenCalled();
+      expect(prismaMock.activityLog.create).not.toHaveBeenCalled();
     });
   });
 });
