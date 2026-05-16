@@ -5,6 +5,8 @@ import type {
   UpdateLeadPayload,
   ListLeadsParams,
   InactiveClient,
+  RecoveryChannel,
+  RecoveryResult,
 } from '@/types';
 import type { PaginatedResult } from '@/types';
 
@@ -25,6 +27,12 @@ export const leadsApi = {
    */
   inactive: (days: number = 30) =>
     apiClient.get<InactiveClient[]>('/leads/inactive', { params: { days } }),
+  /**
+   * Triggers an AI-generated recovery message for a lead.
+   * Backend chooses the channel automatically when `channel` is omitted.
+   */
+  recover: (leadId: string, channel?: RecoveryChannel) =>
+    apiClient.post<RecoveryResult>(`/leads/${leadId}/recuperar`, { channel }),
 };
 
 /**

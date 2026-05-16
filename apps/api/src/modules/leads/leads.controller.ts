@@ -3,9 +3,11 @@ import {
   Body, Param, Query, ParseUUIDPipe, HttpCode, HttpStatus,
 } from '@nestjs/common';
 import { LeadsService } from './leads.service';
+import { ClientRecoveryService, type RecoveryChannel } from './services/client-recovery.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
 import { ListLeadsDto } from './dto/list-leads.dto';
+import { RecoverClientDto } from './dto/recover-client.dto';
 import { RequirePermission } from '../../common/rbac/permissions';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { PlanLimit } from '../../common/guards/plan-limits.guard';
@@ -13,7 +15,10 @@ import type { TenantContext } from '../../common/tenant/tenant-context';
 
 @Controller('leads')
 export class LeadsController {
-  constructor(private readonly leadsService: LeadsService) {}
+  constructor(
+    private readonly leadsService: LeadsService,
+    private readonly recoveryService: ClientRecoveryService,
+  ) {}
 
   @Post()
   @RequirePermission('leads:create')
@@ -58,6 +63,20 @@ export class LeadsController {
     @CurrentUser() ctx: TenantContext,
   ) {
     return this.leadsService.update(id, dto, ctx);
+  }
+
+  /**
+   * Dispara a recuperação de um cliente inativo via IA + canal de mensagem.
+   * O backend gera o texto, envia pelo provider e registra ActivityLog.
+   */
+  @Post(':id/recuperar')
+  @RequirePermission('leads:update')
+  recoverClient(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: RecoverClientDto,
+    @CurrentUser() ctx: TenantContext,
+  ) {
+    return this.recoveryService.recover(id, ctx, body.channel as RecoveryChannel | undefined);
   }
 
   @Delete(':id')

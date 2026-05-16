@@ -8,6 +8,7 @@ import { useInactiveClientsQuery } from '@/lib/hooks/leads/useInactiveClientsQue
 import { cn } from '@/lib/utils';
 import { RecoveryHero } from './RecoveryHero';
 import { InactiveClientsList } from './InactiveClientsList';
+import { RecoveryModal } from './RecoveryModal';
 import type { InactiveClient } from '@/types';
 
 type TabKey = 'inactive' | 'all' | 'recovered';
@@ -20,6 +21,7 @@ const TABS: { key: TabKey; label: string; disabled?: boolean }[] = [
 
 export default function ClientesPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('inactive');
+  const [selectedClient, setSelectedClient] = useState<InactiveClient | null>(null);
   const { data, isLoading, isError } = useInactiveClientsQuery(30);
   const { toast } = useToast();
 
@@ -31,14 +33,8 @@ export default function ClientesPage() {
   );
 
   function handleRecoverOne(client: InactiveClient) {
-    // TODO: open a confirm modal and POST to
-    // /api/v1/assistente-financeiro/generate-message + send-message.
-    // Optimistic toast for now so the screen feels alive.
-    toast({
-      variant: 'ai',
-      title: `Recuperação enviada para ${client.name}`,
-      description: 'A Nexora vai personalizar a mensagem e disparar via WhatsApp.',
-    });
+    // Abre o modal de confirmação — o envio real acontece dentro dele.
+    setSelectedClient(client);
   }
 
   function handleRecoverAll() {
@@ -112,6 +108,11 @@ export default function ClientesPage() {
       ) : (
         <InactiveClientsList clients={clients} onRecover={handleRecoverOne} />
       )}
+
+      <RecoveryModal
+        client={selectedClient}
+        onClose={() => setSelectedClient(null)}
+      />
     </div>
   );
 }

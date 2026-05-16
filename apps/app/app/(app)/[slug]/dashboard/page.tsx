@@ -5,6 +5,7 @@ import { Users, CheckSquare, Sparkles, AlertTriangle } from 'lucide-react';
 import { StatCard } from '@/components/modules/dashboard/StatCard';
 import { ActivityFeed } from '@/components/modules/dashboard/ActivityFeed';
 import { AiStatusPanel } from '@/components/modules/dashboard/AiStatusPanel';
+import { NexoraDashboard } from '@/components/modules/dashboard/NexoraDashboard';
 import { OnboardingChecklist } from '@/components/modules/onboarding/OnboardingChecklist';
 import { useDashboardSummary } from '@/lib/hooks/dashboard/useDashboardSummary';
 import { useAuth } from '@/lib/hooks/auth/useAuth';
@@ -65,6 +66,11 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const { data: summary, isLoading } = useDashboardSummary();
   const { data: org } = useOrgQuery();
+
+  // Nexora: dashboard especializado para recuperação de clientes
+  if (org?.slug) {
+    return <NexoraDashboard slug={org.slug} />;
+  }
 
   return (
     <div className="p-6 max-w-6xl">

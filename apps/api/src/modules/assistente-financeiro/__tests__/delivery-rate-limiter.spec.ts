@@ -147,7 +147,7 @@ describe('DeliveryRateLimiterService', () => {
     const module = await Test.createTestingModule({
       providers: [
         DeliveryRateLimiterService,
-        { provide: RedisService, useValue: { getClient: () => mockRedis } },
+        { provide: RedisService, useValue: mockRedis },
       ],
     }).compile();
     limiter = module.get(DeliveryRateLimiterService);

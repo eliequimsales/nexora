@@ -19,4 +19,14 @@ export class DashboardController {
   getActivity(@CurrentUser() ctx: TenantContext) {
     return this.service.getActivity(ctx);
   }
+
+  /**
+   * Métricas específicas de Nexora — foco em recuperação de clientes.
+   * Retorna dados para o dashboard Nexora (inativos, recuperados, receita estimada).
+   */
+  @Get('nexora-metrics')
+  @RequirePermission('leads:read')
+  getNexoraMetrics(@CurrentUser() ctx: TenantContext) {
+    return this.service.getNexoraMetrics(ctx);
+  }
 }

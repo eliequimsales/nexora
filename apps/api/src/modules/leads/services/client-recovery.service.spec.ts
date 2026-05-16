@@ -1,0 +1,346 @@
+import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import { ClientRecoveryService } from './client-recovery.service';
+import { PrismaService } from '../../../database/prisma.service';
+import { LlmService } from '../../ai-actions/llm.service';
+import { ZapiWhatsappProvider } from '../../assistente-financeiro/providers/zapi-whatsapp.provider';
+import { ResendEmailProvider } from '../../assistente-financeiro/providers/resend-email.provider';
+import type { TenantContext } from '../../../common/tenant/tenant-context';
+
+const CTX: TenantContext = {
+  orgId: 'org-1',
+  userId: 'user-1',
+  role: 'admin',
+  tokenId: 'tok-1',
+};
+
+const FORTY_DAYS_AGO = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000);
+
+const buildLead = (overrides: Partial<{
+  id: string;
+  orgId: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  updatedAt: Date;
+}> = {}) => ({
+  id: 'lead-1',
+  orgId: 'org-1',
+  name: 'João Silva',
+  email: 'joao@example.com',
+  phone: '5511999998888',
+  source: 'manual',
+  status: 'contacted',
+  pipelineStageId: null,
+  archivedAt: null,
+  aiClassification: null,
+  aiScore: null,
+  assignedTo: null,
+  followUpCount: 0,
+  nicheData: {},
+  createdAt: new Date(),
+  updatedAt: FORTY_DAYS_AGO,
+  ...overrides,
+});
+
+describe('ClientRecoveryService', () => {
+  let service: ClientRecoveryService;
+  let prismaMock: any;
+  let llmMock: any;
+  let whatsappMock: any;
+  let emailMock: any;
+
+  beforeEach(async () => {
+    jest.resetAllMocks();
+
+    prismaMock = {
+      lead: {
+        findUnique: jest.fn(),
+        update: jest.fn().mockResolvedValue({}),
+      },
+      activityLog: {
+        create: jest.fn().mockResolvedValue({}),
+      },
+    };
+
+    llmMock = {
+      call: jest.fn().mockResolvedValue({
+        content: 'João, faz um tempinho que a gente não te vê por aqui. Aparece pra dar aquele trato! ✂️',
+        tokensInput: 50,
+        tokensOutput: 30,
+        latencyMs: 100,
+      }),
+    };
+
+    whatsappMock = {
+      channel: 'whatsapp',
+      send: jest.fn(),
+      parseWebhook: jest.fn(),
+    };
+
+    emailMock = {
+      channel: 'email',
+      send: jest.fn(),
+      parseWebhook: jest.fn(),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ClientRecoveryService,
+        { provide: PrismaService, useValue: prismaMock },
+        { provide: LlmService, useValue: llmMock },
+        { provide: ZapiWhatsappProvider, useValue: whatsappMock },
+        { provide: ResendEmailProvider, useValue: emailMock },
+      ],
+    }).compile();
+
+    service = module.get<ClientRecoveryService>(ClientRecoveryService);
+  });
+
+  describe('happy paths', () => {
+    it('recovers via whatsapp when lead has phone (auto-detected channel)', async () => {
+      prismaMock.lead.findUnique.mockResolvedValueOnce(buildLead());
+      whatsappMock.send.mockResolvedValueOnce({
+        success: true,
+        externalId: 'wa-msg-123',
+        status: 'sent',
+      });
+
+      const result = await service.recover('lead-1', CTX);
+
+      expect(result.success).toBe(true);
+      expect(result.channel).toBe('whatsapp');
+      expect(result.sentTo).toBe('5511999998888');
+      expect(result.externalId).toBe('wa-msg-123');
+      expect(result.message).toContain('João');
+      expect(whatsappMock.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recipient: '5511999998888',
+          message: expect.any(String),
+        }),
+      );
+      expect(emailMock.send).not.toHaveBeenCalled();
+    });
+
+    it('recovers via email when lead has no phone (auto-detected)', async () => {
+      prismaMock.lead.findUnique.mockResolvedValueOnce(
+        buildLead({ phone: null, email: 'maria@example.com', name: 'Maria' }),
+      );
+      emailMock.send.mockResolvedValueOnce({
+        success: true,
+        externalId: 'email-id-456',
+        status: 'sent',
+      });
+
+      const result = await service.recover('lead-1', CTX);
+
+      expect(result.success).toBe(true);
+      expect(result.channel).toBe('email');
+      expect(result.sentTo).toBe('maria@example.com');
+      expect(emailMock.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recipient: 'maria@example.com',
+          subject: expect.stringContaining('Maria'),
+        }),
+      );
+      expect(whatsappMock.send).not.toHaveBeenCalled();
+    });
+
+    it('respects explicit channel override (email even when phone exists)', async () => {
+      prismaMock.lead.findUnique.mockResolvedValueOnce(
+        buildLead({ phone: '5511...', email: 'a@b.com' }),
+      );
+      emailMock.send.mockResolvedValueOnce({
+        success: true,
+        externalId: 'mail-1',
+        status: 'sent',
+      });
+
+      const result = await service.recover('lead-1', CTX, 'email');
+
+      expect(result.channel).toBe('email');
+      expect(emailMock.send).toHaveBeenCalled();
+      expect(whatsappMock.send).not.toHaveBeenCalled();
+    });
+
+    it('bumps followUpCount on success', async () => {
+      prismaMock.lead.findUnique.mockResolvedValueOnce(buildLead());
+      whatsappMock.send.mockResolvedValueOnce({
+        success: true,
+        externalId: 'wa-1',
+        status: 'sent',
+      });
+
+      await service.recover('lead-1', CTX);
+
+      expect(prismaMock.lead.update).toHaveBeenCalledWith({
+        where: { id: 'lead-1' },
+        data: { followUpCount: { increment: 1 } },
+      });
+    });
+
+    it('persists ActivityLog with recovery_sent type on success', async () => {
+      prismaMock.lead.findUnique.mockResolvedValueOnce(buildLead());
+      whatsappMock.send.mockResolvedValueOnce({
+        success: true,
+        externalId: 'wa-1',
+        status: 'sent',
+      });
+
+      await service.recover('lead-1', CTX);
+
+      expect(prismaMock.activityLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          orgId: 'org-1',
+          leadId: 'lead-1',
+          userId: 'user-1',
+          type: 'recovery_sent',
+          metadata: expect.objectContaining({
+            channel: 'whatsapp',
+            recipient: '5511999998888',
+            success: true,
+            externalId: 'wa-1',
+          }),
+        }),
+      });
+    });
+  });
+
+  describe('error paths', () => {
+    it('throws NotFoundException when lead does not exist', async () => {
+      prismaMock.lead.findUnique.mockResolvedValueOnce(null);
+
+      await expect(service.recover('ghost', CTX)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(llmMock.call).not.toHaveBeenCalled();
+      expect(whatsappMock.send).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException when lead belongs to another tenant (no leak)', async () => {
+      prismaMock.lead.findUnique.mockResolvedValueOnce(
+        buildLead({ orgId: 'org-EVIL' }),
+      );
+
+      await expect(service.recover('lead-1', CTX)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(whatsappMock.send).not.toHaveBeenCalled();
+    });
+
+    it('throws BadRequestException when whatsapp explicitly chosen but lead has no phone', async () => {
+      prismaMock.lead.findUnique.mockResolvedValueOnce(
+        buildLead({ phone: null, email: 'a@b.com' }),
+      );
+
+      await expect(
+        service.recover('lead-1', CTX, 'whatsapp'),
+      ).rejects.toThrow(BadRequestException);
+      expect(whatsappMock.send).not.toHaveBeenCalled();
+    });
+
+    it('throws BadRequestException when email explicitly chosen but lead has no email', async () => {
+      prismaMock.lead.findUnique.mockResolvedValueOnce(
+        buildLead({ phone: '5511...', email: null }),
+      );
+
+      await expect(service.recover('lead-1', CTX, 'email')).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(emailMock.send).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('failure handling', () => {
+    it('still logs ActivityLog when provider returns failure', async () => {
+      prismaMock.lead.findUnique.mockResolvedValueOnce(buildLead());
+      whatsappMock.send.mockResolvedValueOnce({
+        success: false,
+        status: 'failed',
+        error: 'provider_not_configured',
+        retryable: false,
+      });
+
+      const result = await service.recover('lead-1', CTX);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('provider_not_configured');
+      expect(prismaMock.activityLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          type: 'recovery_sent',
+          metadata: expect.objectContaining({
+            success: false,
+            error: 'provider_not_configured',
+          }),
+        }),
+      });
+      // followUpCount NÃO deve incrementar em falha
+      expect(prismaMock.lead.update).not.toHaveBeenCalled();
+    });
+
+    it('logs ActivityLog when provider throws unexpectedly', async () => {
+      prismaMock.lead.findUnique.mockResolvedValueOnce(buildLead());
+      whatsappMock.send.mockRejectedValueOnce(new Error('network down'));
+
+      const result = await service.recover('lead-1', CTX);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('network down');
+      expect(prismaMock.activityLog.create).toHaveBeenCalled();
+      expect(prismaMock.lead.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('AI prompt', () => {
+    it('builds prompt with lead name and days inactive', async () => {
+      const fifty = new Date(Date.now() - 50 * 24 * 60 * 60 * 1000);
+      prismaMock.lead.findUnique.mockResolvedValueOnce(
+        buildLead({ name: 'Carlos Pereira', updatedAt: fifty }),
+      );
+      whatsappMock.send.mockResolvedValueOnce({
+        success: true,
+        externalId: 'wa-1',
+        status: 'sent',
+      });
+
+      await service.recover('lead-1', CTX);
+
+      const prompt = llmMock.call.mock.calls[0][0] as string;
+      expect(prompt).toContain('Carlos Pereira');
+      // dias inativos entre 49 e 51 (rounding tolerância)
+      expect(prompt).toMatch(/há (49|50|51) dias/);
+      expect(prompt).toContain('barbearia');
+      expect(prompt).toContain('NÃO mencione preços');
+    });
+
+    it('uses whatsapp-specific copy hint for whatsapp channel', async () => {
+      prismaMock.lead.findUnique.mockResolvedValueOnce(buildLead());
+      whatsappMock.send.mockResolvedValueOnce({
+        success: true,
+        externalId: 'wa-1',
+        status: 'sent',
+      });
+
+      await service.recover('lead-1', CTX);
+
+      const prompt = llmMock.call.mock.calls[0][0] as string;
+      expect(prompt).toContain('WhatsApp');
+    });
+
+    it('uses email-specific copy hint for email channel', async () => {
+      prismaMock.lead.findUnique.mockResolvedValueOnce(
+        buildLead({ phone: null, email: 'x@y.com' }),
+      );
+      emailMock.send.mockResolvedValueOnce({
+        success: true,
+        externalId: 'm-1',
+        status: 'sent',
+      });
+
+      await service.recover('lead-1', CTX);
+
+      const prompt = llmMock.call.mock.calls[0][0] as string;
+      expect(prompt).toContain('email');
+    });
+  });
+});

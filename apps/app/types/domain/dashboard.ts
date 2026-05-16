@@ -32,3 +32,16 @@ export interface ActivityItem {
 export interface DashboardActivity {
   items: ActivityItem[];
 }
+
+/**
+ * Métricas de Nexora — recuperação de clientes.
+ */
+export interface NexoraMetricsDto {
+  recovery: {
+    inactiveCount: number; // Clientes sem atividade há 30+ dias
+    recoveredToday: number; // Recuperações tentadas hoje
+    recoveredThisMonth: number; // Total este mês
+    successRate: number; // % de respostas (0-100)
+    estimatedRevenue: number; // R$ 80 × count
+  };
+}

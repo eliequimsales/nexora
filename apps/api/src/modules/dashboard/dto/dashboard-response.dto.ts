@@ -32,3 +32,18 @@ export interface ActivityItemDto {
 export interface DashboardActivityDto {
   items: ActivityItemDto[];
 }
+
+/**
+ * Métricas específicas da Nexora — foco em recuperação de clientes.
+ * Usada para substituir o dashboard genérico quando a org está em modo Nexora.
+ */
+export interface NexoraMetricsDto {
+  recovery: {
+    inactiveCount: number; // Clientes sem atividade há 30+ dias
+    recoveredToday: number; // Recuperações tentadas/bem-sucedidas hoje
+    recoveredThisMonth: number; // Total este mês
+    successRate: number; // % de mensagens que geraram resposta
+    estimatedRevenue: number; // R$ 80 × count (ticket médio barbearia)
+  };
+}
+

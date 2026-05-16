@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import type { DashboardSummaryDto, DashboardActivityDto } from './dto/dashboard-response.dto';
+import type { DashboardSummaryDto, DashboardActivityDto, NexoraMetricsDto } from './dto/dashboard-response.dto';
 import type { TenantContext } from '../../common/tenant/tenant-context';
 
 @Injectable()
@@ -72,6 +72,88 @@ export class DashboardService {
         userAvatarUrl: log.user?.avatarUrl ?? null,
         createdAt: log.createdAt,
       })),
+    };
+  }
+
+  /**
+   * Métricas específicas para o modo Nexora — foco em recuperação de clientes.
+   * Retorna dados prontos para o dashboard de recuperação.
+   */
+  async getNexoraMetrics(ctx: TenantContext): Promise<NexoraMetricsDto> {
+    const { orgId } = ctx;
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    // Clientes inativos (30+ dias, excluding closed/archived)
+    const inactiveThreshold = new Date();
+    inactiveThreshold.setDate(inactiveThreshold.getDate() - 30);
+
+    const [
+      inactiveCount,
+      recoveredToday,
+      recoveredThisMonth,
+      successfulRecoveriesThisMonth,
+    ] = await Promise.all([
+      // Inativos: sem atividade há 30+ dias, status não final
+      this.prisma.lead.count({
+        where: {
+          orgId,
+          archivedAt: null,
+          status: { notIn: ['closed_lost', 'closed_won'] },
+          updatedAt: { lt: inactiveThreshold },
+        },
+      }),
+      // Recuperações tentadas hoje (tipo = recovery_sent)
+      this.prisma.activityLog.count({
+        where: {
+          orgId,
+          type: 'recovery_sent',
+          createdAt: { gte: todayStart },
+        },
+      }),
+      // Recuperações tentadas este mês
+      this.prisma.activityLog.count({
+        where: {
+          orgId,
+          type: 'recovery_sent',
+          createdAt: { gte: monthStart },
+        },
+      }),
+      // Recuperações bem-sucedidas este mês (metadata.success = true)
+      this.prisma.activityLog.count({
+        where: {
+          orgId,
+          type: 'recovery_sent',
+          createdAt: { gte: monthStart },
+          metadata: {
+            path: ['success'],
+            equals: true,
+          },
+        },
+      }),
+    ]);
+
+    const successRate =
+      recoveredThisMonth > 0
+        ? Math.round((successfulRecoveriesThisMonth / recoveredThisMonth) * 100)
+        : 0;
+
+    // R$ estimado = inactiveCount × R$80 (ticket médio barbearia)
+    const estimatedRevenue = inactiveCount * 80;
+
+    return {
+      recovery: {
+        inactiveCount,
+        recoveredToday,
+        recoveredThisMonth,
+        successRate,
+        estimatedRevenue,
+      },
     };
   }
 }

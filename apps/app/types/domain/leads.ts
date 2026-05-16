@@ -71,3 +71,20 @@ export interface InactiveClient {
   daysSinceLastActivity: number;
   estimatedValue: number;
 }
+
+/** Canal de envio da mensagem de recuperação. */
+export type RecoveryChannel = 'whatsapp' | 'email';
+
+/**
+ * Resposta do endpoint POST /leads/:id/recuperar.
+ * Espelha `RecoveryResult` do backend.
+ */
+export interface RecoveryResult {
+  success: boolean;
+  leadId: string;
+  channel: RecoveryChannel;
+  message: string;
+  sentTo: string;
+  externalId?: string;
+  error?: string;
+}
