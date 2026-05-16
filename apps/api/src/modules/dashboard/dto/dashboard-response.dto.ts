@@ -96,3 +96,27 @@ export interface NexoraAnalyticsDto {
   };
 }
 
+/**
+ * Item de resposta de cliente a mensagem de recuperação
+ */
+export interface NexoraResponseItemDto {
+  id: string;
+  leadId: string;
+  leadName: string;
+  channel: 'whatsapp' | 'email';
+  sentAt: Date;
+  respondedAt?: Date | null;
+  responded: boolean;
+  message: string;
+  response?: string | null;
+}
+
+/**
+ * Lista de respostas de clientes a campanhas de recuperação
+ */
+export interface NexoraResponsesDto {
+  items: NexoraResponseItemDto[];
+  total: number;
+  responded: number;
+}
+

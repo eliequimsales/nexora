@@ -38,4 +38,14 @@ export class DashboardController {
   getNexoraAnalytics(@CurrentUser() ctx: TenantContext) {
     return this.service.getNexoraAnalytics(ctx);
   }
+
+  /**
+   * Respostas de clientes a mensagens de recuperação.
+   * Mostra timeline de tentativas e respostas.
+   */
+  @Get('nexora-responses')
+  @RequirePermission('leads:read')
+  getNexoraResponses(@CurrentUser() ctx: TenantContext) {
+    return this.service.getNexoraResponses(ctx);
+  }
 }

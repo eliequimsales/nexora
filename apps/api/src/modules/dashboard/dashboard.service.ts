@@ -7,6 +7,7 @@ import type {
   NexoraAnalyticsDto,
   TrendPointDto,
   ChannelStatsDto,
+  NexoraResponsesDto,
 } from './dto/dashboard-response.dto';
 import type { TenantContext } from '../../common/tenant/tenant-context';
 
@@ -275,6 +276,52 @@ export class DashboardService {
         topMessage,
         avgTimeToReactivation,
       },
+    };
+  }
+
+  /**
+   * Respostas de clientes a mensagens de recuperação.
+   * Retorna lista de recovery_sent logs com status de resposta.
+   */
+  async getNexoraResponses(ctx: TenantContext): Promise<NexoraResponsesDto> {
+    const { orgId } = ctx;
+
+    // Buscar logs de recovery_sent com dados do lead
+    const responses = await this.prisma.activityLog.findMany({
+      where: {
+        orgId,
+        type: 'recovery_sent',
+      },
+      include: {
+        lead: {
+          select: { id: true, name: true, email: true, phone: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+
+    const items = responses.map((log) => ({
+      id: log.id,
+      leadId: log.lead.id,
+      leadName: log.lead.name,
+      channel: ((log.metadata as any)?.channel || 'whatsapp') as 'whatsapp' | 'email',
+      sentAt: log.createdAt,
+      respondedAt: ((log.metadata as any)?.respondedAt
+        ? new Date((log.metadata as any).respondedAt)
+        : null),
+      responded: ((log.metadata as any)?.success ?? false) as boolean,
+      message: log.content,
+      response: (log.metadata as any)?.response ?? null,
+    }));
+
+    const total = responses.length;
+    const responded = responses.filter((r) => ((r.metadata as any)?.success ?? false)).length;
+
+    return {
+      items,
+      total,
+      responded,
     };
   }
 }
