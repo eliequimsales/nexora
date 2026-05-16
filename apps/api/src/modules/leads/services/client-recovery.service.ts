@@ -178,6 +178,106 @@ export class ClientRecoveryService {
   }
 
   /**
+   * Executa recuperação em lote para múltiplos leads.
+   *
+   * Processa cada lead sequencialmente para evitar rate-limit em providers.
+   * Sucessos e falhas são contabilizados — não para na primeira falha.
+   *
+   * Channels parameter:
+   * - Se omitido: auto-detect por lead (whatsapp se phone, senão email)
+   * - Se ['whatsapp']: força whatsapp (falha leads sem phone)
+   * - Se ['whatsapp', 'email']: auto-detect entre os dois canais permitidos
+   */
+  async batchRecover(
+    leadIds: string[],
+    ctx: TenantContext,
+    channels?: RecoveryChannel[],
+  ): Promise<{ sent: number; failed: number; total: number; results: RecoveryResult[] }> {
+    const results: RecoveryResult[] = [];
+    let sent = 0;
+    let failed = 0;
+
+    // Pre-validate: get all leads at once and filter by tenant
+    const leads = await this.prisma.lead.findMany({
+      where: {
+        id: { in: leadIds },
+        orgId: ctx.orgId,
+      },
+    });
+
+    const leadsMap = new Map(leads.map((l) => [l.id, l]));
+
+    // Process each lead sequentially
+    for (const leadId of leadIds) {
+      const lead = leadsMap.get(leadId);
+      if (!lead) {
+        failed++;
+        results.push({
+          success: false,
+          leadId,
+          channel: 'whatsapp',
+          message: '',
+          sentTo: '',
+          error: 'Lead não encontrado ou não pertence a esta organização',
+        });
+        continue;
+      }
+
+      // Determine channel for this specific lead
+      let targetChannel: RecoveryChannel | undefined;
+      if (channels && channels.length > 0) {
+        // Pick first allowed channel that lead has data for
+        if (channels.includes('whatsapp') && lead.phone) {
+          targetChannel = 'whatsapp';
+        } else if (channels.includes('email') && lead.email) {
+          targetChannel = 'email';
+        } else {
+          failed++;
+          results.push({
+            success: false,
+            leadId,
+            channel: channels[0],
+            message: '',
+            sentTo: '',
+            error: `Lead não tem ${channels[0] === 'whatsapp' ? 'telefone' : 'email'} cadastrado`,
+          });
+          continue;
+        }
+      }
+
+      try {
+        const result = await this.recover(leadId, ctx, targetChannel);
+        results.push(result);
+        if (result.success) {
+          sent++;
+        } else {
+          failed++;
+        }
+      } catch (err: any) {
+        failed++;
+        this.logger.error(
+          `Batch recovery failed for lead ${leadId}: ${err?.message}`,
+        );
+        results.push({
+          success: false,
+          leadId,
+          channel: targetChannel || 'whatsapp',
+          message: '',
+          sentTo: '',
+          error: err?.message || 'unknown_error',
+        });
+      }
+    }
+
+    return {
+      sent,
+      failed,
+      total: leadIds.length,
+      results,
+    };
+  }
+
+  /**
    * Builds the AI prompt — kept inside the service so the wording is
    * versionable alongside the recovery rules.
    */

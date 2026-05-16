@@ -3,15 +3,7 @@
 import { useState } from 'react';
 import { CheckCircle2, AlertCircle, Send, Zap, ChevronDown } from 'lucide-react';
 import { useBatchRecovery } from '@/lib/hooks/nexora/useBatchRecovery';
-
-interface InactiveCustomer {
-  id: string;
-  leadId: string;
-  leadName: string;
-  phone?: string;
-  email?: string;
-  daysInactive: number;
-}
+import { useInactiveClientsQuery } from '@/lib/hooks/leads/useInactiveClientsQuery';
 
 export function NexoraBatchRecovery() {
   const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(new Set());
@@ -19,49 +11,26 @@ export function NexoraBatchRecovery() {
   const [channelFilter, setChannelFilter] = useState<'all' | 'whatsapp' | 'email'>('all');
   const [showPreview, setShowPreview] = useState(false);
   const { mutate, isPending, isSuccess, selected } = useBatchRecovery();
+  const { data: inactiveClients, isLoading: isLoadingClients } = useInactiveClientsQuery(filterDays);
 
   const whatsappVar = '{{customer_name}}';
 
-  // Mock inactive customers data
-  const mockCustomers: InactiveCustomer[] = [
-    {
-      id: 'c1',
-      leadId: 'lead-1',
-      leadName: 'João Silva',
-      phone: '(11) 99999-8888',
-      daysInactive: 45,
-    },
-    {
-      id: 'c2',
-      leadId: 'lead-2',
-      leadName: 'Maria Santos',
-      email: 'maria@email.com',
-      daysInactive: 35,
-    },
-    {
-      id: 'c3',
-      leadId: 'lead-3',
-      leadName: 'Carlos Mendes',
-      phone: '(11) 98888-7777',
-      daysInactive: 60,
-    },
-    {
-      id: 'c4',
-      leadId: 'lead-4',
-      leadName: 'Ana Costa',
-      email: 'ana@email.com',
-      phone: '(11) 97777-6666',
-      daysInactive: 50,
-    },
-  ];
+  // Map inactive clients from API to UI shape (api returns InactiveClient)
+  const allCustomers = (inactiveClients ?? []).map((client) => ({
+    id: client.id,
+    leadId: client.id,
+    leadName: client.name,
+    phone: client.phone || undefined,
+    email: client.email || undefined,
+    daysInactive: client.daysSinceLastActivity,
+  }));
 
-  // Filter customers
-  const filteredCustomers = mockCustomers.filter(
+  // Filter customers by channel availability (days filter is applied via the query)
+  const filteredCustomers = allCustomers.filter(
     (c) =>
-      c.daysInactive >= filterDays &&
-      (channelFilter === 'all' ||
-        (channelFilter === 'whatsapp' && c.phone) ||
-        (channelFilter === 'email' && c.email)),
+      channelFilter === 'all' ||
+      (channelFilter === 'whatsapp' && c.phone) ||
+      (channelFilter === 'email' && c.email),
   );
 
   const handleSelectAll = (checked: boolean) => {
@@ -179,7 +148,11 @@ export function NexoraBatchRecovery() {
         </div>
 
         <div className="space-y-2 max-h-96 overflow-y-auto">
-          {filteredCustomers.length > 0 ? (
+          {isLoadingClients ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-14 rounded-lg bg-brand-surface-2 skeleton" />
+            ))
+          ) : filteredCustomers.length > 0 ? (
             filteredCustomers.map((customer) => (
               <div
                 key={customer.id}

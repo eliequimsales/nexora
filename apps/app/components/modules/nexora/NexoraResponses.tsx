@@ -44,45 +44,8 @@ export function NexoraResponses() {
     );
   }
 
-  // Mock data for demonstration
-  const mockResponses: RecoveryResponseItem[] = [
-    {
-      id: '1',
-      leadId: 'lead-1',
-      leadName: 'João Silva',
-      channel: 'whatsapp',
-      sentAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      respondedAt: new Date(Date.now() - 1.5 * 24 * 60 * 60 * 1000).toISOString(),
-      responded: true,
-      message: 'Oi João, saudades suas! 👋 Que tal voltar para uma hidratação?',
-      response: 'Oi! Tudo bem? Quero sim, quando você tem disponibilidade?',
-      phone: '(11) 99999-8888',
-    },
-    {
-      id: '2',
-      leadId: 'lead-2',
-      leadName: 'Maria Santos',
-      channel: 'email',
-      sentAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-      responded: false,
-      message: 'Volta para nós, Maria! Temos 20% de desconto esperando por você.',
-      email: 'maria@email.com',
-    },
-    {
-      id: '3',
-      leadId: 'lead-3',
-      leadName: 'Carlos Mendes',
-      channel: 'whatsapp',
-      sentAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-      respondedAt: new Date(Date.now() - 3.5 * 24 * 60 * 60 * 1000).toISOString(),
-      responded: true,
-      message: 'Oi Carlos! Temos um novo serviço que você pode gostar.',
-      response: 'Manda os detalhes aí! Qual é o horário de funcionamento?',
-      phone: '(11) 98888-7777',
-    },
-  ];
-
-  const responses = data || mockResponses;
+  // Use real data from the API
+  const responses: RecoveryResponseItem[] = data || [];
 
   // Filter responses
   const filteredResponses =

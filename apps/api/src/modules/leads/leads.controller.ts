@@ -8,6 +8,7 @@ import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
 import { ListLeadsDto } from './dto/list-leads.dto';
 import { RecoverClientDto } from './dto/recover-client.dto';
+import { BatchRecoverDto } from './dto/batch-recover.dto';
 import { RequirePermission } from '../../common/rbac/permissions';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { PlanLimit } from '../../common/guards/plan-limits.guard';
@@ -77,6 +78,23 @@ export class LeadsController {
     @CurrentUser() ctx: TenantContext,
   ) {
     return this.recoveryService.recover(id, ctx, body.channel as RecoveryChannel | undefined);
+  }
+
+  /**
+   * Recuperação em lote — envia mensagens de recuperação para múltiplos clientes.
+   * Processa até 100 leads por chamada. Não para na primeira falha.
+   */
+  @Post('batch-recover')
+  @RequirePermission('leads:update')
+  batchRecover(
+    @Body() body: BatchRecoverDto,
+    @CurrentUser() ctx: TenantContext,
+  ) {
+    return this.recoveryService.batchRecover(
+      body.leadIds,
+      ctx,
+      body.channels as RecoveryChannel[] | undefined,
+    );
   }
 
   @Delete(':id')
