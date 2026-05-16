@@ -50,4 +50,12 @@ export class RedisService implements OnModuleInit {
   async ttl(key: string): Promise<number> {
     return this.client.ttl(key);
   }
+
+  /**
+   * Liveness check — used by `/readiness` endpoint to verify Redis is reachable.
+   * Throws if the connection is down, returns 'PONG' on success.
+   */
+  async ping(): Promise<string> {
+    return this.client.ping();
+  }
 }

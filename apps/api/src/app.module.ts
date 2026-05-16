@@ -33,6 +33,7 @@ import { TemplatesModule } from './modules/templates/templates.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { QueueModule } from './workers/queue.module';
 import { AssistenteFinanceiroModule } from './modules/assistente-financeiro/assistente-financeiro.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -92,6 +93,7 @@ import { AssistenteFinanceiroModule } from './modules/assistente-financeiro/assi
     BillingModule,
     QueueModule,
     AssistenteFinanceiroModule,
+    HealthModule,
   ],
 
   providers: [
