@@ -57,10 +57,13 @@ describe('ClientRecoveryService', () => {
       lead: {
         findUnique: jest.fn(),
         findMany: jest.fn(),
+        findFirst: jest.fn(),
         update: jest.fn().mockResolvedValue({}),
       },
       activityLog: {
         create: jest.fn().mockResolvedValue({}),
+        findFirst: jest.fn(),
+        update: jest.fn().mockResolvedValue({}),
       },
     };
 
@@ -440,6 +443,118 @@ describe('ClientRecoveryService', () => {
       expect(result.sent).toBe(1);
       expect(result.results[0].channel).toBe('whatsapp');
       expect(emailMock.send).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('markResponseReceived (webhook inbound)', () => {
+    it('marks the most recent recovery_sent as responded when a known phone replies', async () => {
+      const lead = buildLead({ phone: '5511999998888' });
+      const log = {
+        id: 'log-1',
+        orgId: lead.orgId,
+        leadId: lead.id,
+        type: 'recovery_sent',
+        metadata: { channel: 'whatsapp', success: false },
+        createdAt: new Date(),
+      };
+
+      prismaMock.lead.findFirst.mockResolvedValueOnce(lead);
+      prismaMock.activityLog.findFirst.mockResolvedValueOnce(log);
+
+      const result = await service.markResponseReceived({
+        channel: 'whatsapp',
+        fromIdentifier: '5511999998888',
+        responseText: 'Quero voltar sim!',
+      });
+
+      expect(result.matched).toBe(true);
+      expect(result.leadId).toBe(lead.id);
+      expect(prismaMock.activityLog.update).toHaveBeenCalledWith({
+        where: { id: 'log-1' },
+        data: {
+          metadata: expect.objectContaining({
+            success: true,
+            response: 'Quero voltar sim!',
+            respondedAt: expect.any(String),
+          }),
+        },
+      });
+    });
+
+    it('returns matched=false when no lead exists for the phone', async () => {
+      prismaMock.lead.findFirst.mockResolvedValueOnce(null);
+
+      const result = await service.markResponseReceived({
+        channel: 'whatsapp',
+        fromIdentifier: '5511000000000',
+        responseText: 'spam',
+      });
+
+      expect(result.matched).toBe(false);
+      expect(result.leadId).toBeNull();
+      expect(prismaMock.activityLog.update).not.toHaveBeenCalled();
+    });
+
+    it('returns leadId but does nothing when lead has no recent recovery log', async () => {
+      const lead = buildLead({ phone: '5511999998888' });
+      prismaMock.lead.findFirst.mockResolvedValueOnce(lead);
+      prismaMock.activityLog.findFirst.mockResolvedValueOnce(null);
+
+      const result = await service.markResponseReceived({
+        channel: 'whatsapp',
+        fromIdentifier: '5511999998888',
+        responseText: 'oi',
+      });
+
+      expect(result.matched).toBe(false);
+      expect(result.leadId).toBe(lead.id);
+      expect(prismaMock.activityLog.update).not.toHaveBeenCalled();
+    });
+
+    it('is idempotent — does not overwrite when already marked as responded', async () => {
+      const lead = buildLead();
+      const alreadyResponded = {
+        id: 'log-2',
+        metadata: { channel: 'whatsapp', success: true, respondedAt: '2026-01-01' },
+        createdAt: new Date(),
+      };
+
+      prismaMock.lead.findFirst.mockResolvedValueOnce(lead);
+      prismaMock.activityLog.findFirst.mockResolvedValueOnce(alreadyResponded);
+
+      const result = await service.markResponseReceived({
+        channel: 'whatsapp',
+        fromIdentifier: '5511999998888',
+        responseText: 'second reply',
+      });
+
+      expect(result.matched).toBe(true);
+      expect(prismaMock.activityLog.update).not.toHaveBeenCalled();
+    });
+
+    it('looks up by email when channel is email', async () => {
+      const lead = buildLead({ phone: null, email: 'maria@example.com' });
+      const log = {
+        id: 'log-3',
+        metadata: { channel: 'email', success: false },
+        createdAt: new Date(),
+      };
+
+      prismaMock.lead.findFirst.mockResolvedValueOnce(lead);
+      prismaMock.activityLog.findFirst.mockResolvedValueOnce(log);
+
+      await service.markResponseReceived({
+        channel: 'email',
+        fromIdentifier: 'maria@example.com',
+        responseText: 'Quero agendar',
+      });
+
+      // Verify the lead lookup used email, not phone
+      expect(prismaMock.lead.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { email: 'maria@example.com' },
+        }),
+      );
     });
   });
 });

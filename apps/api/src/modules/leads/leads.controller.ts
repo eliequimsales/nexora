@@ -10,6 +10,7 @@ import { ListLeadsDto } from './dto/list-leads.dto';
 import { RecoverClientDto } from './dto/recover-client.dto';
 import { BatchRecoverDto } from './dto/batch-recover.dto';
 import { RequirePermission } from '../../common/rbac/permissions';
+import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { PlanLimit } from '../../common/guards/plan-limits.guard';
 import type { TenantContext } from '../../common/tenant/tenant-context';
@@ -95,6 +96,32 @@ export class LeadsController {
       ctx,
       body.channels as RecoveryChannel[] | undefined,
     );
+  }
+
+  /**
+   * Webhook público — recebe respostas inbound de clientes.
+   *
+   * Provider (Z-API ou Resend) envia { channel, from, message } e o backend
+   * busca a recovery_sent mais recente do lead, marcando-a como respondida.
+   *
+   * Não recebe org-id na payload — o tenant é inferido pelo lead encontrado
+   * via phone/email. Idempotente.
+   */
+  @Public()
+  @Post('webhooks/response')
+  @HttpCode(HttpStatus.OK)
+  async handleResponseWebhook(
+    @Body() body: { channel: 'whatsapp' | 'email'; from: string; message: string },
+  ) {
+    if (!body?.from || !body?.message || !body?.channel) {
+      return { ok: false, matched: false };
+    }
+    const result = await this.recoveryService.markResponseReceived({
+      channel: body.channel,
+      fromIdentifier: body.from,
+      responseText: body.message,
+    });
+    return { ok: true, ...result };
   }
 
   @Delete(':id')

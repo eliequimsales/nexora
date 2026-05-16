@@ -278,6 +278,90 @@ export class ClientRecoveryService {
   }
 
   /**
+   * Marks the most recent recovery attempt as "responded" when a customer
+   * replies via WhatsApp or Email.
+   *
+   * Lookup strategy:
+   *   1. Find the lead by phone (for whatsapp) or email (for email) in the
+   *      given org. If multiple match, prefer the most recently updated one.
+   *   2. Find the most recent `recovery_sent` ActivityLog for that lead within
+   *      the last 30 days that has not yet been marked as responded.
+   *   3. Patch its metadata with `success: true`, `respondedAt`, `response`.
+   *
+   * Returns the leadId touched (null if nothing was matched — webhook noise).
+   *
+   * NOTE: this is intentionally org-scoped via the lead lookup. Webhooks are
+   * public, so we never trust org-id from the payload.
+   */
+  async markResponseReceived(input: {
+    channel: RecoveryChannel;
+    fromIdentifier: string; // phone or email of the responding customer
+    responseText: string;
+    receivedAt?: Date;
+  }): Promise<{ matched: boolean; leadId: string | null }> {
+    const receivedAt = input.receivedAt ?? new Date();
+
+    // Find a lead with this phone/email (across all tenants — webhook context)
+    const lead = await this.prisma.lead.findFirst({
+      where:
+        input.channel === 'whatsapp'
+          ? { phone: input.fromIdentifier }
+          : { email: input.fromIdentifier },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    if (!lead) {
+      this.logger.debug(
+        `No lead matched for ${input.channel} from ${input.fromIdentifier}`,
+      );
+      return { matched: false, leadId: null };
+    }
+
+    // Find the most recent recovery_sent log NOT yet marked as responded,
+    // within the last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const log = await this.prisma.activityLog.findFirst({
+      where: {
+        orgId: lead.orgId,
+        leadId: lead.id,
+        type: 'recovery_sent',
+        createdAt: { gte: thirtyDaysAgo },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!log) {
+      this.logger.debug(
+        `No recent recovery_sent log for lead ${lead.id}; webhook ignored`,
+      );
+      return { matched: false, leadId: lead.id };
+    }
+
+    // Patch metadata to record the response
+    const existing = (log.metadata as Record<string, unknown>) ?? {};
+    if (existing.success === true) {
+      // Already marked — idempotency for noisy webhooks
+      return { matched: true, leadId: lead.id };
+    }
+
+    await this.prisma.activityLog.update({
+      where: { id: log.id },
+      data: {
+        metadata: {
+          ...existing,
+          success: true,
+          respondedAt: receivedAt.toISOString(),
+          response: input.responseText,
+        },
+      },
+    });
+
+    return { matched: true, leadId: lead.id };
+  }
+
+  /**
    * Builds the AI prompt — kept inside the service so the wording is
    * versionable alongside the recovery rules.
    */
