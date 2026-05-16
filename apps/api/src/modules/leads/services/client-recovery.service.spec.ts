@@ -56,6 +56,7 @@ describe('ClientRecoveryService', () => {
     prismaMock = {
       lead: {
         findUnique: jest.fn(),
+        findMany: jest.fn(),
         update: jest.fn().mockResolvedValue({}),
       },
       activityLog: {
@@ -341,6 +342,104 @@ describe('ClientRecoveryService', () => {
 
       const prompt = llmMock.call.mock.calls[0][0] as string;
       expect(prompt).toContain('email');
+    });
+  });
+
+  describe('batchRecover', () => {
+    it('sends recovery to multiple leads sequentially and counts sent/failed', async () => {
+      const lead1 = buildLead({ id: 'lead-1', name: 'João' });
+      const lead2 = buildLead({ id: 'lead-2', name: 'Maria', phone: null, email: 'm@e.com' });
+
+      prismaMock.lead.findMany.mockResolvedValueOnce([lead1, lead2]);
+      // recover() reads individual leads via findUnique
+      prismaMock.lead.findUnique
+        .mockResolvedValueOnce(lead1)
+        .mockResolvedValueOnce(lead2);
+      whatsappMock.send.mockResolvedValueOnce({
+        success: true,
+        externalId: 'wa-1',
+        status: 'sent',
+      });
+      emailMock.send.mockResolvedValueOnce({
+        success: true,
+        externalId: 'em-1',
+        status: 'sent',
+      });
+
+      const result = await service.batchRecover(['lead-1', 'lead-2'], CTX);
+
+      expect(result.sent).toBe(2);
+      expect(result.failed).toBe(0);
+      expect(result.total).toBe(2);
+      expect(result.results).toHaveLength(2);
+      expect(result.results[0].channel).toBe('whatsapp');
+      expect(result.results[1].channel).toBe('email');
+    });
+
+    it('counts a lead as failed when it does not belong to the tenant', async () => {
+      // findMany returns nothing because the lead belongs to another tenant
+      prismaMock.lead.findMany.mockResolvedValueOnce([]);
+
+      const result = await service.batchRecover(['lead-orphan'], CTX);
+
+      expect(result.sent).toBe(0);
+      expect(result.failed).toBe(1);
+      expect(result.total).toBe(1);
+      expect(result.results[0].success).toBe(false);
+      expect(result.results[0].error).toContain('não pertence');
+    });
+
+    it('does not stop on individual failures — continues batch', async () => {
+      const lead1 = buildLead({ id: 'lead-1' });
+      const lead2 = buildLead({ id: 'lead-2' });
+
+      prismaMock.lead.findMany.mockResolvedValueOnce([lead1, lead2]);
+      prismaMock.lead.findUnique
+        .mockResolvedValueOnce(lead1)
+        .mockResolvedValueOnce(lead2);
+      whatsappMock.send
+        .mockRejectedValueOnce(new Error('provider down'))
+        .mockResolvedValueOnce({
+          success: true,
+          externalId: 'wa-2',
+          status: 'sent',
+        });
+
+      const result = await service.batchRecover(['lead-1', 'lead-2'], CTX);
+
+      expect(result.sent).toBe(1);
+      expect(result.failed).toBe(1);
+      expect(result.total).toBe(2);
+    });
+
+    it('respects channel restriction — fails leads without the requested channel data', async () => {
+      const leadNoPhone = buildLead({ id: 'lead-1', phone: null, email: 'a@e.com' });
+
+      prismaMock.lead.findMany.mockResolvedValueOnce([leadNoPhone]);
+
+      const result = await service.batchRecover(['lead-1'], CTX, ['whatsapp']);
+
+      expect(result.sent).toBe(0);
+      expect(result.failed).toBe(1);
+      expect(result.results[0].error).toContain('telefone');
+    });
+
+    it('prefers whatsapp when both channels allowed and lead has phone', async () => {
+      const leadWithBoth = buildLead({ id: 'lead-1' }); // has both phone + email
+
+      prismaMock.lead.findMany.mockResolvedValueOnce([leadWithBoth]);
+      prismaMock.lead.findUnique.mockResolvedValueOnce(leadWithBoth);
+      whatsappMock.send.mockResolvedValueOnce({
+        success: true,
+        externalId: 'wa-1',
+        status: 'sent',
+      });
+
+      const result = await service.batchRecover(['lead-1'], CTX, ['whatsapp', 'email']);
+
+      expect(result.sent).toBe(1);
+      expect(result.results[0].channel).toBe('whatsapp');
+      expect(emailMock.send).not.toHaveBeenCalled();
     });
   });
 });
