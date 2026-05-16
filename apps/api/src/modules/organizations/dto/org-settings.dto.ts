@@ -1,5 +1,50 @@
-import { IsBoolean, IsIn, IsObject, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsObject,
+  IsOptional,
+  IsString,
+  IsNumber,
+  MaxLength,
+  ValidateNested,
+  Min,
+  Max,
+} from 'class-validator';
 import { Type } from 'class-transformer';
+
+class NexoraRecoverySettingsDto {
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(180)
+  inactivityDays?: number; // Dias sem atividade para considerar cliente inativo (default: 30)
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  whatsappTemplate?: string; // Mensagem template para WhatsApp
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  emailTemplate?: string; // Mensagem template para Email
+
+  @IsOptional()
+  @IsString()
+  zapiApiKey?: string; // Chave de API do Z-API (criptografada)
+
+  @IsOptional()
+  @IsString()
+  resendApiKey?: string; // Chave de API do Resend (criptografada)
+
+  @IsOptional()
+  @IsBoolean()
+  whatsappEnabled?: boolean; // Se WhatsApp está habilitado
+
+  @IsOptional()
+  @IsBoolean()
+  emailEnabled?: boolean; // Se Email está habilitado
+}
 
 class OrgNotificationsDto {
   @IsOptional()
@@ -59,4 +104,10 @@ export class OrgSettingsDto {
   @ValidateNested()
   @Type(() => OrgSecretaryDto)
   secretary?: OrgSecretaryDto;
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => NexoraRecoverySettingsDto)
+  nexoraRecovery?: NexoraRecoverySettingsDto;
 }

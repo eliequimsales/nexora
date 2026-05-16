@@ -27,6 +27,16 @@ export interface IntegrationSettings {
   resendApiKey?: string;
 }
 
+export interface NexoraRecoverySettings {
+  inactivityDays?: number; // Default: 30 days
+  whatsappTemplate?: string; // Message template for WhatsApp
+  emailTemplate?: string; // Message template for Email
+  zapiApiKey?: string; // Z-API key (encrypted)
+  resendApiKey?: string; // Resend API key (encrypted)
+  whatsappEnabled?: boolean; // Enable WhatsApp recovery
+  emailEnabled?: boolean; // Enable Email recovery
+}
+
 export interface NexoraSettings {
   inactivityDays?: number; // Default: 30
 }
@@ -45,6 +55,7 @@ export interface OrgSettings {
   aiPrompts?: Record<string, string>;
   integrations?: IntegrationSettings;
   nexora?: NexoraSettings;
+  nexoraRecovery?: NexoraRecoverySettings;
 }
 
 // Full org response from GET /organizations/me and PATCH /organizations/me
