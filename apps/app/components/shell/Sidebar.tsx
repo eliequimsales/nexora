@@ -21,6 +21,7 @@ import {
 import { UserDropdown } from './UserDropdown';
 import { useOrg } from '@/lib/hooks/org/useOrg';
 import { useTenant } from '@/lib/hooks/org/useTenant';
+import { useUnreadResponses } from '@/lib/hooks/nexora/useUnreadResponses';
 import { cn } from '@/lib/utils';
 
 interface NavItem {
@@ -63,9 +64,10 @@ interface SidebarNavItemProps {
   item: NavItem;
   basePath: string;
   pathname: string;
+  badgeCount?: number;
 }
 
-function SidebarNavItem({ item, basePath, pathname }: SidebarNavItemProps) {
+function SidebarNavItem({ item, basePath, pathname, badgeCount }: SidebarNavItemProps) {
   const href = `${basePath}/${item.href}`;
   const isActive = item.exact ? pathname === href : pathname.startsWith(href);
   const Icon = item.icon;
@@ -73,7 +75,12 @@ function SidebarNavItem({ item, basePath, pathname }: SidebarNavItemProps) {
   return (
     <Link href={href} className={cn('sidebar-item', isActive && 'active')}>
       <Icon size={16} strokeWidth={1.75} />
-      <span>{item.label}</span>
+      <span className="flex-1">{item.label}</span>
+      {badgeCount && badgeCount > 0 ? (
+        <span className="ml-auto inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-2xs font-bold rounded-full bg-brand-gold text-brand-bg">
+          {badgeCount > 99 ? '99+' : badgeCount}
+        </span>
+      ) : null}
     </Link>
   );
 }
@@ -100,6 +107,10 @@ export function Sidebar() {
 
   const [nexoraOpen, setNexoraOpen] = useState(isOnNexoraRoute);
   const [advancedOpen, setAdvancedOpen] = useState(isOnAdvancedRoute);
+
+  // Unread customer responses — only meaningful in Nexora mode.
+  // The hook reads from React Query so it shares cache with the responses page.
+  const { unreadCount } = useUnreadResponses();
 
   return (
     <aside
@@ -158,6 +169,7 @@ export function Sidebar() {
                     item={item}
                     basePath={basePath}
                     pathname={pathname}
+                    badgeCount={item.href === 'nexora/responses' ? unreadCount : undefined}
                   />
                 ))}
               </div>

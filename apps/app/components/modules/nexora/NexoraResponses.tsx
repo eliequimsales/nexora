@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MessageSquare, CheckCircle2, Clock, ArrowRight, Filter } from 'lucide-react';
 import { useNexoraResponses } from '@/lib/hooks/nexora/useNexoraResponses';
+import { useUnreadResponses } from '@/lib/hooks/nexora/useUnreadResponses';
 
 type ResponseStatus = 'responded' | 'no-response' | 'all';
 
@@ -33,6 +34,12 @@ interface RecoveryResponseItem {
 export function NexoraResponses() {
   const [filter, setFilter] = useState<ResponseStatus>('all');
   const { data, isLoading } = useNexoraResponses();
+  const { markAllRead } = useUnreadResponses();
+
+  // Mark responses as seen when the user opens this page — clears the sidebar badge.
+  useEffect(() => {
+    markAllRead();
+  }, [markAllRead]);
 
   if (isLoading) {
     return (
