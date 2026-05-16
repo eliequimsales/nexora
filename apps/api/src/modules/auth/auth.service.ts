@@ -74,6 +74,24 @@ export class AuthService {
         },
       });
 
+      // Create trial subscription automatically — 7 days free
+      const trialEnd = new Date();
+      trialEnd.setDate(trialEnd.getDate() + 7);
+      await tx.subscription.create({
+        data: {
+          orgId: org.id,
+          stripeCustomerId: '', // Will be updated when user upgrades
+          plan: 'starter', // Default plan for trial
+          status: 'trialing',
+          currentPeriodEnd: trialEnd,
+          limits: {
+            leadsPerMonth: 100, // Starter plan limits
+            aiExecPerMonth: 50,
+            maxUsers: 2,
+          },
+        },
+      });
+
       return { org, user };
     });
 

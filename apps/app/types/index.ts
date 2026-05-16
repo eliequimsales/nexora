@@ -15,3 +15,4 @@ export * from './domain/integrations';
 export * from './domain/voice-actions';
 export * from './domain/tasks';
 export * from './domain/templates';
+export * from './domain/billing';
