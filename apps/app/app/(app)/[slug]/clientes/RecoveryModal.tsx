@@ -46,6 +46,8 @@ export function RecoveryModal({ client, onClose }: RecoveryModalProps) {
   const [result, setResult] = useState<RecoveryResult | null>(null);
   const [preview, setPreview] = useState<PreviewRecoveryResponse | null>(null);
   const [manualDone, setManualDone] = useState(false);
+  // Feedback visual de "Copiado!" — chave: 'message' | 'recipient' | null
+  const [copiedKey, setCopiedKey] = useState<'message' | 'recipient' | null>(null);
 
   // Define canal default toda vez que o cliente muda.
   useEffect(() => {
@@ -144,6 +146,9 @@ export function RecoveryModal({ client, onClose }: RecoveryModalProps) {
     if (!preview) return;
     try {
       await navigator.clipboard.writeText(preview.message);
+      setCopiedKey('message');
+      // Limpa o feedback visual depois de 2s — botão volta ao normal.
+      setTimeout(() => setCopiedKey((k) => (k === 'message' ? null : k)), 2000);
       toast({ variant: 'success', title: 'Mensagem copiada' });
     } catch {
       toast({ variant: 'error', title: 'Não foi possível copiar' });
@@ -154,6 +159,8 @@ export function RecoveryModal({ client, onClose }: RecoveryModalProps) {
     if (!preview) return;
     try {
       await navigator.clipboard.writeText(preview.recipient);
+      setCopiedKey('recipient');
+      setTimeout(() => setCopiedKey((k) => (k === 'recipient' ? null : k)), 2000);
       toast({
         variant: 'success',
         title: preview.channel === 'whatsapp' ? 'Número copiado' : 'Email copiado',
@@ -260,10 +267,24 @@ export function RecoveryModal({ client, onClose }: RecoveryModalProps) {
           <button
             type="button"
             onClick={handleCopyRecipient}
-            className="shrink-0 inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-brand-surface-3 hover:bg-brand-surface-2 text-text-secondary"
+            className={cn(
+              'shrink-0 inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md transition-colors',
+              copiedKey === 'recipient'
+                ? 'bg-status-success text-white'
+                : 'bg-brand-surface-3 hover:bg-brand-surface-2 text-text-secondary',
+            )}
           >
-            <Copy size={12} />
-            Copiar
+            {copiedKey === 'recipient' ? (
+              <>
+                <CheckCircle2 size={12} />
+                Copiado!
+              </>
+            ) : (
+              <>
+                <Copy size={12} />
+                Copiar
+              </>
+            )}
           </button>
         </div>
 
@@ -276,10 +297,24 @@ export function RecoveryModal({ client, onClose }: RecoveryModalProps) {
             <button
               type="button"
               onClick={handleCopyMessage}
-              className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-brand-gold text-brand-bg font-semibold hover:bg-brand-gold/90"
+              className={cn(
+                'inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-semibold transition-colors',
+                copiedKey === 'message'
+                  ? 'bg-status-success text-white'
+                  : 'bg-brand-gold text-brand-bg hover:bg-brand-gold/90',
+              )}
             >
-              <Copy size={12} />
-              Copiar mensagem
+              {copiedKey === 'message' ? (
+                <>
+                  <CheckCircle2 size={12} />
+                  Copiado!
+                </>
+              ) : (
+                <>
+                  <Copy size={12} />
+                  Copiar mensagem
+                </>
+              )}
             </button>
           </div>
           <p className="text-sm text-text-secondary whitespace-pre-line leading-relaxed">

@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import { ShieldAlert, CheckCircle2, ExternalLink } from 'lucide-react';
+import { ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { useOrgQuery } from '@/lib/hooks/org/useOrgQuery';
 import { useAcceptLgpd } from '@/lib/hooks/org/useAcceptLgpd';
 import { useToast } from '@/lib/providers/ToastProvider';
@@ -48,36 +47,16 @@ export function LgpdAcceptanceBanner() {
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="text-base font-semibold text-text-primary">
-            Antes de enviar mensagens — termo LGPD
+            Antes de enviar mensagens — termo de uso
           </h3>
-          <p className="text-sm text-text-secondary mt-1">
-            Pela LGPD, você (controlador dos dados dos seus clientes) precisa declarar que tem
-            permissão para enviar mensagens a eles. A Nexora atua como operadora.
-          </p>
 
-          <div className="mt-3 rounded-lg bg-brand-surface p-3 text-xs text-text-secondary space-y-1">
-            <p>
-              <CheckCircle2 size={11} className="inline mr-1 text-status-success" />
-              Seus clientes consentiram em receber comunicação (fichinha, formulário, etc).
-            </p>
-            <p>
-              <CheckCircle2 size={11} className="inline mr-1 text-status-success" />
-              Pedidos de descadastro ("parar") são respeitados automaticamente.
-            </p>
-            <p>
-              <CheckCircle2 size={11} className="inline mr-1 text-status-success" />
-              Sua responsabilidade primária é o consentimento; a Nexora cuida da operação técnica.
-            </p>
+          <div className="mt-3 rounded-lg bg-brand-surface p-4 text-sm text-text-secondary leading-relaxed">
+            O estabelecimento <strong>{org.name}</strong> declara que seus clientes
+            consentiram em receber comunicações sobre produtos e serviços, e autoriza a
+            Nexora a enviar mensagens em seu nome para fins de reativação de clientes
+            inativos. O estabelecimento assume total responsabilidade pelo consentimento
+            de sua base de clientes.
           </div>
-
-          <Link
-            href="/docs/legal/termo-consentimento-cliente.md"
-            target="_blank"
-            className="inline-flex items-center gap-1 mt-3 text-xs text-brand-gold hover:underline"
-          >
-            Ler termo completo
-            <ExternalLink size={11} />
-          </Link>
 
           <div className="mt-4 flex items-start gap-2">
             <input
@@ -89,8 +68,7 @@ export function LgpdAcceptanceBanner() {
               className="mt-1 w-4 h-4 rounded shrink-0"
             />
             <label htmlFor="lgpd-accept" className="text-sm text-text-primary cursor-pointer">
-              Li e concordo. Declaro que tenho consentimento dos meus clientes para essa
-              comunicação e assumo a responsabilidade primária pelo tratamento dos dados.
+              Li e concordo com os termos acima.
             </label>
           </div>
 

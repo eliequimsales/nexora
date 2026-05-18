@@ -21,6 +21,9 @@ const schema = z.object({
   password: z.string().min(8, 'Mínimo 8 caracteres'),
   orgName: z.string().min(2, 'Mínimo 2 caracteres'),
   niche: z.string().min(1, 'Selecione o segmento'),
+  acceptTerms: z.literal(true, {
+    errorMap: () => ({ message: 'Você precisa aceitar o termo de uso para continuar' }),
+  }),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -33,13 +36,27 @@ export function RegisterForm() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
+
+  const orgNameValue = watch('orgName') || 'sua empresa';
 
   async function onSubmit(data: FormData) {
     setServerError(null);
     try {
+      // Cria a conta — o aceite efetivo do termo é registrado logo após o registro
+      // chamando POST /organizations/current/lgpd-accept (já temos o hook).
+      // Como o registro retorna access_token, o cliente já está autenticado.
       await registerUser(data.name, data.email, data.password, data.orgName, data.niche);
+      // O hook useAcceptLgpd usa o token JWT que acabou de ser setado.
+      // Fire-and-forget aqui é OK porque o backend já guarda o aceite no DB.
+      try {
+        const { apiClient } = await import('@/lib/api/client');
+        await apiClient.post('/organizations/current/lgpd-accept');
+      } catch {
+        // Se falhar, o banner aparece dentro do app e o usuário aceita lá — não bloqueia o fluxo
+      }
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -117,6 +134,29 @@ export function RegisterForm() {
         </select>
         {errors.niche && (
           <p className="text-xs text-status-error">{errors.niche.message}</p>
+        )}
+      </div>
+
+      {/* Termo de uso — obrigatório para criar conta */}
+      <div className="rounded-lg border border-brand-border bg-brand-surface-2/40 p-3 space-y-2">
+        <p className="text-xs text-text-secondary leading-relaxed">
+          O estabelecimento <strong>{orgNameValue}</strong> declara que seus clientes consentiram em
+          receber comunicações sobre produtos e serviços, e autoriza a Nexora a enviar mensagens em
+          seu nome para fins de reativação de clientes inativos. O estabelecimento assume total
+          responsabilidade pelo consentimento de sua base de clientes.
+        </p>
+        <label className="flex items-start gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            className="mt-0.5 w-4 h-4 rounded shrink-0"
+            {...register('acceptTerms')}
+          />
+          <span className="text-xs text-text-primary">
+            Li e concordo com o termo de uso acima.
+          </span>
+        </label>
+        {errors.acceptTerms && (
+          <p className="text-xs text-status-error">{errors.acceptTerms.message}</p>
         )}
       </div>
 
