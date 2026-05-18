@@ -23,6 +23,8 @@ COPY packages/shared ./packages/shared
 # Build shared first then app — NEXT_PUBLIC_* must be present at build time
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+# Liga o output standalone (necessário pro Dockerfile, ignorado fora)
+ENV NEXT_STANDALONE=1
 
 RUN pnpm --filter @nexora/shared build && pnpm --filter app build
 

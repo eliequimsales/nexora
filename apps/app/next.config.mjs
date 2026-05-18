@@ -1,7 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Required for Docker production builds — emits a self-contained server bundle.
-  output: 'standalone',
+  // `standalone` é só pra Docker (Railway/Render/Fly). Vercel e dev local
+  // não precisam — e no Windows tenta criar symlinks que exigem admin.
+  // Ative com NEXT_STANDALONE=1 no Dockerfile.
+  output: process.env.NEXT_STANDALONE === '1' ? 'standalone' : undefined,
   transpilePackages: ['@nexora/shared'],
   images: {
     formats: ['image/avif', 'image/webp'],
