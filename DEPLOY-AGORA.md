@@ -1,7 +1,23 @@
-# Subir o Nexora online em 15 minutos
+# Nexora — URLs Vivas (Deploy Concluído)
 
-> Versão mínima viável. Só pra ter um link funcionando que dev possa testar.
-> Sem domínio próprio, sem Stripe real, sem chave Claude (IA fake mas funciona).
+> Deploy feito automaticamente em 2026-05-18.
+> URLs ativas no Railway. Sem Stripe real, sem chave Claude (IA mock funciona).
+
+## 🌐 URLs Ativas
+
+| Serviço | URL |
+|---------|-----|
+| **App (frontend)** | https://app-production-255b.up.railway.app |
+| **API (backend)** | https://api-production-8d14.up.railway.app |
+| **Health check** | https://api-production-8d14.up.railway.app/api/v1/healthz |
+| **Registro barbearia** | https://app-production-255b.up.railway.app/register?niche=barbearia |
+
+**Conta Railway:** eliequimsales → projeto nexora
+**Repo GitHub:** https://github.com/eliequimsales/nexora
+
+---
+
+## Refazer deploy (se precisar)
 
 ---
 
