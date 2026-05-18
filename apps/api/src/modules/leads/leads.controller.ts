@@ -1,7 +1,10 @@
 import {
   Controller, Get, Post, Patch, Delete,
   Body, Param, Query, ParseUUIDPipe, HttpCode, HttpStatus,
+  Headers, UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { timingSafeEqual } from 'crypto';
 import { LeadsService } from './leads.service';
 import { ClientRecoveryService, type RecoveryChannel } from './services/client-recovery.service';
 import { LeadsImportService } from './services/leads-import.service';
@@ -24,7 +27,41 @@ export class LeadsController {
     private readonly leadsService: LeadsService,
     private readonly recoveryService: ClientRecoveryService,
     private readonly importService: LeadsImportService,
+    private readonly config: ConfigService,
   ) {}
+
+  /**
+   * Compara o header `X-Webhook-Secret` recebido com o secret configurado.
+   * Usa timingSafeEqual para evitar ataques de timing.
+   *
+   * Quando NEXORA_WEBHOOK_SECRET não está configurado:
+   *  - Em produção: REJEITA o webhook (não dá pra confiar em payload aberto)
+   *  - Em dev/test: aceita (facilita teste local sem precisar setar a var)
+   */
+  private verifyWebhookSecret(provided: string | undefined): void {
+    const expected = this.config.get<string>('webhook.secret') ?? '';
+    const isProd = (this.config.get<string>('app.env') ?? process.env.NODE_ENV) === 'production';
+
+    if (!expected) {
+      if (isProd) {
+        throw new UnauthorizedException(
+          'NEXORA_WEBHOOK_SECRET não configurado — webhook desabilitado',
+        );
+      }
+      // Em dev/test sem secret: aceita
+      return;
+    }
+
+    if (!provided) {
+      throw new UnauthorizedException('Header X-Webhook-Secret ausente');
+    }
+
+    const a = Buffer.from(provided);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length || !timingSafeEqual(a, b)) {
+      throw new UnauthorizedException('X-Webhook-Secret inválido');
+    }
+  }
 
   @Post()
   @RequirePermission('leads:create')
@@ -175,13 +212,20 @@ export class LeadsController {
    *
    * Não recebe org-id na payload — o tenant é inferido pelo lead encontrado
    * via phone/email. Idempotente.
+   *
+   * Protegido por header `X-Webhook-Secret` (NEXORA_WEBHOOK_SECRET).
+   * Sem isso, qualquer um na internet poderia marcar leads como respondidos
+   * ou opt-out — ataque de envenenamento de dados.
    */
   @Public()
   @Post('webhooks/response')
   @HttpCode(HttpStatus.OK)
   async handleResponseWebhook(
     @Body() body: { channel: 'whatsapp' | 'email'; from: string; message: string },
+    @Headers('x-webhook-secret') secret?: string,
   ) {
+    this.verifyWebhookSecret(secret);
+
     if (!body?.from || !body?.message || !body?.channel) {
       return { ok: false, matched: false };
     }

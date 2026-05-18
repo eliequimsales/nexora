@@ -3,6 +3,18 @@ export const configuration = () => ({
   port: Number(process.env.PORT),
   appUrl: process.env.APP_URL ?? 'http://localhost:3000',
 
+  // Compat alias — alguns serviços consomem como `app.env`
+  app: {
+    env: process.env.NODE_ENV ?? 'development',
+  },
+
+  webhook: {
+    // Secret compartilhado pelo header `X-Webhook-Secret` no endpoint público
+    // `/leads/webhooks/response`. Em produção é OBRIGATÓRIO — sem ele o
+    // controller rejeita 401.
+    secret: process.env.NEXORA_WEBHOOK_SECRET ?? '',
+  },
+
   database: {
     url: process.env.DATABASE_URL,
   },
