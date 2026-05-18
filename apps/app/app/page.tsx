@@ -29,18 +29,24 @@ export default function LandingPage() {
           <p className="text-xl text-text-muted max-w-2xl mx-auto">
             A Nexora identifica clientes que pararam de voltar e os traz de volta automaticamente com mensagens personalizadas por IA.
           </p>
-          <div className="flex items-center justify-center gap-4 pt-4">
+          <div className="flex items-center justify-center gap-4 pt-4 flex-wrap">
             <Link
-              href="/register?niche=barbearia"
+              href="/diagnostico"
               className="inline-flex items-center gap-2 bg-brand-gold text-brand-bg font-semibold px-6 py-3 rounded-lg hover:bg-brand-gold/90 active:scale-[0.98] transition-all"
             >
-              Começar trial grátis
+              Fazer diagnóstico grátis
               <ArrowRight size={16} />
             </Link>
-            <button className="px-6 py-3 border border-brand-border rounded-lg text-text-primary font-medium hover:bg-brand-surface transition-colors">
-              Ver demo
-            </button>
+            <Link
+              href="/register?niche=barbearia"
+              className="px-6 py-3 border border-brand-border rounded-lg text-text-primary font-medium hover:bg-brand-surface transition-colors"
+            >
+              Começar trial direto
+            </Link>
           </div>
+          <p className="text-xs text-text-muted pt-2">
+            Em 1 minuto descubra quanto sua barbearia pode estar deixando de ganhar
+          </p>
         </div>
       </section>
 
