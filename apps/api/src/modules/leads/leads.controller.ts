@@ -4,6 +4,7 @@ import {
   Headers, UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Throttle } from '@nestjs/throttler';
 import { timingSafeEqual } from 'crypto';
 import { LeadsService } from './leads.service';
 import { ClientRecoveryService, type RecoveryChannel } from './services/client-recovery.service';
@@ -81,10 +82,15 @@ export class LeadsController {
    * Suporta separadores `,` e `;`, cabeçalhos PT/EN, dedup por phone OU email.
    *
    * Use `dryRun: true` para preview antes de gravar.
+   *
+   * Rate limit: 10 imports por hora por usuário/IP. Suficiente pro uso normal
+   * (1 import inicial + alguns retries com correções), bloqueia tentativa de
+   * abuse com payloads gigantes em série.
    */
   @Post('import')
   @HttpCode(HttpStatus.OK)
   @RequirePermission('leads:create')
+  @Throttle({ default: { ttl: 3_600_000, limit: 10 } })
   importLeads(@Body() dto: ImportLeadsDto, @CurrentUser() ctx: TenantContext) {
     return this.importService.importCsv(dto.csvContent, ctx, dto.dryRun ?? false);
   }
