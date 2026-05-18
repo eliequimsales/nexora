@@ -50,6 +50,9 @@ const mockPrisma = {
   pipelineStage: {
     createMany: jest.fn(),
   },
+  subscription: {
+    create: jest.fn(),
+  },
   $transaction: jest.fn(),
 };
 
