@@ -3,6 +3,7 @@ import {
   Logger,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { assertSameTenant } from '../../../common/tenant/assert-same-tenant';
@@ -133,6 +134,9 @@ export class ClientRecoveryService {
     ctx: TenantContext,
     channel?: RecoveryChannel,
   ): Promise<RecoveryResult> {
+    // LGPD gate — sem aceite, não enviamos NADA. Aplica a recover, batch e preview.
+    await this.assertLgpdAccepted(ctx.orgId);
+
     const lead = await this.prisma.lead.findUnique({ where: { id: leadId } });
     if (!lead) {
       throw new NotFoundException('Cliente não encontrado');
@@ -260,6 +264,8 @@ export class ClientRecoveryService {
     total: number;
     results: RecoveryResult[];
   }> {
+    await this.assertLgpdAccepted(ctx.orgId);
+
     const results: RecoveryResult[] = [];
     let sent = 0;
     let failed = 0;
@@ -501,6 +507,8 @@ export class ClientRecoveryService {
     recipient: string;
     message: string;
   }> {
+    await this.assertLgpdAccepted(ctx.orgId);
+
     const lead = await this.prisma.lead.findUnique({ where: { id: leadId } });
     if (!lead) throw new NotFoundException('Cliente não encontrado');
     assertSameTenant(lead.orgId, ctx.orgId);
@@ -555,6 +563,8 @@ export class ClientRecoveryService {
     ctx: TenantContext,
     input: { channel: RecoveryChannel; message: string },
   ): Promise<{ success: true; leadId: string }> {
+    await this.assertLgpdAccepted(ctx.orgId);
+
     const lead = await this.prisma.lead.findUnique({ where: { id: leadId } });
     if (!lead) throw new NotFoundException('Cliente não encontrado');
     assertSameTenant(lead.orgId, ctx.orgId);
@@ -659,6 +669,25 @@ export class ClientRecoveryService {
       recoveredAt,
       recoveredValue: value,
     };
+  }
+
+  /**
+   * Lança ForbiddenException quando a organização ainda não aceitou o termo
+   * LGPD. Aplicada antes de qualquer envio (auto, manual, preview, batch).
+   *
+   * Optei por verificar in-line em vez de criar um NestJS Guard porque o
+   * estado vem do DB e seria 1 query extra em rotas que não precisam.
+   */
+  private async assertLgpdAccepted(orgId: string): Promise<void> {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: orgId },
+      select: { lgpdAcceptedAt: true },
+    });
+    if (!org?.lgpdAcceptedAt) {
+      throw new ForbiddenException(
+        'Aceite o termo LGPD em Configurações > Privacidade antes de enviar mensagens.',
+      );
+    }
   }
 
   /**

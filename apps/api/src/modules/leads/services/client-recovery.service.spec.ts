@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ClientRecoveryService, isOptOutMessage } from './client-recovery.service';
 import { PrismaService } from '../../../database/prisma.service';
@@ -64,6 +64,10 @@ describe('ClientRecoveryService', () => {
         create: jest.fn().mockResolvedValue({}),
         findFirst: jest.fn(),
         update: jest.fn().mockResolvedValue({}),
+      },
+      organization: {
+        // Default: LGPD aceito — testes individuais sobrescrevem quando precisam testar o bloqueio
+        findUnique: jest.fn().mockResolvedValue({ lgpdAcceptedAt: new Date('2026-05-18') }),
       },
     };
 
@@ -730,6 +734,43 @@ describe('ClientRecoveryService', () => {
 
       await expect(service.confirmRecovery('lead-1', 50, CTX)).rejects.toThrow();
       expect(prismaMock.lead.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('LGPD gate', () => {
+    function withoutLgpdAccepted() {
+      prismaMock.organization.findUnique.mockResolvedValueOnce({
+        lgpdAcceptedAt: null,
+      });
+    }
+
+    it('recover() bloqueia envio quando organização não aceitou LGPD', async () => {
+      withoutLgpdAccepted();
+      await expect(service.recover('lead-1', CTX)).rejects.toThrow(ForbiddenException);
+      // Não chega a buscar o lead — para no gate
+      expect(prismaMock.lead.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('previewRecovery() bloqueia geração quando LGPD não aceito', async () => {
+      withoutLgpdAccepted();
+      await expect(service.previewRecovery('lead-1', CTX)).rejects.toThrow(ForbiddenException);
+      expect(llmMock.call).not.toHaveBeenCalled();
+    });
+
+    it('markSentManually() bloqueia registro quando LGPD não aceito', async () => {
+      withoutLgpdAccepted();
+      await expect(
+        service.markSentManually('lead-1', CTX, { channel: 'whatsapp', message: 'oi' }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prismaMock.activityLog.create).not.toHaveBeenCalled();
+    });
+
+    it('batchRecover() bloqueia lote inteiro quando LGPD não aceito', async () => {
+      withoutLgpdAccepted();
+      await expect(service.batchRecover(['lead-1', 'lead-2'], CTX)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(prismaMock.lead.findMany).not.toHaveBeenCalled();
     });
   });
 

@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { RecoveryHero } from './RecoveryHero';
 import { InactiveClientsList } from './InactiveClientsList';
 import { RecoveryModal } from './RecoveryModal';
+import { LgpdAcceptanceBanner } from '@/components/modules/legal/LgpdAcceptanceBanner';
 import type { InactiveClient } from '@/types';
 
 type TabKey = 'inactive' | 'all' | 'recovered';
@@ -49,6 +50,9 @@ export default function ClientesPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6">
+      {/* Banner LGPD — só aparece se não aceitou ainda; bloqueante por backend de qualquer jeito */}
+      <LgpdAcceptanceBanner />
+
       <RecoveryHero
         inactiveCount={clients.length}
         potentialRevenue={potentialRevenue}

@@ -69,6 +69,8 @@ export interface OrgResponse {
   settings: OrgSettings;
   aiPrompts: Record<string, string>;
   createdAt: string;
+  lgpdAcceptedAt: string | null;
+  lgpdTermVersion: string | null;
 }
 
 export interface UpdateOrgPayload {

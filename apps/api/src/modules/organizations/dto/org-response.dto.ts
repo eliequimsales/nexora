@@ -10,6 +10,8 @@ export interface OrgResponseDto {
   settings: Record<string, unknown>;
   aiPrompts: Record<string, string>;
   createdAt: Date;
+  lgpdAcceptedAt: Date | null;
+  lgpdTermVersion: string | null;
 }
 
 export function mapOrg(org: Organization): OrgResponseDto {
@@ -23,5 +25,7 @@ export function mapOrg(org: Organization): OrgResponseDto {
     settings: (org.settings ?? {}) as Record<string, unknown>,
     aiPrompts: (org.aiPrompts ?? {}) as Record<string, string>,
     createdAt: org.createdAt,
+    lgpdAcceptedAt: org.lgpdAcceptedAt,
+    lgpdTermVersion: org.lgpdTermVersion,
   };
 }

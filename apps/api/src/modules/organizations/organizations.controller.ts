@@ -34,4 +34,15 @@ export class OrganizationsController {
   updateOnboarding(@CurrentUser() ctx: TenantContext, @Body() dto: UpdateOnboardingDto) {
     return this.service.updateOnboarding(ctx, dto);
   }
+
+  /**
+   * Marca o aceite do termo LGPD da organização.
+   * Sem esse aceite, todas as rotas de envio (recover, batch-recover, preview)
+   * retornam 403. Versionado para permitir re-aceite quando o termo mudar.
+   */
+  @Post('current/lgpd-accept')
+  @RequirePermission('org:update')
+  acceptLgpd(@CurrentUser() ctx: TenantContext) {
+    return this.service.acceptLgpdTerm(ctx);
+  }
 }

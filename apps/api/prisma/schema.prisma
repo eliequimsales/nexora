@@ -19,6 +19,11 @@ model Organization {
   aiPrompts Json     @default("{}") @map("ai_prompts")
   formToken String   @unique @map("form_token") @db.VarChar(64)
   settings  Json     @default("{}")
+  // LGPD — momento em que a barbearia aceitou o termo de tratamento de dados.
+  // Bloqueia o uso de funções de envio até o aceite.
+  lgpdAcceptedAt    DateTime? @map("lgpd_accepted_at") @db.Timestamptz
+  lgpdAcceptedBy    String?   @map("lgpd_accepted_by") @db.VarChar(255) // userId que aceitou
+  lgpdTermVersion   String?   @map("lgpd_term_version") @db.VarChar(20) // ex: "2026-05-18"
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 

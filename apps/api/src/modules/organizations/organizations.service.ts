@@ -25,6 +25,36 @@ export class OrganizationsService {
     return mapOrg(org);
   }
 
+  /**
+   * Registra que a organização aceitou o termo LGPD vigente.
+   *
+   * O `lgpdTermVersion` é fixo no código — quando o texto mudar, bumpamos
+   * essa constante e o front detecta que precisa pedir re-aceite (porque
+   * `org.lgpdTermVersion !== CURRENT_LGPD_TERM_VERSION`).
+   *
+   * Idempotente: re-chamar atualiza o timestamp e o user que aceitou.
+   */
+  async acceptLgpdTerm(
+    ctx: TenantContext,
+  ): Promise<{ acceptedAt: Date; version: string }> {
+    const CURRENT_LGPD_TERM_VERSION = '2026-05-18';
+
+    const updated = await this.prisma.organization.update({
+      where: { id: ctx.orgId },
+      data: {
+        lgpdAcceptedAt: new Date(),
+        lgpdAcceptedBy: ctx.userId,
+        lgpdTermVersion: CURRENT_LGPD_TERM_VERSION,
+      },
+      select: { lgpdAcceptedAt: true, lgpdTermVersion: true },
+    });
+
+    return {
+      acceptedAt: updated.lgpdAcceptedAt!,
+      version: updated.lgpdTermVersion!,
+    };
+  }
+
   async update(ctx: TenantContext, dto: UpdateOrgDto): Promise<OrgResponseDto> {
     const exists = await this.prisma.organization.findUnique({
       where: { id: ctx.orgId },
