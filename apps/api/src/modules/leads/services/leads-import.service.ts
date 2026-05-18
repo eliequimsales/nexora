@@ -22,6 +22,11 @@ export interface ImportPreview {
 export interface ImportResult extends ImportPreview {
   created: number;
   updated: number;
+  // Aliases em português — usados pelo frontend de forma mais legível.
+  // Mantemos os nomes originais (created, valid, etc) para compatibilidade.
+  importados: number;
+  duplicados: number;
+  erros: number;
 }
 
 // Header aliases — robust to common Excel/Sheets exports in pt-BR and en-US.
@@ -189,6 +194,8 @@ export class LeadsImportService {
 
     for (let i = 1; i < lines.length; i++) {
       const rowNumber = i;
+      // Human-friendly line number (1-indexed including header). Used in error messages.
+      const humanLine = i + 1;
       const cols = splitCsvLine(lines[i], sep);
 
       const partial: Partial<Omit<ImportRow, 'rowNumber'>> = {};
@@ -197,16 +204,40 @@ export class LeadsImportService {
       }
 
       const name = (partial.name as string | undefined)?.trim();
-      const phone = normalizePhone(partial.phone as string | undefined ?? null);
-      const email = normalizeEmail(partial.email as string | undefined ?? null);
-      const lastVisitAt = parseDate(partial.lastVisitAt as string | undefined ?? null);
+      const rawPhone = (partial.phone as string | undefined) ?? null;
+      const rawEmail = (partial.email as string | undefined) ?? null;
+      const phone = normalizePhone(rawPhone);
+      const email = normalizeEmail(rawEmail);
+      const lastVisitAt = parseDate((partial.lastVisitAt as string | undefined) ?? null);
 
       if (!name) {
-        invalid.push({ rowNumber, reason: 'Nome vazio' });
+        invalid.push({ rowNumber, reason: `Linha ${humanLine}: nome vazio` });
         continue;
       }
+
+      // Telefone foi preenchido mas não passou na validação → mensagem específica
+      if (rawPhone && rawPhone.trim() && !phone) {
+        invalid.push({
+          rowNumber,
+          reason: `Linha ${humanLine}: telefone "${rawPhone.trim()}" inválido. Use o formato 21999998888 (com DDD, sem espaços).`,
+        });
+        continue;
+      }
+
+      // Email foi preenchido mas é inválido → mensagem específica
+      if (rawEmail && rawEmail.trim() && !email) {
+        invalid.push({
+          rowNumber,
+          reason: `Linha ${humanLine}: email "${rawEmail.trim()}" inválido.`,
+        });
+        continue;
+      }
+
       if (!phone && !email) {
-        invalid.push({ rowNumber, reason: 'Sem telefone nem email' });
+        invalid.push({
+          rowNumber,
+          reason: `Linha ${humanLine}: cliente sem telefone nem email`,
+        });
         continue;
       }
 
@@ -258,9 +289,21 @@ export class LeadsImportService {
       invalid,
       created: 0,
       updated: 0,
+      // Aliases pt-BR — preenchidos no final, depois da gravação
+      importados: 0,
+      duplicados: duplicatesInFile + duplicatesInDb,
+      erros: invalid.length,
     };
 
     if (dryRun) return preview;
+
+    // Se chegou aqui sem nada válido pra gravar, falha com mensagem clara.
+    // Acontece quando todas as linhas tinham dado ruim ou já existiam.
+    if (toCreate.length === 0 && lines.length > 1) {
+      throw new BadRequestException(
+        'Nenhum cliente foi importado. Verifique se a planilha está no formato correto ou se os clientes já estão cadastrados.',
+      );
+    }
 
     // Real run — bulk create
     if (toCreate.length > 0) {
@@ -295,6 +338,9 @@ export class LeadsImportService {
         });
       }
     }
+
+    // Atualiza alias pt-BR depois da gravação
+    preview.importados = preview.created;
 
     this.logger.log(
       `Import for org ${ctx.orgId}: created=${preview.created}, dup_file=${duplicatesInFile}, dup_db=${duplicatesInDb}, invalid=${invalid.length}`,

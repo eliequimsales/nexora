@@ -12,8 +12,8 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
-    "@radix-ui/react-slot": "^1.2.4",
     "@nexora/shared": "workspace:*",
+    "@radix-ui/react-slot": "^1.2.4",
     "@tanstack/react-query": "^5.56.0",
     "axios": "^1.7.0",
     "class-variance-authority": "^0.7.1",
@@ -26,6 +26,7 @@
     "react-dom": "^18.3.0",
     "react-hook-form": "^7.53.0",
     "tailwind-merge": "^2.5.0",
+    "xlsx": "^0.18.5",
     "zod": "^3.23.0",
     "zustand": "^4.5.0"
   },

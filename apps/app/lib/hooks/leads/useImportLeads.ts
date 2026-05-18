@@ -17,6 +17,10 @@ export interface ImportPreview {
   invalid: Array<{ rowNumber: number; reason: string }>;
   created: number;
   updated: number;
+  // Aliases pt-BR (espelho de created/duplicatesIn*/invalid)
+  importados: number;
+  duplicados: number;
+  erros: number;
 }
 
 /**

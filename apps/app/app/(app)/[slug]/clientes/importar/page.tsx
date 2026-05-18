@@ -7,18 +7,13 @@ import {
   FileText,
   CheckCircle2,
   AlertTriangle,
-  XCircle,
   Download,
   ArrowLeft,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useImportLeads, type ImportPreview } from '@/lib/hooks/leads/useImportLeads';
 import { useToast } from '@/lib/providers/ToastProvider';
-
-const EXAMPLE_CSV = `Nome,Telefone,Email,Última Visita
-João Silva,(11) 99999-8888,joao@email.com,15/03/2026
-Maria Santos,11988887777,maria@email.com,
-Carlos Mendes,11977776666,,20/02/2026`;
+import { downloadSampleXlsx, xlsxFileToCsv } from '@/lib/utils/xlsx';
 
 export default function ImportarClientesPage() {
   const router = useRouter();
@@ -32,35 +27,62 @@ export default function ImportarClientesPage() {
   const [step, setStep] = useState<'select' | 'preview' | 'done'>('select');
   const mutation = useImportLeads();
 
-  function handleFile(file: File) {
+  async function handleFile(file: File) {
     if (file.size > 5 * 1024 * 1024) {
       toast({ variant: 'error', title: 'Arquivo muito grande (máx 5MB)' });
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const content = e.target?.result as string;
-      setCsvContent(content);
-      setFileName(file.name);
-      // Auto-trigger preview
-      mutation.mutate(
-        { csvContent: content, dryRun: true },
-        {
-          onSuccess: (data) => {
-            setPreview(data);
-            setStep('preview');
-          },
-          onError: (err: any) => {
-            toast({
-              variant: 'error',
-              title: 'Erro ao processar arquivo',
-              description: err?.response?.data?.message ?? err?.message ?? 'Verifique o formato.',
-            });
-          },
+
+    const lowerName = file.name.toLowerCase();
+    const isCsv = lowerName.endsWith('.csv') || file.type === 'text/csv';
+    const isXlsx =
+      lowerName.endsWith('.xlsx') ||
+      file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+    if (!isCsv && !isXlsx) {
+      toast({
+        variant: 'error',
+        title: 'Formato não suportado',
+        description: 'Envie um arquivo .csv ou .xlsx.',
+      });
+      return;
+    }
+
+    let content: string;
+    try {
+      if (isXlsx) {
+        content = await xlsxFileToCsv(file);
+      } else {
+        content = await file.text();
+      }
+    } catch (err: any) {
+      toast({
+        variant: 'error',
+        title: 'Não consegui ler o arquivo',
+        description: err?.message ?? 'Verifique o formato.',
+      });
+      return;
+    }
+
+    setCsvContent(content);
+    setFileName(file.name);
+
+    mutation.mutate(
+      { csvContent: content, dryRun: true },
+      {
+        onSuccess: (data) => {
+          setPreview(data);
+          setStep('preview');
         },
-      );
-    };
-    reader.readAsText(file, 'UTF-8');
+        onError: (err: any) => {
+          toast({
+            variant: 'error',
+            title: 'Erro ao processar arquivo',
+            description: err?.response?.data?.message ?? err?.message ?? 'Verifique o formato.',
+          });
+        },
+      },
+    );
   }
 
   function handleConfirmImport() {
@@ -86,14 +108,16 @@ export default function ImportarClientesPage() {
     );
   }
 
-  function downloadExample() {
-    const blob = new Blob([EXAMPLE_CSV], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'exemplo-clientes-nexora.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+  async function handleDownloadSample() {
+    try {
+      await downloadSampleXlsx();
+    } catch (err: any) {
+      toast({
+        variant: 'error',
+        title: 'Erro ao gerar planilha modelo',
+        description: err?.message ?? 'Tente novamente.',
+      });
+    }
   }
 
   return (
@@ -130,11 +154,11 @@ export default function ImportarClientesPage() {
             <p className="text-sm font-medium text-text-primary mb-1">
               Clique para escolher um arquivo ou arraste aqui
             </p>
-            <p className="text-xs text-text-muted">Aceita .csv até 5 MB</p>
+            <p className="text-xs text-text-muted">Aceita .csv ou .xlsx até 5 MB</p>
             <input
               ref={fileInputRef}
               type="file"
-              accept=".csv,text/csv"
+              accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
@@ -169,11 +193,11 @@ export default function ImportarClientesPage() {
               Telefone OU email é obrigatório (pelo menos um dos dois por linha).
             </p>
             <button
-              onClick={downloadExample}
+              onClick={handleDownloadSample}
               className="inline-flex items-center gap-2 text-xs text-brand-gold hover:underline"
             >
               <Download size={12} />
-              Baixar planilha de exemplo
+              Baixar planilha modelo (XLSX)
             </button>
           </div>
 

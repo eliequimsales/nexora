@@ -94,14 +94,16 @@ describe('LeadsImportService', () => {
       expect(result.valid[0].phone).toBe('5511999998888');
     });
 
-    it('rejects phone with fewer than 8 digits', async () => {
+    it('rejects entire row when phone filled but invalid (< 8 digits)', async () => {
+      // Comportamento estrito: telefone preenchido errado vira erro de linha,
+      // mesmo que o email esteja correto. Evita importar dados sujos sem aviso.
       const csv = ['Nome,Telefone,Email', 'A,123,a@e.com'].join('\n');
 
       const result = await service.importCsv(csv, CTX, true);
 
-      // phone é null, mas email é válido → linha aceita
-      expect(result.valid[0].phone).toBeNull();
-      expect(result.valid[0].email).toBe('a@e.com');
+      expect(result.valid).toHaveLength(0);
+      expect(result.invalid).toHaveLength(1);
+      expect(result.invalid[0].reason).toMatch(/telefone.*inválido/i);
     });
   });
 
@@ -126,14 +128,14 @@ describe('LeadsImportService', () => {
       await expect(service.importCsv(csv, CTX)).rejects.toThrow(/Telefone ou Email/i);
     });
 
-    it('marks row as invalid when name is empty', async () => {
+    it('marks row as invalid when name is empty (linha specific)', async () => {
       const csv = ['Nome,Telefone', ',11999998888'].join('\n');
 
       const result = await service.importCsv(csv, CTX, true);
 
       expect(result.valid).toHaveLength(0);
       expect(result.invalid).toHaveLength(1);
-      expect(result.invalid[0].reason).toBe('Nome vazio');
+      expect(result.invalid[0].reason).toMatch(/Linha 2.*nome vazio/i);
     });
 
     it('marks row as invalid when both phone and email are missing', async () => {
@@ -142,7 +144,24 @@ describe('LeadsImportService', () => {
       const result = await service.importCsv(csv, CTX, true);
 
       expect(result.invalid).toHaveLength(1);
-      expect(result.invalid[0].reason).toBe('Sem telefone nem email');
+      expect(result.invalid[0].reason).toMatch(/Linha 2.*sem telefone nem email/i);
+    });
+
+    it('reports specific error when phone is filled but invalid', async () => {
+      // "999" has fewer than 8 digits → marked as invalid (not silently null)
+      const csv = ['Nome,Telefone', 'João,999'].join('\n');
+
+      const result = await service.importCsv(csv, CTX, true);
+
+      expect(result.invalid).toHaveLength(1);
+      expect(result.invalid[0].reason).toMatch(/Linha 2.*telefone.*999.*inválido/i);
+    });
+
+    it('throws when no valid rows remain (real run)', async () => {
+      const csv = ['Nome,Telefone', 'João,'].join('\n'); // sem telefone nem email
+      await expect(service.importCsv(csv, CTX, false)).rejects.toThrow(
+        /Nenhum cliente foi importado/i,
+      );
     });
   });
 
