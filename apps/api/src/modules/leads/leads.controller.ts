@@ -4,12 +4,14 @@ import {
 } from '@nestjs/common';
 import { LeadsService } from './leads.service';
 import { ClientRecoveryService, type RecoveryChannel } from './services/client-recovery.service';
+import { LeadsImportService } from './services/leads-import.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
 import { ListLeadsDto } from './dto/list-leads.dto';
 import { RecoverClientDto } from './dto/recover-client.dto';
 import { BatchRecoverDto } from './dto/batch-recover.dto';
 import { ConfirmRecoveryDto } from './dto/confirm-recovery.dto';
+import { ImportLeadsDto } from './dto/import-leads.dto';
 import { RequirePermission } from '../../common/rbac/permissions';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -21,6 +23,7 @@ export class LeadsController {
   constructor(
     private readonly leadsService: LeadsService,
     private readonly recoveryService: ClientRecoveryService,
+    private readonly importService: LeadsImportService,
   ) {}
 
   @Post()
@@ -34,6 +37,19 @@ export class LeadsController {
   @RequirePermission('leads:read')
   findAll(@Query() params: ListLeadsDto, @CurrentUser() ctx: TenantContext) {
     return this.leadsService.findAll(params, ctx);
+  }
+
+  /**
+   * Importa clientes a partir de um CSV (texto enviado no body).
+   * Suporta separadores `,` e `;`, cabeçalhos PT/EN, dedup por phone OU email.
+   *
+   * Use `dryRun: true` para preview antes de gravar.
+   */
+  @Post('import')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('leads:create')
+  importLeads(@Body() dto: ImportLeadsDto, @CurrentUser() ctx: TenantContext) {
+    return this.importService.importCsv(dto.csvContent, ctx, dto.dryRun ?? false);
   }
 
   /**

@@ -1,7 +1,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { AlertCircle, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { AlertCircle, RefreshCw, Upload } from 'lucide-react';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useToast } from '@/lib/providers/ToastProvider';
 import { useInactiveClientsQuery } from '@/lib/hooks/leads/useInactiveClientsQuery';
@@ -21,6 +23,7 @@ const TABS: { key: TabKey; label: string; disabled?: boolean }[] = [
 ];
 
 export default function ClientesPage() {
+  const { slug } = useParams<{ slug: string }>();
   const [activeTab, setActiveTab] = useState<TabKey>('inactive');
   const [selectedClient, setSelectedClient] = useState<InactiveClient | null>(null);
   const { data, isLoading, isError } = useInactiveClientsQuery(30);
@@ -52,6 +55,17 @@ export default function ClientesPage() {
     <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6">
       {/* Banner LGPD — só aparece se não aceitou ainda; bloqueante por backend de qualquer jeito */}
       <LgpdAcceptanceBanner />
+
+      {/* Importar CTA — fica visível independente de inativos pra resolver o problema de "lista vazia" */}
+      <div className="flex justify-end">
+        <Link
+          href={`/${slug}/clientes/importar`}
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-brand-border bg-brand-surface text-text-primary rounded-lg hover:bg-brand-surface-2 transition-colors"
+        >
+          <Upload size={14} />
+          Importar lista de clientes
+        </Link>
+      </div>
 
       <RecoveryHero
         inactiveCount={clients.length}
