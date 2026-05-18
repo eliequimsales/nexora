@@ -19,15 +19,15 @@ COPY apps/api/prisma ./apps/api/prisma
 # Install dependencies (including dev — needed to build TS)
 RUN pnpm install --frozen-lockfile
 
+# Generate Prisma client BEFORE build so TypeScript has the generated types
+RUN pnpm --filter api exec prisma generate
+
 # Copy source last so we can rebuild without re-fetching deps
 COPY apps/api ./apps/api
 COPY packages/shared ./packages/shared
 
 # Build shared package first (api depends on it), then api
 RUN pnpm --filter @nexora/shared build && pnpm --filter api build
-
-# Generate Prisma client for production runtime
-RUN pnpm --filter api exec prisma generate
 
 # ---------- Stage 2: production runtime ----------
 FROM node:20-alpine AS runtime
