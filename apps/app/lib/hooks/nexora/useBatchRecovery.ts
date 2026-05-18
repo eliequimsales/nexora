@@ -11,6 +11,7 @@ interface BatchRecoveryInput {
 interface BatchRecoveryResponse {
   sent: number;
   failed: number;
+  skipped: number;
   total: number;
 }
 
@@ -31,6 +32,7 @@ export function useBatchRecovery() {
     isSuccess,
     selected: data?.sent || 0,
     failed: data?.failed || 0,
+    skipped: data?.skipped || 0,
     error,
   };
 }

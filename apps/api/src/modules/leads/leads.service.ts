@@ -82,6 +82,12 @@ export class LeadsService {
       where: {
         orgId: ctx.orgId,
         archivedAt: null,
+        // Hard exclude opt-outs — never appear in the "inactive customers"
+        // list. Compliance + sanity: we won't send to them anyway.
+        optedOutAt: null,
+        // Hard exclude clients we've already brought back this period — they're
+        // not "inactive" in any useful sense once they've returned and paid.
+        recoveredAt: null,
         status: { notIn: ['closed_lost', 'closed_won'] },
         updatedAt: { lt: cutoffDate },
       },

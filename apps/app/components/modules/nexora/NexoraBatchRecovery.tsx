@@ -10,7 +10,7 @@ export function NexoraBatchRecovery() {
   const [filterDays, setFilterDays] = useState(30);
   const [channelFilter, setChannelFilter] = useState<'all' | 'whatsapp' | 'email'>('all');
   const [showPreview, setShowPreview] = useState(false);
-  const { mutate, isPending, isSuccess, selected } = useBatchRecovery();
+  const { mutate, isPending, isSuccess, selected, failed, skipped } = useBatchRecovery();
   const { data: inactiveClients, isLoading: isLoadingClients } = useInactiveClientsQuery(filterDays);
 
   const whatsappVar = '{{customer_name}}';
@@ -75,11 +75,26 @@ export function NexoraBatchRecovery() {
       {isSuccess && (
         <div className="rounded-lg border border-status-success-border bg-status-success-muted p-4 flex gap-3">
           <CheckCircle2 size={16} className="text-status-success shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-medium text-status-success">Mensagens enviadas com sucesso!</p>
-            <p className="text-xs text-status-success-secondary mt-1">
-              {selected} clientes foram contatados
-            </p>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-status-success">Campanha enviada</p>
+            <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+              <div>
+                <span className="text-text-muted">Enviadas: </span>
+                <span className="font-semibold text-status-success">{selected}</span>
+              </div>
+              {skipped > 0 && (
+                <div>
+                  <span className="text-text-muted">Pularam (opt-out): </span>
+                  <span className="font-semibold text-text-secondary">{skipped}</span>
+                </div>
+              )}
+              {failed > 0 && (
+                <div>
+                  <span className="text-text-muted">Falharam: </span>
+                  <span className="font-semibold text-status-error">{failed}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
