@@ -44,8 +44,12 @@ COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 
-# Install only production deps for runtime
+# Install production deps (inclui @prisma/client mas não o CLI prisma)
 RUN pnpm install --prod --frozen-lockfile
+
+# Copia o Prisma CLI do builder para poder rodar migrate deploy no startup
+COPY --from=builder /app/node_modules/.bin/prisma /app/node_modules/.bin/prisma
+COPY --from=builder /app/node_modules/prisma /app/node_modules/prisma
 
 # Default port (overridden by PORT env)
 ENV NODE_ENV=production
