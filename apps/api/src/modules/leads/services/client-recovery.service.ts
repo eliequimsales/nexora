@@ -481,6 +481,126 @@ export class ClientRecoveryService {
   }
 
   /**
+   * Gera o texto de recuperação SEM enviar — para o "modo manual" do piloto.
+   *
+   * O barbeiro/atendente chama esse endpoint, recebe a mensagem pronta + o
+   * número do cliente, e copia/cola no WhatsApp dele mesmo. Permite operar
+   * sem Z-API (e portanto sem o risco de banimento) durante validação.
+   *
+   * Não registra ActivityLog — preview puro. Use `markSentManually` para
+   * fechar o ciclo depois que o usuário realmente enviar.
+   */
+  async previewRecovery(
+    leadId: string,
+    ctx: TenantContext,
+    channel?: RecoveryChannel,
+  ): Promise<{
+    leadId: string;
+    leadName: string;
+    channel: RecoveryChannel;
+    recipient: string;
+    message: string;
+  }> {
+    const lead = await this.prisma.lead.findUnique({ where: { id: leadId } });
+    if (!lead) throw new NotFoundException('Cliente não encontrado');
+    assertSameTenant(lead.orgId, ctx.orgId);
+
+    if (lead.optedOutAt) {
+      throw new BadRequestException(
+        'Cliente solicitou parar de receber mensagens (opt-out)',
+      );
+    }
+
+    const targetChannel: RecoveryChannel =
+      channel ?? (lead.phone ? 'whatsapp' : 'email');
+    const recipient =
+      targetChannel === 'whatsapp' ? lead.phone : lead.email;
+    if (!recipient) {
+      throw new BadRequestException(
+        targetChannel === 'whatsapp'
+          ? 'Cliente não tem telefone cadastrado'
+          : 'Cliente não tem email cadastrado',
+      );
+    }
+
+    const daysSinceLast = Math.max(
+      0,
+      Math.floor(
+        (Date.now() - lead.updatedAt.getTime()) / (1000 * 60 * 60 * 24),
+      ),
+    );
+    const prompt = this.buildPrompt(lead.name, daysSinceLast, targetChannel);
+    const llmResult = await this.llm.call(prompt, 200);
+
+    return {
+      leadId: lead.id,
+      leadName: lead.name,
+      channel: targetChannel,
+      recipient,
+      message: llmResult.content.trim(),
+    };
+  }
+
+  /**
+   * Registra que uma mensagem de recuperação foi enviada **manualmente**
+   * (fora do sistema — barbeiro mandou pelo WhatsApp dele).
+   *
+   * Cria o mesmo ActivityLog que `recover()` cria, mas com `metadata.manual=true`.
+   * Incrementa followUpCount para tirar o cliente da lista de inativos.
+   *
+   * Usado pelo piloto manual: gerar texto → copiar → mandar fora → marcar aqui.
+   */
+  async markSentManually(
+    leadId: string,
+    ctx: TenantContext,
+    input: { channel: RecoveryChannel; message: string },
+  ): Promise<{ success: true; leadId: string }> {
+    const lead = await this.prisma.lead.findUnique({ where: { id: leadId } });
+    if (!lead) throw new NotFoundException('Cliente não encontrado');
+    assertSameTenant(lead.orgId, ctx.orgId);
+
+    if (lead.optedOutAt) {
+      throw new BadRequestException(
+        'Cliente solicitou parar de receber mensagens (opt-out)',
+      );
+    }
+
+    const recipient =
+      input.channel === 'whatsapp' ? lead.phone : lead.email;
+    if (!recipient) {
+      throw new BadRequestException(
+        `Cliente não tem ${input.channel === 'whatsapp' ? 'telefone' : 'email'} cadastrado`,
+      );
+    }
+
+    await this.prisma.activityLog.create({
+      data: {
+        orgId: ctx.orgId,
+        leadId: lead.id,
+        userId: ctx.userId,
+        type: 'recovery_sent',
+        content: `Mensagem de recuperação enviada manualmente via ${input.channel}`,
+        metadata: {
+          channel: input.channel,
+          recipient,
+          message: input.message,
+          success: true,
+          manual: true, // ← bandeira que marca envio fora do sistema
+          externalId: null,
+          error: null,
+        },
+      },
+    });
+
+    await this.prisma.lead.update({
+      where: { id: lead.id },
+      data: { followUpCount: { increment: 1 } },
+    });
+
+    return { success: true, leadId: lead.id };
+  }
+
+  /**
    * Confirma que um cliente recuperado realmente voltou e pagou.
    *
    * Persiste:

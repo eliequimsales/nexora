@@ -83,6 +83,41 @@ export class LeadsController {
   }
 
   /**
+   * Modo MANUAL — gera o texto da mensagem sem enviar.
+   * O barbeiro copia/cola no WhatsApp dele mesmo. Sem risco de banimento.
+   * Não registra ActivityLog (puro preview).
+   */
+  @Post(':id/preview-recovery')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('leads:update')
+  previewRecovery(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: RecoverClientDto,
+    @CurrentUser() ctx: TenantContext,
+  ) {
+    return this.recoveryService.previewRecovery(
+      id,
+      ctx,
+      body.channel as RecoveryChannel | undefined,
+    );
+  }
+
+  /**
+   * Modo MANUAL — fecha o ciclo: registra que o barbeiro enviou a mensagem
+   * pelo WhatsApp dele (fora do sistema). Tira o cliente da lista de inativos.
+   */
+  @Post(':id/mark-sent-manually')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('leads:update')
+  markSentManually(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { channel: 'whatsapp' | 'email'; message: string },
+    @CurrentUser() ctx: TenantContext,
+  ) {
+    return this.recoveryService.markSentManually(id, ctx, body);
+  }
+
+  /**
    * Recuperação em lote — envia mensagens de recuperação para múltiplos clientes.
    * Processa até 100 leads por chamada. Não para na primeira falha.
    */

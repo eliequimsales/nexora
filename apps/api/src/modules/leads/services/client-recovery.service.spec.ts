@@ -582,6 +582,92 @@ describe('ClientRecoveryService', () => {
     });
   });
 
+  describe('previewRecovery (modo manual — sem enviar)', () => {
+    it('gera mensagem e devolve canal + destinatário sem chamar provider', async () => {
+      prismaMock.lead.findUnique.mockResolvedValueOnce(buildLead());
+
+      const result = await service.previewRecovery('lead-1', CTX);
+
+      expect(result.message).toContain('João');
+      expect(result.channel).toBe('whatsapp');
+      expect(result.recipient).toBe('5511999998888');
+      expect(result.leadName).toBe('João Silva');
+      // NÃO chama os providers
+      expect(whatsappMock.send).not.toHaveBeenCalled();
+      expect(emailMock.send).not.toHaveBeenCalled();
+      // NÃO escreve ActivityLog
+      expect(prismaMock.activityLog.create).not.toHaveBeenCalled();
+    });
+
+    it('respeita opt-out — não gera mensagem se cliente já opted out', async () => {
+      prismaMock.lead.findUnique.mockResolvedValueOnce(
+        buildLead({ optedOutAt: new Date() } as any),
+      );
+
+      await expect(service.previewRecovery('lead-1', CTX)).rejects.toThrow(BadRequestException);
+      expect(llmMock.call).not.toHaveBeenCalled();
+    });
+
+    it('respeita escolha explícita de canal email', async () => {
+      prismaMock.lead.findUnique.mockResolvedValueOnce(buildLead());
+
+      const result = await service.previewRecovery('lead-1', CTX, 'email');
+
+      expect(result.channel).toBe('email');
+      expect(result.recipient).toBe('joao@example.com');
+    });
+  });
+
+  describe('markSentManually (modo manual — fecha o ciclo)', () => {
+    it('registra ActivityLog com manual=true e incrementa followUpCount', async () => {
+      prismaMock.lead.findUnique.mockResolvedValueOnce(buildLead());
+
+      const result = await service.markSentManually('lead-1', CTX, {
+        channel: 'whatsapp',
+        message: 'Oi João, sentimos sua falta!',
+      });
+
+      expect(result.success).toBe(true);
+      expect(prismaMock.activityLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          type: 'recovery_sent',
+          metadata: expect.objectContaining({
+            manual: true,
+            success: true,
+            channel: 'whatsapp',
+            recipient: '5511999998888',
+            message: 'Oi João, sentimos sua falta!',
+          }),
+        }),
+      });
+      expect(prismaMock.lead.update).toHaveBeenCalledWith({
+        where: { id: 'lead-1' },
+        data: { followUpCount: { increment: 1 } },
+      });
+      // Provider NÃO foi chamado — esse é o ponto do modo manual
+      expect(whatsappMock.send).not.toHaveBeenCalled();
+    });
+
+    it('respeita opt-out — não registra se cliente já opted out', async () => {
+      prismaMock.lead.findUnique.mockResolvedValueOnce(
+        buildLead({ optedOutAt: new Date() } as any),
+      );
+
+      await expect(
+        service.markSentManually('lead-1', CTX, { channel: 'whatsapp', message: 'oi' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prismaMock.activityLog.create).not.toHaveBeenCalled();
+    });
+
+    it('rejeita whatsapp explícito quando lead não tem telefone', async () => {
+      prismaMock.lead.findUnique.mockResolvedValueOnce(buildLead({ phone: null }));
+
+      await expect(
+        service.markSentManually('lead-1', CTX, { channel: 'whatsapp', message: 'oi' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
   describe('confirmRecovery (real revenue tracking)', () => {
     it('marks lead as recovered with the given value', async () => {
       const lead = buildLead();
