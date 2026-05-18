@@ -18,6 +18,7 @@ export function NexoraRecoverySettings() {
   const businessNameVar = '{{business_name}}';
 
   const [inactivityDays, setInactivityDays] = useState(nexoraSettings.inactivityDays || 30);
+  const [avgTicket, setAvgTicket] = useState(nexoraSettings.avgTicket || 80);
   const [whatsappTemplate, setWhatsappTemplate] = useState(nexoraSettings.whatsappTemplate || '');
   const [emailTemplate, setEmailTemplate] = useState(nexoraSettings.emailTemplate || '');
   const [whatsappEnabled, setWhatsappEnabled] = useState(
@@ -36,6 +37,7 @@ export function NexoraRecoverySettings() {
   function handleSave() {
     const input: NexoraRecoverySettingsInput = {
       inactivityDays,
+      avgTicket,
       whatsappTemplate: whatsappTemplate || undefined,
       emailTemplate: emailTemplate || undefined,
       whatsappEnabled,
@@ -77,27 +79,56 @@ export function NexoraRecoverySettings() {
         </div>
       )}
 
-      {/* Inactivity threshold */}
-      <div className="rounded-lg border border-brand-border bg-brand-surface p-5">
-        <div className="mb-4">
-          <label className="block text-sm font-semibold text-text-primary mb-1">
-            Dias até considerar cliente inativo
-          </label>
-          <p className="text-xs text-text-muted">
-            Clientes sem atividade há este número de dias serão marcados como inativos.
-          </p>
+      {/* Inactivity threshold + ticket médio (duas configs lado a lado) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="rounded-lg border border-brand-border bg-brand-surface p-5">
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-text-primary mb-1">
+              Dias até considerar cliente inativo
+            </label>
+            <p className="text-xs text-text-muted">
+              Clientes sem atividade há este número de dias.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min="1"
+              max="180"
+              value={inactivityDays}
+              onChange={(e) =>
+                setInactivityDays(Math.min(180, Math.max(1, parseInt(e.target.value) || 1)))
+              }
+              className="px-3 py-2 border border-brand-border rounded-lg bg-brand-surface-2 text-text-primary text-sm w-24"
+              disabled={isPending}
+            />
+            <span className="text-sm text-text-muted">dias</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <input
-            type="number"
-            min="1"
-            max="180"
-            value={inactivityDays}
-            onChange={(e) => setInactivityDays(Math.min(180, Math.max(1, parseInt(e.target.value) || 1)))}
-            className="px-3 py-2 border border-brand-border rounded-lg bg-brand-surface-2 text-text-primary text-sm w-24"
-            disabled={isPending}
-          />
-          <span className="text-sm text-text-muted">dias</span>
+
+        <div className="rounded-lg border border-brand-border bg-brand-surface p-5">
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-text-primary mb-1">
+              Ticket médio
+            </label>
+            <p className="text-xs text-text-muted">
+              Valor médio gasto por cliente. Usado para calcular receita potencial.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-text-muted">R$</span>
+            <input
+              type="number"
+              min="10"
+              max="2000"
+              value={avgTicket}
+              onChange={(e) =>
+                setAvgTicket(Math.min(2000, Math.max(10, parseInt(e.target.value) || 10)))
+              }
+              className="px-3 py-2 border border-brand-border rounded-lg bg-brand-surface-2 text-text-primary text-sm w-28"
+              disabled={isPending}
+            />
+          </div>
         </div>
       </div>
 

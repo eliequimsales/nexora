@@ -20,6 +20,12 @@ class NexoraRecoverySettingsDto {
   inactivityDays?: number; // Dias sem atividade para considerar cliente inativo (default: 30)
 
   @IsOptional()
+  @IsNumber()
+  @Min(10)
+  @Max(2000)
+  avgTicket?: number; // Ticket médio R$ (default: 80) — usado em "Receita potencial"
+
+  @IsOptional()
   @IsString()
   @MaxLength(500)
   whatsappTemplate?: string; // Mensagem template para WhatsApp

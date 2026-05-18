@@ -7,6 +7,7 @@ import type { OrgResponse } from '@/types';
 
 export interface NexoraRecoverySettingsInput {
   inactivityDays?: number;
+  avgTicket?: number;
   whatsappTemplate?: string;
   emailTemplate?: string;
   whatsappEnabled?: boolean;
@@ -28,6 +29,7 @@ export function useNexoraSettings() {
         settings: {
           nexoraRecovery: {
             inactivityDays: data.inactivityDays,
+            avgTicket: data.avgTicket,
             whatsappTemplate: data.whatsappTemplate,
             emailTemplate: data.emailTemplate,
             whatsappEnabled: data.whatsappEnabled,

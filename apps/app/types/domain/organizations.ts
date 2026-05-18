@@ -29,6 +29,7 @@ export interface IntegrationSettings {
 
 export interface NexoraRecoverySettings {
   inactivityDays?: number; // Default: 30 days
+  avgTicket?: number; // Default: 80 — ticket médio em R$
   whatsappTemplate?: string; // Message template for WhatsApp
   emailTemplate?: string; // Message template for Email
   zapiApiKey?: string; // Z-API key (encrypted)

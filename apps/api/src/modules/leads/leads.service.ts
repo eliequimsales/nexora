@@ -78,6 +78,15 @@ export class LeadsService {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - inactiveDays);
 
+    // Le o ticket médio da config da org (settings.nexoraRecovery.avgTicket)
+    // com fallback para R$80. Permite à barbearia ajustar pra realidade dela.
+    const org = await this.prisma.organization.findUnique({
+      where: { id: ctx.orgId },
+      select: { settings: true },
+    });
+    const settings = (org?.settings ?? {}) as Record<string, any>;
+    const avgTicket = Number(settings?.nexoraRecovery?.avgTicket) || 80;
+
     const inactive = await this.prisma.lead.findMany({
       where: {
         orgId: ctx.orgId,
@@ -109,7 +118,7 @@ export class LeadsService {
       daysSinceLastActivity: Math.floor(
         (now - lead.updatedAt.getTime()) / (1000 * 60 * 60 * 24),
       ),
-      estimatedValue: 80, // R$80 barbershop average ticket — TODO: read from org config
+      estimatedValue: avgTicket,
     }));
   }
 

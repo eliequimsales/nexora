@@ -29,6 +29,10 @@ const mockPrisma = {
   pipelineStage: { findUnique: jest.fn() },
   user: { findUnique: jest.fn() },
   activityLog: { create: jest.fn() },
+  // findInactive lê settings.nexoraRecovery.avgTicket — default OK
+  organization: {
+    findUnique: jest.fn().mockResolvedValue({ settings: {} }),
+  },
 };
 
 const mockEventEmitter = { emit: jest.fn() };
@@ -38,6 +42,10 @@ describe('LeadsService — update guards (C1 regression)', () => {
 
   beforeEach(async () => {
     jest.resetAllMocks();
+
+    // findInactive le settings.nexoraRecovery.avgTicket; sem isso → undefined.
+    // Resetamos pra { settings: {} } em todos os testes pra cair no default 80.
+    mockPrisma.organization.findUnique.mockResolvedValue({ settings: {} });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
