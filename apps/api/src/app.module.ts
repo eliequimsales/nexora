@@ -34,6 +34,7 @@ import { BillingModule } from './modules/billing/billing.module';
 import { QueueModule } from './workers/queue.module';
 import { AssistenteFinanceiroModule } from './modules/assistente-financeiro/assistente-financeiro.module';
 import { HealthModule } from './modules/health/health.module';
+import { NexoraReportsModule } from './modules/nexora-reports/nexora-reports.module';
 
 @Module({
   imports: [
@@ -94,6 +95,7 @@ import { HealthModule } from './modules/health/health.module';
     QueueModule,
     AssistenteFinanceiroModule,
     HealthModule,
+    NexoraReportsModule,
   ],
 
   providers: [
