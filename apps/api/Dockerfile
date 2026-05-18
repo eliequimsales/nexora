@@ -36,5 +36,6 @@ ENV PORT=3001
 EXPOSE 3001
 
 # Para dev/staging: db push sincroniza o schema sem precisar de migration history
+# NestJS com rootDir="../../" coloca output em dist/apps/api/src/main.js
 # Troca para "prisma migrate deploy" quando tiver producao real com dados
-CMD ["sh", "-c", "pnpm --filter api exec prisma db push --accept-data-loss && node apps/api/dist/main.js"]
+CMD ["sh", "-c", "pnpm --filter api exec prisma db push --accept-data-loss && node apps/api/dist/apps/api/src/main.js"]
