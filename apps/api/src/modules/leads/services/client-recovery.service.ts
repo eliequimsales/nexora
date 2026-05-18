@@ -481,6 +481,67 @@ export class ClientRecoveryService {
   }
 
   /**
+   * Confirma que um cliente recuperado realmente voltou e pagou.
+   *
+   * Persiste:
+   *   - leads.recoveredAt = now
+   *   - leads.recoveredValue = value (R$)
+   *   - ActivityLog de type 'recovery_confirmed'
+   *
+   * Idempotente: se já estiver marcado como recovered, atualiza o valor
+   * (caso o barbeiro queira corrigir o ticket).
+   *
+   * Esta é a operação que transforma "potencial estimado" em "receita real"
+   * no dashboard da Nexora.
+   */
+  async confirmRecovery(
+    leadId: string,
+    value: number,
+    ctx: TenantContext,
+  ): Promise<{ leadId: string; recoveredAt: Date; recoveredValue: number }> {
+    const lead = await this.prisma.lead.findUnique({ where: { id: leadId } });
+    if (!lead) {
+      throw new NotFoundException('Cliente não encontrado');
+    }
+    assertSameTenant(lead.orgId, ctx.orgId);
+
+    const recoveredAt = lead.recoveredAt ?? new Date();
+    const isNewConfirmation = !lead.recoveredAt;
+
+    await this.prisma.lead.update({
+      where: { id: lead.id },
+      data: {
+        recoveredAt,
+        recoveredValue: value,
+      },
+    });
+
+    // Only log "confirmed" event on the first confirmation; corrections to
+    // recoveredValue are silent updates so the timeline doesn't get noisy.
+    if (isNewConfirmation) {
+      await this.prisma.activityLog.create({
+        data: {
+          orgId: ctx.orgId,
+          leadId: lead.id,
+          userId: ctx.userId,
+          type: 'recovery_confirmed',
+          content: `Cliente voltou e pagou R$ ${value.toFixed(2)}`,
+          metadata: {
+            value,
+            confirmedAt: recoveredAt.toISOString(),
+          },
+        },
+      });
+    }
+
+    return {
+      leadId: lead.id,
+      recoveredAt,
+      recoveredValue: value,
+    };
+  }
+
+  /**
    * Builds the AI prompt — kept inside the service so the wording is
    * versionable alongside the recovery rules.
    */

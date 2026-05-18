@@ -106,12 +106,15 @@ export class DashboardService {
       recoveredToday,
       recoveredThisMonth,
       successfulRecoveriesThisMonth,
+      confirmedRecoveriesThisMonth,
+      revenueAggregate,
     ] = await Promise.all([
-      // Inativos: sem atividade há 30+ dias, status não final
+      // Inativos: sem atividade há 30+ dias, status não final, sem opt-out
       this.prisma.lead.count({
         where: {
           orgId,
           archivedAt: null,
+          optedOutAt: null,
           status: { notIn: ['closed_lost', 'closed_won'] },
           updatedAt: { lt: inactiveThreshold },
         },
@@ -144,6 +147,21 @@ export class DashboardService {
           },
         },
       }),
+      // Confirmadas pelo barbeiro este mês (leads.recoveredAt)
+      this.prisma.lead.count({
+        where: {
+          orgId,
+          recoveredAt: { gte: monthStart },
+        },
+      }),
+      // Soma de receita REAL recuperada este mês (leads.recoveredValue)
+      this.prisma.lead.aggregate({
+        where: {
+          orgId,
+          recoveredAt: { gte: monthStart },
+        },
+        _sum: { recoveredValue: true },
+      }),
     ]);
 
     const successRate =
@@ -151,8 +169,11 @@ export class DashboardService {
         ? Math.round((successfulRecoveriesThisMonth / recoveredThisMonth) * 100)
         : 0;
 
-    // R$ estimado = inactiveCount × R$80 (ticket médio barbearia)
+    // R$ estimado = inactiveCount × R$80 (ticket médio barbearia) — POTENCIAL
     const estimatedRevenue = inactiveCount * 80;
+
+    // R$ real recuperado este mês (soma de leads.recovered_value)
+    const realRecoveredRevenue = Number(revenueAggregate._sum.recoveredValue ?? 0);
 
     return {
       recovery: {
@@ -161,6 +182,8 @@ export class DashboardService {
         recoveredThisMonth,
         successRate,
         estimatedRevenue,
+        confirmedRecoveriesThisMonth,
+        realRecoveredRevenue,
       },
     };
   }

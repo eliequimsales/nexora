@@ -582,6 +582,71 @@ describe('ClientRecoveryService', () => {
     });
   });
 
+  describe('confirmRecovery (real revenue tracking)', () => {
+    it('marks lead as recovered with the given value', async () => {
+      const lead = buildLead();
+      prismaMock.lead.findUnique.mockResolvedValueOnce(lead);
+
+      const result = await service.confirmRecovery('lead-1', 80, CTX);
+
+      expect(result.leadId).toBe('lead-1');
+      expect(result.recoveredValue).toBe(80);
+      expect(prismaMock.lead.update).toHaveBeenCalledWith({
+        where: { id: 'lead-1' },
+        data: expect.objectContaining({
+          recoveredAt: expect.any(Date),
+          recoveredValue: 80,
+        }),
+      });
+    });
+
+    it('writes a recovery_confirmed ActivityLog on first confirmation', async () => {
+      prismaMock.lead.findUnique.mockResolvedValueOnce(buildLead());
+
+      await service.confirmRecovery('lead-1', 50, CTX);
+
+      expect(prismaMock.activityLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            type: 'recovery_confirmed',
+            content: expect.stringContaining('R$ 50.00'),
+          }),
+        }),
+      );
+    });
+
+    it('does NOT duplicate the audit log when correcting the value', async () => {
+      // Already-recovered lead
+      prismaMock.lead.findUnique.mockResolvedValueOnce(
+        buildLead({ recoveredAt: new Date('2026-05-01') } as any),
+      );
+
+      await service.confirmRecovery('lead-1', 95, CTX);
+
+      // Update should still run (correcting the value), but audit log entry
+      // for recovery_confirmed must NOT be appended again.
+      expect(prismaMock.lead.update).toHaveBeenCalled();
+      expect(prismaMock.activityLog.create).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException when lead does not exist', async () => {
+      prismaMock.lead.findUnique.mockResolvedValueOnce(null);
+
+      await expect(service.confirmRecovery('missing', 50, CTX)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('refuses cross-tenant confirmation', async () => {
+      prismaMock.lead.findUnique.mockResolvedValueOnce(
+        buildLead({ orgId: 'other-org' }),
+      );
+
+      await expect(service.confirmRecovery('lead-1', 50, CTX)).rejects.toThrow();
+      expect(prismaMock.lead.update).not.toHaveBeenCalled();
+    });
+  });
+
   describe('opt-out enforcement', () => {
     it('recover() throws BadRequestException when lead has optedOutAt set', async () => {
       prismaMock.lead.findUnique.mockResolvedValueOnce(

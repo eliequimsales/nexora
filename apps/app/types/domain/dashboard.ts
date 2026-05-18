@@ -42,7 +42,9 @@ export interface NexoraMetricsDto {
     recoveredToday: number; // Recuperações tentadas hoje
     recoveredThisMonth: number; // Total este mês
     successRate: number; // % de respostas (0-100)
-    estimatedRevenue: number; // R$ 80 × count
+    estimatedRevenue: number; // R$ 80 × count (POTENCIAL)
+    confirmedRecoveriesThisMonth: number; // Clientes confirmados (voltaram + pagaram)
+    realRecoveredRevenue: number; // R$ REAL recuperado este mês (soma dos tickets confirmados)
   };
 }
 

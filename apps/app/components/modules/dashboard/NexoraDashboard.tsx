@@ -33,7 +33,7 @@ export function NexoraDashboard({ slug }: { slug: string }) {
         </p>
       </div>
 
-      {/* KPI Grid — 4 cards em destaque */}
+      {/* KPI Grid — 4 cards em destaque (Receita Recuperada é o KPI rei) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Inativos */}
         <StatCard
@@ -45,17 +45,36 @@ export function NexoraDashboard({ slug }: { slug: string }) {
           loading={isLoading}
         />
 
-        {/* Recuperados hoje */}
-        <StatCard
-          label="Recuperados hoje"
-          value={recovery?.recoveredToday ?? 0}
-          sub="mensagens enviadas"
-          variant="amber"
-          icon={<TrendingUp size={14} />}
-          loading={isLoading}
-        />
+        {/* RECEITA RECUPERADA (real, este mês) — métrica que retém o cliente */}
+        <div className="rounded-lg border-2 border-status-success/40 bg-status-success-muted/20 p-4">
+          <div className="flex items-start justify-between">
+            <div className="min-w-0">
+              <p className="text-2xs uppercase tracking-widest text-status-success font-semibold">
+                Receita recuperada
+              </p>
+              <p
+                className={cn(
+                  'text-2xl font-bold mt-2',
+                  isLoading
+                    ? 'animate-pulse bg-brand-surface-2 rounded w-24 h-7'
+                    : 'text-status-success',
+                )}
+              >
+                {!isLoading && (
+                  <>R${(recovery?.realRecoveredRevenue ?? 0).toLocaleString('pt-BR')}</>
+                )}
+              </p>
+              <p className="text-xs text-text-muted mt-2">
+                {recovery?.confirmedRecoveriesThisMonth ?? 0} clientes voltaram este mês
+              </p>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-status-success-muted flex items-center justify-center shrink-0">
+              <DollarSign size={16} className="text-status-success" />
+            </div>
+          </div>
+        </div>
 
-        {/* Taxa de sucesso */}
+        {/* Taxa de resposta */}
         <StatCard
           label="Taxa de resposta"
           value={`${recovery?.successRate ?? 0}%`}
@@ -65,12 +84,12 @@ export function NexoraDashboard({ slug }: { slug: string }) {
           loading={isLoading}
         />
 
-        {/* R$ Recuperável */}
+        {/* Potencial em aberto (estimativa) */}
         <div className="rounded-lg border border-brand-border bg-brand-surface p-4">
           <div className="flex items-start justify-between">
             <div className="min-w-0">
               <p className="text-2xs uppercase tracking-widest text-text-muted font-medium">
-                Receita em risco
+                Potencial em aberto
               </p>
               <p
                 className={cn(
@@ -79,17 +98,15 @@ export function NexoraDashboard({ slug }: { slug: string }) {
                 )}
               >
                 {!isLoading && (
-                  <>
-                    R${(recovery?.estimatedRevenue ?? 0).toLocaleString('pt-BR')}
-                  </>
+                  <>R${(recovery?.estimatedRevenue ?? 0).toLocaleString('pt-BR')}</>
                 )}
               </p>
               <p className="text-xs text-text-muted mt-2">
-                Potencial de recuperação
+                Estimativa: inativos × R$80
               </p>
             </div>
-            <div className="w-10 h-10 rounded-lg bg-status-success-muted/40 flex items-center justify-center shrink-0">
-              <DollarSign size={16} className="text-status-success" />
+            <div className="w-10 h-10 rounded-lg bg-brand-surface-2 flex items-center justify-center shrink-0">
+              <TrendingUp size={16} className="text-text-muted" />
             </div>
           </div>
         </div>
@@ -100,17 +117,23 @@ export function NexoraDashboard({ slug }: { slug: string }) {
         <h3 className="text-sm font-semibold text-text-primary mb-4">
           📊 Resumo do mês
         </h3>
-        <div className="grid grid-cols-3 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <div className="p-3 rounded-lg bg-brand-surface-2/40">
-            <p className="text-2xs uppercase text-text-muted mb-1">Tentativas</p>
+            <p className="text-2xs uppercase text-text-muted mb-1">Mensagens hoje</p>
+            <p className="text-lg font-semibold text-text-primary">
+              {recovery?.recoveredToday ?? 0}
+            </p>
+          </div>
+          <div className="p-3 rounded-lg bg-brand-surface-2/40">
+            <p className="text-2xs uppercase text-text-muted mb-1">Tentativas mês</p>
             <p className="text-lg font-semibold text-text-primary">
               {recovery?.recoveredThisMonth ?? 0}
             </p>
           </div>
           <div className="p-3 rounded-lg bg-brand-surface-2/40">
-            <p className="text-2xs uppercase text-text-muted mb-1">Taxa média</p>
-            <p className="text-lg font-semibold text-text-primary">
-              {recovery?.successRate ?? 0}%
+            <p className="text-2xs uppercase text-text-muted mb-1">Confirmados</p>
+            <p className="text-lg font-semibold text-status-success">
+              {recovery?.confirmedRecoveriesThisMonth ?? 0}
             </p>
           </div>
           <div className="p-3 rounded-lg bg-brand-surface-2/40">

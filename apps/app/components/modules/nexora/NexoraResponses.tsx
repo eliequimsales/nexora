@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { MessageSquare, CheckCircle2, Clock, ArrowRight, Filter } from 'lucide-react';
+import { MessageSquare, CheckCircle2, Clock, Filter, DollarSign } from 'lucide-react';
 import { useNexoraResponses } from '@/lib/hooks/nexora/useNexoraResponses';
 import { useUnreadResponses } from '@/lib/hooks/nexora/useUnreadResponses';
+import { useConfirmRecovery } from '@/lib/hooks/nexora/useConfirmRecovery';
 
 type ResponseStatus = 'responded' | 'no-response' | 'all';
 
@@ -29,6 +30,73 @@ interface RecoveryResponseItem {
   response?: string;
   phone?: string;
   email?: string;
+}
+
+function ConfirmRecoveryButton({ leadId }: { leadId: string }) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState('80');
+  const [confirmed, setConfirmed] = useState(false);
+  const mutation = useConfirmRecovery();
+
+  if (confirmed) {
+    return (
+      <div className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-status-success-muted text-status-success">
+        <CheckCircle2 size={12} />
+        Retorno confirmado
+      </div>
+    );
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-brand-gold text-brand-bg hover:bg-brand-gold/90 transition-colors"
+      >
+        <DollarSign size={12} />
+        Confirmar retorno
+      </button>
+    );
+  }
+
+  const handleConfirm = () => {
+    const numericValue = parseFloat(value.replace(',', '.'));
+    if (!Number.isFinite(numericValue) || numericValue <= 0) return;
+    mutation.mutate(
+      { leadId, value: numericValue },
+      { onSuccess: () => setConfirmed(true) },
+    );
+  };
+
+  return (
+    <div className="flex-1 flex items-center gap-2">
+      <span className="text-xs text-text-muted shrink-0">R$</span>
+      <input
+        type="number"
+        step="0.01"
+        min="0.01"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        disabled={mutation.isPending}
+        className="flex-1 min-w-0 px-2 py-1 text-xs border border-brand-border rounded bg-brand-surface-2 text-text-primary"
+        autoFocus
+      />
+      <button
+        onClick={handleConfirm}
+        disabled={mutation.isPending}
+        className="px-3 py-1 text-xs font-medium rounded bg-brand-gold text-brand-bg hover:bg-brand-gold/90 disabled:opacity-50"
+      >
+        {mutation.isPending ? '...' : 'Salvar'}
+      </button>
+      <button
+        onClick={() => setOpen(false)}
+        disabled={mutation.isPending}
+        className="px-2 py-1 text-xs text-text-muted hover:text-text-primary"
+      >
+        ✕
+      </button>
+    </div>
+  );
 }
 
 export function NexoraResponses() {
@@ -194,16 +262,10 @@ export function NexoraResponses() {
                 )}
               </div>
 
-              {/* Actions */}
+              {/* Actions — só quando o cliente respondeu positivamente */}
               {response.responded && (
                 <div className="mt-3 pt-3 border-t border-brand-border flex gap-2">
-                  <button className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-brand-gold text-brand-bg hover:bg-brand-gold/90 transition-colors">
-                    <ArrowRight size={12} />
-                    Próxima Ação
-                  </button>
-                  <button className="flex-1 text-xs font-medium rounded-lg bg-brand-surface-2 hover:bg-brand-border transition-colors px-3 py-1.5">
-                    Fechar Recuperação
-                  </button>
+                  <ConfirmRecoveryButton leadId={response.leadId} />
                 </div>
               )}
             </div>

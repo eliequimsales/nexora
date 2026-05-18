@@ -9,6 +9,7 @@ import { UpdateLeadDto } from './dto/update-lead.dto';
 import { ListLeadsDto } from './dto/list-leads.dto';
 import { RecoverClientDto } from './dto/recover-client.dto';
 import { BatchRecoverDto } from './dto/batch-recover.dto';
+import { ConfirmRecoveryDto } from './dto/confirm-recovery.dto';
 import { RequirePermission } from '../../common/rbac/permissions';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -96,6 +97,23 @@ export class LeadsController {
       ctx,
       body.channels as RecoveryChannel[] | undefined,
     );
+  }
+
+  /**
+   * Confirma que um cliente recuperado voltou e pagou.
+   * Body: { value: number } — valor real em R$ gasto pelo cliente.
+   *
+   * Este é o evento que alimenta o KPI "Receita Recuperada" — o número que
+   * justifica a assinatura mensal aos olhos do barbeiro.
+   */
+  @Post(':id/confirm-recovery')
+  @RequirePermission('leads:update')
+  confirmRecovery(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: ConfirmRecoveryDto,
+    @CurrentUser() ctx: TenantContext,
+  ) {
+    return this.recoveryService.confirmRecovery(id, body.value, ctx);
   }
 
   /**

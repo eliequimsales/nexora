@@ -43,7 +43,10 @@ export interface NexoraMetricsDto {
     recoveredToday: number; // Recuperações tentadas/bem-sucedidas hoje
     recoveredThisMonth: number; // Total este mês
     successRate: number; // % de mensagens que geraram resposta
-    estimatedRevenue: number; // R$ 80 × count (ticket médio barbearia)
+    estimatedRevenue: number; // POTENCIAL: inactiveCount × R$80 (ticket médio)
+    // ─── novos campos: receita REAL recuperada (confirmada pelo barbeiro) ───
+    confirmedRecoveriesThisMonth: number; // Clientes confirmados (leads.recoveredAt no mês)
+    realRecoveredRevenue: number; // Soma de leads.recoveredValue no mês (R$)
   };
 }
 
