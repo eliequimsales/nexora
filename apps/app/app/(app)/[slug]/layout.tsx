@@ -2,6 +2,7 @@ import { Sidebar } from '@/components/shell/Sidebar';
 import { TopBar } from '@/components/shell/TopBar';
 import { SlugGuard } from '@/components/shell/SlugGuard';
 import { WizardTrigger } from '@/components/modules/onboarding/WizardTrigger';
+import { NexoraPilotWizard } from '@/components/modules/onboarding/NexoraPilotWizard';
 import { CopilotButton } from '@/components/modules/copilot/CopilotButton';
 import { ErrorBoundary } from '@/components/shell/ErrorBoundary';
 
@@ -26,6 +27,7 @@ export default function OrgLayout({ children, params }: OrgLayoutProps) {
         <ErrorBoundary>{children}</ErrorBoundary>
       </main>
       <WizardTrigger />
+      <NexoraPilotWizard />
       <CopilotButton />
     </div>
   );
