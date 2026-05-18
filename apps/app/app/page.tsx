@@ -7,9 +7,9 @@ export default function LandingPage() {
       {/* Navigation */}
       <nav className="border-b border-brand-border px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-bold text-brand-gold">N</span>
-            <span className="text-lg font-bold text-text-primary">exora</span>
+          <div className="text-lg font-bold">
+            <span className="text-brand-gold">N</span>
+            <span className="text-text-primary">exora</span>
           </div>
           <Link
             href="/login"
@@ -27,7 +27,8 @@ export default function LandingPage() {
             Quantos clientes você perdeu <span className="text-brand-gold">esse mês?</span>
           </h1>
           <p className="text-xl text-text-muted max-w-2xl mx-auto">
-            A Nexora identifica clientes que pararam de voltar e os traz de volta automaticamente com mensagens personalizadas por IA.
+            A Nexora descobre quem parou de voltar pra sua barbearia e prepara
+            a mensagem pronta pra você chamar cada um no WhatsApp.
           </p>
           <div className="flex items-center justify-center gap-4 pt-4 flex-wrap">
             <Link

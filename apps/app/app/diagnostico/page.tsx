@@ -56,9 +56,9 @@ export default function DiagnosticoPage() {
       {/* Top bar */}
       <nav className="border-b border-brand-border px-6 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="text-lg font-bold text-brand-gold">N</span>
-            <span className="text-lg font-bold text-text-primary">exora</span>
+          <Link href="/" className="text-lg font-bold">
+            <span className="text-brand-gold">N</span>
+            <span className="text-text-primary">exora</span>
           </Link>
           <Link
             href="/login"
