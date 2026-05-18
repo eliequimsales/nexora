@@ -7,6 +7,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# openssl necessario para Prisma no Alpine Linux
+RUN apk add --no-cache openssl
+
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
 # Copiar manifests do monorepo
