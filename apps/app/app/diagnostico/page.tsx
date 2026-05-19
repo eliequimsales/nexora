@@ -2,14 +2,11 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Calculator, TrendingDown, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Calculator, TrendingDown, CheckCircle2, Mail } from 'lucide-react';
 
-// Heurísticas conservadoras baseadas em médias do setor de barbearia:
-// - INACTIVE_RATE: % de clientes que costumam parar de voltar mensalmente
-// - RECOVERABLE_RATE: % desses inativos que respondem à reativação bem feita
-// Esses números são intencionalmente conservadores para evitar promessa enganosa.
 const INACTIVE_RATE = 0.3;
 const RECOVERABLE_RATE = 0.2;
+const NEXORA_PRICE = 97;
 
 function formatCurrency(value: number): string {
   return value.toLocaleString('pt-BR', {
@@ -26,13 +23,20 @@ export default function DiagnosticoPage() {
   const [clientsPerMonth, setClientsPerMonth] = useState(150);
   const [avgTicket, setAvgTicket] = useState(50);
   const [returnDays, setReturnDays] = useState(30);
-  const [hasWhatsappList, setHasWhatsappList] = useState<boolean | null>(null);
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
 
-  // Cálculos
   const monthlyInactives = useMemo(
     () => Math.round(clientsPerMonth * INACTIVE_RATE),
     [clientsPerMonth],
   );
+
+  const monthlyLoss = useMemo(
+    () => monthlyInactives * avgTicket,
+    [monthlyInactives, avgTicket],
+  );
+
+  const yearlyLoss = useMemo(() => monthlyLoss * 12, [monthlyLoss]);
 
   const monthlyRecoverableCustomers = useMemo(
     () => Math.round(monthlyInactives * RECOVERABLE_RATE),
@@ -44,46 +48,53 @@ export default function DiagnosticoPage() {
     [monthlyRecoverableCustomers, avgTicket],
   );
 
-  const yearlyLoss = useMemo(
-    () => monthlyInactives * avgTicket * 12,
-    [monthlyInactives, avgTicket],
+  const roi = useMemo(
+    () => Math.round(monthlyRecoverableRevenue / NEXORA_PRICE),
+    [monthlyRecoverableRevenue],
   );
 
-  const ctaUrl = `/register?niche=barbearia&utm_source=diagnostico&potencial=${monthlyRecoverableRevenue}`;
+  const ctaUrl = `/register?niche=barbearia&utm_source=diagnostico&email=${encodeURIComponent(email)}&potencial=${monthlyRecoverableRevenue}`;
+
+  function handleEmailSubmit() {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setEmailError('Insira um email válido.');
+      return;
+    }
+    setEmailError('');
+    setStep('result');
+  }
 
   return (
     <div className="min-h-screen bg-brand-bg">
-      {/* Top bar */}
       <nav className="border-b border-brand-border px-6 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link href="/" className="text-lg font-bold">
             <span className="text-brand-gold">N</span>
             <span className="text-text-primary">exora</span>
           </Link>
-          <Link
-            href="/login"
-            className="text-sm font-medium text-text-secondary hover:text-text-primary"
-          >
+          <Link href="/login" className="text-sm font-medium text-text-secondary hover:text-text-primary">
             Entrar
           </Link>
         </div>
       </nav>
 
       <main className="max-w-2xl mx-auto px-6 py-12">
-        {/* Progress */}
+        {/* Progress — 3 steps + email = 4 */}
         {step !== 'result' && (
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-2">
               {[1, 2, 3, 4].map((n) => (
                 <div
                   key={n}
-                  className={`h-1 flex-1 rounded ${
-                    n <= step ? 'bg-brand-gold' : 'bg-brand-border'
+                  className={`h-1 flex-1 rounded transition-colors ${
+                    n <= (step === 4 ? 4 : Number(step)) ? 'bg-brand-gold' : 'bg-brand-border'
                   }`}
                 />
               ))}
             </div>
-            <p className="text-xs text-text-muted">Passo {step} de 4</p>
+            <p className="text-xs text-text-muted">
+              Passo {step} de 4
+            </p>
           </div>
         )}
 
@@ -98,7 +109,7 @@ export default function DiagnosticoPage() {
                 Sua barbearia está perdendo dinheiro
               </h1>
               <p className="text-text-muted mt-2">
-                Veja o que descobrimos com base nas suas informações:
+                Veja o que encontramos com base nas suas informações:
               </p>
             </>
           ) : (
@@ -116,7 +127,7 @@ export default function DiagnosticoPage() {
           )}
         </div>
 
-        {/* Step 1 */}
+        {/* Step 1 — clientes por mês */}
         {step === 1 && (
           <div className="rounded-xl border border-brand-border bg-brand-surface p-6">
             <label className="block text-sm font-semibold text-text-primary mb-3">
@@ -131,20 +142,17 @@ export default function DiagnosticoPage() {
               className="w-full px-4 py-3 border border-brand-border rounded-lg bg-brand-surface-2 text-text-primary text-lg"
               autoFocus
             />
-            <p className="text-xs text-text-muted mt-2">
-              Conte cortes + serviços. Estimativa serve.
-            </p>
+            <p className="text-xs text-text-muted mt-2">Conte cortes + serviços. Estimativa serve.</p>
             <button
               onClick={() => setStep(2)}
               className="w-full mt-6 flex items-center justify-center gap-2 bg-brand-gold text-brand-bg font-semibold px-4 py-3 rounded-lg hover:bg-brand-gold/90"
             >
-              Próximo
-              <ArrowRight size={16} />
+              Próximo <ArrowRight size={16} />
             </button>
           </div>
         )}
 
-        {/* Step 2 */}
+        {/* Step 2 — ticket médio */}
         {step === 2 && (
           <div className="rounded-xl border border-brand-border bg-brand-surface p-6">
             <label className="block text-sm font-semibold text-text-primary mb-3">
@@ -167,31 +175,31 @@ export default function DiagnosticoPage() {
                 <button
                   key={preset}
                   onClick={() => setAvgTicket(preset)}
-                  className="px-3 py-1 text-xs rounded-full border border-brand-border hover:bg-brand-surface-2 text-text-secondary"
+                  className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                    avgTicket === preset
+                      ? 'border-brand-gold bg-brand-gold/10 text-brand-gold'
+                      : 'border-brand-border hover:bg-brand-surface-2 text-text-secondary'
+                  }`}
                 >
                   R$ {preset}
                 </button>
               ))}
             </div>
             <div className="flex gap-2 mt-6">
-              <button
-                onClick={() => setStep(1)}
-                className="px-4 py-3 border border-brand-border rounded-lg text-text-secondary hover:bg-brand-surface-2"
-              >
+              <button onClick={() => setStep(1)} className="px-4 py-3 border border-brand-border rounded-lg text-text-secondary hover:bg-brand-surface-2">
                 Voltar
               </button>
               <button
                 onClick={() => setStep(3)}
                 className="flex-1 flex items-center justify-center gap-2 bg-brand-gold text-brand-bg font-semibold px-4 py-3 rounded-lg hover:bg-brand-gold/90"
               >
-                Próximo
-                <ArrowRight size={16} />
+                Próximo <ArrowRight size={16} />
               </button>
             </div>
           </div>
         )}
 
-        {/* Step 3 */}
+        {/* Step 3 — frequência */}
         {step === 3 && (
           <div className="rounded-xl border border-brand-border bg-brand-surface p-6">
             <label className="block text-sm font-semibold text-text-primary mb-3">
@@ -207,7 +215,7 @@ export default function DiagnosticoPage() {
                 <button
                   key={opt.value}
                   onClick={() => setReturnDays(opt.value)}
-                  className={`px-4 py-3 rounded-lg border text-left ${
+                  className={`px-4 py-3 rounded-lg border text-left transition-colors ${
                     returnDays === opt.value
                       ? 'border-brand-gold bg-brand-gold/10 text-brand-gold font-semibold'
                       : 'border-brand-border bg-brand-surface-2 text-text-secondary hover:bg-brand-surface'
@@ -218,123 +226,150 @@ export default function DiagnosticoPage() {
               ))}
             </div>
             <div className="flex gap-2 mt-6">
-              <button
-                onClick={() => setStep(2)}
-                className="px-4 py-3 border border-brand-border rounded-lg text-text-secondary hover:bg-brand-surface-2"
-              >
+              <button onClick={() => setStep(2)} className="px-4 py-3 border border-brand-border rounded-lg text-text-secondary hover:bg-brand-surface-2">
                 Voltar
               </button>
               <button
                 onClick={() => setStep(4)}
                 className="flex-1 flex items-center justify-center gap-2 bg-brand-gold text-brand-bg font-semibold px-4 py-3 rounded-lg hover:bg-brand-gold/90"
               >
-                Próximo
-                <ArrowRight size={16} />
+                Próximo <ArrowRight size={16} />
               </button>
             </div>
           </div>
         )}
 
-        {/* Step 4 */}
+        {/* Step 4 — captura de email antes do resultado */}
         {step === 4 && (
-          <div className="rounded-xl border border-brand-border bg-brand-surface p-6">
-            <label className="block text-sm font-semibold text-text-primary mb-3">
-              Você já tem o número de WhatsApp dos seus clientes?
-            </label>
-            <div className="space-y-2">
-              <button
-                onClick={() => setHasWhatsappList(true)}
-                className={`w-full px-4 py-3 rounded-lg border text-left ${
-                  hasWhatsappList === true
-                    ? 'border-brand-gold bg-brand-gold/10 text-brand-gold font-semibold'
-                    : 'border-brand-border bg-brand-surface-2 text-text-secondary hover:bg-brand-surface'
-                }`}
-              >
-                Sim, tenho uma lista
-              </button>
-              <button
-                onClick={() => setHasWhatsappList(false)}
-                className={`w-full px-4 py-3 rounded-lg border text-left ${
-                  hasWhatsappList === false
-                    ? 'border-brand-gold bg-brand-gold/10 text-brand-gold font-semibold'
-                    : 'border-brand-border bg-brand-surface-2 text-text-secondary hover:bg-brand-surface'
-                }`}
-              >
-                Ainda não tenho
-              </button>
+          <div className="space-y-4">
+            {/* Teaser do número — cria tensão antes do email */}
+            <div className="rounded-xl border border-status-error/30 bg-status-error-muted/10 p-5 text-center">
+              <p className="text-xs text-status-error font-semibold uppercase tracking-widest mb-1">
+                Resultado calculado
+              </p>
+              <p className="text-4xl font-bold text-status-error blur-sm select-none">
+                {formatCurrency(monthlyLoss)}/mês
+              </p>
+              <p className="text-xs text-text-muted mt-1">em potencial perdido — desbloqueie abaixo</p>
             </div>
-            <div className="flex gap-2 mt-6">
+
+            {/* Email */}
+            <div className="rounded-xl border border-brand-border bg-brand-surface p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-9 h-9 rounded-full bg-brand-gold/10 flex items-center justify-center shrink-0">
+                  <Mail size={16} className="text-brand-gold" />
+                </div>
+                <div>
+                  <p className="font-semibold text-text-primary text-sm">
+                    Onde enviamos o diagnóstico completo?
+                  </p>
+                  <p className="text-xs text-text-muted">
+                    Seu relatório completo + dicas de recuperação no email
+                  </p>
+                </div>
+              </div>
+              <input
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setEmailError(''); }}
+                onKeyDown={(e) => e.key === 'Enter' && handleEmailSubmit()}
+                className={`w-full px-4 py-3 border rounded-lg bg-brand-surface-2 text-text-primary ${
+                  emailError ? 'border-status-error' : 'border-brand-border'
+                }`}
+                autoFocus
+              />
+              {emailError && (
+                <p className="text-xs text-status-error mt-1">{emailError}</p>
+              )}
               <button
-                onClick={() => setStep(3)}
-                className="px-4 py-3 border border-brand-border rounded-lg text-text-secondary hover:bg-brand-surface-2"
+                onClick={handleEmailSubmit}
+                className="w-full mt-4 flex items-center justify-center gap-2 bg-brand-gold text-brand-bg font-semibold px-4 py-3 rounded-lg hover:bg-brand-gold/90 active:scale-[0.98] transition-all"
               >
-                Voltar
-              </button>
-              <button
-                onClick={() => setStep('result')}
-                disabled={hasWhatsappList === null}
-                className="flex-1 flex items-center justify-center gap-2 bg-brand-gold text-brand-bg font-semibold px-4 py-3 rounded-lg hover:bg-brand-gold/90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Ver meu diagnóstico
+                Ver meu diagnóstico completo
                 <ArrowRight size={16} />
               </button>
+              <p className="text-center text-xs text-text-muted mt-2">
+                Sem spam. Cancelamento em 1 clique.
+              </p>
             </div>
+
+            <button onClick={() => setStep(3)} className="text-sm text-text-muted hover:text-text-secondary underline w-full text-center">
+              ← Voltar
+            </button>
           </div>
         )}
 
         {/* Result */}
         {step === 'result' && (
           <div className="space-y-4">
-            {/* Big number */}
+            {/* Número mensal em destaque — mais palpável que o anual */}
             <div className="rounded-xl border-2 border-status-error/40 bg-status-error-muted/20 p-6 text-center">
-              <p className="text-sm text-status-error font-semibold uppercase tracking-widest mb-2">
-                Você pode estar perdendo até
+              <p className="text-sm text-status-error font-semibold uppercase tracking-widest mb-1">
+                Você pode estar perdendo
               </p>
               <p className="text-5xl font-bold text-status-error">
-                {formatCurrency(yearlyLoss)}
+                {formatCurrency(monthlyLoss)}<span className="text-2xl">/mês</span>
               </p>
-              <p className="text-sm text-text-muted mt-2">por ano em clientes que somem</p>
+              <p className="text-sm text-text-muted mt-2">
+                {formatCurrency(yearlyLoss)}/ano em clientes que somem sem avisar
+              </p>
             </div>
 
             {/* Breakdown */}
             <div className="rounded-xl border border-brand-border bg-brand-surface p-6">
               <h2 className="text-base font-semibold text-text-primary mb-4">
-                💡 Onde tá esse dinheiro
+                💡 De onde vem esse número
               </h2>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between items-center pb-3 border-b border-brand-border">
                   <span className="text-text-secondary">Clientes que somem por mês</span>
-                  <span className="font-semibold text-text-primary">
-                    ~{monthlyInactives} clientes
-                  </span>
+                  <span className="font-semibold text-text-primary">~{monthlyInactives} clientes</span>
                 </div>
                 <div className="flex justify-between items-center pb-3 border-b border-brand-border">
-                  <span className="text-text-secondary">Receita perdida por mês</span>
-                  <span className="font-semibold text-status-error">
-                    {formatCurrency(monthlyInactives * avgTicket)}
-                  </span>
+                  <span className="text-text-secondary">Receita que some com eles</span>
+                  <span className="font-semibold text-status-error">{formatCurrency(monthlyLoss)}/mês</span>
                 </div>
                 <div className="flex justify-between items-center pb-3 border-b border-brand-border">
                   <span className="text-text-secondary">Clientes recuperáveis (estimativa)</span>
-                  <span className="font-semibold text-text-primary">
-                    ~{monthlyRecoverableCustomers}/mês
-                  </span>
+                  <span className="font-semibold text-text-primary">~{monthlyRecoverableCustomers}/mês</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-text-secondary font-semibold">Você pode recuperar</span>
-                  <span className="font-bold text-status-success text-lg">
-                    {formatCurrency(monthlyRecoverableRevenue)}/mês
-                  </span>
+                  <span className="font-bold text-status-success text-lg">{formatCurrency(monthlyRecoverableRevenue)}/mês</span>
                 </div>
               </div>
-              <p className="text-2xs text-text-muted mt-4 italic">
+              <p className="text-xs text-text-muted mt-4 italic">
                 * Estimativa conservadora: 30% dos clientes deixam de voltar mensalmente; 20% desses
-                respondem positivamente a uma campanha de reativação bem feita. Resultados reais
-                variam por barbearia.
+                respondem a uma campanha de reativação bem feita. Resultados reais variam.
               </p>
             </div>
 
-            {/* Solution */}
+            {/* ROI explícito — não deixa o usuário calcular sozinho */}
+            <div className="rounded-xl border border-brand-gold/30 bg-brand-gold/5 p-5">
+              <h2 className="text-sm font-semibold text-brand-gold mb-3 uppercase tracking-wide">
+                📊 O que a Nexora custa vs. o que ela traz
+              </h2>
+              <div className="grid grid-cols-3 gap-3 text-center text-sm">
+                <div>
+                  <p className="text-text-muted text-xs mb-1">Custo mensal</p>
+                  <p className="font-bold text-text-primary">{formatCurrency(NEXORA_PRICE)}</p>
+                </div>
+                <div>
+                  <p className="text-text-muted text-xs mb-1">Potencial recuperado</p>
+                  <p className="font-bold text-status-success">{formatCurrency(monthlyRecoverableRevenue)}</p>
+                </div>
+                <div>
+                  <p className="text-text-muted text-xs mb-1">ROI estimado</p>
+                  <p className="font-bold text-brand-gold">{roi}x</p>
+                </div>
+              </div>
+              <p className="text-xs text-text-muted text-center mt-3">
+                Se recuperar <strong className="text-text-secondary">1 cliente por mês</strong>, o plano já se pagou.
+              </p>
+            </div>
+
+            {/* Como Nexora resolve — copy corrigido */}
             <div className="rounded-xl border border-brand-border bg-brand-surface p-6">
               <h2 className="text-base font-semibold text-text-primary mb-3">
                 ✂️ Como a Nexora resolve isso
@@ -350,11 +385,11 @@ export default function DiagnosticoPage() {
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 size={14} className="text-brand-gold shrink-0 mt-0.5" />
-                  Envia direto pelo WhatsApp da sua barbearia
+                  Você copia a mensagem e envia do seu próprio WhatsApp — sem integração
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 size={14} className="text-brand-gold shrink-0 mt-0.5" />
-                  Mostra exatamente quanto dinheiro voltou pro caixa
+                  Registra quem voltou e quanto entrou no caixa
                 </li>
               </ul>
             </div>
@@ -362,7 +397,7 @@ export default function DiagnosticoPage() {
             {/* CTA */}
             <Link
               href={ctaUrl}
-              className="block w-full text-center bg-brand-gold text-brand-bg font-semibold px-6 py-4 rounded-lg hover:bg-brand-gold/90 active:scale-[0.98] transition-all"
+              className="block w-full text-center bg-brand-gold text-brand-bg font-semibold px-6 py-4 rounded-lg hover:bg-brand-gold/90 active:scale-[0.98] transition-all text-lg"
             >
               Quero recuperar esses clientes — Teste grátis por 7 dias
             </Link>
@@ -370,22 +405,6 @@ export default function DiagnosticoPage() {
             <p className="text-center text-xs text-text-muted">
               Sem cartão de crédito · Cancela quando quiser
             </p>
-
-            {/* Whatsapp warning */}
-            {hasWhatsappList === false && (
-              <div className="rounded-lg border border-status-warning-border bg-status-warning-muted/30 p-4 flex gap-3">
-                <AlertTriangle size={16} className="text-status-warning shrink-0 mt-0.5" />
-                <div className="text-sm text-text-secondary">
-                  <p className="font-semibold text-text-primary mb-1">
-                    Sem lista de WhatsApp? Sem problema.
-                  </p>
-                  <p>
-                    A Nexora ajuda você a montar sua lista a partir dos atendimentos atuais. Em 30
-                    dias você já tem clientes para reativar.
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </main>
