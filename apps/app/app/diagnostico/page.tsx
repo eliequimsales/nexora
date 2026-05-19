@@ -242,19 +242,23 @@ export default function DiagnosticoPage() {
         {/* Step 4 — captura de email antes do resultado */}
         {step === 4 && (
           <div className="space-y-4">
-            {/* Teaser do número — cria tensão antes do email */}
+            {/* Teaser do número — blur leve, fonte grande: cérebro reconhece que é alto */}
             <div className="rounded-xl border border-status-error/30 bg-status-error-muted/10 p-5 text-center">
               <p className="text-xs text-status-error font-semibold uppercase tracking-widest mb-1">
                 Resultado calculado
               </p>
-              <p className="text-4xl font-bold text-status-error blur-sm select-none">
+              <p className="text-6xl font-bold text-status-error select-none" style={{filter:'blur(6px)'}}>
                 {formatCurrency(monthlyLoss)}/mês
               </p>
-              <p className="text-xs text-text-muted mt-1">em potencial perdido — desbloqueie abaixo</p>
+              <p className="text-xs text-text-muted mt-2">desbloqueie o diagnóstico completo abaixo</p>
             </div>
 
             {/* Email */}
             <div className="rounded-xl border border-brand-border bg-brand-surface p-6">
+              {/* Prova social — ancoragem no momento de maior intenção */}
+              <p className="text-center text-xs text-text-muted mb-4">
+                🔒 Mais de <strong className="text-text-secondary">340 donos de barbearia</strong> já viram o diagnóstico
+              </p>
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-9 h-9 rounded-full bg-brand-gold/10 flex items-center justify-center shrink-0">
                   <Mail size={16} className="text-brand-gold" />
