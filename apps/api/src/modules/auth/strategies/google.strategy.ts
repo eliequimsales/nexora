@@ -13,12 +13,10 @@ export interface GoogleProfile {
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   constructor(config: ConfigService) {
-    super({
-      clientID: config.getOrThrow<string>('google.clientId'),
-      clientSecret: config.getOrThrow<string>('google.clientSecret'),
-      callbackURL: config.getOrThrow<string>('google.callbackUrl'),
-      scope: ['email', 'profile'],
-    });
+    const clientID = config.get<string>('google.clientId') || 'disabled';
+    const clientSecret = config.get<string>('google.clientSecret') || 'disabled';
+    const callbackURL = config.get<string>('google.callbackUrl') || 'http://localhost:3001/api/v1/auth/google/callback';
+    super({ clientID, clientSecret, callbackURL, scope: ['email', 'profile'] });
   }
 
   validate(

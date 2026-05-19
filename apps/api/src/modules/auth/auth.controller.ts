@@ -101,7 +101,14 @@ export class AuthController {
   @Public()
   @UseGuards(AuthGuard('google'))
   googleLogin() {
-    // O guard redireciona para Google — nada a fazer aqui
+    // Guard redireciona para Google — corpo não executado
+  }
+
+  @Get('google/enabled')
+  @Public()
+  googleEnabled() {
+    const enabled = !!(this.config.get<string>('google.clientId'));
+    return { enabled };
   }
 
   @Get('google/callback')
