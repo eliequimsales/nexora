@@ -11,7 +11,7 @@ export default function RegisterPage() {
         Crie sua conta
       </h1>
       <p className="text-sm text-text-secondary mb-6">
-        Configure seu workspace em menos de 1 minuto
+        7 dias grátis. Configure em menos de 1 minuto.
       </p>
       <RegisterForm />
       <p className="text-xs text-text-muted text-center mt-4">

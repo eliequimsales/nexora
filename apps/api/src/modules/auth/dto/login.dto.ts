@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class LoginDto {
@@ -10,7 +10,8 @@ export class LoginDto {
   @IsNotEmpty()
   password!: string;
 
+  /** Opcional — quando omitido, o sistema resolve o workspace pelo email. */
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  slug!: string;
+  slug?: string;
 }

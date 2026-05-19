@@ -4,13 +4,12 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, EyeOff, Mail, Lock, Building2 } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/lib/hooks/auth/useAuth';
 
 const schema = z.object({
-  slug: z.string().min(1, 'Informe o workspace'),
   email: z.string().email('Email inválido'),
   password: z.string().min(8, 'Mínimo 8 caracteres'),
 });
@@ -31,7 +30,8 @@ export function LoginForm() {
   async function onSubmit(data: FormData) {
     setServerError(null);
     try {
-      await login(data.email, data.password, data.slug);
+      // slug omitido — backend resolve automaticamente pelo email
+      await login(data.email, data.password);
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -42,20 +42,10 @@ export function LoginForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
       <Input
-        label="Workspace"
-        type="text"
-        autoComplete="organization"
-        placeholder="minha-empresa"
-        iconLeft={<Building2 size={15} />}
-        error={errors.slug?.message}
-        {...register('slug')}
-      />
-
-      <Input
         label="Email"
         type="email"
         autoComplete="email"
-        placeholder="voce@empresa.com"
+        placeholder="voce@barbearia.com"
         iconLeft={<Mail size={15} />}
         error={errors.email?.message}
         {...register('email')}

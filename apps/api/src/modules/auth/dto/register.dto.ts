@@ -1,6 +1,7 @@
 import {
   IsEmail,
   IsIn,
+  IsOptional,
   IsString,
   MaxLength,
   MinLength,
@@ -9,10 +10,12 @@ import { Transform } from 'class-transformer';
 import { getSupportedNiches } from '@nexora/shared';
 
 export class RegisterDto {
+  /** Opcional no piloto barbearia — usa orgName como fallback */
+  @IsOptional()
   @IsString()
   @MinLength(2)
   @MaxLength(255)
-  name!: string;
+  name?: string;
 
   @IsEmail()
   @Transform(({ value }: { value: string }) => value.toLowerCase())
@@ -28,7 +31,9 @@ export class RegisterDto {
   @MaxLength(255)
   orgName!: string;
 
+  /** Opcional no piloto — default 'barbearia' quando omitido */
+  @IsOptional()
   @IsString()
   @IsIn(getSupportedNiches())
-  niche!: string;
+  niche?: string;
 }

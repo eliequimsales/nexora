@@ -26,11 +26,14 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResponseDto & { refreshToken: string }> {
+    const niche = dto.niche ?? 'barbearia';
+    const userName = dto.name ?? dto.orgName;
+
     let nicheConfig;
     try {
-      nicheConfig = getNicheConfig(dto.niche);
+      nicheConfig = getNicheConfig(niche);
     } catch {
-      throw new BadRequestException(`Unsupported niche: ${dto.niche}`);
+      throw new BadRequestException(`Unsupported niche: ${niche}`);
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
@@ -42,7 +45,7 @@ export class AuthService {
         data: {
           name: dto.orgName,
           slug,
-          niche: dto.niche,
+          niche,
           formToken,
           aiPrompts: nicheConfig.aiPrompts as object,
         },
@@ -68,7 +71,7 @@ export class AuthService {
         data: {
           orgId: org.id,
           email: dto.email,
-          name: dto.name,
+          name: userName,
           passwordHash,
           role: 'admin',
         },
@@ -110,20 +113,33 @@ export class AuthService {
   }
 
   async login(dto: LoginDto): Promise<AuthResponseDto & { refreshToken: string }> {
-    const org = await this.prisma.organization.findUnique({
-      where: { slug: dto.slug },
-      select: { id: true, status: true },
-    });
+    // Quando slug não é informado, resolve automaticamente pelo email do usuário.
+    // Para múltiplos workspaces no futuro, retornar lista e pedir seleção.
+    let user: (User & { organization: Organization }) | null = null;
 
-    const user = org
-      ? await this.prisma.user.findUnique({
+    if (dto.slug) {
+      const org = await this.prisma.organization.findUnique({
+        where: { slug: dto.slug },
+        select: { id: true, status: true },
+      });
+      if (org) {
+        user = await this.prisma.user.findUnique({
           where: { orgId_email: { orgId: org.id, email: dto.email } },
           include: { organization: true },
-        })
-      : null;
+        });
+      }
+    } else {
+      // Sem slug: busca pelo email — assume 1 org por usuário (piloto)
+      user = await this.prisma.user.findFirst({
+        where: { email: dto.email },
+        include: { organization: true },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
 
     const hash = user?.passwordHash ?? DUMMY_HASH;
     const valid = await bcrypt.compare(dto.password, hash);
+    const org = user?.organization;
 
     if (!org || org.status !== 'active' || !user || !valid || user.status !== 'active') {
       throw new UnauthorizedException('Invalid credentials');

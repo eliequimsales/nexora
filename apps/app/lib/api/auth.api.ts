@@ -4,15 +4,15 @@ import type { LoginResponse, MeResponse } from '@/types';
 interface LoginPayload {
   email: string;
   password: string;
-  slug: string;
+  slug?: string; // opcional — backend resolve automaticamente
 }
 
 interface RegisterPayload {
-  name: string;
+  name?: string; // opcional — usa orgName como fallback
   email: string;
   password: string;
   orgName: string;
-  niche: string;
+  niche?: string; // opcional — default 'barbearia'
 }
 
 export const authApi = {
