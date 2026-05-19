@@ -60,6 +60,13 @@ export const configuration = () => ({
     fromEmail: process.env.RESEND_FROM_EMAIL || '',
     fromName: process.env.RESEND_FROM_NAME || 'Assistente Financeiro',
   },
+
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID || '',
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+    callbackUrl: process.env.GOOGLE_CALLBACK_URL
+      || `${process.env.APP_URL ?? 'http://localhost:3001'}/api/v1/auth/google/callback`,
+  },
 });
 
 export type AppConfig = ReturnType<typeof configuration>;

@@ -8,6 +8,7 @@ import { Mail, Lock, Building2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/lib/hooks/auth/useAuth';
+import { GoogleButton } from './GoogleButton';
 
 const schema = z.object({
   email: z.string().email('Email inválido'),
@@ -37,9 +38,9 @@ export function RegisterForm() {
   async function onSubmit(data: FormData) {
     setServerError(null);
     try {
-      // niche hardcoded como 'barbearia' no piloto
+      // niche fixo 'beauty_wellness' no piloto barbearia
       // name usa orgName como fallback — backend aceita opcional
-      await registerUser(data.orgName, data.email, data.password, data.orgName, 'barbearia');
+      await registerUser(data.orgName, data.email, data.password, data.orgName, 'beauty_wellness');
       try {
         const { apiClient } = await import('@/lib/api/client');
         await apiClient.post('/organizations/current/lgpd-accept');
@@ -54,6 +55,13 @@ export function RegisterForm() {
   }
 
   return (
+    <div className="space-y-4">
+    <GoogleButton label="Cadastrar com Google" />
+    <div className="flex items-center gap-3">
+      <hr className="flex-1 border-brand-border" />
+      <span className="text-xs text-text-muted">ou preencha abaixo</span>
+      <hr className="flex-1 border-brand-border" />
+    </div>
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
       <Input
         label="Nome da sua barbearia"
@@ -133,5 +141,6 @@ export function RegisterForm() {
         {isSubmitting ? 'Criando conta...' : 'Criar conta grátis'}
       </Button>
     </form>
+    </div>
   );
 }

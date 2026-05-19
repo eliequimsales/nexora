@@ -8,6 +8,7 @@ import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/lib/hooks/auth/useAuth';
+import { GoogleButton } from './GoogleButton';
 
 const schema = z.object({
   email: z.string().email('Email inválido'),
@@ -40,6 +41,13 @@ export function LoginForm() {
   }
 
   return (
+    <div className="space-y-4">
+    <GoogleButton label="Entrar com Google" />
+    <div className="flex items-center gap-3">
+      <hr className="flex-1 border-brand-border" />
+      <span className="text-xs text-text-muted">ou</span>
+      <hr className="flex-1 border-brand-border" />
+    </div>
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
       <Input
         label="Email"
@@ -87,5 +95,6 @@ export function LoginForm() {
         {isSubmitting ? 'Entrando...' : 'Entrar'}
       </Button>
     </form>
+    </div>
   );
 }

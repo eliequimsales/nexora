@@ -8,10 +8,12 @@ import {
   Req,
   Res,
   UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
+import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -19,6 +21,7 @@ import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { TenantContext } from '../../common/tenant/tenant-context';
 import type { AuthResponseDto } from './dto/auth-response.dto';
+import type { GoogleProfile } from './strategies/google.strategy';
 
 const COOKIE_NAME = 'refresh_token';
 
@@ -90,6 +93,33 @@ export class AuthController {
   @Get('me')
   async me(@CurrentUser() user: TenantContext) {
     return this.authService.me(user.userId, user.orgId);
+  }
+
+  // ─── Google OAuth ─────────────────────────────────────────────────────────
+
+  @Get('google')
+  @Public()
+  @UseGuards(AuthGuard('google'))
+  googleLogin() {
+    // O guard redireciona para Google — nada a fazer aqui
+  }
+
+  @Get('google/callback')
+  @Public()
+  @UseGuards(AuthGuard('google'))
+  async googleCallback(
+    @Req() req: Request & { user: GoogleProfile },
+    @Res() res: Response,
+  ) {
+    const { refreshToken, ...result } = await this.authService.googleAuth(req.user);
+    this.setRefreshCookie(res, refreshToken);
+
+    const appUrl = this.config.get<string>('appUrl') ?? 'http://localhost:3000';
+    const params = new URLSearchParams({
+      token: result.access_token,
+      slug: result.organization.slug,
+    });
+    res.redirect(`${appUrl}/auth/google/success?${params}`);
   }
 
   private setRefreshCookie(res: Response, refreshToken: string): void {

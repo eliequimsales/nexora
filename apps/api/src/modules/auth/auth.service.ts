@@ -26,7 +26,7 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResponseDto & { refreshToken: string }> {
-    const niche = dto.niche ?? 'barbearia';
+    const niche = dto.niche ?? 'beauty_wellness';
     const userName = dto.name ?? dto.orgName;
 
     let nicheConfig;
@@ -240,6 +240,69 @@ export class AuthService {
       avatarUrl: user.avatarUrl,
       createdAt: user.createdAt,
     };
+  }
+
+  /** Cria ou loga um usuário via Google OAuth */
+  async googleAuth(
+    googleProfile: { googleId: string; email: string; name: string; picture?: string },
+  ): Promise<AuthResponseDto & { refreshToken: string }> {
+    const email = googleProfile.email.toLowerCase();
+
+    // Busca usuário existente pelo email (1 org no piloto)
+    let user = await this.prisma.user.findFirst({
+      where: { email },
+      include: { organization: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!user) {
+      // Primeiro acesso via Google: cria conta automaticamente
+      const orgName = googleProfile.name;
+      const niche = 'beauty_wellness';
+      const nicheConfig = getNicheConfig(niche);
+      const formToken = randomBytes(32).toString('hex');
+      const slug = await this.generateUniqueSlug(orgName);
+      const passwordHash = await bcrypt.hash(randomBytes(32).toString('hex'), 12);
+
+      const result = await this.prisma.$transaction(async (tx) => {
+        const org = await tx.organization.create({
+          data: { name: orgName, slug, niche, formToken, aiPrompts: nicheConfig.aiPrompts as object },
+        });
+        await tx.pipelineStage.createMany({
+          data: nicheConfig.pipelineStages.map((s) => ({
+            orgId: org.id, name: s.name, position: s.position,
+            color: s.color, stageType: s.stageType, isDefault: s.isDefault,
+          })),
+        });
+        const trialEnd = new Date();
+        trialEnd.setDate(trialEnd.getDate() + 7);
+        await tx.subscription.create({
+          data: { orgId: org.id, stripeCustomerId: '', plan: 'starter', status: 'trialing', currentPeriodEnd: trialEnd, limits: { leadsPerMonth: 100 } },
+        });
+        const newUser = await tx.user.create({
+          data: { orgId: org.id, email, name: googleProfile.name, passwordHash, role: 'admin', googleId: googleProfile.googleId },
+          include: { organization: true },
+        });
+        return newUser;
+      });
+      user = result;
+    } else if (!user.googleId) {
+      // Vincula o Google ID a uma conta existente com mesmo email
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: { googleId: googleProfile.googleId },
+        include: { organization: true },
+      });
+    }
+
+    if (user.status !== 'active' || user.organization.status !== 'active') {
+      throw new UnauthorizedException('Conta desativada');
+    }
+
+    await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+
+    const tokens = await this.tokenService.generateTokens(user.id, user.orgId, user.role as 'admin' | 'member');
+    return { access_token: tokens.accessToken, refreshToken: tokens.refreshToken, user: this.mapUser(user), organization: this.mapOrg(user.organization) };
   }
 
   private mapOrg(org: Organization): AuthOrgDto {
