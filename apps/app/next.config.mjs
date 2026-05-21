@@ -9,6 +9,16 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [],
   },
+  // Proxy /api/* para o backend — resolve problema de cookies cross-domain.
+  // Cookies são setados no mesmo dominio do App, middleware ve refresh_token.
+  async rewrites() {
+    const apiUrl = process.env.API_INTERNAL_URL
+      || process.env.NEXT_PUBLIC_API_URL
+      || 'http://localhost:3001';
+    return [
+      { source: '/api/:path*', destination: `${apiUrl}/api/:path*` },
+    ];
+  },
   async headers() {
     return [
       {

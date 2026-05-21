@@ -1,10 +1,9 @@
 'use client';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
-
 export function GoogleButton({ label = 'Continuar com Google' }: { label?: string }) {
   function handleClick() {
-    window.location.href = `${API_URL}/api/v1/auth/google`;
+    // Usa proxy via Next.js rewrite — Google callback redireciona pro App
+    window.location.href = `/api/v1/auth/google`;
   }
 
   return (

@@ -2,7 +2,13 @@ import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '@/lib/stores/auth.store';
 import { usePlanLimitStore } from '@/lib/stores/plan-limit.store';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+// URL relativa: Next.js rewrite proxia /api/* → backend.
+// Mantem cookie de auth no mesmo dominio do App (resolve cross-domain).
+// Em dev (sem rewrite), fallback pra URL absoluta do backend.
+const isBrowser = typeof window !== 'undefined';
+const API_URL = isBrowser
+  ? '' // browser: usa /api/v1 (mesmo dominio via rewrite)
+  : (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001');
 
 export const apiClient = axios.create({
   baseURL: `${API_URL}/api/v1`,
