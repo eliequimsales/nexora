@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none">
+  <!-- Icone Nexora — N gold em fundo escuro arredondado -->
+  <rect width="256" height="256" rx="56" fill="#0A0A0F"/>
+  <rect x="2" y="2" width="252" height="252" rx="54" fill="none" stroke="#1E1E2E" stroke-width="2"/>
+  <text x="128" y="180" text-anchor="middle" font-family="Geist, Inter, system-ui, sans-serif" font-weight="800" font-size="180" letter-spacing="-0.04em" fill="#EAB308">N</text>
+</svg>
