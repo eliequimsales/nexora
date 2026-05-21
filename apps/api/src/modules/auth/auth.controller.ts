@@ -118,16 +118,21 @@ export class AuthController {
     @Req() req: Request & { user: GoogleProfile },
     @Res() res: Response,
   ) {
-    const { refreshToken, ...result } = await this.authService.googleAuth(req.user);
-    this.setRefreshCookie(res, refreshToken);
-
     const appUrl = this.config.get<string>('appUrl') ?? 'http://localhost:3000';
-    const params = new URLSearchParams({
-      token: result.access_token,
-      slug: result.organization.slug,
-    });
-    // Route group (auth) some da URL — pagina fica em /google/success
-    res.redirect(`${appUrl}/google/success?${params}`);
+    try {
+      const { refreshToken, ...result } = await this.authService.googleAuth(req.user);
+      this.setRefreshCookie(res, refreshToken);
+      const params = new URLSearchParams({
+        token: result.access_token,
+        slug: result.organization.slug,
+      });
+      res.redirect(`${appUrl}/google/success?${params}`);
+    } catch (err: unknown) {
+      // Redireciona para login com mensagem de erro em vez de mostrar JSON cru
+      const message = (err as { message?: string })?.message ?? 'erro-google';
+      const errorParams = new URLSearchParams({ error: 'google_oauth', detail: message.substring(0, 200) });
+      res.redirect(`${appUrl}/login?${errorParams}`);
+    }
   }
 
   private setRefreshCookie(res: Response, refreshToken: string): void {

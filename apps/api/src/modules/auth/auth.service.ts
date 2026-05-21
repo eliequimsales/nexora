@@ -248,15 +248,45 @@ export class AuthService {
   ): Promise<AuthResponseDto & { refreshToken: string }> {
     const email = googleProfile.email.toLowerCase();
 
-    // Busca usuário existente pelo email (1 org no piloto)
-    let user = await this.prisma.user.findFirst({
-      where: { email },
+    // Estratégia de resolução de identidade (em ordem):
+    // 1. Busca por googleId — se já vinculado, é o caminho mais confiável
+    // 2. Busca por email + tem googleId — é a mesma conta, retorna direto
+    // 3. Busca por email sem googleId — vincula o googleId nessa conta
+    // 4. Nenhum dos acima → cria conta nova
+    let user = await this.prisma.user.findUnique({
+      where: { googleId: googleProfile.googleId },
       include: { organization: true },
-      orderBy: { createdAt: 'desc' },
     });
 
     if (!user) {
-      // Primeiro acesso via Google: cria conta automaticamente
+      // Procura por email; se houver várias (testes), pega a que já tem googleId
+      const byEmail = await this.prisma.user.findMany({
+        where: { email },
+        include: { organization: true },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      user = byEmail.find((u) => u.googleId === googleProfile.googleId)
+        ?? byEmail.find((u) => !u.googleId)
+        ?? null;
+
+      if (user && !user.googleId) {
+        // Tenta vincular o googleId. Se falhar por race condition/unique
+        // constraint, ignora e segue sem vincular (já estamos logando essa conta).
+        try {
+          user = await this.prisma.user.update({
+            where: { id: user.id },
+            data: { googleId: googleProfile.googleId },
+            include: { organization: true },
+          });
+        } catch {
+          // Já existe outra row com esse googleId — segue sem vincular
+        }
+      }
+    }
+
+    if (!user) {
+      // Primeiro acesso real via Google: cria conta nova
       const orgName = googleProfile.name;
       const niche = 'beauty_wellness';
       const nicheConfig = getNicheConfig(niche);
@@ -286,13 +316,6 @@ export class AuthService {
         return newUser;
       });
       user = result;
-    } else if (!user.googleId) {
-      // Vincula o Google ID a uma conta existente com mesmo email
-      user = await this.prisma.user.update({
-        where: { id: user.id },
-        data: { googleId: googleProfile.googleId },
-        include: { organization: true },
-      });
     }
 
     if (user.status !== 'active' || user.organization.status !== 'active') {
