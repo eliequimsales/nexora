@@ -17,8 +17,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setAuth, clearAuth, accessToken } = useAuthStore();
 
   useEffect(() => {
-    // Skip if already authenticated (in-memory token survived navigation)
-    if (accessToken) {
+    // Lê via getState() para evitar stale closure — o closure captura o valor
+    // do render inicial (null), mas getState() sempre retorna o estado atual.
+    // Isso é necessário para o fluxo do Google OAuth, onde o google/success
+    // page seta o token via setAccessToken() antes deste efeito rodar.
+    if (useAuthStore.getState().accessToken) {
       useAuthStore.getState().setLoading(false);
       return;
     }
@@ -32,7 +35,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (cancelled) return;
 
         const token = refreshData.access_token;
-        // Put token in store so /me interceptor picks it up
         useAuthStore.getState().setAccessToken(token);
 
         // Step 2: fetch user + org profile
@@ -41,7 +43,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setAuth({ user: meData.user, org: meData.organization, accessToken: token });
       } catch {
-        if (!cancelled) clearAuth();
+        if (cancelled) return;
+        // Só limpa auth se não há token no store — previne limpar o estado
+        // setado pelo google/success page durante a race condition.
+        if (!useAuthStore.getState().accessToken) {
+          clearAuth();
+        } else {
+          useAuthStore.getState().setLoading(false);
+        }
       }
     }
 

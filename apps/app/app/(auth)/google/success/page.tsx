@@ -17,11 +17,17 @@ function GoogleSuccessInner() {
     const slug = params.get('slug');
     if (!token || !slug) { router.replace('/login'); return; }
 
-    store.setAuth({ accessToken: token, user: null as never, org: null as never });
+    // Disponibiliza o token para o interceptor do axios sem ainda marcar
+    // isAuthenticated=true (evita o dashboard renderizar com user/org null).
+    useAuthStore.getState().setAccessToken(token);
+
     authApi.me().then(({ data }) => {
       store.setAuth({ accessToken: token, user: data.user, org: data.organization });
       router.replace(`/${slug}/dashboard`);
-    }).catch(() => router.replace('/login'));
+    }).catch(() => {
+      useAuthStore.getState().clearAuth();
+      router.replace('/login');
+    });
   }, [params, router, store]);
 
   return (
