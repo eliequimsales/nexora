@@ -126,7 +126,8 @@ export class AuthController {
       token: result.access_token,
       slug: result.organization.slug,
     });
-    res.redirect(`${appUrl}/auth/google/success?${params}`);
+    // Route group (auth) some da URL — pagina fica em /google/success
+    res.redirect(`${appUrl}/google/success?${params}`);
   }
 
   private setRefreshCookie(res: Response, refreshToken: string): void {
