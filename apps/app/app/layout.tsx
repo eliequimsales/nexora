@@ -11,6 +11,11 @@ export const metadata: Metadata = {
   },
   description: 'A IA que recupera seus clientes perdidos no automático.',
   robots: { index: false, follow: false },
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
 };
 
 export const viewport: Viewport = {
