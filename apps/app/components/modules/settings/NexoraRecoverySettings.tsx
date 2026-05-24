@@ -145,8 +145,8 @@ export function NexoraRecoverySettings() {
           {/* WhatsApp toggle */}
           <div className="flex items-center justify-between p-3 rounded-lg bg-brand-surface-2">
             <div>
-              <p className="text-sm font-medium text-text-primary">WhatsApp (Z-API)</p>
-              <p className="text-xs text-text-muted">Envia mensagens via WhatsApp Business</p>
+              <p className="text-sm font-medium text-text-primary">WhatsApp</p>
+              <p className="text-xs text-text-muted">Gera mensagens para você enviar do seu número</p>
             </div>
             <label className="relative inline-block w-10 h-6">
               <input
@@ -173,8 +173,8 @@ export function NexoraRecoverySettings() {
           {/* Email toggle */}
           <div className="flex items-center justify-between p-3 rounded-lg bg-brand-surface-2">
             <div>
-              <p className="text-sm font-medium text-text-primary">Email (Resend)</p>
-              <p className="text-xs text-text-muted">Envia mensagens via Email</p>
+              <p className="text-sm font-medium text-text-primary">Email</p>
+              <p className="text-xs text-text-muted">Gera mensagens de reativação por email</p>
             </div>
             <label className="relative inline-block w-10 h-6">
               <input

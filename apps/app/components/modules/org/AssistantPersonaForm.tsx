@@ -35,7 +35,7 @@ export function AssistantPersonaForm({ org }: AssistantPersonaFormProps) {
     resolver: zodResolver(schema),
     defaultValues: {
       name: persona?.name ?? '',
-      tone: persona?.tone ?? 'formal',
+      tone: persona?.tone ?? 'casual',
       style: persona?.style ?? 'concise',
     },
   });
@@ -43,7 +43,7 @@ export function AssistantPersonaForm({ org }: AssistantPersonaFormProps) {
   useEffect(() => {
     reset({
       name: persona?.name ?? '',
-      tone: persona?.tone ?? 'formal',
+      tone: persona?.tone ?? 'casual',
       style: persona?.style ?? 'concise',
     });
   }, [org, reset, persona]);
@@ -64,10 +64,10 @@ export function AssistantPersonaForm({ org }: AssistantPersonaFormProps) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
       <Input
-        label="Nome da assistente"
-        placeholder="Ex: Sofia, Luna, Assistente"
+        label="Remetente das mensagens (opcional)"
+        placeholder="Ex: João da Barbearia, Barbearia Silva"
         iconLeft={<Bot size={15} />}
-        helper="Como a IA se apresenta nas mensagens geradas"
+        helper="Como a IA assina as mensagens. Deixe em branco para usar o nome da barbearia."
         error={errors.name?.message}
         {...register('name')}
       />
