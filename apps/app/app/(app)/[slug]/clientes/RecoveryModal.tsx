@@ -438,7 +438,7 @@ export function RecoveryModal({ client, onClose }: RecoveryModalProps) {
               : 'text-text-secondary hover:text-text-primary',
           )}
         >
-          Automático (Z-API)
+          Automático (integração)
         </button>
       </div>
 
@@ -448,7 +448,7 @@ export function RecoveryModal({ client, onClose }: RecoveryModalProps) {
         </p>
       ) : (
         <p className="mt-2 text-2xs text-status-warning">
-          ⚠ Envia direto pelo Z-API. Use só se já configurou e entende o risco.
+          ⚠ Envia via API de WhatsApp conectada. Configure em Integrações antes de usar.
         </p>
       )}
 

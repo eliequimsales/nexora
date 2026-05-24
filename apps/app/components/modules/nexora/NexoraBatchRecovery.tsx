@@ -13,7 +13,7 @@ export function NexoraBatchRecovery() {
   const { mutate, isPending, isSuccess, selected, failed, skipped } = useBatchRecovery();
   const { data: inactiveClients, isLoading: isLoadingClients } = useInactiveClientsQuery(filterDays);
 
-  const whatsappVar = '{{customer_name}}';
+  const whatsappVar = '{{name}}';
 
   // Map inactive clients from API to UI shape (api returns InactiveClient)
   const allCustomers = (inactiveClients ?? []).map((client) => ({
@@ -214,11 +214,11 @@ export function NexoraBatchRecovery() {
           <div className="space-y-2 text-xs">
             <div className="p-2 rounded bg-brand-surface text-text-secondary">
               <p className="font-medium mb-1">💬 WhatsApp:</p>
-              <p>"Oi {whatsappVar}, saudades suas! 👋 Que tal voltar para uma hidratação?"</p>
+              <p>"Oi {whatsappVar}, faz um tempo que você não passa aqui na barbearia! Tô aqui disponível quando quiser marcar um horário. 😊"</p>
             </div>
             <div className="p-2 rounded bg-brand-surface text-text-secondary">
               <p className="font-medium mb-1">📧 Email:</p>
-              <p>"Volta para nós! Temos uma oferta especial de 20% de desconto esperando por você."</p>
+              <p>"Ei {whatsappVar}, está na hora de um novo corte! Passa aqui quando quiser — sem compromisso."</p>
             </div>
           </div>
         </div>
