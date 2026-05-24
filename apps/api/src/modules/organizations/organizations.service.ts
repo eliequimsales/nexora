@@ -167,6 +167,7 @@ export class OrganizationsService {
       return tx.organization.update({
         where: { id: ctx.orgId },
         data: {
+          niche: template.niche,
           aiPrompts: template.aiPrompts as object,
           settings: {
             ...currentSettings,

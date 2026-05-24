@@ -11,21 +11,21 @@ import { useToast } from '@/lib/providers/ToastProvider';
 const PROMPT_FIELDS = [
   {
     key: 'classify',
-    label: 'Classificação de lead',
-    description: 'Usado para classificar o lead como quente, morno ou frio com base na conversa.',
-    placeholder: 'Ex: Você é um assistente de vendas. Classifique o lead como quente, morno ou frio...',
+    label: 'Classificação de cliente',
+    description: 'Analisa os dados do cliente e define se está inativo, em risco ou ativo. Influencia a prioridade na lista.',
+    placeholder: 'Ex: Você é um especialista em retenção de clientes para barbearias. Analise os dados abaixo e classifique...',
   },
   {
     key: 'respond',
-    label: 'Resposta automática',
-    description: 'Prompt da IA ao responder automaticamente a um novo lead.',
-    placeholder: 'Ex: Você é uma assistente de atendimento. Responda de forma cordial...',
+    label: 'Mensagem de reativação',
+    description: 'Gera a mensagem de WhatsApp que o barbeiro enviará para o cliente inativo. Deve soar natural e pessoal.',
+    placeholder: 'Ex: Você é um barbeiro simpático. Escreva uma mensagem curta e descontraída para reconquistar o cliente...',
   },
   {
     key: 'followUp',
-    label: 'Follow-up',
-    description: 'Prompt usado nos lembretes e acompanhamentos de leads sem resposta.',
-    placeholder: 'Ex: Você é uma assistente de vendas. Escreva um follow-up para...',
+    label: 'Follow-up (sem resposta)',
+    description: 'Gera mensagem de acompanhamento quando o cliente não respondeu após a primeira tentativa.',
+    placeholder: 'Ex: Você é um barbeiro fazendo follow-up. Escreva uma mensagem leve, sem pressão...',
   },
 ] as const;
 

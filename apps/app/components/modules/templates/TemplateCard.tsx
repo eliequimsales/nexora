@@ -15,6 +15,8 @@ const NICHE_LABELS: Record<string, string> = {
   real_estate: 'Imobiliária',
   services: 'Serviços',
   ecommerce: 'E-commerce',
+  barbearia: 'Barbearia',
+  beauty_wellness: 'Beleza & Bem-estar',
 };
 
 export function TemplateCard({ template, alreadyApplied = false }: TemplateCardProps) {

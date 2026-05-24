@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
-import { Settings, Users, Sparkles, Plug, CreditCard, Shield, Zap } from 'lucide-react';
+import { Settings, Users, Sparkles, Plug, CreditCard, Shield, Zap, Layout } from 'lucide-react';
 import { useOrg } from '@/lib/hooks/org/useOrg';
 
 const NAV_ITEMS = [
   { label: 'Geral', href: '', icon: Settings },
   { label: 'Time', href: '/team', icon: Users },
   { label: 'IA', href: '/ai', icon: Sparkles },
+  { label: 'Templates', href: '/templates', icon: Layout },
   { label: 'Integrações', href: '/integrations', icon: Plug },
   { label: 'Billing', href: '/billing', icon: CreditCard },
   { label: 'Auditoria', href: '/audit', icon: Shield },
