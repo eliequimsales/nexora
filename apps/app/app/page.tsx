@@ -297,6 +297,48 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* FAQ */}
+      <section className="px-6 py-20">
+        <div className="max-w-2xl mx-auto">
+          <h2 className="text-3xl font-bold text-text-primary text-center mb-4">
+            Perguntas frequentes
+          </h2>
+          <p className="text-center text-text-muted mb-10">As dúvidas que todo barbeiro tem antes de começar.</p>
+          <div className="space-y-3">
+            {[
+              {
+                q: 'Preciso ter sistema de agendamento?',
+                a: 'Não. A Nexora funciona com qualquer lista de clientes — Excel, planilha do Google, exportação do seu sistema ou até digitado na mão. Se você tem os nomes e números, já dá pra começar.',
+              },
+              {
+                q: 'Como importo meus clientes?',
+                a: 'Você sobe um arquivo CSV ou XLSX com nome, telefone e data do último atendimento. Em 1 clique a Nexora já identifica quem está inativo.',
+              },
+              {
+                q: 'E se o cliente pedir pra parar de receber mensagem?',
+                a: 'Você simplesmente não manda mais. Como você envia pelo seu próprio WhatsApp, tem controle total. Nenhuma mensagem sai sem você ver e aprovar primeiro.',
+              },
+              {
+                q: 'A Nexora envia as mensagens automaticamente?',
+                a: 'Não no piloto atual. A IA escreve a mensagem pronta pra você — você copia e envia do seu número. Zero integração, zero risco.',
+              },
+              {
+                q: 'Funciona para barbearia pequena?',
+                a: 'Especialmente. Se você tem 80–300 clientes no cadastro, já tem potencial de recuperação real. O plano é o mesmo independente do tamanho.',
+              },
+            ].map(({ q, a }) => (
+              <details key={q} className="group rounded-xl border border-brand-border bg-brand-surface overflow-hidden">
+                <summary className="flex items-center justify-between px-5 py-4 cursor-pointer list-none font-medium text-text-primary text-sm gap-4">
+                  {q}
+                  <span className="text-brand-gold shrink-0 group-open:rotate-45 transition-transform duration-150 text-lg font-light">+</span>
+                </summary>
+                <p className="px-5 pb-4 text-sm text-text-secondary leading-relaxed">{a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* CTA Final */}
       <section className="px-6 py-20">
         <div className="max-w-2xl mx-auto text-center space-y-6">
@@ -330,9 +372,9 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto flex items-center justify-between text-sm text-text-muted flex-wrap gap-4">
           <p>© 2026 Nexora. Todos os direitos reservados.</p>
           <div className="flex gap-6">
-            <a href="#" className="hover:text-text-primary transition-colors">Privacidade</a>
-            <a href="#" className="hover:text-text-primary transition-colors">Termos</a>
-            <a href="#" className="hover:text-text-primary transition-colors">Contato</a>
+            <Link href="/privacidade" className="hover:text-text-primary transition-colors">Privacidade</Link>
+            <Link href="/termos" className="hover:text-text-primary transition-colors">Termos</Link>
+            <Link href="/contato" className="hover:text-text-primary transition-colors">Contato</Link>
           </div>
         </div>
       </footer>

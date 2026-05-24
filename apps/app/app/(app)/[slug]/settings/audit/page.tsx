@@ -105,8 +105,8 @@ export default function AuditLogPage() {
         <div className="flex items-center gap-2.5 mb-6">
           <Shield size={18} className="text-text-secondary" />
           <div>
-            <h1 className="text-lg font-semibold text-text-primary">Audit Log</h1>
-            <p className="text-xs text-text-muted">Registro de mutações sensíveis da organização</p>
+            <h1 className="text-lg font-semibold text-text-primary">Registro de Auditoria</h1>
+            <p className="text-xs text-text-muted">Histórico de ações importantes da organização</p>
           </div>
         </div>
 

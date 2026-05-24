@@ -257,7 +257,7 @@ export default function DiagnosticoPage() {
             <div className="rounded-xl border border-brand-border bg-brand-surface p-6">
               {/* Prova social — ancoragem no momento de maior intenção */}
               <p className="text-center text-xs text-text-muted mb-4">
-                🔒 Mais de <strong className="text-text-secondary">340 donos de barbearia</strong> já viram o diagnóstico
+                🔒 Seu diagnóstico é <strong className="text-text-secondary">gratuito e sem compromisso</strong>
               </p>
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-9 h-9 rounded-full bg-brand-gold/10 flex items-center justify-center shrink-0">
