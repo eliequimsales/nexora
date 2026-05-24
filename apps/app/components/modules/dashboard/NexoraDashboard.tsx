@@ -102,7 +102,7 @@ export function NexoraDashboard({ slug }: { slug: string }) {
                 )}
               </p>
               <p className="text-xs text-text-muted mt-2">
-                Estimativa: inativos × R$80
+                Estimativa baseada no ticket médio configurado
               </p>
             </div>
             <div className="w-10 h-10 rounded-lg bg-brand-surface-2 flex items-center justify-center shrink-0">
@@ -137,7 +137,7 @@ export function NexoraDashboard({ slug }: { slug: string }) {
             </p>
           </div>
           <div className="p-3 rounded-lg bg-brand-surface-2/40">
-            <p className="text-2xs uppercase text-text-muted mb-1">CTA</p>
+            <p className="text-2xs uppercase text-text-muted mb-1">Ação rápida</p>
             <Link
               href={`/${slug}/clientes`}
               className="inline-flex text-xs font-semibold text-brand-gold hover:text-brand-gold/80 transition-colors"

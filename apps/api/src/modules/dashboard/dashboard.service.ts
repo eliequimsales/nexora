@@ -90,6 +90,15 @@ export class DashboardService {
   async getNexoraMetrics(ctx: TenantContext): Promise<NexoraMetricsDto> {
     const { orgId } = ctx;
 
+    // Lê ticket médio configurado pela org (settings.nexoraRecovery.avgTicket)
+    const org = await this.prisma.organization.findUnique({
+      where: { id: orgId },
+      select: { settings: true },
+    });
+    const settings = (org?.settings ?? {}) as Record<string, unknown>;
+    const nexoraRecovery = (settings.nexoraRecovery ?? {}) as Record<string, unknown>;
+    const avgTicket = Number(nexoraRecovery.avgTicket) > 0 ? Number(nexoraRecovery.avgTicket) : 80;
+
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
@@ -169,8 +178,8 @@ export class DashboardService {
         ? Math.round((successfulRecoveriesThisMonth / recoveredThisMonth) * 100)
         : 0;
 
-    // R$ estimado = inactiveCount × R$80 (ticket médio barbearia) — POTENCIAL
-    const estimatedRevenue = inactiveCount * 80;
+    // R$ estimado = inativos × ticket médio configurado pela org — POTENCIAL
+    const estimatedRevenue = inactiveCount * avgTicket;
 
     // R$ real recuperado este mês (soma de leads.recovered_value)
     const realRecoveredRevenue = Number(revenueAggregate._sum.recoveredValue ?? 0);

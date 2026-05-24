@@ -67,8 +67,8 @@ export default function DashboardPage() {
   const { data: summary, isLoading } = useDashboardSummary();
   const { data: org } = useOrgQuery();
 
-  // Nexora: dashboard especializado para recuperação de clientes
-  if (org?.slug) {
+  // Nexora: dashboard especializado para recuperação de clientes (barbearia)
+  if (org?.niche === 'barbearia') {
     return <NexoraDashboard slug={org.slug} />;
   }
 

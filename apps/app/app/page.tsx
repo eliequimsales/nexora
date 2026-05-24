@@ -24,12 +24,20 @@ export default function LandingPage() {
             <span className="text-brand-gold">N</span>
             <span className="text-text-primary">exora</span>
           </div>
-          <Link
-            href="/login"
-            className="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
-          >
-            Entrar
-          </Link>
+          <div className="flex items-center gap-5">
+            <Link
+              href="/diagnostico"
+              className="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+            >
+              Diagnóstico grátis
+            </Link>
+            <Link
+              href="/login"
+              className="text-sm font-medium text-brand-gold hover:text-brand-gold/80 transition-colors"
+            >
+              Entrar
+            </Link>
+          </div>
         </div>
       </nav>
 
@@ -56,7 +64,7 @@ export default function LandingPage() {
               href="/register?niche=barbearia"
               className="px-6 py-3 border border-brand-border rounded-lg text-text-primary font-medium hover:bg-brand-surface transition-colors"
             >
-              Começar trial direto
+              Criar conta grátis
             </Link>
           </div>
           <p className="text-xs text-text-muted pt-2">
@@ -230,11 +238,11 @@ export default function LandingPage() {
                 <Check size={20} className="text-status-success" />
               </div>
               <h3 className="font-semibold text-text-primary mb-2">
-                Você corta bem. A gente garante que o cliente volta.
+                Você corta. A Nexora faz o cliente lembrar que está com saudade.
               </h3>
               <p className="text-sm text-text-muted">
-                Foca no que você faz de melhor. A Nexora cuida de descobrir quem sumiu e
-                preparar a abordagem certa.
+                Foca no que você faz de melhor. A Nexora descobre quem sumiu e prepara a
+                abordagem certa pra cada cliente.
               </p>
             </div>
           </div>
@@ -320,7 +328,7 @@ export default function LandingPage() {
               },
               {
                 q: 'A Nexora envia as mensagens automaticamente?',
-                a: 'Não no piloto atual. A IA escreve a mensagem pronta pra você — você copia e envia do seu número. Zero integração, zero risco.',
+                a: 'Não. A IA escreve a mensagem pronta pra você — você lê, aprova e envia do seu próprio número. Zero integração, zero risco de spam.',
               },
               {
                 q: 'Funciona para barbearia pequena?',
