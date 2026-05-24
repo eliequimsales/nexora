@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Building2, Globe, Clock } from 'lucide-react';
+import { Building2, Globe, Clock, Hash } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useUpdateOrg } from '@/lib/hooks/org/useUpdateOrg';
@@ -14,6 +14,13 @@ const schema = z.object({
   name: z.string().min(2, 'Mínimo 2 caracteres').max(255),
   language: z.enum(['pt-BR', 'en-US']),
   timezone: z.string().max(100).optional(),
+  cnpj: z
+    .string()
+    .optional()
+    .refine(
+      (v) => !v || /^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/.test(v) || /^\d{14}$/.test(v),
+      { message: 'CNPJ inválido (formato: XX.XXX.XXX/XXXX-XX)' },
+    ),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -36,6 +43,7 @@ export function OrgSettingsForm({ org }: OrgSettingsFormProps) {
       name: org.name,
       language: org.settings.language ?? 'pt-BR',
       timezone: org.settings.timezone ?? '',
+      cnpj: (org.settings.cnpj as string) ?? '',
     },
   });
 
@@ -45,6 +53,7 @@ export function OrgSettingsForm({ org }: OrgSettingsFormProps) {
       name: org.name,
       language: org.settings.language ?? 'pt-BR',
       timezone: org.settings.timezone ?? '',
+      cnpj: (org.settings.cnpj as string) ?? '',
     });
   }, [org, reset]);
 
@@ -54,6 +63,7 @@ export function OrgSettingsForm({ org }: OrgSettingsFormProps) {
       settings: {
         language: data.language,
         timezone: data.timezone || undefined,
+        cnpj: data.cnpj || undefined,
       },
     });
     reset(data); // clear dirty state after successful save
@@ -98,6 +108,15 @@ export function OrgSettingsForm({ org }: OrgSettingsFormProps) {
         helper="Ex: America/Sao_Paulo, America/New_York"
         error={errors.timezone?.message}
         {...register('timezone')}
+      />
+
+      <Input
+        label="CNPJ (opcional)"
+        placeholder="00.000.000/0001-00"
+        iconLeft={<Hash size={15} />}
+        helper="Para emissão de notas fiscais e documentos legais"
+        error={errors.cnpj?.message}
+        {...register('cnpj')}
       />
 
       <div className="pt-2 flex justify-end">

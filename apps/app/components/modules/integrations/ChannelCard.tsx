@@ -27,9 +27,9 @@ const CHANNEL_META: Record<string, { label: string; fields: Field[] }> = {
     ],
   },
   whatsapp: {
-    label: 'WhatsApp (Evolution API)',
+    label: 'WhatsApp — Envio automático',
     fields: [
-      { key: 'apiUrl', label: 'URL da API', placeholder: 'https://api.evolution.example.com' },
+      { key: 'apiUrl', label: 'URL da Evolution API', placeholder: 'https://api.evolution.example.com' },
       { key: 'instance', label: 'Instância', placeholder: 'minha-instancia' },
       { key: 'apiKey', label: 'API Key', type: 'password', placeholder: existing => existing ? '••••••••' : 'Chave de API' },
     ],

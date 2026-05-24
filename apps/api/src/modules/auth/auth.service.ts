@@ -26,7 +26,7 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResponseDto & { refreshToken: string }> {
-    const niche = dto.niche ?? 'beauty_wellness';
+    const niche = dto.niche ?? 'barbearia';
     const userName = dto.name ?? dto.orgName;
 
     let nicheConfig;
@@ -288,7 +288,7 @@ export class AuthService {
     if (!user) {
       // Primeiro acesso real via Google: cria conta nova
       const orgName = googleProfile.name;
-      const niche = 'beauty_wellness';
+      const niche = 'barbearia';
       const nicheConfig = getNicheConfig(niche);
       const formToken = randomBytes(32).toString('hex');
       const slug = await this.generateUniqueSlug(orgName);

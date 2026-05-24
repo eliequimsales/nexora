@@ -38,9 +38,9 @@ export function RegisterForm() {
   async function onSubmit(data: FormData) {
     setServerError(null);
     try {
-      // niche fixo 'beauty_wellness' no piloto barbearia
+      // niche fixo 'barbearia' no piloto — stages e prompts específicos de barbearia
       // name usa orgName como fallback — backend aceita opcional
-      await registerUser(data.orgName, data.email, data.password, data.orgName, 'beauty_wellness');
+      await registerUser(data.orgName, data.email, data.password, data.orgName, 'barbearia');
       try {
         const { apiClient } = await import('@/lib/api/client');
         await apiClient.post('/organizations/current/lgpd-accept');

@@ -5,6 +5,7 @@ import { culinaryConfig } from './culinary';
 import { beautyWellnessConfig } from './beauty_wellness';
 import { professionalServicesConfig } from './professional_services';
 import { realEstateConfig } from './real_estate';
+import { barbeariaConfig } from './barbearia';
 import type { NicheConfig } from './types';
 
 const NICHE_CONFIGS: Record<string, NicheConfig> = {
@@ -15,6 +16,7 @@ const NICHE_CONFIGS: Record<string, NicheConfig> = {
   beauty_wellness: beautyWellnessConfig,
   professional_services: professionalServicesConfig,
   real_estate: realEstateConfig,
+  barbearia: barbeariaConfig,
 };
 
 export function getNicheConfig(niche: string): NicheConfig {

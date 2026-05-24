@@ -62,17 +62,17 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     if (exception instanceof Prisma.PrismaClientKnownRequestError) {
       if (exception.code === 'P2002') {
-        return { statusCode: 409, error: 'CONFLICT', message: 'Resource already exists' };
+        return { statusCode: 409, error: 'CONFLICT', message: 'Este registro já existe.' };
       }
       if (exception.code === 'P2025') {
-        return { statusCode: 404, error: 'NOT_FOUND', message: 'Resource not found' };
+        return { statusCode: 404, error: 'NOT_FOUND', message: 'Registro não encontrado.' };
       }
     }
 
     return {
       statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
       error: 'INTERNAL_SERVER_ERROR',
-      message: 'An unexpected error occurred',
+      message: 'Ocorreu um erro inesperado. Tente novamente em instantes.',
     };
   }
 

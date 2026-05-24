@@ -1,8 +1,10 @@
 import { realEstateTemplate } from './real_estate.template';
 import { beautyWellnessTemplate } from './beauty_wellness.template';
+import { barbeariaTemplate } from './barbearia.template';
 import type { TemplateDefinition } from './types';
 
 const TEMPLATES: Record<string, TemplateDefinition> = {
+  barbearia_v1: barbeariaTemplate,
   beauty_wellness_v1: beautyWellnessTemplate,
   real_estate_v1: realEstateTemplate,
 };
@@ -24,5 +26,5 @@ export function getTemplate(id: string): TemplateDefinition | undefined {
   return TEMPLATES[id];
 }
 
-export { realEstateTemplate, beautyWellnessTemplate };
+export { realEstateTemplate, beautyWellnessTemplate, barbeariaTemplate };
 export type { TemplateDefinition };

@@ -1,6 +1,6 @@
 'use client';
 
-import { Plug } from 'lucide-react';
+import { Plug, AlertTriangle } from 'lucide-react';
 import { ChannelCard } from '@/components/modules/integrations/ChannelCard';
 import { WebhookList } from '@/components/modules/integrations/WebhookList';
 import { IntegrationLogsTable } from '@/components/modules/integrations/IntegrationLogsTable';
@@ -36,7 +36,17 @@ export default function IntegrationsPage() {
           <p className="text-sm font-semibold text-text-primary mb-3">Canais de comunicação</p>
           <div className="space-y-3">
             <ChannelCard channel="email" existing={emailConfig} />
-            <ChannelCard channel="whatsapp" existing={whatsappConfig} />
+
+            {/* WhatsApp automático — apenas usuários avançados */}
+            <div>
+              <ChannelCard channel="whatsapp" existing={whatsappConfig} />
+              <div className="mt-2 flex items-start gap-2 rounded-lg border border-status-warning/30 bg-status-warning/5 px-3 py-2.5">
+                <AlertTriangle size={13} className="text-status-warning shrink-0 mt-0.5" />
+                <p className="text-xs text-text-muted leading-relaxed">
+                  <strong className="text-text-secondary">Avançado:</strong> Envio automático via Evolution API exige servidor próprio e pode violar os termos do WhatsApp. Durante o piloto, recomendamos usar o modo manual — a IA gera a mensagem e você envia do seu número normalmente.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 

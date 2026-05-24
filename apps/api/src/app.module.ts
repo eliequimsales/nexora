@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { BullModule } from '@nestjs/bullmq';
 import { ScheduleModule } from '@nestjs/schedule';
 import { configuration } from './config/configuration';
@@ -100,8 +100,10 @@ import { NexoraReportsModule } from './modules/nexora-reports/nexora-reports.mod
 
   providers: [
     // Guards registered here are applied globally via DI — Reflector is properly injected.
-    // JwtAuthGuard first: establishes identity. RolesGuard second: enforces role constraints.
-    // Use @Public() to opt out of auth. Use @RequirePermission() or @Roles() to add constraints.
+    // ThrottlerGuard primeiro: limita taxa de requisições por IP antes de qualquer lógica.
+    // JwtAuthGuard: estabelece identidade. RolesGuard: restrições de papel. PlanLimitsGuard: limites de plano.
+    // Use @Public() para desativar auth. Use @RequirePermission() ou @Roles() para adicionar restrições.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: PlanLimitsGuard },
