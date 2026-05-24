@@ -67,8 +67,8 @@ export function RecoveryHero({
           </p>
 
           <p className="mt-1 text-xs text-white/60">
-            Cada dia parado é receita perdida. A Nexora gera uma mensagem
-            personalizada para cada cliente e dispara via WhatsApp.
+            Cada dia parado é receita perdida. A Nexora gera a mensagem certa
+            para cada cliente — você copia e manda do seu WhatsApp.
           </p>
         </div>
 
