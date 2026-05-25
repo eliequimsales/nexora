@@ -14,7 +14,6 @@
     "@hookform/resolvers": "^3.9.0",
     "@nexora/shared": "workspace:*",
     "@radix-ui/react-slot": "^1.2.4",
-    "@sentry/nextjs": "^10.53.1",
     "@tanstack/react-query": "^5.56.0",
     "axios": "^1.7.0",
     "class-variance-authority": "^0.7.1",
