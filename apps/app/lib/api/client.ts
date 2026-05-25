@@ -48,8 +48,14 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Don't try to refresh on auth endpoints themselves
-    if (original.url?.includes('/auth/')) {
+    // Não tentar refresh nos próprios endpoints de auth — evita loop infinito.
+    // /auth/me PODE tentar refresh (é o caso mobile: token perdeu da memória,
+    // mas o refresh_token cookie ainda é válido).
+    const isRefreshOrLogin =
+      original.url?.includes('/auth/refresh') ||
+      original.url?.includes('/auth/login') ||
+      original.url?.includes('/auth/register');
+    if (isRefreshOrLogin) {
       return Promise.reject(error);
     }
 

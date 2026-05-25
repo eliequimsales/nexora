@@ -18,8 +18,10 @@ export function middleware(request: NextRequest) {
   const hasRefreshToken = request.cookies.has('refresh_token');
   const isPublicPath = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'));
 
-  // Authenticated user trying to access login → redirect to org selection
-  if (hasRefreshToken && isPublicPath) {
+  // Authenticated user trying to access login → redirect to org selection.
+  // Exceção: /select-org em si não redireciona (evita loop quando refresh falha).
+  const isSelectOrg = pathname === '/select-org';
+  if (hasRefreshToken && isPublicPath && !isSelectOrg) {
     return NextResponse.redirect(new URL('/select-org', request.url));
   }
 
