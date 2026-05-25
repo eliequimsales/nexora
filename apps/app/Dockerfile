@@ -9,12 +9,9 @@ WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
-# Copy monorepo manifests first — todos os package.json do workspace são
-# necessários para o pnpm resolver o lockfile com --frozen-lockfile
+# Copy monorepo manifests first
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY apps/app/package.json ./apps/app/
-COPY apps/api/package.json ./apps/api/
-COPY apps/web/package.json ./apps/web/
 COPY packages/shared/package.json ./packages/shared/
 
 RUN pnpm install --frozen-lockfile
