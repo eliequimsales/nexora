@@ -34,7 +34,7 @@ export function NexoraDashboard({ slug }: { slug: string }) {
       </div>
 
       {/* KPI Grid — 4 cards em destaque (Receita Recuperada é o KPI rei) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Inativos */}
         <StatCard
           label="Clientes inativos"
