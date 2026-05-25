@@ -14,6 +14,13 @@ export default function SelectOrgPage() {
 
   useEffect(() => {
     let cancelled = false;
+
+    // Fallback: se em 12s ainda não saiu, redireciona pro login.
+    // Protege contra request pendurado sem resposta (mobile com sinal ruim).
+    const fallback = setTimeout(() => {
+      if (!cancelled) router.replace('/login');
+    }, 12000);
+
     authApi.me()
       .then(({ data }) => {
         if (cancelled) return;
@@ -26,10 +33,16 @@ export default function SelectOrgPage() {
       })
       .catch(() => {
         if (cancelled) return;
-        // Sem sessão válida → manda pro login
         router.replace('/login');
+      })
+      .finally(() => {
+        clearTimeout(fallback);
       });
-    return () => { cancelled = true; };
+
+    return () => {
+      cancelled = true;
+      clearTimeout(fallback);
+    };
   }, [router, store]);
 
   return (
