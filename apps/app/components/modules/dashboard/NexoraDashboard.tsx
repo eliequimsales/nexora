@@ -22,14 +22,14 @@ export function NexoraDashboard({ slug }: { slug: string }) {
   const recovery = metrics?.recovery;
 
   return (
-    <div className="p-6 max-w-6xl space-y-6">
+    <div className="p-4 sm:p-6 max-w-6xl space-y-4 sm:space-y-6">
       {/* Greeting */}
       <div>
-        <h2 className="text-2xl font-bold text-text-primary">
-          🎯 Dashboard de Recuperação Nexora
+        <h2 className="text-xl sm:text-2xl font-bold text-text-primary">
+          🎯 Dashboard de Recuperação
         </h2>
-        <p className="text-sm text-text-muted mt-1">
-          Acompanhe seus clientes perdidos e o potencial de recuperação em tempo real.
+        <p className="text-xs sm:text-sm text-text-muted mt-1">
+          Acompanhe clientes perdidos e o potencial de recuperação em tempo real.
         </p>
       </div>
 

@@ -6,8 +6,14 @@
   :root {
     --font-geist-sans: 'Geist Sans', system-ui, sans-serif;
     --font-geist-mono: 'Geist Mono', 'Fira Code', monospace;
-    --sidebar-width: 240px;
+    --sidebar-width: 0px;   /* mobile-first: sidebar é drawer, não ocupa espaço */
     --header-height: 56px;
+  }
+
+  @media (min-width: 768px) {
+    :root {
+      --sidebar-width: 240px; /* desktop: sidebar fixo ocupa espaço */
+    }
   }
 
   *,

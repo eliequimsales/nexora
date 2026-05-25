@@ -22,6 +22,7 @@ import { UserDropdown } from './UserDropdown';
 import { useOrg } from '@/lib/hooks/org/useOrg';
 import { useTenant } from '@/lib/hooks/org/useTenant';
 import { useUnreadResponses } from '@/lib/hooks/nexora/useUnreadResponses';
+import { useMobileSidebar } from './MobileSidebarContext';
 import { cn } from '@/lib/utils';
 
 interface NavItem {
@@ -65,15 +66,16 @@ interface SidebarNavItemProps {
   basePath: string;
   pathname: string;
   badgeCount?: number;
+  onNavigate?: () => void;
 }
 
-function SidebarNavItem({ item, basePath, pathname, badgeCount }: SidebarNavItemProps) {
+function SidebarNavItem({ item, basePath, pathname, badgeCount, onNavigate }: SidebarNavItemProps) {
   const href = `${basePath}/${item.href}`;
   const isActive = item.exact ? pathname === href : pathname.startsWith(href);
   const Icon = item.icon;
 
   return (
-    <Link href={href} className={cn('sidebar-item', isActive && 'active')}>
+    <Link href={href} onClick={onNavigate} className={cn('sidebar-item', isActive && 'active')}>
       <Icon size={16} strokeWidth={1.75} />
       <span className="flex-1">{item.label}</span>
       {badgeCount && badgeCount > 0 ? (
@@ -90,6 +92,7 @@ export function Sidebar() {
   const { slug } = useTenant();
   const pathname = usePathname();
   const basePath = `/${slug}`;
+  const { isOpen, close } = useMobileSidebar();
 
   // Check if org is in Nexora mode (barbershop niche)
   const isNexoraMode = org.niche === 'barbearia';
@@ -112,11 +115,29 @@ export function Sidebar() {
   // The hook reads from React Query so it shares cache with the responses page.
   const { unreadCount } = useUnreadResponses();
 
+  // Fecha o drawer ao navegar (mobile)
+  const handleNavigate = () => close();
+
   return (
-    <aside
-      className="fixed inset-y-0 left-0 flex flex-col bg-sidebar-bg border-r border-sidebar-border z-30"
-      style={{ width: 'var(--sidebar-width)' }}
-    >
+    <>
+      {/* Overlay — visível só no mobile quando o drawer está aberto */}
+      {isOpen && (
+        <div
+          aria-hidden
+          className="fixed inset-0 z-40 bg-black/60 md:hidden"
+          onClick={close}
+        />
+      )}
+
+      <aside
+        className={cn(
+          'fixed inset-y-0 left-0 flex flex-col bg-sidebar-bg border-r border-sidebar-border z-50 w-[240px] transition-transform duration-200',
+          // Mobile: esconde por padrão, abre via drawer
+          isOpen ? 'translate-x-0' : '-translate-x-full',
+          // Desktop: sempre visível, sem translate
+          'md:translate-x-0',
+        )}
+      >
       {/* Logo + org */}
       <div className="flex items-center gap-2.5 px-4 py-4 border-b border-sidebar-border">
         <div className="w-7 h-7 rounded-lg bg-brand-amber flex items-center justify-center shrink-0">
@@ -140,6 +161,7 @@ export function Sidebar() {
             item={item}
             basePath={basePath}
             pathname={pathname}
+            onNavigate={handleNavigate}
           />
         ))}
 
@@ -170,6 +192,7 @@ export function Sidebar() {
                     basePath={basePath}
                     pathname={pathname}
                     badgeCount={item.href === 'nexora/responses' ? unreadCount : undefined}
+                    onNavigate={handleNavigate}
                   />
                 ))}
               </div>
@@ -202,6 +225,7 @@ export function Sidebar() {
                   item={item}
                   basePath={basePath}
                   pathname={pathname}
+                  onNavigate={handleNavigate}
                 />
               ))}
             </div>
@@ -219,6 +243,7 @@ export function Sidebar() {
               item={item}
               basePath={basePath}
               pathname={pathname}
+              onNavigate={handleNavigate}
             />
           ))}
         </div>
@@ -229,5 +254,6 @@ export function Sidebar() {
         <UserDropdown />
       </div>
     </aside>
+    </>
   );
 }
