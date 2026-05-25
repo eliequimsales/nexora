@@ -247,7 +247,7 @@ export default function DiagnosticoPage() {
               <p className="text-xs text-status-error font-semibold uppercase tracking-widest mb-1">
                 Resultado calculado
               </p>
-              <p className="text-6xl font-bold text-status-error select-none" style={{filter:'blur(6px)'}}>
+              <p className="text-6xl font-bold text-status-error select-none" style={{filter:'blur(3px)'}}>
                 {formatCurrency(monthlyLoss)}/mês
               </p>
               <p className="text-xs text-text-muted mt-2">desbloqueie o diagnóstico completo abaixo</p>

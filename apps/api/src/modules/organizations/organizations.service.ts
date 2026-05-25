@@ -110,6 +110,132 @@ export class OrganizationsService {
     return mapOrg(updated);
   }
 
+  /**
+   * LGPD Art. 18 — direito de acesso e portabilidade.
+   * Retorna todos os dados pessoais que a organização possui na plataforma.
+   * Não exporta hashes de senha nem tokens internos.
+   */
+  async exportData(ctx: TenantContext): Promise<Record<string, unknown>> {
+    const [org, users, leads, tasks] = await Promise.all([
+      this.prisma.organization.findUnique({
+        where: { id: ctx.orgId },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          niche: true,
+          status: true,
+          lgpdAcceptedAt: true,
+          lgpdTermVersion: true,
+          createdAt: true,
+        },
+      }),
+      this.prisma.user.findMany({
+        where: { orgId: ctx.orgId },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          status: true,
+          createdAt: true,
+        },
+      }),
+      this.prisma.lead.findMany({
+        where: { orgId: ctx.orgId },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          status: true,
+          source: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }),
+      this.prisma.task.findMany({
+        where: { orgId: ctx.orgId },
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          dueDate: true,
+          createdAt: true,
+        },
+      }),
+    ]);
+
+    if (!org) throw new NotFoundException();
+
+    await this.auditLog.record({
+      orgId: ctx.orgId,
+      actorId: ctx.userId,
+      actorRole: ctx.role,
+      action: 'organization.data_exported',
+      resourceType: 'organization',
+      resourceId: ctx.orgId,
+      metadata: {
+        exportedAt: new Date().toISOString(),
+        recordCounts: {
+          users: users.length,
+          leads: leads.length,
+          tasks: tasks.length,
+        },
+      },
+    });
+
+    return {
+      exportedAt: new Date().toISOString(),
+      organization: org,
+      users,
+      leads,
+      tasks,
+    };
+  }
+
+  /**
+   * LGPD Art. 18 — direito de eliminação.
+   * Faz soft-delete da organização (status = 'deletion_requested').
+   * Hard-delete pode ser agendado por job após período de retenção legal.
+   * Apenas admins podem solicitar. Irreversível via UI.
+   */
+  async requestDeletion(ctx: TenantContext): Promise<{ requestedAt: Date; message: string }> {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: ctx.orgId },
+      select: { id: true, status: true },
+    });
+    if (!org) throw new NotFoundException();
+
+    if (org.status === 'deletion_requested') {
+      return {
+        requestedAt: new Date(),
+        message: 'Solicitação de exclusão já registrada. Será processada em até 30 dias.',
+      };
+    }
+
+    await this.prisma.organization.update({
+      where: { id: ctx.orgId },
+      data: { status: 'deletion_requested' },
+    });
+
+    await this.auditLog.record({
+      orgId: ctx.orgId,
+      actorId: ctx.userId,
+      actorRole: ctx.role,
+      action: 'organization.deletion_requested',
+      resourceType: 'organization',
+      resourceId: ctx.orgId,
+      metadata: { requestedAt: new Date().toISOString() },
+    });
+
+    return {
+      requestedAt: new Date(),
+      message:
+        'Solicitação de exclusão registrada. Todos os dados serão eliminados em até 30 dias conforme LGPD Art. 18.',
+    };
+  }
+
   async applyTemplate(ctx: TenantContext, templateId: string): Promise<OrgResponseDto> {
     const template = getTemplate(templateId);
     if (!template) throw new BadRequestException(`Template "${templateId}" não encontrado`);

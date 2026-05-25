@@ -3,6 +3,7 @@ export type Role = 'admin' | 'member';
 export const PERMISSIONS = {
   'org:read': 'member',
   'org:update': 'admin',
+  'org:delete': 'admin',
   'users:list': 'member',
   'users:read': 'member',
   'users:update': 'admin',

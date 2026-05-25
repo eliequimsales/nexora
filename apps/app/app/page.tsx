@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { ArrowRight, Check, MessageSquare, Upload, Eye, Copy } from 'lucide-react';
 import Link from 'next/link';
+import { DashboardMockup } from '@/components/landing/DashboardMockup';
 
 export const metadata: Metadata = {
   title: 'Nexora — Recupere clientes inativos da sua barbearia',
@@ -70,6 +71,13 @@ export default function LandingPage() {
           <p className="text-xs text-text-muted pt-2">
             Sem cartão. Cancela quando quiser. Trial gratuito por 7 dias.
           </p>
+        </div>
+      </section>
+
+      {/* Product Mockup — prévia visual do dashboard */}
+      <section className="px-6 pb-12 -mt-2">
+        <div className="max-w-4xl mx-auto">
+          <DashboardMockup />
         </div>
       </section>
 

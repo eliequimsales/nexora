@@ -105,7 +105,7 @@ export function RegisterForm() {
 
       {/* Termo LGPD — fonte maior para leitura no celular */}
       <div className="rounded-lg border border-brand-border bg-brand-surface-2/40 p-4 space-y-3">
-        <p className="text-sm text-text-secondary leading-relaxed">
+        <p className="text-base sm:text-sm text-text-secondary leading-relaxed">
           Você confirma que seus clientes aceitaram receber mensagens da{' '}
           <strong className="text-text-primary">{orgNameValue}</strong> e autoriza a Nexora a gerar
           mensagens de reativação em seu nome.
@@ -116,7 +116,7 @@ export function RegisterForm() {
             className="mt-0.5 w-4 h-4 rounded shrink-0 accent-brand-gold"
             {...register('acceptTerms')}
           />
-          <span className="text-sm text-text-primary">
+          <span className="text-base sm:text-sm text-text-primary">
             Li e concordo com o termo acima.
           </span>
         </label>

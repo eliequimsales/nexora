@@ -9,6 +9,7 @@ import {
 import { Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
 import { PlanLimitException } from '../exceptions/plan-limit.exception';
+import * as Sentry from '@sentry/node';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -37,6 +38,16 @@ export class HttpExceptionFilter implements ExceptionFilter {
         `${request.method} ${request.url} → ${statusCode}`,
         exception instanceof Error ? exception.stack : String(exception),
       );
+      // Reporta erros 5xx ao Sentry (se DSN configurado)
+      if (process.env.SENTRY_DSN) {
+        Sentry.captureException(exception, {
+          extra: {
+            method: request.method,
+            url: request.url,
+            statusCode,
+          },
+        });
+      }
     }
 
     response.status(statusCode).json({ statusCode, error, message });

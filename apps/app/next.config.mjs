@@ -1,3 +1,6 @@
+// @ts-check
+import { withSentryConfig } from '@sentry/nextjs';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // `standalone` é só pra Docker (Railway/Render/Fly). Vercel e dev local
@@ -49,4 +52,18 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+// withSentryConfig envolve o nextConfig com source maps e tunneling.
+// Quando SENTRY_DSN não está definido (ex.: dev local sem Sentry),
+// o wrapper é ignorado e o build continua normalmente.
+export default process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN
+  ? withSentryConfig(nextConfig, {
+      // Org e projeto ficam em SENTRY_ORG / SENTRY_PROJECT (Railway secrets)
+      silent: true,
+      // Source maps enviados ao Sentry não ficam no bundle público
+      hideSourceMaps: true,
+      // Tunnel proxies os pedidos do browser para evitar ad-blockers
+      tunnelRoute: '/api/monitoring',
+      // Desabilita o instrumentation automático de rotas API (usamos manual)
+      autoInstrumentMiddleware: false,
+    })
+  : nextConfig;
