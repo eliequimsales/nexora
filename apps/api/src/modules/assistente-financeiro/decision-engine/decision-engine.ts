@@ -26,23 +26,11 @@ export interface Decision {
 }
 
 const TOP_N = 3;
-const LOW_CONFIDENCE: ConfidenceLevel[] = ['preliminary', 'low'];
 
 export class DecisionEngine {
   decide(assessment: EngineAssessment): Decision {
-    // Art. VI: confiança baixa não manda executar — manda melhorar o dado.
-    const trustworthy = !LOW_CONFIDENCE.includes(assessment.confidence.level);
-    const action: Action = trustworthy
-      ? {
-          kind: 'create_campaign',
-          label: 'Gerar campanha de recuperação para este cliente',
-          executable: true,
-        }
-      : {
-          kind: 'increase_confidence',
-          label: 'Melhorar dados antes de executar',
-          executable: false,
-        };
+    // Regra Zero (Art. IV): a confiança define QUAL ação, nunca SE existe ação.
+    const action = selectAction(assessment.confidence.level);
 
     const all = assessment.items;
     const byMoney = [...all].sort((a, b) => b.recoverableCents - a.recoverableCents); // Art. X
@@ -92,6 +80,40 @@ function executiveRri(assessment: EngineAssessment): number | null {
   const annual = assessment.annualRevenueCents;
   if (annual === null || annual <= 0) return null;
   return Math.round((assessment.totalRecoverableCents / annual) * 100);
+}
+
+/**
+ * A ação escala com a confiança (Art. IV + Art. VI): nunca trava a tela, mas
+ * nunca exagera o que a evidência permite. Dado insuficiente → o próximo passo
+ * honesto é melhorar o dado; daí em diante, recuperar — piloto → recomendada → automática.
+ */
+function selectAction(level: ConfidenceLevel): Action {
+  switch (level) {
+    case 'preliminary':
+      return {
+        kind: 'increase_confidence',
+        label: 'Melhorar dados antes de executar',
+        executable: false,
+      };
+    case 'low':
+      return {
+        kind: 'create_campaign',
+        label: 'Executar campanha piloto em pequena escala',
+        executable: true,
+      };
+    case 'medium':
+      return {
+        kind: 'create_campaign',
+        label: 'Executar campanha de recuperação',
+        executable: true,
+      };
+    case 'high':
+      return {
+        kind: 'create_campaign',
+        label: 'Executar recuperação automaticamente (quando permitido)',
+        executable: true,
+      };
+  }
 }
 
 /** Percentil interno 0–100: % de oportunidades com R$ ≤ este. Maior R$ → 100. */

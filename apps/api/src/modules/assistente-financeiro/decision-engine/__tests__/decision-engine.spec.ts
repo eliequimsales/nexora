@@ -5,7 +5,8 @@
  * Ordem: dinheiro primeiro (Top 3 por R$), 1 ação por oportunidade, depois RRI, depois causas.
  */
 
-import { DecisionEngine } from '../decision-engine';
+import { DecisionEngine, type RankedOpportunity } from '../decision-engine';
+import type { ConfidenceLevel } from '../../contracts/revenue.contracts';
 import type { EngineAssessment } from '../../revenue-engine/revenue-engine';
 
 function assessment(partial?: Partial<EngineAssessment>): EngineAssessment {
@@ -36,30 +37,38 @@ describe('DecisionEngine.decide — Regra Zero: dinheiro vira decisão', () => {
     expect(decision.topOpportunities.map((o) => o.externalId)).toEqual(['top', 'mid', 'low']);
   });
 
-  it('RED 007: cada oportunidade tem exatamente 1 ação executável (campanha)', () => {
+  function decideWithLevel(level: ConfidenceLevel, pct: number): RankedOpportunity {
     const a = assessment({
       items: [{ externalId: 'x', recoverableCents: 5_000 }],
       totalRecoverableCents: 5_000,
-      confidence: { pct: 80, level: 'high', reason: 'ok' },
+      confidence: { pct, level, reason: 'x' },
     });
+    return new DecisionEngine().decide(a).topOpportunities[0];
+  }
 
-    const op = new DecisionEngine().decide(a).topOpportunities[0];
+  // Regra Zero (Art. IV): a confiança define QUAL ação, nunca SE existe ação.
+  it('RED 007: preliminary (<25%) não executa — manda melhorar dados (Art. VI)', () => {
+    const op = decideWithLevel('preliminary', 12);
+    expect(op.action.label).toBe('Melhorar dados antes de executar');
+    expect(op.action.executable).toBe(false);
+  });
 
-    expect(op.action.label).toBe('Gerar campanha de recuperação para este cliente');
+  it('RED 007b: low → campanha piloto executável (sempre há próximo passo)', () => {
+    const op = decideWithLevel('low', 33);
+    expect(op.action.label).toBe('Executar campanha piloto em pequena escala');
     expect(op.action.executable).toBe(true);
   });
 
-  it('RED 007b: confiança baixa → ação vira "melhorar dados", não executável (Art. VI)', () => {
-    const a = assessment({
-      items: [{ externalId: 'x', recoverableCents: 5_000 }],
-      totalRecoverableCents: 5_000,
-      confidence: { pct: 12, level: 'preliminary', reason: 'amostra pequena' },
-    });
+  it('RED 007c: medium → campanha de recuperação executável', () => {
+    const op = decideWithLevel('medium', 70);
+    expect(op.action.label).toBe('Executar campanha de recuperação');
+    expect(op.action.executable).toBe(true);
+  });
 
-    const op = new DecisionEngine().decide(a).topOpportunities[0];
-
-    expect(op.action.label).toBe('Melhorar dados antes de executar');
-    expect(op.action.executable).toBe(false);
+  it('RED 007d: high → recuperação automática (quando permitido), executável', () => {
+    const op = decideWithLevel('high', 90);
+    expect(op.action.label).toBe('Executar recuperação automaticamente (quando permitido)');
+    expect(op.action.executable).toBe(true);
   });
 
   it('RED 008: RRI operacional é percentil interno 0–100 — maior R$ = 100', () => {
