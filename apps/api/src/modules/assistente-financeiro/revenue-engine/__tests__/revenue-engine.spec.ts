@@ -85,4 +85,12 @@ describe('RevenueEngine.assess — a conta que vira R$ (Artigo X)', () => {
     expect(tiny.confidence.level).not.toBe('high');
     expect(tiny.confidence.pct).toBeLessThan(25);
   });
+
+  it('expõe annualRevenueCents do input para o RRI executivo a jusante (null se ausente)', () => {
+    const withRev = new RevenueEngine().assess([], makeInput({ annualRevenueCents: 1_000_000 }));
+    const without = new RevenueEngine().assess([], makeInput());
+
+    expect(withRev.annualRevenueCents).toBe(1_000_000);
+    expect(without.annualRevenueCents).toBeNull();
+  });
 });

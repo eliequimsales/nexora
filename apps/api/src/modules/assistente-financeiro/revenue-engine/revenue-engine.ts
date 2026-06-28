@@ -22,6 +22,8 @@ export interface EngineAssessment {
   items: RecoverableItem[];
   totalRecoverableCents: number;
   confidence: Confidence;
+  /** Receita anual da org (do input) — base do RRI executivo a jusante. null se desconhecida. */
+  annualRevenueCents: number | null;
 }
 
 /** Meia-amostra: nº de clientes onde o volume já contribui ~63% da confiança. */
@@ -44,6 +46,7 @@ export class RevenueEngine {
       items,
       totalRecoverableCents,
       confidence: computeConfidence(signals.length, input),
+      annualRevenueCents: input.annualRevenueCents ?? null,
     };
   }
 }
