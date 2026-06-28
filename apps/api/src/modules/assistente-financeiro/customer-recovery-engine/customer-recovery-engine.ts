@@ -1,7 +1,7 @@
 /**
- * RevenueEngine — o MOTOR UNIVERSAL (Constituição, Artigo VII).
+ * CustomerRecoveryEngine — o MOTOR UNIVERSAL (Constituição, Artigo VII).
  *
- * Só consome RevenueSignal normalizado. NÃO conhece setor, RFM, recência crua —
+ * Só consome CustomerRecoverySignal normalizado. NÃO conhece setor, RFM, recência crua —
  * qualquer Signal Provider (CSV/RFM, Subscription, B2B...) alimenta o mesmo motor.
  * Artigo X: a saída primária é R$ recuperável.
  */
@@ -10,8 +10,8 @@ import type {
   AssessmentInput,
   Confidence,
   ConfidenceLevel,
-  RevenueSignal,
-} from '../contracts/revenue.contracts';
+  CustomerRecoverySignal,
+} from '../contracts/recovery.contracts';
 
 export interface RecoverableItem {
   externalId: string;
@@ -29,8 +29,8 @@ export interface EngineAssessment {
 /** Meia-amostra: nº de clientes onde o volume já contribui ~63% da confiança. */
 const VOLUME_HALFLIFE = 50;
 
-export class RevenueEngine {
-  assess(signals: RevenueSignal[], input: AssessmentInput): EngineAssessment {
+export class CustomerRecoveryEngine {
+  assess(signals: CustomerRecoverySignal[], input: AssessmentInput): EngineAssessment {
     const items: RecoverableItem[] = signals.map((s) => ({
       externalId: s.externalId,
       // Artigo VI: recuperável nunca é negativo — custo > ganho é oportunidade zero, não dívida.

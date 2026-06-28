@@ -1,24 +1,24 @@
 /**
  * DecisionEngine — onde o número vira DECISÃO DE DONO (Regra Zero / Art. IV).
  *
- * Só consome a saída do RevenueEngine (EngineAssessment): nada de CSV, RFM ou setor.
+ * Só consome a saída do CustomerRecoveryEngine (EngineAssessment): nada de CSV, RFM ou setor.
  * Constrói a fila de prioridade por R$ (Art. X), não dashboard.
  */
 
-import type { Action, ConfidenceLevel, RecoverableCause } from '../contracts/revenue.contracts';
-import type { EngineAssessment } from '../revenue-engine/revenue-engine';
+import type { RecoveryAction, ConfidenceLevel, RecoverableCause } from '../contracts/recovery.contracts';
+import type { EngineAssessment } from '../customer-recovery-engine/customer-recovery-engine';
 
-export interface RankedOpportunity {
+export interface RecoveryOpportunity {
   externalId: string;
   recoverableCents: number;
   /** RRI operacional 0–100: percentil interno de R$ — ranking, nunca o número de venda. */
   rriOperational: number;
   /** Regra Zero (Art. IV): EXATAMENTE uma ação por oportunidade. */
-  action: Action;
+  action: RecoveryAction;
 }
 
 export interface Decision {
-  topOpportunities: RankedOpportunity[];
+  topOpportunities: RecoveryOpportunity[];
   /** RRI executivo (%): recuperável ÷ receita anual. null se receita anual desconhecida. */
   rriExecutivePct: number | null;
   /** Causas auditáveis (Guardrail 5): segmentos básicos que reconciliam com o total. */
@@ -75,7 +75,7 @@ function concentrationCauses(
   return causes;
 }
 
-/** RRI executivo (%): quanto a receita recuperável representa da receita anual da org. */
+/** RRI executivo (%): quanto a valor potencial recuperável representa da receita anual da org. */
 function executiveRri(assessment: EngineAssessment): number | null {
   const annual = assessment.annualRevenueCents;
   if (annual === null || annual <= 0) return null;
@@ -87,7 +87,7 @@ function executiveRri(assessment: EngineAssessment): number | null {
  * nunca exagera o que a evidência permite. Dado insuficiente → o próximo passo
  * honesto é melhorar o dado; daí em diante, recuperar — piloto → recomendada → automática.
  */
-function selectAction(level: ConfidenceLevel): Action {
+function selectAction(level: ConfidenceLevel): RecoveryAction {
   switch (level) {
     case 'preliminary':
       return {

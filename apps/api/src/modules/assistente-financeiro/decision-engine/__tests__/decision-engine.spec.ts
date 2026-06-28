@@ -1,13 +1,13 @@
 /**
  * DecisionEngine — onde o número vira DECISÃO DE DONO (Constituição, Regra Zero / Art. IV).
  *
- * Trava: só consome a saída do RevenueEngine (EngineAssessment). Nada de CSV, RFM, setor.
+ * Trava: só consome a saída do CustomerRecoveryEngine (EngineAssessment). Nada de CSV, RFM, setor.
  * Ordem: dinheiro primeiro (Top 3 por R$), 1 ação por oportunidade, depois RRI, depois causas.
  */
 
-import { DecisionEngine, type RankedOpportunity } from '../decision-engine';
-import type { ConfidenceLevel } from '../../contracts/revenue.contracts';
-import type { EngineAssessment } from '../../revenue-engine/revenue-engine';
+import { DecisionEngine, type RecoveryOpportunity } from '../decision-engine';
+import type { ConfidenceLevel } from '../../contracts/recovery.contracts';
+import type { EngineAssessment } from '../../customer-recovery-engine/customer-recovery-engine';
 
 function assessment(partial?: Partial<EngineAssessment>): EngineAssessment {
   return {
@@ -37,7 +37,7 @@ describe('DecisionEngine.decide — Regra Zero: dinheiro vira decisão', () => {
     expect(decision.topOpportunities.map((o) => o.externalId)).toEqual(['top', 'mid', 'low']);
   });
 
-  function decideWithLevel(level: ConfidenceLevel, pct: number): RankedOpportunity {
+  function decideWithLevel(level: ConfidenceLevel, pct: number): RecoveryOpportunity {
     const a = assessment({
       items: [{ externalId: 'x', recoverableCents: 5_000 }],
       totalRecoverableCents: 5_000,

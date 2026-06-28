@@ -6,12 +6,12 @@
  * oportunidades + 1 ação cada + confiança honesta + ação executável.
  *
  * Deve FALHAR até a experiência completa existir. Depois é quebrado em testes
- * menores (Provider, Revenue Engine, Decision) — a ordem de implementação.
+ * menores (Provider, Customer Recovery Engine, Decision) — a ordem de implementação.
  */
 
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { runRevenueAssessment } from '../revenue-assessment';
+import { runCustomerRecoveryAssessment } from '../customer-recovery-assessment';
 
 // fixtures/ ficam na raiz do repo (datasets canônicos compartilhados por todos os testes)
 const SHOPIFY_FIXTURE = resolve(
@@ -23,7 +23,7 @@ describe('TESTE DE VALOR (BDD) — a promessa da Nexora', () => {
   it('CSV de clientes → R$ recuperável + Top 3 + 1 ação cada + confiança + ação executável', async () => {
     const csv = readFileSync(SHOPIFY_FIXTURE, 'utf-8');
 
-    const result = await runRevenueAssessment(csv, {
+    const result = await runCustomerRecoveryAssessment(csv, {
       orgId: 'org_test',
       annualRevenueCents: 100_000_00, // R$ 100.000
       marginPctDefault: 0.6,

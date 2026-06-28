@@ -2,7 +2,7 @@
  * CsvSignalProvider — o PRIMEIRO Signal Provider (Guardrail 8).
  *
  * RFM é apenas o modelo de sinal deste provider, nunca a regra universal.
- * O Revenue Engine só consome RevenueSignal normalizado.
+ * O Customer Recovery Engine só consome CustomerRecoverySignal normalizado.
  *
  * Implementação por micro-TDD: parse → toSignals → validação honesta.
  */
@@ -11,9 +11,9 @@ import type {
   AssessmentInput,
   CanonicalCustomer,
   CanonicalPurchase,
-  RevenueSignal,
+  CustomerRecoverySignal,
   SignalProvider,
-} from '../contracts/revenue.contracts';
+} from '../contracts/recovery.contracts';
 
 export interface CsvProviderConfig {
   orgId: string;
@@ -80,7 +80,7 @@ export class CsvSignalProvider implements SignalProvider {
     };
   }
 
-  toSignals(input: AssessmentInput): RevenueSignal[] {
+  toSignals(input: AssessmentInput): CustomerRecoverySignal[] {
     const now = this.config.now ?? new Date();
     return input.customers.map((c) => {
       const F = c.purchases.length;

@@ -1,8 +1,8 @@
 /**
- * Revenue Contracts — A LINGUAGEM DA NEXORA.
+ * Recovery Contracts — A LINGUAGEM DA NEXORA.
  *
  * Estes contratos NÃO dependem de nenhuma implementação. Eles definem a língua
- * que todas as camadas falam (Signal Providers, Revenue Engine, Decision Engine, UI).
+ * que todas as camadas falam (Signal Providers, Customer Recovery Engine, Decision Engine, UI).
  *
  * Constituição:
  * - Artigo VII (Engine Universal): o núcleo só conhece sinais normalizados, nunca setores.
@@ -64,10 +64,10 @@ export interface AssessmentInput {
 // ---------- Sinais normalizados (saída do Signal Provider) ----------
 
 /**
- * O Revenue Engine SÓ conhece isto — nunca recência/frequência cruas.
+ * O Customer Recovery Engine SÓ conhece isto — nunca recência/frequência cruas.
  * Cada provider (RFM, Subscription, B2B...) calcula pReturn/futureValue do SEU jeito.
  */
-export interface RevenueSignal {
+export interface CustomerRecoverySignal {
   externalId: string;
   /** Probabilidade de retorno se abordado agora (0..1). */
   pReturn: number;
@@ -94,7 +94,7 @@ export type ActionKind =
   | 'export_list'
   | 'increase_confidence';
 
-export interface Action {
+export interface RecoveryAction {
   kind: ActionKind;
   /** Texto em PT, orientado a clareza/dinheiro. */
   label: string;
@@ -107,7 +107,7 @@ export interface Opportunity {
   /** RRI operacional 0..100 — ranking interno, nunca o número de venda. */
   rriOperational: number;
   /** Artigo IV (Regra Zero): EXATAMENTE uma ação por oportunidade. */
-  action: Action;
+  action: RecoveryAction;
   /** Guardrail 5: motivo auditável. */
   why: string;
 }
@@ -142,5 +142,5 @@ export interface SignalProvider {
   /** Normaliza entrada bruta da fonte para o schema canônico. */
   parse(raw: unknown): Promise<AssessmentInput>;
   /** Produz os sinais normalizados (pReturn/futureValue/custo) que o Engine consome. */
-  toSignals(input: AssessmentInput): RevenueSignal[];
+  toSignals(input: AssessmentInput): CustomerRecoverySignal[];
 }
