@@ -19,7 +19,8 @@ export function useAuth() {
         org: data.organization,
         accessToken: data.access_token,
       });
-      router.push(`/${data.organization.slug}/dashboard`);
+      // Pós-cadastro vai direto pro coração do produto (Engine money-first), não pro dashboard.
+      router.push(`/${data.organization.slug}/recuperar`);
     },
     [store, router]
   );

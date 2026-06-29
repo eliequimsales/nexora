@@ -6,12 +6,15 @@
  */
 
 import { useEffect, useState } from 'react';
-import { X, PartyPopper } from 'lucide-react';
+import Link from 'next/link';
+import { X, PartyPopper, ArrowRight } from 'lucide-react';
+import { useAuth } from '@/lib/hooks/auth/useAuth';
 
 const KEY = 'nexora-pilot-welcome-dismissed';
 
 export function PilotWelcomeBanner() {
   const [show, setShow] = useState(false);
+  const { org } = useAuth();
 
   useEffect(() => {
     setShow(localStorage.getItem(KEY) !== '1');
@@ -41,6 +44,14 @@ export function PilotWelcomeBanner() {
             Você faz parte das primeiras clínicas que estão ajudando a construir a plataforma.
             Seu feedback terá impacto direto nas próximas funcionalidades.
           </p>
+          {org?.slug && (
+            <Link
+              href={`/${org.slug}/recuperar`}
+              className="mt-3 inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-bg hover:bg-brand-gold/90"
+            >
+              Subir base de pacientes <ArrowRight size={14} />
+            </Link>
+          )}
         </div>
       </div>
     </div>

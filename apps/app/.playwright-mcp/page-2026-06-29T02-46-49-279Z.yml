@@ -1,0 +1,168 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e5]
+  - generic [ref=e6]:
+    - complementary [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e10]: "N"
+        - generic [ref=e11]:
+          - paragraph [ref=e12]: Nexora
+          - paragraph [ref=e13]: Clínica Teste Piloto
+      - navigation [ref=e14]:
+        - paragraph [ref=e15]: Principal
+        - link "Dashboard" [ref=e16] [cursor=pointer]:
+          - /url: /clinica-teste-piloto/dashboard
+          - img [ref=e17]
+          - generic [ref=e22]: Dashboard
+        - link "Clientes" [ref=e23] [cursor=pointer]:
+          - /url: /clinica-teste-piloto/clientes
+          - img [ref=e24]
+          - generic [ref=e29]: Clientes
+        - link "Tarefas" [ref=e30] [cursor=pointer]:
+          - /url: /clinica-teste-piloto/tasks
+          - img [ref=e31]
+          - generic [ref=e34]: Tarefas
+        - button "Nexora" [ref=e36] [cursor=pointer]:
+          - generic [ref=e37]: Nexora
+          - img [ref=e38]
+        - button "Avançado" [ref=e41] [cursor=pointer]:
+          - generic [ref=e42]: Avançado
+          - img [ref=e43]
+        - generic [ref=e45]:
+          - paragraph [ref=e46]: Gerenciar
+          - link "Configurações" [ref=e47] [cursor=pointer]:
+            - /url: /clinica-teste-piloto/settings
+            - img [ref=e48]
+            - generic [ref=e51]: Configurações
+          - link "Equipe" [ref=e52] [cursor=pointer]:
+            - /url: /clinica-teste-piloto/settings/team
+            - img [ref=e53]
+            - generic [ref=e57]: Equipe
+          - link "Integrações" [ref=e58] [cursor=pointer]:
+            - /url: /clinica-teste-piloto/settings/integrations
+            - img [ref=e59]
+            - generic [ref=e61]: Integrações
+          - link "Plano" [ref=e62] [cursor=pointer]:
+            - /url: /clinica-teste-piloto/settings/billing
+            - img [ref=e63]
+            - generic [ref=e65]: Plano
+      - button "Clínica Teste Piloto Clínica Teste Piloto admin" [ref=e68] [cursor=pointer]:
+        - generic "Clínica Teste Piloto" [ref=e70]: CT
+        - generic [ref=e71]:
+          - paragraph [ref=e72]: Clínica Teste Piloto
+          - paragraph [ref=e73]: admin
+        - img [ref=e74]
+    - banner [ref=e76]:
+      - heading "Dashboard" [level=1] [ref=e77]
+      - generic [ref=e78]: Clínica Teste Piloto
+    - main [ref=e79]:
+      - generic [ref=e80]:
+        - generic [ref=e81]:
+          - button "Dispensar" [ref=e82] [cursor=pointer]:
+            - img [ref=e83]
+          - generic [ref=e86]:
+            - img [ref=e87]
+            - generic [ref=e93]:
+              - paragraph [ref=e94]: Bem-vindo ao Projeto Piloto da Nexora! 🎉
+              - paragraph [ref=e95]: Você faz parte das primeiras clínicas que estão ajudando a construir a plataforma. Seu feedback terá impacto direto nas próximas funcionalidades.
+        - generic [ref=e96]:
+          - heading "🎯 Dashboard de Recuperação" [level=2] [ref=e97]
+          - paragraph [ref=e98]: Acompanhe clientes perdidos e o potencial de recuperação em tempo real.
+        - generic [ref=e99]:
+          - generic [ref=e100]:
+            - generic [ref=e101]:
+              - generic [ref=e102]: Clientes inativos
+              - img [ref=e104]
+            - paragraph [ref=e109]: "0"
+            - paragraph [ref=e110]: 30+ dias sem contato
+          - generic [ref=e112]:
+            - generic [ref=e113]:
+              - paragraph [ref=e114]: Receita recuperada
+              - paragraph [ref=e115]: R$0
+              - paragraph [ref=e116]: 0 clientes voltaram este mês
+            - img [ref=e118]
+          - generic [ref=e120]:
+            - generic [ref=e121]:
+              - generic [ref=e122]: Taxa de resposta
+              - img [ref=e124]
+            - paragraph [ref=e126]: 0%
+            - paragraph [ref=e127]: este mês
+          - generic [ref=e129]:
+            - generic [ref=e130]:
+              - paragraph [ref=e131]: Potencial em aberto
+              - paragraph [ref=e132]: R$0
+              - paragraph [ref=e133]: Estimativa baseada no ticket médio configurado
+            - img [ref=e135]
+        - generic [ref=e138]:
+          - heading "📊 Resumo do mês" [level=3] [ref=e139]
+          - generic [ref=e140]:
+            - generic [ref=e141]:
+              - paragraph [ref=e142]: Mensagens hoje
+              - paragraph [ref=e143]: "0"
+            - generic [ref=e144]:
+              - paragraph [ref=e145]: Tentativas mês
+              - paragraph [ref=e146]: "0"
+            - generic [ref=e147]:
+              - paragraph [ref=e148]: Confirmados
+              - paragraph [ref=e149]: "0"
+            - generic [ref=e150]:
+              - paragraph [ref=e151]: Ação rápida
+              - link "Ver clientes →" [ref=e152] [cursor=pointer]:
+                - /url: /clinica-teste-piloto/clientes
+        - generic [ref=e153]:
+          - generic [ref=e154]:
+            - heading "Atividade recente" [level=3] [ref=e155]
+            - generic [ref=e156]: Atualiza a cada 30s
+          - generic [ref=e157]:
+            - paragraph [ref=e158]: Nenhuma atividade ainda.
+            - paragraph [ref=e159]: As ações aparecem aqui em tempo real.
+    - generic [ref=e162]:
+      - generic [ref=e164]:
+        - generic [ref=e165]: Passo 1 de 6
+        - generic [ref=e166]: Bem-vindo
+      - generic [ref=e175]:
+        - img [ref=e177]
+        - generic [ref=e179]:
+          - heading "Bem-vindo à Nexora, Clínica!" [level=2] [ref=e180]
+          - paragraph [ref=e181]:
+            - text: Vamos configurar
+            - strong [ref=e182]: Clínica Teste Piloto
+            - text: em menos de 2 minutos. Você pode pular qualquer etapa e configurar depois.
+        - button "Começar" [ref=e183] [cursor=pointer]:
+          - text: Começar
+          - img [ref=e184]
+    - dialog [ref=e186]:
+      - generic [ref=e187]:
+        - generic [ref=e188]:
+          - img [ref=e190]
+          - heading "Bem-vindo à Nexora!" [level=2] [ref=e192]
+          - paragraph [ref=e193]: Vamos colocar seu primeiro cliente na lista em 3 passos.
+        - generic [ref=e194]:
+          - img [ref=e234]
+          - generic [ref=e196]:
+            - heading "Baixe a planilha modelo" [level=3] [ref=e197]
+            - paragraph [ref=e198]: "É um arquivo Excel com 3 colunas: nome, telefone e última visita."
+            - button "Planilha baixada" [disabled] [ref=e237]:
+              - img [ref=e238]
+              - text: Planilha baixada
+        - generic [ref=e204]:
+          - generic [ref=e205]: "2"
+          - generic [ref=e206]:
+            - heading "Preencha com seus clientes e importe" [level=3] [ref=e207]
+            - paragraph [ref=e208]: Você pode começar com 5 a 10 clientes pra testar. Acrescente mais depois.
+            - link "Importar agora" [ref=e210] [cursor=pointer]:
+              - /url: /clinica-teste-piloto/clientes/importar
+              - img [ref=e211]
+              - text: Importar agora
+        - generic [ref=e214]:
+          - generic [ref=e215]: "3"
+          - generic [ref=e216]:
+            - heading "Veja seus clientes inativos" [level=3] [ref=e217]
+            - paragraph [ref=e218]: A Nexora identifica automaticamente quem tem 30+ dias sem voltar.
+            - button "Ver meus clientes" [disabled] [ref=e220]:
+              - img [ref=e221]
+              - text: Ver meus clientes
+              - img [ref=e226]
+        - paragraph [ref=e228]: Esse guia some quando você importar seu primeiro cliente.
+    - button "Abrir Copilot" [ref=e229] [cursor=pointer]:
+      - img [ref=e231]
+      - generic [ref=e233]: Copilot

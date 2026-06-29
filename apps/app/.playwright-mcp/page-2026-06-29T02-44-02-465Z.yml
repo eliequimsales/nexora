@@ -1,0 +1,54 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e6]: "N"
+      - generic [ref=e7]: Nexora
+    - generic [ref=e8]:
+      - heading "Crie sua conta" [level=1] [ref=e9]
+      - paragraph [ref=e10]: 7 dias grátis. Configure em menos de 1 minuto.
+      - generic [ref=e11]:
+        - button "Cadastrar com Google" [ref=e12] [cursor=pointer]:
+          - img [ref=e13]
+          - text: Cadastrar com Google
+        - generic [ref=e18]:
+          - separator [ref=e19]
+          - generic [ref=e20]: ou preencha abaixo
+          - separator [ref=e21]
+        - generic [ref=e22]:
+          - generic [ref=e23]:
+            - generic [ref=e24]: Nome da sua clínica
+            - generic [ref=e25]:
+              - generic:
+                - img
+              - textbox "Nome da sua clínica" [ref=e26]:
+                - /placeholder: Clínica Sorriso
+          - generic [ref=e27]:
+            - generic [ref=e28]: Email
+            - generic [ref=e29]:
+              - generic:
+                - img
+              - textbox "Email" [ref=e30]:
+                - /placeholder: voce@clinica.com
+          - generic [ref=e31]:
+            - generic [ref=e32]: Senha
+            - generic [ref=e33]:
+              - generic:
+                - img
+              - textbox "Senha" [ref=e34]:
+                - /placeholder: ••••••••
+              - button "Mostrar senha" [ref=e35] [cursor=pointer]:
+                - img [ref=e36]
+          - generic [ref=e39]:
+            - paragraph [ref=e40]:
+              - text: Você confirma que seus clientes aceitaram receber mensagens da
+              - strong [ref=e41]: sua clínica
+              - text: e autoriza a Nexora a gerar mensagens de reativação em seu nome.
+            - generic [ref=e42] [cursor=pointer]:
+              - checkbox "Li e concordo com o termo acima." [ref=e43]
+              - generic [ref=e44]: Li e concordo com o termo acima.
+          - button "Criar conta grátis" [ref=e45] [cursor=pointer]
+      - paragraph [ref=e46]:
+        - text: Já tem uma conta?
+        - link "Entrar" [ref=e47] [cursor=pointer]:
+          - /url: /login
+  - alert [ref=e48]

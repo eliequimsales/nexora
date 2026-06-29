@@ -1,0 +1,30 @@
+'use client';
+
+/**
+ * Recuperação — a tela central da clínica no piloto (Engine Universal money-first).
+ *
+ * Destino padrão pós-cadastro: sobe CSV → vê clientes recuperáveis, valor potencial,
+ * Top 3 e a ação. Uma experiência só (o mesmo RecoveryAnalyzer da demo pública).
+ */
+
+import { RecoveryAnalyzer } from '@/components/modules/recovery/RecoveryAnalyzer';
+import { useAuth } from '@/lib/hooks/auth/useAuth';
+
+export default function ClinicaRecuperarPage() {
+  const { user } = useAuth();
+  const firstName = (user?.name ?? '').split(' ')[0];
+
+  return (
+    <div className="p-4 sm:p-6 max-w-3xl">
+      <header className="mb-6">
+        <h1 className="text-2xl font-bold text-text-primary">
+          {firstName ? `Bem-vindo, ${firstName}! 🎉` : 'Bem-vindo! 🎉'}
+        </h1>
+        <p className="mt-1 text-text-secondary">
+          Suba a base de pacientes (CSV) e veja em segundos quem vale a pena recuperar primeiro.
+        </p>
+      </header>
+      <RecoveryAnalyzer />
+    </div>
+  );
+}
