@@ -45,31 +45,34 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="px-6 py-20">
         <div className="max-w-4xl mx-auto text-center space-y-6">
+          <div className="inline-flex items-center gap-2 rounded-full border border-brand-gold/30 bg-brand-gold/10 px-4 py-1.5 text-sm font-medium text-brand-gold">
+            🚀 Projeto Piloto — Primeiras clínicas parceiras
+          </div>
           <h1 className="text-5xl lg:text-6xl font-bold text-text-primary leading-tight">
-            Quantos clientes você perdeu{' '}
-            <span className="text-brand-gold">nos últimos 30 dias sem perceber?</span>
+            Quantos pacientes sua clínica perdeu{' '}
+            <span className="text-brand-gold">sem perceber?</span>
           </h1>
           <p className="text-xl text-text-muted max-w-2xl mx-auto">
-            A Nexora analisa sua lista, identifica quem sumiu há 30+ dias e escreve a mensagem
-            pronta pra você copiar no WhatsApp — sem sistema de agendamento, sem integração.
+            A Nexora analisa sua lista de pacientes, identifica quem deixou de voltar e mostra
+            exatamente quem vale a pena recuperar primeiro — e a ação certa pra cada um.
           </p>
           <div className="flex items-center justify-center gap-4 pt-4 flex-wrap">
             <Link
-              href="/diagnostico"
+              href="/piloto"
               className="inline-flex items-center gap-2 bg-brand-gold text-brand-bg font-semibold px-6 py-3 rounded-lg hover:bg-brand-gold/90 active:scale-[0.98] transition-all"
             >
-              Fazer diagnóstico grátis
+              Participar do Projeto Piloto
               <ArrowRight size={16} />
             </Link>
             <Link
-              href="/register"
+              href="/recuperar"
               className="px-6 py-3 border border-brand-border rounded-lg text-text-primary font-medium hover:bg-brand-surface transition-colors"
             >
-              Criar conta grátis
+              Ver demonstração
             </Link>
           </div>
           <p className="text-xs text-text-muted pt-2">
-            Sem cartão. Cancela quando quiser. Trial gratuito por 7 dias.
+            100% gratuito durante a fase piloto. Em troca, pedimos só seu feedback. Vagas limitadas.
           </p>
         </div>
       </section>
@@ -257,32 +260,26 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Plano único — sem confusão */}
+      {/* Projeto Piloto — validação, não monetização */}
       <section className="px-6 py-20 bg-brand-surface-2/30">
         <div className="max-w-lg mx-auto">
           <h2 className="text-3xl font-bold text-text-primary text-center mb-4">
-            Um plano. Sem pegadinha.
+            Projeto Piloto Nexora
           </h2>
           <p className="text-center text-text-muted mb-10">
-            7 dias grátis. Depois R$ 97/mês.
+            Estamos selecionando as primeiras clínicas odontológicas para construir a Nexora junto com elas.
           </p>
           <div className="rounded-xl border border-brand-gold/50 bg-brand-surface p-8 shadow-lg">
             <div className="text-center mb-6">
-              <p className="text-4xl font-bold text-brand-gold">
-                R$ 97<span className="text-lg text-text-muted font-normal">/mês</span>
-              </p>
-              <p className="text-text-muted text-sm mt-1">
-                R$ 3,20 por dia — menos que um café
-              </p>
+              <p className="text-3xl font-bold text-brand-gold">100% gratuito</p>
+              <p className="text-text-muted text-sm mt-1">durante a fase piloto</p>
             </div>
             <ul className="space-y-3 mb-6">
               {[
-                'Clientes ilimitados',
-                'Mensagens geradas pela IA',
-                'Import CSV e XLSX',
-                'Detecção de inativos (30+ dias)',
-                'Dashboard com métricas',
-                'Suporte por email',
+                'Acesso gratuito à plataforma',
+                'Suporte direto com os fundadores',
+                'Atualizações frequentes',
+                'Prioridade nas novas funcionalidades',
               ].map((item) => (
                 <li key={item} className="flex items-center gap-3 text-sm text-text-secondary">
                   <Check size={14} className="text-brand-gold shrink-0" />
@@ -290,24 +287,23 @@ export default function LandingPage() {
                 </li>
               ))}
             </ul>
-            {/* Argumento de ROI */}
             <div className="rounded-lg bg-brand-gold/10 border border-brand-gold/20 p-4 mb-6 text-center">
               <p className="text-sm text-brand-gold font-medium">
-                Se recuperar 1 cliente por mês, o plano já se paga.
+                Em troca, pedimos só o seu feedback.
               </p>
               <p className="text-xs text-text-muted mt-1">
-                Dependendo do seu ticket, um cliente recuperado já cobre o mês.
+                Vagas limitadas — acompanhamos cada clínica de forma individual nesta fase.
               </p>
             </div>
             <Link
-              href="/register"
+              href="/piloto"
               className="w-full inline-flex items-center justify-center gap-2 bg-brand-gold text-brand-bg font-semibold px-4 py-3 rounded-lg hover:bg-brand-gold/90 transition-colors"
             >
-              Começar 7 dias grátis
+              Participar do Projeto Piloto
               <ArrowRight size={16} />
             </Link>
             <p className="text-center text-xs text-text-muted mt-3">
-              Sem cartão de crédito. Cancela quando quiser.
+              Sem cartão. Sem compromisso de contratação.
             </p>
           </div>
         </div>
@@ -355,25 +351,25 @@ export default function LandingPage() {
       <section className="px-6 py-20">
         <div className="max-w-2xl mx-auto text-center space-y-6">
           <h2 className="text-3xl font-bold text-text-primary">
-            Descubra agora quanto seu negócio está perdendo
+            Construa a Nexora junto com a gente
           </h2>
           <p className="text-lg text-text-muted">
-            Faça o diagnóstico grátis. Em 1 minuto você vê quantos clientes sumiram e quanto
-            isso representa em receita.
+            Estamos selecionando as primeiras clínicas parceiras. Acesso 100% gratuito durante o
+            piloto — em troca, só o seu feedback.
           </p>
           <div className="flex items-center justify-center gap-4 flex-wrap">
             <Link
-              href="/diagnostico"
+              href="/piloto"
               className="inline-flex items-center gap-2 bg-brand-gold text-brand-bg font-semibold px-8 py-4 rounded-lg hover:bg-brand-gold/90 active:scale-[0.98] transition-all text-lg"
             >
-              Fazer diagnóstico grátis
+              Participar do Projeto Piloto
               <ArrowRight size={18} />
             </Link>
           </div>
           <p className="text-sm text-text-muted">
             Ou{' '}
-            <Link href="/register" className="text-brand-gold hover:underline">
-              crie sua conta e importe sua lista agora
+            <Link href="/recuperar" className="text-brand-gold hover:underline">
+              veja a demonstração com seus próprios dados
             </Link>
           </p>
         </div>
