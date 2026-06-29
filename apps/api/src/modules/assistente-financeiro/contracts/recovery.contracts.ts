@@ -99,6 +99,8 @@ export interface RecoveryAction {
   /** Texto em PT, orientado a clareza/dinheiro. */
   label: string;
   executable: boolean;
+  /** Art. VI: risco de executar nesta confiança, em PT — proporcional à evidência. */
+  riskCopy: string;
 }
 
 export interface Opportunity {
