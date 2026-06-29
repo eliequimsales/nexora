@@ -49,6 +49,9 @@ export default function PilotoPage() {
           <p className="text-sm text-brand-gold font-medium">
             Vagas limitadas · acompanhamos cada clínica individualmente
           </p>
+          <div className="inline-flex items-center gap-2 rounded-lg border border-brand-gold/30 bg-brand-gold/5 px-4 py-2 text-sm text-text-secondary">
+            🏆 <span className="font-semibold text-brand-gold">Clínica Fundadora</span> — quem entra agora faz parte do começo
+          </div>
         </div>
       </section>
 
@@ -117,8 +120,30 @@ export default function PilotoPage() {
         </div>
       </section>
 
+      {/* Carta dos fundadores */}
+      <section className="px-6 pb-4">
+        <div className="max-w-2xl mx-auto rounded-xl border border-brand-border bg-brand-surface p-7">
+          <h2 className="text-xl font-bold text-text-primary mb-4">Por que estamos fazendo isso?</h2>
+          <div className="space-y-3 text-sm text-text-secondary leading-relaxed">
+            <p>
+              Acreditamos que milhares de clínicas perdem pacientes todos os meses sem saber por
+              onde começar para recuperá-los.
+            </p>
+            <p>
+              Em vez de construir a Nexora sozinhos, decidimos convidar algumas clínicas para
+              desenvolver essa plataforma junto com a gente.
+            </p>
+            <p>
+              Se você participar do Projeto Piloto, a sua opinião terá impacto direto nas próximas
+              funcionalidades da Nexora.
+            </p>
+            <p className="text-text-muted pt-1">— Jherlil, fundador da Nexora</p>
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
-      <section className="px-6 pb-20">
+      <section className="px-6 pb-20 pt-12">
         <div className="max-w-xl mx-auto text-center space-y-5">
           <h2 className="text-2xl font-bold text-text-primary">Quer participar?</h2>
           <p className="text-text-muted">

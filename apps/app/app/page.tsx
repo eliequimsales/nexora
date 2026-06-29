@@ -53,8 +53,8 @@ export default function LandingPage() {
             <span className="text-brand-gold">sem perceber?</span>
           </h1>
           <p className="text-xl text-text-muted max-w-2xl mx-auto">
-            A Nexora analisa sua lista de pacientes, identifica quem deixou de voltar e mostra
-            exatamente quem vale a pena recuperar primeiro — e a ação certa pra cada um.
+            Sua clínica pode estar deixando pacientes valiosos sem contato há meses. A Nexora
+            identifica exatamente quem ainda vale a pena recuperar — e a ação certa pra cada um.
           </p>
           <div className="flex items-center justify-center gap-4 pt-4 flex-wrap">
             <Link
@@ -72,7 +72,7 @@ export default function LandingPage() {
             </Link>
           </div>
           <p className="text-xs text-text-muted pt-2">
-            100% gratuito durante a fase piloto. Em troca, pedimos só seu feedback. Vagas limitadas.
+            Vagas limitadas para clínicas parceiras. Durante o piloto, o acesso é sem custo — em troca, só o seu feedback.
           </p>
         </div>
       </section>
@@ -271,8 +271,8 @@ export default function LandingPage() {
           </p>
           <div className="rounded-xl border border-brand-gold/50 bg-brand-surface p-8 shadow-lg">
             <div className="text-center mb-6">
-              <p className="text-3xl font-bold text-brand-gold">100% gratuito</p>
-              <p className="text-text-muted text-sm mt-1">durante a fase piloto</p>
+              <p className="text-3xl font-bold text-brand-gold">Clínicas Fundadoras</p>
+              <p className="text-text-muted text-sm mt-1">acesso sem custo durante o piloto</p>
             </div>
             <ul className="space-y-3 mb-6">
               {[
