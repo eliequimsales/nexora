@@ -4,13 +4,13 @@ import Link from 'next/link';
 import { DashboardMockup } from '@/components/landing/DashboardMockup';
 
 export const metadata: Metadata = {
-  title: 'Nexora — Recupere clientes inativos da sua barbearia',
+  title: 'Nexora — Recupere clientes inativos do seu negócio',
   description:
     'A Nexora analisa sua lista de clientes, identifica quem sumiu há 30+ dias e escreve a mensagem pronta pra você copiar no WhatsApp. Setup em menos de 1 hora.',
   robots: { index: true, follow: true },
   openGraph: {
-    title: 'Nexora — Recupere clientes inativos da sua barbearia',
-    description: 'Descubra agora quantos clientes sua barbearia perdeu e quanto isso custa por mês.',
+    title: 'Nexora — Recupere clientes inativos do seu negócio',
+    description: 'Descubra agora quantos clientes seu negócio perdeu e quanto isso custa por mês.',
     type: 'website',
   },
 };
@@ -62,7 +62,7 @@ export default function LandingPage() {
               <ArrowRight size={16} />
             </Link>
             <Link
-              href="/register?niche=barbearia"
+              href="/register"
               className="px-6 py-3 border border-brand-border rounded-lg text-text-primary font-medium hover:bg-brand-surface transition-colors"
             >
               Criar conta grátis
@@ -178,7 +178,7 @@ export default function LandingPage() {
                   <p className="text-white text-sm leading-relaxed">
                     Oi João, tudo bem? 😊
                     <br /><br />
-                    Faz 47 dias que você não passa aqui na barbearia. Tô aqui disponível pra te
+                    Faz 47 dias que você não aparece por aqui. Tô à disposição pra te
                     atender quando você quiser!
                     <br /><br />
                     Quer marcar um horário essa semana?
@@ -296,11 +296,11 @@ export default function LandingPage() {
                 Se recuperar 1 cliente por mês, o plano já se paga.
               </p>
               <p className="text-xs text-text-muted mt-1">
-                Ticket médio de barbearia: R$ 60–120. Um cliente = 1 mês grátis.
+                Dependendo do seu ticket, um cliente recuperado já cobre o mês.
               </p>
             </div>
             <Link
-              href="/register?niche=barbearia"
+              href="/register"
               className="w-full inline-flex items-center justify-center gap-2 bg-brand-gold text-brand-bg font-semibold px-4 py-3 rounded-lg hover:bg-brand-gold/90 transition-colors"
             >
               Começar 7 dias grátis
@@ -319,7 +319,7 @@ export default function LandingPage() {
           <h2 className="text-3xl font-bold text-text-primary text-center mb-4">
             Perguntas frequentes
           </h2>
-          <p className="text-center text-text-muted mb-10">As dúvidas que todo barbeiro tem antes de começar.</p>
+          <p className="text-center text-text-muted mb-10">As dúvidas que todo dono de negócio tem antes de começar.</p>
           <div className="space-y-3">
             {[
               {
@@ -338,10 +338,6 @@ export default function LandingPage() {
                 q: 'A Nexora envia as mensagens automaticamente?',
                 a: 'Não. A IA escreve a mensagem pronta pra você — você lê, aprova e envia do seu próprio número. Zero integração, zero risco de spam.',
               },
-              {
-                q: 'Funciona para barbearia pequena?',
-                a: 'Especialmente. Se você tem 80–300 clientes no cadastro, já tem potencial de recuperação real. O plano é o mesmo independente do tamanho.',
-              },
             ].map(({ q, a }) => (
               <details key={q} className="group rounded-xl border border-brand-border bg-brand-surface overflow-hidden">
                 <summary className="flex items-center justify-between px-5 py-4 cursor-pointer list-none font-medium text-text-primary text-sm gap-4">
@@ -359,7 +355,7 @@ export default function LandingPage() {
       <section className="px-6 py-20">
         <div className="max-w-2xl mx-auto text-center space-y-6">
           <h2 className="text-3xl font-bold text-text-primary">
-            Descubra agora quanto sua barbearia está perdendo
+            Descubra agora quanto seu negócio está perdendo
           </h2>
           <p className="text-lg text-text-muted">
             Faça o diagnóstico grátis. Em 1 minuto você vê quantos clientes sumiram e quanto
@@ -376,7 +372,7 @@ export default function LandingPage() {
           </div>
           <p className="text-sm text-text-muted">
             Ou{' '}
-            <Link href="/register?niche=barbearia" className="text-brand-gold hover:underline">
+            <Link href="/register" className="text-brand-gold hover:underline">
               crie sua conta e importe sua lista agora
             </Link>
           </p>
