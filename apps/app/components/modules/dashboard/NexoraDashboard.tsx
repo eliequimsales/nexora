@@ -5,6 +5,7 @@ import { TrendingUp, Users, BarChart3, DollarSign } from 'lucide-react';
 import { StatCard } from './StatCard';
 import { useNexoraMetrics } from '@/lib/hooks/dashboard/useNexoraMetrics';
 import { ActivityFeed } from './ActivityFeed';
+import { PilotWelcomeBanner } from '@/components/modules/onboarding/PilotWelcomeBanner';
 import { cn } from '@/lib/utils';
 
 /**
@@ -23,6 +24,8 @@ export function NexoraDashboard({ slug }: { slug: string }) {
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl space-y-4 sm:space-y-6">
+      <PilotWelcomeBanner />
+
       {/* Greeting */}
       <div>
         <h2 className="text-xl sm:text-2xl font-bold text-text-primary">
