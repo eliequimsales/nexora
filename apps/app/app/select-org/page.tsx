@@ -29,7 +29,7 @@ export default function SelectOrgPage() {
           user: data.user,
           org: data.organization,
         });
-        router.replace(`/${data.organization.slug}/dashboard`);
+        router.replace(`/${data.organization.slug}/recuperar`);
       })
       .catch(() => {
         if (cancelled) return;

@@ -23,7 +23,7 @@ function GoogleSuccessInner() {
 
     authApi.me().then(({ data }) => {
       store.setAuth({ accessToken: token, user: data.user, org: data.organization });
-      router.replace(`/${slug}/dashboard`);
+      router.replace(`/${slug}/recuperar`);
     }).catch(() => {
       useAuthStore.getState().clearAuth();
       router.replace('/login');

@@ -35,7 +35,8 @@ export function useAuth() {
         org: data.organization,
         accessToken: data.access_token,
       });
-      router.push(`/${data.organization.slug}/dashboard`);
+      // O produto é a recuperação, não o dashboard — primeira tela = /recuperar.
+      router.push(`/${data.organization.slug}/recuperar`);
     },
     [store, router]
   );
