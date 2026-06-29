@@ -24,7 +24,7 @@ export function DashboardMockup() {
             <div className="w-3 h-3 rounded-full bg-[#28c840]" />
           </div>
           <div className="flex-1 mx-4 bg-white/5 rounded-md px-3 py-1 text-xs text-white/30 font-mono">
-            app.nexora.com.br/barbearia-do-marcos/dashboard
+            app.nexora.com.br/negocio-do-marcos/dashboard
           </div>
         </div>
 
@@ -63,7 +63,7 @@ export function DashboardMockup() {
             {/* Header */}
             <div>
               <p className="text-xs sm:text-sm font-bold text-white/90">🎯 Dashboard de Recuperação</p>
-              <p className="text-[10px] text-white/30 mt-0.5 hidden sm:block">Barbearia do Marcos • Atualizado agora</p>
+              <p className="text-[10px] text-white/30 mt-0.5 hidden sm:block">Negócio do Marcos • Atualizado agora</p>
             </div>
 
             {/* KPI cards */}
