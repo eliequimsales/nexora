@@ -45,6 +45,8 @@ export interface NexoraSettings {
 export interface OrgSettings {
   timezone?: string;
   language?: 'pt-BR' | 'en-US';
+  /** CNPJ da organização (usado no OrgSettingsForm; estava faltando no tipo). */
+  cnpj?: string;
   notifications?: {
     newLead?: boolean;
     aiAlert?: boolean;
