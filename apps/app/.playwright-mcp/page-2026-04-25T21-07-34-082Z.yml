@@ -1,8 +1,0 @@
-- generic [active] [ref=e1]:
-  - generic [ref=e3]:
-    - paragraph [ref=e4]: "404"
-    - heading "Página não encontrada" [level=1] [ref=e5]
-    - paragraph [ref=e6]: Esse endereço não existe ou você não tem acesso a ele.
-    - link "← Voltar ao início" [ref=e7] [cursor=pointer]:
-      - /url: /
-  - alert [ref=e8]
