@@ -11,7 +11,7 @@ import { RecoveryAnalyzer } from '@/components/modules/recovery/RecoveryAnalyzer
 import { useAuth } from '@/lib/hooks/auth/useAuth';
 
 export default function ClinicaRecuperarPage() {
-  const { user } = useAuth();
+  const { user, org } = useAuth();
   const firstName = (user?.name ?? '').split(' ')[0];
 
   return (
@@ -24,7 +24,7 @@ export default function ClinicaRecuperarPage() {
           Suba a base de pacientes (CSV) e veja em segundos quem vale a pena recuperar primeiro.
         </p>
       </header>
-      <RecoveryAnalyzer />
+      <RecoveryAnalyzer orgSlug={org?.slug} />
     </div>
   );
 }

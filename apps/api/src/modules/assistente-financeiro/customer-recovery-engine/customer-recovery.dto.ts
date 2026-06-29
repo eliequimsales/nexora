@@ -1,4 +1,15 @@
-import { IsString, IsNotEmpty, IsOptional, IsNumber, Min, Max, MaxLength } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsNumber,
+  IsInt,
+  IsBoolean,
+  IsIn,
+  Min,
+  Max,
+  MaxLength,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 /**
@@ -31,4 +42,39 @@ export class AssessmentRequestDto {
   @IsNumber()
   @Min(0)
   annualRevenueCents?: number;
+}
+
+export const PRICE_BANDS = ['ate_49', 'ate_99', 'ate_149', 'mais_149', 'nao_pagaria'] as const;
+
+/**
+ * Feedback estruturado do piloto (fim da análise). O aprendizado mais valioso —
+ * por isso é capturado e gravado, nunca perdido.
+ */
+export class FeedbackRequestDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  rating!: number;
+
+  @IsBoolean()
+  wouldUseAgain!: boolean;
+
+  @IsBoolean()
+  wouldPay!: boolean;
+
+  @IsIn(PRICE_BANDS)
+  priceBand!: (typeof PRICE_BANDS)[number];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  whatMissing?: string;
+
+  // Metadados (preenchidos pela tela a partir do resultado/contexto)
+  @IsOptional() @IsString() @MaxLength(120) orgId?: string;
+  @IsOptional() @IsString() @MaxLength(120) orgSlug?: string;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) recoverableCount?: number;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) totalRecoverableCents?: number;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) @Max(100) confidencePct?: number;
 }

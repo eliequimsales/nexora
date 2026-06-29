@@ -679,3 +679,25 @@ model AssisteFinanceiroMessageFeedback {
   @@index([createdAt(sort: Desc)])
   @@map("assistente_financeiro_message_feedbacks")
 }
+
+// ─── customer recovery — feedback do piloto ──────────────────────────────────
+// Captura estruturada no fim da análise. O aprendizado mais valioso do piloto.
+// Standalone (sem FK) pra ser aditivo e seguro no db push. orgId é opcional
+// (null na demo pública).
+model CustomerRecoveryFeedback {
+  id                    String   @id @default(uuid())
+  rating                Int      // 1..5
+  wouldUseAgain         Boolean  @map("would_use_again")
+  wouldPay              Boolean  @map("would_pay")
+  priceBand             String   @map("price_band") @db.VarChar(40) // ate_49 | ate_99 | ate_149 | mais_149 | nao_pagaria
+  whatMissing           String?  @map("what_missing")
+  orgId                 String?  @map("org_id")
+  orgSlug               String?  @map("org_slug") @db.VarChar(100)
+  recoverableCount      Int?     @map("recoverable_count")
+  totalRecoverableCents Int?     @map("total_recoverable_cents")
+  confidencePct         Int?     @map("confidence_pct")
+  version               String?  @db.VarChar(40)
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("customer_recovery_feedback")
+}

@@ -1,6 +1,7 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { Public } from '../../../common/decorators/public.decorator';
-import { AssessmentRequestDto } from './customer-recovery.dto';
+import { PrismaService } from '../../../database/prisma.service';
+import { AssessmentRequestDto, FeedbackRequestDto } from './customer-recovery.dto';
 import {
   runCustomerRecoveryAssessment,
   type CustomerRecoveryAssessment,
@@ -16,6 +17,8 @@ import {
  */
 @Controller('customer-recovery')
 export class CustomerRecoveryController {
+  constructor(private readonly prisma: PrismaService) {}
+
   @Public()
   @Post('assessment')
   async assess(@Body() dto: AssessmentRequestDto): Promise<CustomerRecoveryAssessment> {
@@ -24,5 +27,29 @@ export class CustomerRecoveryController {
       marginPctDefault: dto.marginPctDefault,
       annualRevenueCents: dto.annualRevenueCents,
     });
+  }
+
+  /**
+   * Feedback do piloto — gravado no Postgres. Nunca perdido (Etapa 2 do lançamento).
+   */
+  @Public()
+  @Post('feedback')
+  async feedback(@Body() dto: FeedbackRequestDto): Promise<{ ok: true }> {
+    await this.prisma.customerRecoveryFeedback.create({
+      data: {
+        rating: dto.rating,
+        wouldUseAgain: dto.wouldUseAgain,
+        wouldPay: dto.wouldPay,
+        priceBand: dto.priceBand,
+        whatMissing: dto.whatMissing,
+        orgId: dto.orgId,
+        orgSlug: dto.orgSlug,
+        recoverableCount: dto.recoverableCount,
+        totalRecoverableCents: dto.totalRecoverableCents,
+        confidencePct: dto.confidencePct,
+        version: 'mvp',
+      },
+    });
+    return { ok: true };
   }
 }
