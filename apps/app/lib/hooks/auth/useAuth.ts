@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/stores/auth.store';
 import { authApi } from '@/lib/api/auth.api';
 import { useToast } from '@/lib/providers/ToastProvider';
+import { track } from '@/lib/analytics/track';
 
 export function useAuth() {
   const store = useAuthStore();
@@ -19,6 +20,7 @@ export function useAuth() {
         org: data.organization,
         accessToken: data.access_token,
       });
+      track('signup', data.organization.slug);
       // Pós-cadastro vai direto pro coração do produto (Engine money-first), não pro dashboard.
       router.push(`/${data.organization.slug}/recuperar`);
     },

@@ -701,3 +701,17 @@ model CustomerRecoveryFeedback {
 
   @@map("customer_recovery_feedback")
 }
+
+// ─── customer recovery — eventos de funil (analytics próprio) ─────────────────
+// Mede onde a clínica trava: landing → cta → signup → analyze → result → feedback.
+// Standalone, aditivo (db push). anonId = id anônimo do navegador (sem PII).
+model FunnelEvent {
+  id        String   @id @default(uuid())
+  name      String   @db.VarChar(40) // landing_view | cta_pilot | signup | analyze | result | feedback
+  anonId    String?  @map("anon_id") @db.VarChar(64)
+  orgSlug   String?  @map("org_slug") @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([name, createdAt])
+  @@map("funnel_events")
+}

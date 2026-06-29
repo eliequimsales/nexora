@@ -78,3 +78,21 @@ export class FeedbackRequestDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) totalRecoverableCents?: number;
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) @Max(100) confidencePct?: number;
 }
+
+export const FUNNEL_EVENTS = [
+  'landing_view',
+  'cta_pilot',
+  'signup',
+  'analyze',
+  'result',
+  'feedback',
+] as const;
+
+/** Evento de funil (analytics próprio). Sem PII — só onde a clínica trava. */
+export class EventRequestDto {
+  @IsIn(FUNNEL_EVENTS)
+  name!: (typeof FUNNEL_EVENTS)[number];
+
+  @IsOptional() @IsString() @MaxLength(64) anonId?: string;
+  @IsOptional() @IsString() @MaxLength(120) orgSlug?: string;
+}

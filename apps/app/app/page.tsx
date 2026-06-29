@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { ArrowRight, Check, MessageSquare, Upload, Eye, Copy } from 'lucide-react';
 import Link from 'next/link';
 import { DashboardMockup } from '@/components/landing/DashboardMockup';
+import { TrackView } from '@/components/analytics/TrackView';
 
 export const metadata: Metadata = {
   title: 'Nexora — Recupere clientes inativos do seu negócio',
@@ -18,6 +19,7 @@ export const metadata: Metadata = {
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-brand-bg">
+      <TrackView name="landing_view" />
       {/* Navigation */}
       <nav className="border-b border-brand-border px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">

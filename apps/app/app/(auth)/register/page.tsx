@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { RegisterForm } from '@/components/modules/auth/RegisterForm';
+import { TrackView } from '@/components/analytics/TrackView';
 
 export const metadata: Metadata = { title: 'Criar conta' };
 
 export default function RegisterPage() {
   return (
     <div className="rounded-2xl border border-brand-border bg-brand-surface p-6">
+      <TrackView name="cta_pilot" />
       <h1 className="text-lg font-semibold text-text-primary mb-1">
         Crie sua conta
       </h1>

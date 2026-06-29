@@ -1,7 +1,7 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Get, Body } from '@nestjs/common';
 import { Public } from '../../../common/decorators/public.decorator';
 import { PrismaService } from '../../../database/prisma.service';
-import { AssessmentRequestDto, FeedbackRequestDto } from './customer-recovery.dto';
+import { AssessmentRequestDto, FeedbackRequestDto, EventRequestDto } from './customer-recovery.dto';
 import {
   runCustomerRecoveryAssessment,
   type CustomerRecoveryAssessment,
@@ -51,5 +51,31 @@ export class CustomerRecoveryController {
       },
     });
     return { ok: true };
+  }
+
+  /**
+   * Registra um evento de funil (público, fire-and-forget). Sem PII.
+   */
+  @Public()
+  @Post('event')
+  async event(@Body() dto: EventRequestDto): Promise<{ ok: true }> {
+    await this.prisma.funnelEvent.create({
+      data: { name: dto.name, anonId: dto.anonId, orgSlug: dto.orgSlug },
+    });
+    return { ok: true };
+  }
+
+  /**
+   * Funil dos últimos 30 dias — contagem por evento. Autenticado (só fundadores).
+   */
+  @Get('funnel')
+  async funnel(): Promise<{ name: string; count: number }[]> {
+    const since = new Date(Date.now() - 30 * 86_400_000);
+    const grouped = await this.prisma.funnelEvent.groupBy({
+      by: ['name'],
+      where: { createdAt: { gte: since } },
+      _count: { _all: true },
+    });
+    return grouped.map((g) => ({ name: g.name, count: g._count._all }));
   }
 }

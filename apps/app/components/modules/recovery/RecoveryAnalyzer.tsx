@@ -11,6 +11,7 @@
 import { useState } from 'react';
 import { Upload, TrendingUp, CheckCircle2, AlertTriangle, Star } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { track } from '@/lib/analytics/track';
 
 const PRICE_BANDS: { value: string; label: string }[] = [
   { value: 'ate_49', label: 'Até R$ 49/mês' },
@@ -84,6 +85,7 @@ export function RecoveryAnalyzer({ orgSlug }: { orgSlug?: string } = {}) {
           confidencePct: result?.confidence.pct,
         }),
       });
+      track('feedback', orgSlug);
       setFbSent(true);
     } finally {
       setFbLoading(false);
@@ -103,6 +105,7 @@ export function RecoveryAnalyzer({ orgSlug }: { orgSlug?: string } = {}) {
     if (!csv) return;
     setLoading(true);
     setError('');
+    track('analyze', orgSlug);
     try {
       const res = await fetch('/api/v1/customer-recovery/assessment', {
         method: 'POST',
@@ -111,6 +114,7 @@ export function RecoveryAnalyzer({ orgSlug }: { orgSlug?: string } = {}) {
       });
       if (!res.ok) throw new Error(`Falha ao analisar (${res.status})`);
       setResult(await res.json());
+      track('result', orgSlug);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao analisar o CSV.');
     } finally {
