@@ -166,6 +166,19 @@ describe('DecisionEngine.decide — Regra Zero: dinheiro vira decisão', () => {
     expect(hiWidth).toBeLessThan(loWidth);
   });
 
+  it('RED 017: conta os clientes recuperáveis (recoverableCents > 0), não os zerados', () => {
+    const a = assessment({
+      items: [
+        { externalId: 'a', recoverableCents: 9_000 },
+        { externalId: 'b', recoverableCents: 3_000 },
+        { externalId: 'c', recoverableCents: 0 }, // não vale recuperar — não conta
+      ],
+      totalRecoverableCents: 12_000,
+    });
+
+    expect(new DecisionEngine().decide(a).recoverableCount).toBe(2);
+  });
+
   it('RED 014: a ação carrega riskCopy proporcional à confiança', () => {
     const lo = decideWithLevel('low', 33).action;
     const hi = decideWithLevel('high', 90).action;

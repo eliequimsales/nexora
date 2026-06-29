@@ -20,6 +20,8 @@ export interface RecoveryOpportunity {
 }
 
 export interface Decision {
+  /** Quantos clientes valem a pena recuperar (recoverableCents > 0). */
+  recoverableCount: number;
   topOpportunities: RecoveryOpportunity[];
   /** RRI executivo (%): recuperável ÷ receita anual. null se receita anual desconhecida. */
   rriExecutivePct: number | null;
@@ -59,6 +61,7 @@ export class DecisionEngine {
     );
 
     return {
+      recoverableCount: all.filter((i) => i.recoverableCents > 0).length,
       topOpportunities,
       rriExecutivePct: executiveRri(assessment),
       causes: concentrationCauses(byMoney, assessment.totalRecoverableCents),
