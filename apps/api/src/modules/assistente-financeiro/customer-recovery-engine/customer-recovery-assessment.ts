@@ -27,6 +27,8 @@ export interface RunAssessmentOptions {
 }
 
 export interface CustomerRecoveryAssessment {
+  /** Quantos clientes valem a pena recuperar — o número-âncora da tela. */
+  recoverableCount: number;
   totalRecoverableCents: number;
   /** Faixa honesta do valor potencial (Art. VI): mais confiança → mais estreita. */
   rangeLowCents: number;
@@ -56,6 +58,7 @@ export async function runCustomerRecoveryAssessment(
   const decision = new DecisionEngine().decide(assessment);
 
   return {
+    recoverableCount: decision.recoverableCount,
     totalRecoverableCents: assessment.totalRecoverableCents,
     rangeLowCents: decision.rangeLowCents,
     rangeHighCents: decision.rangeHighCents,

@@ -8,6 +8,7 @@ import { AIMetricsService } from './services/ai-metrics.service';
 import { MessageDeliveryService } from './services/message-delivery.service';
 import { DeliveryRateLimiterService } from './services/delivery-rate-limiter.service';
 import { AssistenteFinanceiroController } from './assistente-financeiro.controller';
+import { CustomerRecoveryController } from './customer-recovery-engine/customer-recovery.controller';
 import { AIRetrainingWorker } from './workers/ai-retraining.worker';
 import { MessageDeliveryWorker } from './workers/message-delivery.worker';
 import { ZapiWhatsappProvider } from './providers/zapi-whatsapp.provider';
@@ -30,7 +31,7 @@ import { ResendEmailProvider } from './providers/resend-email.provider';
  */
 @Module({
   imports: [ConfigModule, ScheduleModule.forRoot(), BullModule.registerQueue({ name: 'message-delivery' })],
-  controllers: [AssistenteFinanceiroController],
+  controllers: [AssistenteFinanceiroController, CustomerRecoveryController],
   providers: [PrismaService, MessageGenerationService, AIMetricsService, MessageDeliveryService, DeliveryRateLimiterService, AIRetrainingWorker, MessageDeliveryWorker, ZapiWhatsappProvider, ResendEmailProvider],
   exports: [PrismaService, MessageGenerationService, AIMetricsService, MessageDeliveryService, DeliveryRateLimiterService, AIRetrainingWorker, MessageDeliveryWorker, ZapiWhatsappProvider, ResendEmailProvider],
 })
