@@ -15,6 +15,8 @@ export interface RecoveryOpportunity {
   rriOperational: number;
   /** Regra Zero (Art. IV): EXATAMENTE uma ação por oportunidade. */
   action: RecoveryAction;
+  /** Guardrail 5: por que está no Top 3, rastreável aos números. */
+  why: string;
 }
 
 export interface Decision {
@@ -23,6 +25,9 @@ export interface Decision {
   rriExecutivePct: number | null;
   /** Causas auditáveis (Guardrail 5): segmentos básicos que reconciliam com o total. */
   causes: RecoverableCause[];
+  /** Faixa honesta do valor potencial (Art. VI): mais confiança → mais estreita. */
+  rangeLowCents: number;
+  rangeHighCents: number;
 }
 
 const TOP_N = 3;
@@ -34,19 +39,44 @@ export class DecisionEngine {
 
     const all = assessment.items;
     const byMoney = [...all].sort((a, b) => b.recoverableCents - a.recoverableCents); // Art. X
-    const topOpportunities = byMoney.slice(0, TOP_N).map((item) => ({
-      externalId: item.externalId,
-      recoverableCents: item.recoverableCents,
-      rriOperational: percentileRank(item.recoverableCents, all),
-      action,
-    }));
+    const pct = assessment.confidence.pct;
+    const topOpportunities = byMoney.slice(0, TOP_N).map((item) => {
+      const rriOperational = percentileRank(item.recoverableCents, all);
+      return {
+        externalId: item.externalId,
+        recoverableCents: item.recoverableCents,
+        rriOperational,
+        action,
+        why:
+          `${formatBRL(item.recoverableCents)} recuperável · ` +
+          `prioridade ${rriOperational}/100 · confiança ${pct}%`,
+      };
+    });
+
+    const [rangeLowCents, rangeHighCents] = confidenceRange(
+      assessment.totalRecoverableCents,
+      pct,
+    );
 
     return {
       topOpportunities,
       rriExecutivePct: executiveRri(assessment),
       causes: concentrationCauses(byMoney, assessment.totalRecoverableCents),
+      rangeLowCents,
+      rangeHighCents,
     };
   }
+}
+
+/**
+ * Faixa honesta em torno do total (Art. VI): incerteza u = 1 − confiança.
+ * 80% → ±20% ; 30% → ±70%. Low nunca negativo. Mais confiança → faixa mais estreita.
+ */
+function confidenceRange(total: number, pct: number): [number, number] {
+  const u = 1 - pct / 100;
+  const low = Math.max(0, Math.round(total * (1 - u)));
+  const high = Math.round(total * (1 + u));
+  return [low, high];
 }
 
 /**
@@ -94,26 +124,35 @@ function selectAction(level: ConfidenceLevel): RecoveryAction {
         kind: 'increase_confidence',
         label: 'Melhorar dados antes de executar',
         executable: false,
+        riskCopy: 'Dados insuficientes — não execute ainda; melhore a base primeiro.',
       };
     case 'low':
       return {
         kind: 'create_campaign',
         label: 'Executar campanha piloto em pequena escala',
         executable: true,
+        riskCopy: 'Confiança baixa — rode um piloto pequeno antes de escalar.',
       };
     case 'medium':
       return {
         kind: 'create_campaign',
         label: 'Executar campanha de recuperação',
         executable: true,
+        riskCopy: 'Confiança média — execute acompanhando os resultados de perto.',
       };
     case 'high':
       return {
         kind: 'create_campaign',
         label: 'Executar recuperação automaticamente (quando permitido)',
         executable: true,
+        riskCopy: 'Confiança alta — pode executar; ainda assim, monitore os retornos.',
       };
   }
+}
+
+/** Formata centavos como BRL: 9000 → "R$ 90,00". Localização final fica no frontend. */
+function formatBRL(cents: number): string {
+  return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
 }
 
 /** Percentil interno 0–100: % de oportunidades com R$ ≤ este. Maior R$ → 100. */

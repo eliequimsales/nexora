@@ -125,4 +125,54 @@ describe('DecisionEngine.decide — Regra Zero: dinheiro vira decisão', () => {
     expect(Math.round(causes.reduce((s, c) => s + c.pctOfTotal, 0))).toBe(100);
     expect(causes.length).toBeGreaterThanOrEqual(1);
   });
+
+  it('RED 012: cada oportunidade explica por que está no Top 3 (why auditável)', () => {
+    const a = assessment({
+      items: [{ externalId: 'x', recoverableCents: 9_000 }],
+      totalRecoverableCents: 9_000,
+      confidence: { pct: 80, level: 'high', reason: 'ok' },
+    });
+
+    const op = new DecisionEngine().decide(a).topOpportunities[0];
+
+    // Guardrail 5: o porquê é rastreável aos números (R$ + prioridade + confiança)
+    expect(op.why).toBeTruthy();
+    expect(op.why).toContain('R$');
+    expect(op.why).toContain(String(op.rriOperational)); // prioridade citada
+  });
+
+  function decideWithTotal(total: number, level: ConfidenceLevel, pct: number) {
+    return new DecisionEngine().decide(
+      assessment({
+        items: [{ externalId: 'x', recoverableCents: total }],
+        totalRecoverableCents: total,
+        confidence: { pct, level, reason: 'x' },
+      }),
+    );
+  }
+
+  it('RED 013: valor potencial tem faixa low/high que enquadra o total', () => {
+    const d = decideWithTotal(10_000, 'high', 80);
+    expect(d.rangeLowCents).toBeLessThanOrEqual(10_000);
+    expect(d.rangeHighCents).toBeGreaterThanOrEqual(10_000);
+    expect(d.rangeLowCents).toBeGreaterThanOrEqual(0); // nunca negativo
+  });
+
+  it('RED 013b: mais confiança → faixa mais estreita (Art. VI)', () => {
+    const hi = decideWithTotal(10_000, 'high', 80);
+    const lo = decideWithTotal(10_000, 'low', 30);
+    const hiWidth = hi.rangeHighCents - hi.rangeLowCents;
+    const loWidth = lo.rangeHighCents - lo.rangeLowCents;
+    expect(hiWidth).toBeLessThan(loWidth);
+  });
+
+  it('RED 014: a ação carrega riskCopy proporcional à confiança', () => {
+    const lo = decideWithLevel('low', 33).action;
+    const hi = decideWithLevel('high', 90).action;
+
+    expect(lo.riskCopy).toBeTruthy();
+    expect(hi.riskCopy).toBeTruthy();
+    // o risco comunicado muda com a confiança — não é o mesmo texto
+    expect(lo.riskCopy).not.toBe(hi.riskCopy);
+  });
 });

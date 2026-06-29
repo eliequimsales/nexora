@@ -22,10 +22,15 @@ export interface RunAssessmentOptions {
   orgId: string;
   annualRevenueCents?: number;
   marginPctDefault?: number;
+  /** Data de referência para recência. Injetável → avaliação determinística (Art. VI). */
+  now?: Date;
 }
 
 export interface CustomerRecoveryAssessment {
   totalRecoverableCents: number;
+  /** Faixa honesta do valor potencial (Art. VI): mais confiança → mais estreita. */
+  rangeLowCents: number;
+  rangeHighCents: number;
   confidence: Confidence;
   rriExecutivePct: number | null;
   topOpportunities: RecoveryOpportunity[];
@@ -42,6 +47,7 @@ export async function runCustomerRecoveryAssessment(
     orgId: opts.orgId,
     marginPctDefault: opts.marginPctDefault ?? DEFAULT_MARGIN_PCT,
     annualRevenueCents: opts.annualRevenueCents,
+    now: opts.now,
   });
 
   const input = await provider.parse(csvRaw);
@@ -51,6 +57,8 @@ export async function runCustomerRecoveryAssessment(
 
   return {
     totalRecoverableCents: assessment.totalRecoverableCents,
+    rangeLowCents: decision.rangeLowCents,
+    rangeHighCents: decision.rangeHighCents,
     confidence: assessment.confidence,
     rriExecutivePct: decision.rriExecutivePct,
     topOpportunities: decision.topOpportunities,

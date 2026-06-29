@@ -27,6 +27,7 @@ describe('TESTE DE VALOR (BDD) — a promessa da Nexora', () => {
       orgId: 'org_test',
       annualRevenueCents: 100_000_00, // R$ 100.000
       marginPctDefault: 0.6,
+      now: new Date('2026-06-28T00:00:00Z'), // determinístico: não depende do relógio real
     });
 
     // Artigo X — existe dinheiro recuperável, positivo
