@@ -2,33 +2,21 @@
 
 import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
-import { Settings, Users, Sparkles, Plug, CreditCard, Shield, Zap, Layout } from 'lucide-react';
-import { useOrg } from '@/lib/hooks/org/useOrg';
+import { Settings, Users } from 'lucide-react';
 
+// Piloto enxuto: só o essencial. IA/Templates/Integrações/Billing/Auditoria ficam
+// fora da experiência da clínica (rotas seguem existindo, mas sem poluir o menu).
 const NAV_ITEMS = [
   { label: 'Geral', href: '', icon: Settings },
   { label: 'Time', href: '/team', icon: Users },
-  { label: 'IA', href: '/ai', icon: Sparkles },
-  { label: 'Templates', href: '/templates', icon: Layout },
-  { label: 'Integrações', href: '/integrations', icon: Plug },
-  { label: 'Billing', href: '/billing', icon: CreditCard },
-  { label: 'Auditoria', href: '/audit', icon: Shield },
 ];
-
-const NEXORA_NAV_ITEM = {
-  label: 'Nexora',
-  href: '/nexora',
-  icon: Zap,
-};
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { slug } = useParams<{ slug: string }>();
-  const org = useOrg();
   const base = `/${slug}/settings`;
 
-  // Add Nexora settings item if organization is in Nexora mode
-  const navItems = org?.niche === 'barbearia' ? [...NAV_ITEMS, NEXORA_NAV_ITEM] : NAV_ITEMS;
+  const navItems = NAV_ITEMS;
 
   return (
     <div className="flex min-h-0 flex-1">
