@@ -27,10 +27,10 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-5">
             <Link
-              href="/diagnostico"
+              href="/piloto"
               className="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
             >
-              Diagnóstico grátis
+              Projeto Piloto
             </Link>
             <Link
               href="/login"
@@ -58,7 +58,7 @@ export default function LandingPage() {
           </p>
           <div className="flex items-center justify-center gap-4 pt-4 flex-wrap">
             <Link
-              href="/piloto"
+              href="/register"
               className="inline-flex items-center gap-2 bg-brand-gold text-brand-bg font-semibold px-6 py-3 rounded-lg hover:bg-brand-gold/90 active:scale-[0.98] transition-all"
             >
               Participar do Projeto Piloto
@@ -296,7 +296,7 @@ export default function LandingPage() {
               </p>
             </div>
             <Link
-              href="/piloto"
+              href="/register"
               className="w-full inline-flex items-center justify-center gap-2 bg-brand-gold text-brand-bg font-semibold px-4 py-3 rounded-lg hover:bg-brand-gold/90 transition-colors"
             >
               Participar do Projeto Piloto
@@ -359,7 +359,7 @@ export default function LandingPage() {
           </p>
           <div className="flex items-center justify-center gap-4 flex-wrap">
             <Link
-              href="/piloto"
+              href="/register"
               className="inline-flex items-center gap-2 bg-brand-gold text-brand-bg font-semibold px-8 py-4 rounded-lg hover:bg-brand-gold/90 active:scale-[0.98] transition-all text-lg"
             >
               Participar do Projeto Piloto

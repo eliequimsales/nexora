@@ -53,7 +53,7 @@ export function LoginForm() {
         label="Email"
         type="email"
         autoComplete="email"
-        placeholder="voce@barbearia.com"
+        placeholder="voce@clinica.com"
         iconLeft={<Mail size={15} />}
         error={errors.email?.message}
         {...register('email')}

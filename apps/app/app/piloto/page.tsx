@@ -47,7 +47,8 @@ export default function PilotoPage() {
             fase da Nexora. Acesso 100% gratuito — em troca, pedimos apenas o seu feedback.
           </p>
           <p className="text-sm text-brand-gold font-medium">
-            Vagas limitadas · acompanhamos cada clínica individualmente
+            Estamos acompanhando apenas 10 clínicas nesta primeira fase, para garantir suporte
+            próximo dos fundadores e evoluir a plataforma com base em feedback real.
           </p>
           <div className="inline-flex items-center gap-2 rounded-lg border border-brand-gold/30 bg-brand-gold/5 px-4 py-2 text-sm text-text-secondary">
             🏆 <span className="font-semibold text-brand-gold">Clínica Fundadora</span> — quem entra agora faz parte do começo
@@ -154,14 +155,14 @@ export default function PilotoPage() {
               href="/register"
               className="inline-flex items-center gap-2 bg-brand-gold text-brand-bg font-semibold px-6 py-3 rounded-lg hover:bg-brand-gold/90 active:scale-[0.98] transition-all"
             >
-              Criar minha conta gratuita
+              Participar do Projeto Piloto
               <ArrowRight size={16} />
             </Link>
             <Link
-              href="/contato"
+              href="/recuperar"
               className="px-6 py-3 border border-brand-border rounded-lg text-text-primary font-medium hover:bg-brand-surface transition-colors"
             >
-              Falar com os fundadores
+              Ver demonstração
             </Link>
           </div>
         </div>

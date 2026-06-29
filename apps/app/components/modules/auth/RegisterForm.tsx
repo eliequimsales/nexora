@@ -33,7 +33,7 @@ export function RegisterForm() {
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
-  const orgNameValue = watch('orgName') || 'sua barbearia';
+  const orgNameValue = watch('orgName') || 'sua clínica';
 
   async function onSubmit(data: FormData) {
     setServerError(null);
@@ -64,10 +64,10 @@ export function RegisterForm() {
     </div>
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
       <Input
-        label="Nome da sua barbearia"
+        label="Nome da sua clínica"
         type="text"
         autoComplete="organization"
-        placeholder="Barbearia do João"
+        placeholder="Clínica Sorriso"
         iconLeft={<Building2 size={15} />}
         error={errors.orgName?.message}
         {...register('orgName')}
@@ -77,7 +77,7 @@ export function RegisterForm() {
         label="Email"
         type="email"
         autoComplete="email"
-        placeholder="voce@barbearia.com"
+        placeholder="voce@clinica.com"
         iconLeft={<Mail size={15} />}
         error={errors.email?.message}
         {...register('email')}
