@@ -40,7 +40,7 @@ export class CsvSignalProvider implements SignalProvider {
     const totalRows = lines.length;
 
     for (const line of lines) {
-      const [id, dateStr, totalStr, nStr] = line.split(',').map((c) => c?.trim());
+      const [id, dateStr, totalStr, nStr, name] = line.split(',').map((c) => c?.trim());
       const total = Number(totalStr);
       const n = parseInt(nStr, 10);
       const date = new Date(dateStr);
@@ -58,6 +58,7 @@ export class CsvSignalProvider implements SignalProvider {
       }));
       customers.push({
         externalId: id,
+        name: name || undefined, // coluna opcional; sem nome → saudação neutra
         firstPurchaseAt: null,
         lastPurchaseAt: date,
         purchases,

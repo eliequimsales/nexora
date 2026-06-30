@@ -55,8 +55,8 @@ export default function LandingPage() {
             <span className="text-brand-gold">sem perceber?</span>
           </h1>
           <p className="text-xl text-text-muted max-w-2xl mx-auto">
-            A Nexora identifica clientes que deixaram de comprar, estima o potencial de
-            recuperação de cada um e mostra exatamente quem abordar primeiro.
+            A Nexora identifica quais clientes têm mais chance de voltar, define a melhor
+            estratégia para cada um e escreve a abordagem pronta pra você recuperar.
           </p>
           <p className="text-sm font-medium text-brand-gold/90">
             A plataforma de Customer Recovery — recupere clientes antes de gastar procurando novos.

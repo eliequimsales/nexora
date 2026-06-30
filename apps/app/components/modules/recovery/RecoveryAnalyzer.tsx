@@ -9,7 +9,7 @@
  */
 
 import { useState } from 'react';
-import { Upload, TrendingUp, CheckCircle2, AlertTriangle, Star } from 'lucide-react';
+import { Upload, TrendingUp, CheckCircle2, AlertTriangle, Star, MessageSquare, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { track } from '@/lib/analytics/track';
 
@@ -27,12 +27,34 @@ interface RecoveryAction {
   executable: boolean;
   riskCopy: string;
 }
+interface RecoveryStrategy {
+  approach: string;
+  recommendations: string[];
+  reason: string;
+  offerDiscount: boolean;
+}
 interface RecoveryOpportunity {
   externalId: string;
   recoverableCents: number;
   rriOperational: number;
   action: RecoveryAction;
   why: string;
+  name?: string;
+  strategy?: RecoveryStrategy;
+}
+
+function buildMessage(op: RecoveryOpportunity, variant: number): string {
+  const hi = op.name ? `Olá ${op.name}!` : 'Olá!';
+  const openers = [
+    `${hi}\n\nFaz um tempo desde a sua última visita e ficamos com saudade. Que tal marcar um horário pra colocar tudo em dia?`,
+    `${hi}\n\nNotei que você não passa por aqui há um tempinho. Estamos com horários abertos essa semana — quer que eu reserve um pra você?`,
+    `${hi}\n\nEstava revendo nossos clientes e lembrei de você. Bora marcar uma visita pra deixar tudo em ordem?`,
+  ];
+  let msg = openers[variant % openers.length];
+  msg += op.strategy?.offerDiscount
+    ? `\n\nPra facilitar o seu retorno, preparei uma condição especial. Posso te contar os detalhes? 😊`
+    : `\n\nÉ rápido e ajuda a manter tudo em dia. Te espero! 😊`;
+  return msg;
 }
 interface Assessment {
   recoverableCount: number;
@@ -55,7 +77,31 @@ export function RecoveryAnalyzer({ orgSlug }: { orgSlug?: string } = {}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<Assessment | null>(null);
-  const [done, setDone] = useState<Record<string, boolean>>({});
+
+  // Geração de mensagem por oportunidade (o cérebro em ação)
+  const [msg, setMsg] = useState<Record<string, string>>({}); // presença = painel aberto
+  const [variant, setVariant] = useState<Record<string, number>>({});
+  const [copied, setCopied] = useState<Record<string, boolean>>({});
+
+  function gerarMensagem(op: RecoveryOpportunity) {
+    setMsg((m) => ({ ...m, [op.externalId]: buildMessage(op, 0) }));
+    setVariant((v) => ({ ...v, [op.externalId]: 0 }));
+    setCopied((c) => ({ ...c, [op.externalId]: false }));
+  }
+  function regenerar(op: RecoveryOpportunity) {
+    const v = (variant[op.externalId] ?? 0) + 1;
+    setVariant((s) => ({ ...s, [op.externalId]: v }));
+    setMsg((m) => ({ ...m, [op.externalId]: buildMessage(op, v) }));
+    setCopied((c) => ({ ...c, [op.externalId]: false }));
+  }
+  async function copiar(op: RecoveryOpportunity) {
+    try {
+      await navigator.clipboard.writeText(msg[op.externalId] ?? '');
+      setCopied((c) => ({ ...c, [op.externalId]: true }));
+    } catch {
+      /* ignore */
+    }
+  }
 
   // Feedback (Etapa 2 — aprendizado do piloto)
   const [rating, setRating] = useState(0);
@@ -130,7 +176,7 @@ export function RecoveryAnalyzer({ orgSlug }: { orgSlug?: string } = {}) {
           <Upload className="h-6 w-6 text-brand-amber" />
           <span className="text-sm">{fileName || 'Arraste seu CSV ou clique para escolher'}</span>
           <span className="text-xs text-text-secondary">
-            colunas: customer_id, last_purchase_date, total_amount, n_purchases
+            colunas: customer_id, last_purchase_date, total_amount, n_purchases, name (opcional)
           </span>
           <input type="file" accept=".csv,text/csv" className="hidden" onChange={onFile} />
         </label>
@@ -178,32 +224,73 @@ export function RecoveryAnalyzer({ orgSlug }: { orgSlug?: string } = {}) {
                   className="rounded-xl border border-brand-border bg-brand-surface-2 p-4"
                 >
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="font-medium">Cliente {op.externalId}</span>
+                    <span className="font-medium">{op.name || `Cliente ${op.externalId}`}</span>
                     <span className="text-lg font-bold text-brand-amber">
                       {brl(op.recoverableCents)}
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-text-secondary">{op.why}</p>
 
-                  <div className="mt-3 flex flex-wrap items-center gap-3">
-                    <Button
-                      variant={op.action.executable ? 'primary' : 'outline'}
-                      size="md"
-                      disabled={!op.action.executable || done[op.externalId]}
-                      onClick={() => setDone((d) => ({ ...d, [op.externalId]: true }))}
-                    >
-                      {done[op.externalId] ? (
-                        <>
-                          <CheckCircle2 className="h-4 w-4" /> Ação iniciada
-                        </>
-                      ) : (
-                        op.action.label
-                      )}
-                    </Button>
-                    <span className="flex items-center gap-1 text-xs text-text-secondary">
-                      {!op.action.executable && <AlertTriangle className="h-3.5 w-3.5" />}
-                      {op.action.riskCopy}
-                    </span>
+                  {/* Estratégia — o cérebro: a IA pensou por você */}
+                  {op.strategy && (
+                    <div className="mt-3 rounded-lg border border-brand-border bg-brand-surface p-3">
+                      <p className="text-xs font-semibold text-brand-amber">
+                        Estratégia: {op.strategy.approach}
+                      </p>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {op.strategy.recommendations.map((r) => (
+                          <span
+                            key={r}
+                            className="rounded-full border border-brand-border bg-brand-surface-2 px-2 py-0.5 text-2xs text-text-secondary"
+                          >
+                            {r}
+                          </span>
+                        ))}
+                      </div>
+                      <p className="mt-2 text-xs text-text-secondary">
+                        <span className="text-text-muted">Por quê: </span>
+                        {op.strategy.reason}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Mensagem — a abordagem pronta */}
+                  <div className="mt-3">
+                    {msg[op.externalId] === undefined ? (
+                      <Button variant="primary" size="md" onClick={() => gerarMensagem(op)}>
+                        <MessageSquare className="h-4 w-4" /> Gerar mensagem
+                      </Button>
+                    ) : (
+                      <div className="space-y-2">
+                        <textarea
+                          value={msg[op.externalId]}
+                          onChange={(e) =>
+                            setMsg((m) => ({ ...m, [op.externalId]: e.target.value }))
+                          }
+                          rows={5}
+                          className="w-full rounded-lg border border-brand-border bg-brand-surface px-3 py-2 text-sm text-text-primary focus:border-brand-amber/60 focus:outline-none"
+                        />
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button variant="primary" size="sm" onClick={() => copiar(op)}>
+                            {copied[op.externalId] ? (
+                              <>
+                                <CheckCircle2 className="h-4 w-4" /> Copiado
+                              </>
+                            ) : (
+                              'Copiar'
+                            )}
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => regenerar(op)}>
+                            <RefreshCw className="h-3.5 w-3.5" /> Regenerar
+                          </Button>
+                          {!op.action.executable && (
+                            <span className="flex items-center gap-1 text-2xs text-text-secondary">
+                              <AlertTriangle className="h-3 w-3" /> {op.action.riskCopy}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </li>
               ))}

@@ -17,6 +17,7 @@ import type { Confidence, RecoverableCause } from '../contracts/recovery.contrac
 import { CsvSignalProvider } from '../signal-providers/csv.signal-provider';
 import { DecisionEngine, type RecoveryOpportunity } from '../decision-engine/decision-engine';
 import { CustomerRecoveryEngine } from './customer-recovery-engine';
+import { buildStrategy } from './recovery-strategy';
 
 export interface RunAssessmentOptions {
   orgId: string;
@@ -57,6 +58,32 @@ export async function runCustomerRecoveryAssessment(
   const assessment = new CustomerRecoveryEngine().assess(signals, input);
   const decision = new DecisionEngine().decide(assessment);
 
+  // Enriquece cada oportunidade do Top 3 com nome + estratégia (o cérebro).
+  const now = opts.now ?? new Date();
+  const customerById = new Map(input.customers.map((c) => [c.externalId, c]));
+  const pReturnById = new Map(signals.map((s) => [s.externalId, s.pReturn]));
+
+  const topOpportunities: RecoveryOpportunity[] = decision.topOpportunities.map((op) => {
+    const c = customerById.get(op.externalId);
+    if (!c) return op;
+    const frequency = c.purchases.length;
+    const totalCents = c.purchases.reduce((a, p) => a + p.amountCents, 0);
+    const avgTicketCents = frequency > 0 ? Math.round(totalCents / frequency) : 0;
+    const recencyMonths = c.lastPurchaseAt
+      ? (now.getTime() - c.lastPurchaseAt.getTime()) / 86_400_000 / 30
+      : 999;
+    return {
+      ...op,
+      name: c.name,
+      strategy: buildStrategy({
+        recencyMonths,
+        frequency,
+        avgTicketCents,
+        pReturn: pReturnById.get(op.externalId) ?? 0,
+      }),
+    };
+  });
+
   return {
     recoverableCount: decision.recoverableCount,
     totalRecoverableCents: assessment.totalRecoverableCents,
@@ -64,7 +91,7 @@ export async function runCustomerRecoveryAssessment(
     rangeHighCents: decision.rangeHighCents,
     confidence: assessment.confidence,
     rriExecutivePct: decision.rriExecutivePct,
-    topOpportunities: decision.topOpportunities,
+    topOpportunities,
     causes: decision.causes,
   };
 }

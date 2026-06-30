@@ -5,7 +5,12 @@
  * Constrói a fila de prioridade por R$ (Art. X), não dashboard.
  */
 
-import type { RecoveryAction, ConfidenceLevel, RecoverableCause } from '../contracts/recovery.contracts';
+import type {
+  RecoveryAction,
+  ConfidenceLevel,
+  RecoverableCause,
+  RecoveryStrategy,
+} from '../contracts/recovery.contracts';
 import type { EngineAssessment } from '../customer-recovery-engine/customer-recovery-engine';
 
 export interface RecoveryOpportunity {
@@ -17,6 +22,10 @@ export interface RecoveryOpportunity {
   action: RecoveryAction;
   /** Guardrail 5: por que está no Top 3, rastreável aos números. */
   why: string;
+  /** Nome do cliente (se a fonte trouxer). Preenchido pelo orquestrador. */
+  name?: string;
+  /** Estratégia de recuperação (o cérebro). Preenchida pelo orquestrador. */
+  strategy?: RecoveryStrategy;
 }
 
 export interface Decision {

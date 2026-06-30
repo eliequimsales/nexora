@@ -26,6 +26,8 @@ export interface CanonicalPurchase {
 
 export interface CanonicalCustomer {
   externalId: string;
+  /** Nome do cliente, se a fonte trouxer (coluna opcional). Usado na mensagem. */
+  name?: string;
   firstPurchaseAt: Date | null;
   lastPurchaseAt: Date | null;
   purchases: CanonicalPurchase[];
@@ -34,6 +36,22 @@ export interface CanonicalCustomer {
     abandonedCarts?: number;
     channel?: string;
   };
+}
+
+/**
+ * Estratégia de recuperação por cliente — o CÉREBRO da Nexora (não relatório).
+ * Determinística e auditável (Art. VI): derivada do RFM, com o porquê explícito.
+ * NUNCA inventa contexto que não está no dado.
+ */
+export interface RecoveryStrategy {
+  /** Resumo da abordagem. Ex: "Convite cordial, sem desconto". */
+  approach: string;
+  /** Recomendações curtas (checklist). Ex: ["Convite amigável", "Não oferecer desconto"]. */
+  recommendations: string[];
+  /** Por que esta estratégia — rastreável aos sinais (Guardrail 5). */
+  reason: string;
+  /** Se vale oferecer incentivo financeiro. */
+  offerDiscount: boolean;
 }
 
 /**
