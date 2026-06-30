@@ -48,15 +48,18 @@ export default function LandingPage() {
       <section className="px-6 py-20">
         <div className="max-w-4xl mx-auto text-center space-y-6">
           <div className="inline-flex items-center gap-2 rounded-full border border-brand-gold/30 bg-brand-gold/10 px-4 py-1.5 text-sm font-medium text-brand-gold">
-            🚀 Projeto Piloto — Primeiras clínicas parceiras
+            🚀 Projeto Piloto — Primeiras empresas parceiras
           </div>
           <h1 className="text-5xl lg:text-6xl font-bold text-text-primary leading-tight">
-            Quantos pacientes sua clínica perdeu{' '}
+            Quantos clientes você perdeu{' '}
             <span className="text-brand-gold">sem perceber?</span>
           </h1>
           <p className="text-xl text-text-muted max-w-2xl mx-auto">
-            Sua clínica pode estar deixando pacientes valiosos sem contato há meses. A Nexora
-            identifica exatamente quem ainda vale a pena recuperar — e a ação certa pra cada um.
+            A Nexora identifica clientes que deixaram de comprar, estima o potencial de
+            recuperação de cada um e mostra exatamente quem abordar primeiro.
+          </p>
+          <p className="text-sm font-medium text-brand-gold/90">
+            A plataforma de Customer Recovery — recupere clientes antes de gastar procurando novos.
           </p>
           <div className="flex items-center justify-center gap-4 pt-4 flex-wrap">
             <Link
@@ -74,7 +77,7 @@ export default function LandingPage() {
             </Link>
           </div>
           <p className="text-xs text-text-muted pt-2">
-            Vagas limitadas para clínicas parceiras. Durante o piloto, o acesso é sem custo — em troca, só o seu feedback.
+            Vagas limitadas para empresas parceiras. Durante o piloto, o acesso é sem custo — em troca, só o seu feedback.
           </p>
         </div>
       </section>
@@ -269,11 +272,11 @@ export default function LandingPage() {
             Projeto Piloto Nexora
           </h2>
           <p className="text-center text-text-muted mb-10">
-            Estamos selecionando as primeiras clínicas odontológicas para construir a Nexora junto com elas.
+            Estamos selecionando as primeiras empresas parceiras para construir a Nexora junto com elas.
           </p>
           <div className="rounded-xl border border-brand-gold/50 bg-brand-surface p-8 shadow-lg">
             <div className="text-center mb-6">
-              <p className="text-3xl font-bold text-brand-gold">Clínicas Fundadoras</p>
+              <p className="text-3xl font-bold text-brand-gold">Empresas Fundadoras</p>
               <p className="text-text-muted text-sm mt-1">acesso sem custo durante o piloto</p>
             </div>
             <ul className="space-y-3 mb-6">
@@ -294,7 +297,7 @@ export default function LandingPage() {
                 Em troca, pedimos só o seu feedback.
               </p>
               <p className="text-xs text-text-muted mt-1">
-                Vagas limitadas — acompanhamos cada clínica de forma individual nesta fase.
+                Vagas limitadas — acompanhamos cada empresa de forma individual nesta fase.
               </p>
             </div>
             <Link
@@ -356,7 +359,7 @@ export default function LandingPage() {
             Construa a Nexora junto com a gente
           </h2>
           <p className="text-lg text-text-muted">
-            Estamos selecionando as primeiras clínicas parceiras. Acesso 100% gratuito durante o
+            Estamos selecionando as primeiras empresas parceiras. Acesso 100% gratuito durante o
             piloto — em troca, só o seu feedback.
           </p>
           <div className="flex items-center justify-center gap-4 flex-wrap">

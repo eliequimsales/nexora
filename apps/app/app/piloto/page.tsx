@@ -5,14 +5,14 @@ import { ArrowRight, Check, CircleDot } from 'lucide-react';
 export const metadata: Metadata = {
   title: 'Projeto Piloto — Nexora',
   description:
-    'Estamos selecionando as primeiras clínicas odontológicas para construir a Nexora junto com elas. Acesso 100% gratuito durante a fase piloto, em troca de feedback.',
+    'Estamos selecionando as primeiras empresas parceiras para construir a Nexora junto com elas. Acesso 100% gratuito durante a fase piloto, em troca de feedback.',
   robots: { index: true, follow: true },
 };
 
 const ROADMAP: { label: string; done: boolean }[] = [
-  { label: 'Recuperação inteligente de pacientes', done: true },
+  { label: 'Recuperação inteligente de clientes', done: true },
   { label: 'Importação por CSV', done: true },
-  { label: 'Integração com sistemas odontológicos', done: false },
+  { label: 'Integração com sistemas de gestão', done: false },
   { label: 'WhatsApp automático', done: false },
   { label: 'IA para campanhas personalizadas', done: false },
   { label: 'Relatórios de retorno', done: false },
@@ -43,15 +43,15 @@ export default function PilotoPage() {
             Construa a Nexora junto com a gente
           </h1>
           <p className="text-lg text-text-muted">
-            Estamos selecionando as primeiras clínicas odontológicas para participar da primeira
+            Estamos selecionando as primeiras empresas parceiras para participar da primeira
             fase da Nexora. Acesso 100% gratuito — em troca, pedimos apenas o seu feedback.
           </p>
           <p className="text-sm text-brand-gold font-medium">
-            Estamos acompanhando apenas 10 clínicas nesta primeira fase, para garantir suporte
+            Estamos acompanhando apenas 10 empresas nesta primeira fase, para garantir suporte
             próximo dos fundadores e evoluir a plataforma com base em feedback real.
           </p>
           <div className="inline-flex items-center gap-2 rounded-lg border border-brand-gold/30 bg-brand-gold/5 px-4 py-2 text-sm text-text-secondary">
-            🏆 <span className="font-semibold text-brand-gold">Clínica Fundadora</span> — quem entra agora faz parte do começo
+            🏆 <span className="font-semibold text-brand-gold">Empresa Fundadora</span> — quem entra agora faz parte do começo
           </div>
         </div>
       </section>
@@ -63,10 +63,10 @@ export default function PilotoPage() {
             <h2 className="font-semibold text-text-primary mb-3">Quem pode participar?</h2>
             <ul className="space-y-2 text-sm text-text-secondary">
               <li className="flex items-center gap-2">
-                <Check size={14} className="text-brand-gold shrink-0" /> Clínicas odontológicas
+                <Check size={14} className="text-brand-gold shrink-0" /> Empresas com base de clientes
               </li>
               <li className="flex items-center gap-2">
-                <Check size={14} className="text-brand-gold shrink-0" /> Com base de pacientes em CSV
+                <Check size={14} className="text-brand-gold shrink-0" /> Que conseguem exportar em CSV
               </li>
             </ul>
           </div>
@@ -127,11 +127,11 @@ export default function PilotoPage() {
           <h2 className="text-xl font-bold text-text-primary mb-4">Por que estamos fazendo isso?</h2>
           <div className="space-y-3 text-sm text-text-secondary leading-relaxed">
             <p>
-              Acreditamos que milhares de clínicas perdem pacientes todos os meses sem saber por
+              Acreditamos que milhares de empresas perdem clientes todos os meses sem saber por
               onde começar para recuperá-los.
             </p>
             <p>
-              Em vez de construir a Nexora sozinhos, decidimos convidar algumas clínicas para
+              Em vez de construir a Nexora sozinhos, decidimos convidar algumas empresas para
               desenvolver essa plataforma junto com a gente.
             </p>
             <p>

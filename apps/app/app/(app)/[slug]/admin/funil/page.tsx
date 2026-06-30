@@ -40,7 +40,7 @@ export default function FunilPage() {
     <div className="p-4 sm:p-6 max-w-2xl">
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-text-primary">Funil do piloto</h1>
-        <p className="mt-1 text-text-secondary">Últimos 30 dias. Onde a clínica trava.</p>
+        <p className="mt-1 text-text-secondary">Últimos 30 dias. Onde a empresa trava.</p>
       </header>
 
       {loading && <p className="text-text-muted">Carregando…</p>}
