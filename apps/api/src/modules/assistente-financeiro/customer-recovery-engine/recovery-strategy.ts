@@ -14,8 +14,10 @@ export interface StrategyInput {
   pReturn: number; // 0..1
 }
 
-const HIGH_CHANCE_P = 0.45;
-const HIGH_TICKET_CENTS = 100_000; // R$ 1.000
+const HIGH_CHANCE_P = 0.4;
+const RECENT_MONTHS = 4;
+const LOYAL_FREQ = 4;
+const HIGH_TICKET_CENTS = 30_000; // R$ 300
 const VERY_LONG_MONTHS = 24;
 
 export function buildStrategy({
@@ -24,19 +26,31 @@ export function buildStrategy({
   avgTicketCents,
   pReturn,
 }: StrategyInput): RecoveryStrategy {
-  // 1) Boa chance de voltar sozinho → só lembrar, nunca queimar margem.
-  if (pReturn >= HIGH_CHANCE_P) {
+  // 1) Recente / boa chance → só lembrar, nunca queimar margem.
+  if (pReturn >= HIGH_CHANCE_P || recencyMonths <= RECENT_MONTHS) {
     return {
       approach: 'Apenas um lembrete cordial',
       recommendations: ['Convite amigável', 'Não oferecer desconto', 'Reforçar prevenção'],
       reason:
-        'Boa chance de retorno espontâneo (cliente recente e/ou frequente). ' +
+        'Ausência curta / boa chance de retorno espontâneo. ' +
         'Um lembrete tende a bastar — não vale gastar desconto.',
       offerDiscount: false,
     };
   }
 
-  // 2) Alto valor e já voltou antes → convite cordial, sem incentivo.
+  // 2) Cliente fiel (volta várias vezes) → convite cordial, sem incentivo.
+  if (frequency >= LOYAL_FREQ) {
+    return {
+      approach: 'Convite cordial, sem desconto',
+      recommendations: ['Convite personalizado', 'Não oferecer desconto', 'Valorizar a relação'],
+      reason:
+        'Cliente fiel, que costuma voltar sozinho. Um convite basta — ' +
+        'oferecer desconto só queimaria margem.',
+      offerDiscount: false,
+    };
+  }
+
+  // 3) Alto valor e já voltou antes → convite cordial, sem incentivo.
   if (avgTicketCents >= HIGH_TICKET_CENTS && frequency >= 2) {
     return {
       approach: 'Convite cordial, sem desconto',
