@@ -6,6 +6,7 @@ import { useAuthStore } from '@/lib/stores/auth.store';
 import { authApi } from '@/lib/api/auth.api';
 import { useToast } from '@/lib/providers/ToastProvider';
 import { track } from '@/lib/analytics/track';
+import { fbqTrack } from '@/lib/analytics/meta-pixel';
 
 export function useAuth() {
   const store = useAuthStore();
@@ -21,6 +22,7 @@ export function useAuth() {
         accessToken: data.access_token,
       });
       track('signup', data.organization.slug);
+      fbqTrack('CompleteRegistration');
       // Pós-cadastro vai direto pro coração do produto (Engine money-first), não pro dashboard.
       router.push(`/${data.organization.slug}/recuperar`);
     },

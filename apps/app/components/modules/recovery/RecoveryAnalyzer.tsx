@@ -12,6 +12,7 @@ import { useState } from 'react';
 import { Upload, TrendingUp, CheckCircle2, AlertTriangle, Star, MessageSquare, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { track } from '@/lib/analytics/track';
+import { fbqTrack } from '@/lib/analytics/meta-pixel';
 
 const PRICE_BANDS: { value: string; label: string }[] = [
   { value: 'ate_49', label: 'Até R$ 49/mês' },
@@ -152,6 +153,7 @@ export function RecoveryAnalyzer({ orgSlug }: { orgSlug?: string } = {}) {
     setLoading(true);
     setError('');
     track('analyze', orgSlug);
+    fbqTrack('Lead');
     try {
       const res = await fetch('/api/v1/customer-recovery/assessment', {
         method: 'POST',
