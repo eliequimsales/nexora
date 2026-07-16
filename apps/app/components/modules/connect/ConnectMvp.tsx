@@ -170,6 +170,26 @@ const OPPORTUNITY_STATUS_LABELS: Record<OpportunityStatus, string> = {
   discarded: 'Descartada',
 };
 
+// Titulo humano por tipo de oportunidade. Serve de lastro para um registro do
+// ledger mesmo quando a oportunidade nao esta ativa agora (ex.: ninguem esta
+// atrasado neste momento), garantindo que a tela de Resultados nunca precise
+// mostrar um id interno.
+const OPPORTUNITY_KIND_LABELS: Record<OpportunityKind, string> = {
+  overdue_return: 'Passaram do ciclo de retorno',
+  high_value_no_contact: 'Alto valor sem contato recente',
+  repurchase: 'Perto da recompra',
+  upcoming_birthday: 'Aniversario proximo',
+  missing_data: 'Dados que travam recuperacao',
+};
+
+const OPPORTUNITY_KINDS = Object.keys(OPPORTUNITY_KIND_LABELS) as OpportunityKind[];
+
+// Um registro so tem lastro se o id casar exatamente com o esquema de identidade
+// atual (opp_<kind>). Registros orfaos (ids antigos com hash da carteira, dados
+// corrompidos) retornam null e sao ignorados em receita e listagem.
+const opportunityKindFromId = (id: string): OpportunityKind | null =>
+  OPPORTUNITY_KINDS.find((kind) => id === `opp_${kind}`) ?? null;
+
 const formatLocalIso = (date: Date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -206,16 +226,10 @@ const parseMoney = (value: string | number | undefined) => {
 
 const roundMoney = (value: number) => Math.max(0, Math.round(value / 10) * 10);
 
-const stableHash = (value: string) => {
-  let hash = 0;
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
-  }
-  return hash.toString(36);
-};
-
-const makeOpportunityId = (kind: OpportunityKind, customers: Customer[]) =>
-  `opp_${kind}_${stableHash(customers.map((customer) => customer.id).sort().join('|'))}`;
+// A identidade da oportunidade e o tipo de sinal, nunca o grupo de pessoas.
+// Se o id dependesse da carteira, mudar ciclo ou adicionar uma pessoa criaria
+// uma oportunidade nova e o historico (inclusive "delegada ao Recovery") sumiria.
+const makeOpportunityId = (kind: OpportunityKind) => `opp_${kind}`;
 
 const percent = (value: number) => `${Math.round(value * 100)}%`;
 
@@ -365,38 +379,63 @@ function signalEngine(company: Company | null, customers: Customer[]): Opportuni
   const cycle = Math.max(1, company.returnCycleDays);
   const averageTicket = Math.max(1, company.averageTicket);
 
-  const overdue = customers.filter(
-    (customer) =>
-      customer.contactPermission &&
-      Boolean(customer.phone) &&
-      daysBetween(customer.lastPurchaseDate) > cycle
+  // Cada pessoa pode contribuir valor para no maximo UMA oportunidade aberta.
+  // Sem isso, alguem que e alto valor E passou do ciclo somaria receita em duas
+  // manchetes ao mesmo tempo, inflando a Receita Provavel. Reservamos por
+  // prioridade de negocio (maior dinheiro/urgencia primeiro) e cada bucket
+  // seguinte so enxerga quem ainda esta livre.
+  const claimed = new Set<string>();
+  const isFree = (customer: Customer) => !claimed.has(customer.id);
+  const claim = (list: Customer[]) => {
+    list.forEach((customer) => claimed.add(customer.id));
+    return list;
+  };
+
+  const canContact = (customer: Customer) => customer.contactPermission && Boolean(customer.phone);
+
+  // 1º) Alto valor sem contato recente — o maior dinheiro, urgencia alta.
+  const highValue = claim(
+    customers.filter(
+      (customer) =>
+        canContact(customer) &&
+        customer.approximateValue >= averageTicket * 1.5 &&
+        daysBetween(customer.lastPurchaseDate) >= Math.max(10, Math.floor(cycle * 0.65))
+    )
   );
 
-  const highValue = customers.filter(
-    (customer) =>
-      customer.contactPermission &&
-      Boolean(customer.phone) &&
-      customer.approximateValue >= averageTicket * 1.5 &&
-      daysBetween(customer.lastPurchaseDate) >= Math.max(10, Math.floor(cycle * 0.65))
+  // 2º) Passou do ciclo de retorno — cliente em risco de virar inativo.
+  const overdue = claim(
+    customers.filter(
+      (customer) =>
+        isFree(customer) && canContact(customer) && daysBetween(customer.lastPurchaseDate) > cycle
+    )
   );
 
+  // 3º) Chegando na recompra — ainda ativo, contato preventivo.
+  const repurchase = claim(
+    customers.filter((customer) => {
+      const days = daysBetween(customer.lastPurchaseDate);
+      return (
+        isFree(customer) &&
+        canContact(customer) &&
+        days >= Math.floor(cycle * 0.75) &&
+        days <= cycle
+      );
+    })
+  );
+
+  // 4º) Aniversario proximo — sinal leve, so para quem sobrou.
+  const birthdays = claim(
+    customers.filter(
+      (customer) => isFree(customer) && canContact(customer) && birthdayWithinDays(customer.birthday, 14)
+    )
+  );
+
+  // Dados incompletos — disjunto por definicao (exige falta de telefone/permissao),
+  // nunca soma valor (estimatedValue 0), entao nao participa da reserva.
   const missingData = customers.filter(
     (customer) => !customer.phone || !customer.contactPermission || !customer.lastPurchaseDate
   );
-
-  const birthdays = customers.filter(
-    (customer) => customer.contactPermission && Boolean(customer.phone) && birthdayWithinDays(customer.birthday, 14)
-  );
-
-  const repurchase = customers.filter((customer) => {
-    const days = daysBetween(customer.lastPurchaseDate);
-    return (
-      customer.contactPermission &&
-      Boolean(customer.phone) &&
-      days >= Math.floor(cycle * 0.75) &&
-      days <= cycle
-    );
-  });
 
   const opportunities: Opportunity[] = [];
 
@@ -406,7 +445,7 @@ function signalEngine(company: Company | null, customers: Customer[]): Opportuni
       overdue.length;
 
     opportunities.push({
-      id: makeOpportunityId('overdue_return', overdue),
+      id: makeOpportunityId('overdue_return'),
       kind: 'overdue_return',
       title:
         overdue.length === 1
@@ -426,7 +465,7 @@ function signalEngine(company: Company | null, customers: Customer[]): Opportuni
 
   if (highValue.length > 0) {
     opportunities.push({
-      id: makeOpportunityId('high_value_no_contact', highValue),
+      id: makeOpportunityId('high_value_no_contact'),
       kind: 'high_value_no_contact',
       title:
         highValue.length === 1
@@ -446,7 +485,7 @@ function signalEngine(company: Company | null, customers: Customer[]): Opportuni
 
   if (repurchase.length > 0) {
     opportunities.push({
-      id: makeOpportunityId('repurchase', repurchase),
+      id: makeOpportunityId('repurchase'),
       kind: 'repurchase',
       title:
         repurchase.length === 1
@@ -466,7 +505,7 @@ function signalEngine(company: Company | null, customers: Customer[]): Opportuni
 
   if (birthdays.length > 0) {
     opportunities.push({
-      id: makeOpportunityId('upcoming_birthday', birthdays),
+      id: makeOpportunityId('upcoming_birthday'),
       kind: 'upcoming_birthday',
       title:
         birthdays.length === 1
@@ -486,7 +525,7 @@ function signalEngine(company: Company | null, customers: Customer[]): Opportuni
 
   if (missingData.length > 0) {
     opportunities.push({
-      id: makeOpportunityId('missing_data', missingData),
+      id: makeOpportunityId('missing_data'),
       kind: 'missing_data',
       title:
         missingData.length === 1
@@ -604,10 +643,13 @@ export function ConnectMvp() {
     state.customers.find((customer) => customer.id === selectedCustomerId) ?? state.customers[0] ?? null;
 
   const likelyRevenue = openOpportunities.reduce((sum, opportunity) => sum + opportunity.estimatedValue, 0);
-  const recoveredRevenue = Object.values(state.ledger).reduce(
-    (sum, record) => sum + (record.result === 'recovered' || record.result === 'returned' ? record.recoveredValue ?? 0 : 0),
-    0
-  );
+  // Receita Recuperada so conta registros com lastro (id valido) e com valor real
+  // informado — nunca registros orfaos nem valores sem comprovacao.
+  const recoveredRevenue = Object.values(state.ledger).reduce((sum, record) => {
+    if (!opportunityKindFromId(record.id)) return sum;
+    if (record.result !== 'recovered' && record.result !== 'returned') return sum;
+    return sum + (record.recoveredValue ?? 0);
+  }, 0);
   const riskCustomers = state.customers.filter((customer) => {
     if (!state.company) return false;
     return customer.contactPermission && Boolean(customer.phone) && daysBetween(customer.lastPurchaseDate) > state.company.returnCycleDays;
@@ -1818,6 +1860,8 @@ function ResultsView({
   recoveredRevenue: number;
 }) {
   const records = Object.values(ledger)
+    // So exibe registros com lastro (id valido). Orfaos nunca aparecem na tela.
+    .filter((record) => opportunityKindFromId(record.id))
     .filter((record) => record.result || record.status === 'delegated')
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   const returned = records.filter((record) => record.result === 'returned' || record.result === 'recovered').length;
@@ -1864,12 +1908,16 @@ function ResultsView({
           <div className="divide-y divide-brand-border">
             {records.map((record) => {
               const opportunity = opportunities.find((item) => item.id === record.id);
+              // Titulo especifico da oportunidade ativa; se nao estiver ativa agora,
+              // cai no titulo canonico do tipo — nunca no id interno.
+              const kind = opportunityKindFromId(record.id);
+              const recordTitle = opportunity?.title ?? (kind ? OPPORTUNITY_KIND_LABELS[kind] : 'Oportunidade');
               return (
                 <div key={record.id} className="px-4 py-4">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-medium text-text-primary">{opportunity?.title ?? record.id}</p>
+                        <p className="font-medium text-text-primary">{recordTitle}</p>
                         <Badge variant={record.status === 'delegated' ? 'ai' : record.status === 'discarded' ? 'default' : 'success'} size="sm">
                           {OPPORTUNITY_STATUS_LABELS[record.status]}
                         </Badge>
