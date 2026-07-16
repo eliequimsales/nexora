@@ -2,6 +2,7 @@
 
 import { X, Zap } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { usePlanLimitStore } from '@/lib/stores/plan-limit.store';
 import { useOrgQuery } from '@/lib/hooks/org/useOrgQuery';
 
@@ -12,7 +13,9 @@ const RESOURCE_LABELS: Record<string, string> = {
 
 export function PlanLimitModal() {
   const { isOpen, resource, close } = usePlanLimitStore();
-  const { data: org } = useOrgQuery();
+  const pathname = usePathname();
+  const isConnectDemo = pathname === '/connect' || pathname.startsWith('/connect/');
+  const { data: org } = useOrgQuery(isOpen && !isConnectDemo);
 
   if (!isOpen) return null;
 

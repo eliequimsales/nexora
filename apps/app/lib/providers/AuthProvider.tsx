@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { authApi } from '@/lib/api/auth.api';
 import { useAuthStore } from '@/lib/stores/auth.store';
 
@@ -14,9 +15,15 @@ import { useAuthStore } from '@/lib/stores/auth.store';
  * 2. GET /auth/me with fresh token → hydrates user + org in store
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { setAuth, clearAuth, accessToken } = useAuthStore();
+  const { setAuth, clearAuth } = useAuthStore();
+  const pathname = usePathname();
 
   useEffect(() => {
+    if (pathname === '/connect' || pathname.startsWith('/connect/')) {
+      useAuthStore.getState().setLoading(false);
+      return;
+    }
+
     // Lê via getState() para evitar stale closure — o closure captura o valor
     // do render inicial (null), mas getState() sempre retorna o estado atual.
     // Isso é necessário para o fluxo do Google OAuth, onde o google/success
@@ -60,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [pathname]);
 
   return <>{children}</>;
 }

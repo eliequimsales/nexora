@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password', '/diagnostico', '/recuperar', '/piloto', '/google/success'];
+const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password', '/diagnostico', '/recuperar', '/piloto', '/google/success', '/connect'];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const isConnectDemo = pathname === '/connect' || pathname.startsWith('/connect/');
 
   // Allow Next.js internals and static files to pass through
   if (
@@ -21,7 +22,7 @@ export function middleware(request: NextRequest) {
   // Authenticated user trying to access login → redirect to org selection.
   // Exceção: /select-org em si não redireciona (evita loop quando refresh falha).
   const isSelectOrg = pathname === '/select-org';
-  if (hasRefreshToken && isPublicPath && !isSelectOrg) {
+  if (hasRefreshToken && isPublicPath && !isSelectOrg && !isConnectDemo) {
     return NextResponse.redirect(new URL('/select-org', request.url));
   }
 
