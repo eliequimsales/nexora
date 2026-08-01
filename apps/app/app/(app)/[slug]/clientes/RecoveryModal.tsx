@@ -13,6 +13,9 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Textarea } from '@/components/ui/Textarea';
+import { formatBRL, generateRecoveryMessage } from '@/lib/recovery/intelligence';
+import type { RecoveryStatus } from '@/lib/recovery/tracking';
 import { useToast } from '@/lib/providers/ToastProvider';
 import { useRecoverClientMutation } from '@/lib/hooks/leads/useRecoverClientMutation';
 import { usePreviewRecovery, type PreviewRecoveryResponse } from '@/lib/hooks/leads/usePreviewRecovery';
@@ -24,6 +27,10 @@ type Mode = 'auto' | 'manual';
 interface RecoveryModalProps {
   client: InactiveClient | null;
   onClose: () => void;
+  /** Status local do cliente (localStorage). Opcional — modal funciona sem. */
+  status?: RecoveryStatus;
+  /** Registra o avanço da recuperação. Não chama API. */
+  onTrack?: (id: string, status: RecoveryStatus, recoveredValue?: number) => void;
 }
 
 /**
@@ -36,7 +43,12 @@ interface RecoveryModalProps {
  *  - mostra preview da mensagem gerada pela IA em sucesso
  *  - exibe erro inline em falha (sem fechar)
  */
-export function RecoveryModal({ client, onClose }: RecoveryModalProps) {
+export function RecoveryModal({
+  client,
+  onClose,
+  status = 'idle',
+  onTrack,
+}: RecoveryModalProps) {
   const { toast } = useToast();
   const mutation = useRecoverClientMutation();
   const previewMutation = usePreviewRecovery();
@@ -48,6 +60,9 @@ export function RecoveryModal({ client, onClose }: RecoveryModalProps) {
   const [manualDone, setManualDone] = useState(false);
   // Feedback visual de "Copiado!" — chave: 'message' | 'recipient' | null
   const [copiedKey, setCopiedKey] = useState<'message' | 'recipient' | null>(null);
+  // Texto que o usuário realmente vai mandar: começa na sugestão local e pode
+  // ser editado à vontade. A IA, quando roda, só substitui o rascunho.
+  const [draft, setDraft] = useState('');
 
   // Define canal default toda vez que o cliente muda.
   useEffect(() => {
@@ -56,6 +71,7 @@ export function RecoveryModal({ client, onClose }: RecoveryModalProps) {
       setResult(null);
       setPreview(null);
       setManualDone(false);
+      setDraft('');
       return;
     }
     if (client.phone) setChannel('whatsapp');
@@ -64,6 +80,8 @@ export function RecoveryModal({ client, onClose }: RecoveryModalProps) {
     setResult(null);
     setPreview(null);
     setManualDone(false);
+    // Já abre com uma sugestão pronta — o usuário nunca encara um campo vazio.
+    setDraft(generateRecoveryMessage(client));
   }, [client]);
 
   // Esc fecha o modal — só quando não estiver enviando.
@@ -125,12 +143,33 @@ export function RecoveryModal({ client, onClose }: RecoveryModalProps) {
     onClose();
   }
 
+  /**
+   * Segue com a sugestão local, sem chamar a IA. Instantâneo e offline —
+   * o texto já está pronto desde que o modal abriu.
+   */
+  function handleUseDraft() {
+    if (!client || !channel) return;
+    const to = channel === 'whatsapp' ? client.phone : client.email;
+    if (!to) return;
+    setPreview({
+      leadId: client.id,
+      leadName: client.name,
+      channel,
+      recipient: to,
+      message: draft,
+    });
+  }
+
   function handleGeneratePreview() {
     if (!client || !channel) return;
     previewMutation.mutate(
       { leadId: client.id, channel },
       {
-        onSuccess: (data) => setPreview(data),
+        onSuccess: (data) => {
+          setPreview(data);
+          // A IA substitui o rascunho local; o usuário segue livre pra editar.
+          setDraft(data.message);
+        },
         onError: (err: any) => {
           toast({
             variant: 'error',
@@ -143,9 +182,9 @@ export function RecoveryModal({ client, onClose }: RecoveryModalProps) {
   }
 
   async function handleCopyMessage() {
-    if (!preview) return;
+    if (!draft.trim()) return;
     try {
-      await navigator.clipboard.writeText(preview.message);
+      await navigator.clipboard.writeText(draft);
       setCopiedKey('message');
       // Limpa o feedback visual depois de 2s — botão volta ao normal.
       setTimeout(() => setCopiedKey((k) => (k === 'message' ? null : k)), 2000);
@@ -174,7 +213,7 @@ export function RecoveryModal({ client, onClose }: RecoveryModalProps) {
     if (!preview || preview.channel !== 'whatsapp') return;
     // Limpa o telefone (deixa só dígitos) e abre wa.me com mensagem pré-preenchida
     const digits = preview.recipient.replace(/\D/g, '');
-    const encoded = encodeURIComponent(preview.message);
+    const encoded = encodeURIComponent(draft);
     window.open(`https://wa.me/${digits}?text=${encoded}`, '_blank', 'noopener');
   }
 
@@ -184,7 +223,7 @@ export function RecoveryModal({ client, onClose }: RecoveryModalProps) {
       {
         leadId: client.id,
         channel: preview.channel,
-        message: preview.message,
+        message: draft,
       },
       {
         onSuccess: () => {
@@ -292,7 +331,7 @@ export function RecoveryModal({ client, onClose }: RecoveryModalProps) {
         <div className="mt-3 rounded-lg border border-brand-border bg-brand-surface-2/40 p-3">
           <div className="flex items-center justify-between mb-2">
             <p className="text-2xs uppercase tracking-wider text-text-muted">
-              Mensagem gerada pela IA
+              Mensagem — você pode editar
             </p>
             <button
               type="button"
@@ -317,9 +356,13 @@ export function RecoveryModal({ client, onClose }: RecoveryModalProps) {
               )}
             </button>
           </div>
-          <p className="text-sm text-text-secondary whitespace-pre-line leading-relaxed">
-            {preview.message}
-          </p>
+          <Textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={5}
+            aria-label="Mensagem de recuperação"
+            className="bg-brand-surface-2/60 text-sm leading-relaxed"
+          />
         </div>
 
         {/* Atalho wa.me — só pra WhatsApp */}
@@ -332,6 +375,10 @@ export function RecoveryModal({ client, onClose }: RecoveryModalProps) {
             <ExternalLink size={14} />
             Abrir no WhatsApp Web
           </button>
+        )}
+
+        {onTrack && (
+          <TrackingActions client={client} status={status} onTrack={onTrack} />
         )}
 
         {/* CTA: já enviei */}
@@ -485,6 +532,35 @@ export function RecoveryModal({ client, onClose }: RecoveryModalProps) {
         </p>
       )}
 
+      {/* Sugestão já pronta — o usuário nunca encara um campo vazio */}
+      {mode === 'manual' && (
+        <div className="mt-4">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-2xs uppercase tracking-wider text-text-muted">
+              Sugestão de mensagem
+            </p>
+            <button
+              type="button"
+              onClick={() => setDraft(generateRecoveryMessage(client))}
+              className="text-2xs text-text-muted transition-colors hover:text-text-primary"
+            >
+              Restaurar sugestão
+            </button>
+          </div>
+          <Textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={4}
+            aria-label="Sugestão de mensagem"
+            helper="Edite à vontade. Nada é enviado automaticamente."
+          />
+        </div>
+      )}
+
+      {onTrack && (
+        <TrackingActions client={client} status={status} onTrack={onTrack} />
+      )}
+
       {/* Erro do envio anterior (caso o backend tenha retornado success:false) */}
       {result && !result.success && (
         <div className="mt-4 flex items-start gap-2 rounded-lg border border-status-error/30 bg-status-error-muted/40 p-3">
@@ -509,24 +585,36 @@ export function RecoveryModal({ client, onClose }: RecoveryModalProps) {
           Cancelar
         </button>
         {mode === 'manual' ? (
-          <button
-            type="button"
-            onClick={handleGeneratePreview}
-            disabled={!canSend || previewMutation.isPending}
-            className="flex-[1.4] inline-flex items-center justify-center gap-2 rounded-lg bg-brand-gold text-brand-bg text-sm font-semibold py-2.5 hover:bg-brand-gold/90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:hover:bg-brand-gold disabled:active:scale-100"
-          >
-            {previewMutation.isPending ? (
-              <>
-                <span className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                Gerando…
-              </>
-            ) : (
-              <>
-                <Sparkles size={14} />
-                Gerar mensagem
-              </>
-            )}
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={handleGeneratePreview}
+              disabled={!canSend || previewMutation.isPending}
+              className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-brand-border bg-brand-surface-2 text-sm font-medium text-text-secondary py-2.5 hover:bg-brand-surface-3 transition-colors disabled:opacity-50"
+              title="Reescreve a sugestão usando a IA"
+            >
+              {previewMutation.isPending ? (
+                <>
+                  <span className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                  Gerando…
+                </>
+              ) : (
+                <>
+                  <Sparkles size={14} />
+                  Melhorar com IA
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={handleUseDraft}
+              disabled={!canSend || !draft.trim() || previewMutation.isPending}
+              className="flex-[1.4] inline-flex items-center justify-center gap-2 rounded-lg bg-brand-gold text-brand-bg text-sm font-semibold py-2.5 hover:bg-brand-gold/90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:hover:bg-brand-gold disabled:active:scale-100"
+            >
+              <Send size={14} />
+              Usar essa mensagem
+            </button>
+          </>
         ) : (
           <button
             type="button"
@@ -622,5 +710,82 @@ function ChannelOption({
         {detail}
       </span>
     </button>
+  );
+}
+
+/**
+ * Registro manual do que aconteceu depois do contato.
+ * Estado local (localStorage) — nenhuma chamada de API, nenhum envio.
+ */
+function TrackingActions({
+  client,
+  status,
+  onTrack,
+}: {
+  client: InactiveClient;
+  status: RecoveryStatus;
+  onTrack: (id: string, status: RecoveryStatus, recoveredValue?: number) => void;
+}) {
+  const steps: { key: RecoveryStatus; label: string; active: string }[] = [
+    {
+      key: 'contacted',
+      label: 'Marcar como contactado',
+      active: 'border-brand-border-2 bg-brand-surface-3 text-text-primary',
+    },
+    {
+      key: 'responded',
+      label: 'Respondeu',
+      active: 'border-status-info/40 bg-status-info-muted text-status-info',
+    },
+    {
+      key: 'converted',
+      label: 'Virou cliente 💰',
+      active: 'border-status-success/40 bg-status-success-muted text-status-success',
+    },
+  ];
+
+  return (
+    <div className="mt-4 rounded-lg border border-brand-border bg-brand-surface-2/40 p-3">
+      <p className="text-2xs uppercase tracking-wider text-text-muted">
+        Como foi esse contato?
+      </p>
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        {steps.map((step) => {
+          const isActive = status === step.key;
+          return (
+            <button
+              key={step.key}
+              type="button"
+              onClick={() =>
+                onTrack(
+                  client.id,
+                  step.key,
+                  step.key === 'converted' ? client.estimatedValue : undefined,
+                )
+              }
+              aria-pressed={isActive}
+              className={cn(
+                'rounded-lg border px-3 py-2 text-xs font-semibold transition-all active:scale-[0.98]',
+                isActive
+                  ? step.active
+                  : 'border-brand-border bg-brand-surface text-text-secondary hover:bg-brand-surface-3',
+              )}
+            >
+              {step.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {status === 'converted' && (
+        <p className="mt-2 animate-fade-in-up text-xs font-medium text-status-success">
+          🎉 {formatBRL(client.estimatedValue)} recuperados com {client.name.split(' ')[0]}.
+        </p>
+      )}
+
+      <p className="mt-2 text-2xs text-text-muted">
+        Registro seu, guardado neste navegador. Não envia nada.
+      </p>
+    </div>
   );
 }
