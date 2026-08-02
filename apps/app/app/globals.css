@@ -193,19 +193,3 @@
     animation: pulse-amber 1.2s ease-in-out infinite;
   }
 }
-
-/* ── Landing: mural do silêncio ─────────────────────────────────────────
-   Reveal lento e escalonado. Cada linha "aparece" e assenta na opacidade
-   definida pelo elemento pai, que representa o tempo de ausência. */
-@keyframes nx-emerge {
-  from { opacity: 0; transform: translateY(10px); filter: blur(3px); }
-  to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
-}
-
-.nx-emerge {
-  animation: nx-emerge 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .nx-emerge { animation: none; }
-}

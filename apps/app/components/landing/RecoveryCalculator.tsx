@@ -31,6 +31,9 @@ function clampNumber(raw: string, max: number): number {
   return Math.min(n, max);
 }
 
+/** Chave do repasse landing → cadastro. Fica na sessão, não na URL. */
+export const HANDOFF_KEY = 'nexora.calc';
+
 export function RecoveryCalculator() {
   const [clients, setClients] = useState(400);
   const [ticket, setTicket] = useState(150);
@@ -45,6 +48,21 @@ export function RecoveryCalculator() {
       recoverable: Math.round(parkedValue * RECOVERY_RATE),
     };
   }, [clients, ticket, share]);
+
+  /**
+   * Leva o resultado para o cadastro. O cara viu um número aqui — a próxima
+   * tela precisa continuar a mesma conversa, senão a promessa se perde.
+   */
+  function handoff() {
+    try {
+      window.sessionStorage.setItem(
+        HANDOFF_KEY,
+        JSON.stringify({ parked, inactive, ts: Date.now() }),
+      );
+    } catch {
+      // Sem sessionStorage o cadastro só não personaliza. Não quebra nada.
+    }
+  }
 
   return (
     <div className="rounded-2xl border border-brand-gold/30 bg-brand-surface p-6 shadow-2xl sm:p-8">
@@ -142,6 +160,7 @@ export function RecoveryCalculator() {
 
           <Link
             href="/register"
+            onClick={handoff}
             className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand-gold px-5 py-3.5 font-semibold text-brand-bg shadow-glow-amber-sm transition-all hover:bg-brand-gold/90 active:scale-[0.98]"
           >
             Ver quais clientes são esses
