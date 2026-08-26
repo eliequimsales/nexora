@@ -1,3 +1,15 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# Aprovação de build scripts. Vive aqui, e não no campo "pnpm" do
+# package.json, porque a partir do pnpm 11 aquele campo é ignorado —
+# e build script ignorado derruba o install inteiro. Foi essa a causa
+# da produção ficar fora do ar de 06/07 a 26/08 de 2026.
+onlyBuiltDependencies:
+  - "@nestjs/core"
+  - "@prisma/client"
+  - "@prisma/engines"
+  - msgpackr-extract
+  - prisma
+  - esbuild
