@@ -36,3 +36,9 @@ Thumbs.db
 coverage/
 .nyc_output/
 SET-GOOGLE-VARS.bat
+
+# Artefatos de trabalho (capturas, saídas de automação, cache de build)
+artifacts/
+output/
+.playwright-cli/
+*.tsbuildinfo
