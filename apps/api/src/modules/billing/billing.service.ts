@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@nexora/api-prisma';
 import { PrismaService } from '../../database/prisma.service';
 import { PlanLimitsService, PLAN_LIMITS } from '../../common/billing/plan-limits.service';
 import Stripe from 'stripe';

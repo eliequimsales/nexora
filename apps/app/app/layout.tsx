@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     default: "Nexora",
     template: "%s — Nexora",
   },
-  description: 'A IA que recupera seus clientes perdidos no automático.',
+  description: 'Seus clientes organizados em um só lugar.',
   robots: { index: false, follow: false },
   icons: {
     icon: '/favicon.svg',

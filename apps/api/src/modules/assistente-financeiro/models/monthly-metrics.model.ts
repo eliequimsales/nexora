@@ -7,7 +7,7 @@
 
 import type {
   AssisteFinanceiroMonthlyMetrics as PrismaAssisteFinanceiroMonthlyMetrics,
-} from '@prisma/client';
+} from '@nexora/api-prisma';
 
 export interface AssisteFinanceiroMonthlyMetrics
   extends PrismaAssisteFinanceiroMonthlyMetrics {}

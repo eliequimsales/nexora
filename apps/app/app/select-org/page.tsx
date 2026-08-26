@@ -6,7 +6,7 @@ import { authApi } from '@/lib/api/auth.api';
 import { useAuthStore } from '@/lib/stores/auth.store';
 
 // No piloto cada usuário tem 1 organização. Buscamos via /auth/me e
-// redirecionamos direto pro dashboard dessa org.
+// redirecionamos direto para o início dessa organização.
 // Multi-org no futuro: substituir por lista clicável.
 export default function SelectOrgPage() {
   const router = useRouter();
@@ -29,7 +29,7 @@ export default function SelectOrgPage() {
           user: data.user,
           org: data.organization,
         });
-        router.replace(`/${data.organization.slug}/recuperar`);
+        router.replace(`/${data.organization.slug}/inicio`);
       })
       .catch(() => {
         if (cancelled) return;

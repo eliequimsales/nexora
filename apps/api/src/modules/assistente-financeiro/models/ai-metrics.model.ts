@@ -7,7 +7,7 @@
 
 import type {
   AssisteFinanceiroAiMetrics as PrismaAssisteFinanceiroAiMetrics,
-} from '@prisma/client';
+} from '@nexora/api-prisma';
 
 export interface AssisteFinanceiroAiMetrics
   extends PrismaAssisteFinanceiroAiMetrics {}

@@ -23,8 +23,7 @@ export function useAuth() {
       });
       track('signup', data.organization.slug);
       fbqTrack('CompleteRegistration');
-      // Pós-cadastro vai direto pro coração do produto (Engine money-first), não pro dashboard.
-      router.push(`/${data.organization.slug}/recuperar`);
+      router.push(`/${data.organization.slug}/inicio`);
     },
     [store, router]
   );
@@ -37,8 +36,7 @@ export function useAuth() {
         org: data.organization,
         accessToken: data.access_token,
       });
-      // O produto é a recuperação, não o dashboard — primeira tela = /recuperar.
-      router.push(`/${data.organization.slug}/recuperar`);
+      router.push(`/${data.organization.slug}/inicio`);
     },
     [store, router]
   );

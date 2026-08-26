@@ -31,6 +31,8 @@ export interface CreateLeadPayload {
   name: string;
   email?: string;
   phone?: string;
+  /** Observação livre. A API grava em nicheData.notes. */
+  notes?: string;
   source?: LeadSource;
   pipelineStageId?: string;
 }

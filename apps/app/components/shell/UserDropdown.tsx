@@ -12,6 +12,12 @@ interface UserDropdownProps {
   collapsed?: boolean;
 }
 
+const ROLE_LABELS = {
+  owner: 'Proprietário',
+  admin: 'Administrador',
+  member: 'Membro',
+} as const;
+
 export function UserDropdown({ collapsed = false }: UserDropdownProps) {
   const { user, logout } = useAuth();
   const { url } = useTenant();
@@ -47,7 +53,7 @@ export function UserDropdown({ collapsed = false }: UserDropdownProps) {
           <>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-text-primary truncate">{user.name}</p>
-              <p className="text-2xs text-text-muted truncate capitalize">{user.role}</p>
+              <p className="text-2xs text-text-muted truncate">{ROLE_LABELS[user.role]}</p>
             </div>
             <ChevronDown
               size={13}

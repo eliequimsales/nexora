@@ -78,24 +78,34 @@ export class MessageGenerationService {
       );
 
       // Call Claude API with timeout
-      const response = (await Promise.race([
-        this.client.messages.create({
-          model: this.model,
-          max_tokens: this.maxTokens,
-          messages: [
-            {
-              role: 'user',
-              content: prompt,
-            },
-          ],
-        }),
-        new Promise((_, reject) =>
-          setTimeout(
-            () => reject(new Error('Claude API timeout')),
-            this.timeoutMs,
-          ),
-        ),
-      ])) as Anthropic.Message;
+      let timeoutHandle: NodeJS.Timeout | undefined;
+      const timeout = new Promise<never>((_, reject) => {
+        timeoutHandle = setTimeout(
+          () => reject(new Error('Claude API timeout')),
+          this.timeoutMs,
+        );
+      });
+
+      let response: Anthropic.Message;
+      try {
+        response = (await Promise.race([
+          this.client.messages.create({
+            model: this.model,
+            max_tokens: this.maxTokens,
+            messages: [
+              {
+                role: 'user',
+                content: prompt,
+              },
+            ],
+          }),
+          timeout,
+        ])) as Anthropic.Message;
+      } finally {
+        if (timeoutHandle) {
+          clearTimeout(timeoutHandle);
+        }
+      }
 
       // Extract text from response
       const content = response.content[0];

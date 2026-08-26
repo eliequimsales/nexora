@@ -13,7 +13,7 @@
 
 import type {
   AssisteFinanceiroMessageFeedback as PrismaAssisteFinanceiroMessageFeedback,
-} from '@prisma/client';
+} from '@nexora/api-prisma';
 
 export interface AssisteFinanceiroMessageFeedback
   extends PrismaAssisteFinanceiroMessageFeedback {}

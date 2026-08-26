@@ -7,7 +7,7 @@
 
 import type {
   AssisteFinanceiroRecoveryAction as PrismaAssisteFinanceiroRecoveryAction,
-} from '@prisma/client';
+} from '@nexora/api-prisma';
 
 export type ActionType = 'email' | 'whatsapp' | 'sms';
 export type SentBy = 'ai_automatic' | 'user_approved' | 'user_manual';

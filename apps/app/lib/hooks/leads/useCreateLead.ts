@@ -14,10 +14,14 @@ export function useCreateLead() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      toast({ variant: 'success', title: 'Lead criado' });
+      toast({ variant: 'success', title: 'Cliente adicionado' });
     },
     onError: () => {
-      toast({ variant: 'error', title: 'Erro ao criar lead', description: 'Tente novamente' });
+      toast({
+        variant: 'error',
+        title: 'Não consegui adicionar o cliente',
+        description: 'Tente novamente',
+      });
     },
   });
 }

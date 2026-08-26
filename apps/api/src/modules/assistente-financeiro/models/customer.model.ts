@@ -7,7 +7,7 @@
 
 import type {
   AssisteFinanceiroCustomer as PrismaAssisteFinanceiroCustomer,
-} from '@prisma/client';
+} from '@nexora/api-prisma';
 
 export type CrmSource = 'pipedrive' | 'agendor' | 'rd_station';
 

@@ -1,10 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
-import * as request from 'supertest';
+import request from 'supertest';
 import { ConfigModule } from '@nestjs/config';
 import { AssistenteFinanceiroController } from '../assistente-financeiro.controller';
 import { MessageGenerationService } from '../services/message-generation.service';
 import { AIMetricsService } from '../services/ai-metrics.service';
+import { MessageDeliveryService } from '../services/message-delivery.service';
 import { PrismaService } from '../../../database/prisma.service';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -62,6 +63,10 @@ describe('AssistenteFinanceiro Integration (e2e)', () => {
     };
 
     const mockPrismaService = {};
+    const mockMessageDeliveryService = {
+      send: jest.fn(),
+      handleWebhook: jest.fn(),
+    };
 
     // Guards that bypass authentication and authorization for the integration scope.
     const allowAllGuard = { canActivate: jest.fn(() => true) };
@@ -72,6 +77,7 @@ describe('AssistenteFinanceiro Integration (e2e)', () => {
       providers: [
         { provide: MessageGenerationService, useValue: mockMessageGenerationService },
         { provide: AIMetricsService, useValue: mockAIMetricsService },
+        { provide: MessageDeliveryService, useValue: mockMessageDeliveryService },
         { provide: PrismaService, useValue: mockPrismaService },
       ],
     })
@@ -104,7 +110,7 @@ describe('AssistenteFinanceiro Integration (e2e)', () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    await app?.close();
   });
 
   // Reset call history between cases so assertions like toHaveBeenCalled are scoped.

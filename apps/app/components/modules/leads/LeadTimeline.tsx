@@ -8,7 +8,7 @@ import { useLeadTimeline } from '@/lib/hooks/activity-logs/useLeadTimeline';
 import { formatRelativeTime } from '@/lib/utils';
 
 const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; label: string }> = {
-  lead_created:     { icon: UserPlus,      color: 'text-status-success', label: 'Lead criado' },
+  lead_created:     { icon: UserPlus,      color: 'text-status-success', label: 'Cliente adicionado' },
   lead_classified:  { icon: Sparkles,      color: 'text-brand-amber',    label: 'Classificado pela IA' },
   note:             { icon: MessageSquare, color: 'text-text-muted',      label: 'Nota adicionada' },
   ai_response:      { icon: Bot,           color: 'text-brand-amber',    label: 'IA respondeu' },
@@ -16,7 +16,7 @@ const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; labe
   stage_changed:    { icon: GitBranch,     color: 'text-status-info',    label: 'Estágio alterado' },
   task_created:     { icon: SquarePen,     color: 'text-text-secondary', label: 'Tarefa criada' },
   task_done:        { icon: CheckCheck,    color: 'text-status-success', label: 'Tarefa concluída' },
-  lead_archived:    { icon: Archive,       color: 'text-text-muted',     label: 'Lead arquivado' },
+  lead_archived:    { icon: Archive,       color: 'text-text-muted',     label: 'Cliente arquivado' },
   proposal_created: { icon: FileText,      color: 'text-text-secondary', label: 'Proposta criada' },
   proposal_sent:    { icon: Send,          color: 'text-status-info',    label: 'Proposta enviada' },
   proposal_accepted:{ icon: ThumbsUp,      color: 'text-status-success', label: 'Proposta aceita' },

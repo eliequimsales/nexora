@@ -887,7 +887,7 @@ export function ConnectMvp() {
         <aside className="border-b border-brand-border bg-sidebar-bg/95 lg:min-h-screen lg:w-64 lg:border-b-0 lg:border-r">
           <div className="flex items-center justify-between gap-3 px-4 py-4 lg:block lg:px-5">
             <div>
-              <p className="text-xs font-medium uppercase text-brand-amber">Nexora Connect</p>
+              <p className="text-xs font-medium uppercase text-brand-amber">Nexora</p>
               <h1 className="mt-1 text-lg font-semibold text-text-primary">Dinheiro na carteira</h1>
               <p className="mt-1 hidden text-xs text-text-muted lg:block">
                 Dinheiro primeiro. Cadastro depois.
@@ -1045,7 +1045,7 @@ function OnboardingScreen({
       <div className="mx-auto grid min-h-screen w-full max-w-6xl items-center gap-8 px-4 py-8 lg:grid-cols-[0.95fr_1.05fr]">
         <section className="space-y-5">
           <Badge variant="amber" size="lg">
-            Nexora Connect
+            Nexora
           </Badge>
           <div className="space-y-3">
             <h1 className="max-w-xl text-3xl font-semibold leading-tight text-text-primary sm:text-4xl">

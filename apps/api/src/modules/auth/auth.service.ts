@@ -12,7 +12,7 @@ import { getNicheConfig } from '@nexora/shared';
 import type { RegisterDto } from './dto/register.dto';
 import type { LoginDto } from './dto/login.dto';
 import type { AuthResponseDto, AuthUserDto, AuthOrgDto } from './dto/auth-response.dto';
-import type { Organization, User } from '@prisma/client';
+import type { Organization, User } from '@nexora/api-prisma';
 
 // Constant-time guard: prevents timing attacks on missing users
 const DUMMY_HASH =
@@ -122,7 +122,7 @@ export class AuthService {
         where: { slug: dto.slug },
         select: { id: true, status: true },
       });
-      if (org) {
+      if (org?.status === 'active') {
         user = await this.prisma.user.findUnique({
           where: { orgId_email: { orgId: org.id, email: dto.email } },
           include: { organization: true },

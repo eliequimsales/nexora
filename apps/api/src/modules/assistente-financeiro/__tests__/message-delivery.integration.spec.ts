@@ -79,6 +79,11 @@ describe('Message Delivery Integration Tests', () => {
 
     redisMock = {
       getClient: jest.fn().mockReturnValue(redisClient),
+      incr: jest.fn((key: string) => redisMock.getClient().incr(key)),
+      expire: jest.fn((key: string, seconds: number) =>
+        redisMock.getClient().expire(key, seconds),
+      ),
+      ttl: jest.fn((key: string) => redisMock.getClient().ttl(key)),
     };
 
     module = await Test.createTestingModule({

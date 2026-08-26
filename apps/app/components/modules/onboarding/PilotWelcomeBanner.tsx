@@ -46,10 +46,10 @@ export function PilotWelcomeBanner() {
           </p>
           {org?.slug && (
             <Link
-              href={`/${org.slug}/recuperar`}
+              href={`/${org.slug}/clientes/importar`}
               className="mt-3 inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-bg hover:bg-brand-gold/90"
             >
-              Subir base de pacientes <ArrowRight size={14} />
+              Importar clientes <ArrowRight size={14} />
             </Link>
           )}
         </div>

@@ -26,7 +26,7 @@ const MOCK_LEAD = {
 
 const mockPrisma = {
   lead: { findUnique: jest.fn(), update: jest.fn(), create: jest.fn(), findMany: jest.fn() },
-  pipelineStage: { findUnique: jest.fn() },
+  pipelineStage: { findUnique: jest.fn(), findFirst: jest.fn() },
   user: { findUnique: jest.fn() },
   activityLog: { create: jest.fn() },
   // findInactive lê settings.nexoraRecovery.avgTicket — default OK
@@ -119,6 +119,32 @@ describe('LeadsService — update guards (C1 regression)', () => {
 
       expect(result.id).toBe('lead-1');
       expect(mockPrisma.lead.update).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('create — observação', () => {
+    beforeEach(() => {
+      mockPrisma.pipelineStage.findFirst.mockResolvedValue(null);
+      mockPrisma.lead.create.mockResolvedValue({ ...MOCK_LEAD });
+      mockPrisma.activityLog.create.mockResolvedValue({});
+    });
+
+    it('grava a observação em nicheData.notes', async () => {
+      await service.create({ name: 'Maria', notes: 'Prefere de manhã' }, CTX);
+
+      expect(mockPrisma.lead.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ nicheData: { notes: 'Prefere de manhã' } }),
+        }),
+      );
+    });
+
+    it('mantém nicheData vazio quando não há observação', async () => {
+      await service.create({ name: 'Maria' }, CTX);
+
+      expect(mockPrisma.lead.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ nicheData: {} }) }),
+      );
     });
   });
 

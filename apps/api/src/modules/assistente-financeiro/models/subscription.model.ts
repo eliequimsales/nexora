@@ -7,7 +7,7 @@
 
 import type {
   AssisteFinanceiroSubscription as PrismaAssisteFinanceiroSubscription,
-} from '@prisma/client';
+} from '@nexora/api-prisma';
 
 export type AssisteFinanceiroSubscriptionTier = 'starter' | 'pro' | 'enterprise';
 export type AssisteFinanceiroSubscriptionStatus = 'active' | 'trial' | 'inactive';

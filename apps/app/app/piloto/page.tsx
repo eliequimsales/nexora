@@ -27,8 +27,8 @@ export default function PilotoPage() {
             <span className="text-brand-gold">N</span>
             <span className="text-text-primary">exora</span>
           </Link>
-          <Link href="/recuperar" className="text-sm font-medium text-brand-gold hover:text-brand-gold/80">
-            Ver demonstração
+          <Link href="/register" className="text-sm font-medium text-brand-gold hover:text-brand-gold/80">
+            Participar
           </Link>
         </div>
       </nav>
@@ -159,10 +159,10 @@ export default function PilotoPage() {
               <ArrowRight size={16} />
             </Link>
             <Link
-              href="/recuperar"
+              href="/register"
               className="px-6 py-3 border border-brand-border rounded-lg text-text-primary font-medium hover:bg-brand-surface transition-colors"
             >
-              Ver demonstração
+              Criar minha conta
             </Link>
           </div>
         </div>

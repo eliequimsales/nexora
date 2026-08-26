@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit, BeforeApplicationShutdown } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@nexora/api-prisma';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, BeforeApplicationShutdown {

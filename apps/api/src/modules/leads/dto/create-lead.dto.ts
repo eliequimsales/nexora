@@ -17,6 +17,13 @@ export class CreateLeadDto {
   @MaxLength(30)
   phone?: string;
 
+  // Observação livre do usuário. Persistida em nicheData.notes (sem coluna própria).
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  @Transform(({ value }) => value?.trim())
+  notes?: string;
+
   @IsOptional()
   @IsIn(['manual', 'form', 'import', 'api'])
   source?: string;

@@ -38,6 +38,7 @@ export class LeadsService {
         source: dto.source ?? 'manual',
         status: 'new',
         pipelineStageId,
+        nicheData: dto.notes ? { notes: dto.notes } : {},
       },
     });
 

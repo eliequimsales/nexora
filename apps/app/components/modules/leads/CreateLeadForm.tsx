@@ -6,13 +6,14 @@ import { z } from 'zod';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Textarea';
 import { useCreateLead } from '@/lib/hooks/leads/useCreateLead';
 
 const schema = z.object({
   name: z.string().min(2, 'Mínimo 2 caracteres').max(120),
-  email: z.string().email('Email inválido').optional().or(z.literal('')),
   phone: z.string().max(30).optional(),
-  source: z.enum(['manual', 'form', 'import', 'api']).optional(),
+  notes: z.string().max(500, 'Máximo 500 caracteres').optional(),
+  email: z.string().email('Email inválido').optional().or(z.literal('')),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -30,16 +31,16 @@ export function CreateLeadForm({ onClose }: CreateLeadFormProps) {
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { source: 'manual' },
   });
 
   function onSubmit(data: FormData) {
     mutate(
       {
         name: data.name,
-        email: data.email || undefined,
         phone: data.phone || undefined,
-        source: data.source,
+        notes: data.notes?.trim() || undefined,
+        email: data.email || undefined,
+        source: 'manual',
       },
       { onSuccess: onClose },
     );
@@ -57,7 +58,7 @@ export function CreateLeadForm({ onClose }: CreateLeadFormProps) {
       {/* Modal */}
       <div className="relative z-10 w-full max-w-md rounded-2xl border border-brand-border bg-brand-surface p-6 shadow-xl">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-base font-semibold text-text-primary">Novo lead</h2>
+          <h2 className="text-base font-semibold text-text-primary">Adicionar cliente</h2>
           <button
             onClick={onClose}
             className="p-1 rounded-lg text-text-muted hover:text-text-primary hover:bg-brand-surface-2 transition-colors"
@@ -70,40 +71,37 @@ export function CreateLeadForm({ onClose }: CreateLeadFormProps) {
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
           <Input
             label="Nome"
-            placeholder="Nome do lead"
+            placeholder="Nome do cliente"
             required
             error={errors.name?.message}
             {...register('name')}
           />
 
           <Input
-            label="Email"
-            type="email"
-            placeholder="email@exemplo.com"
-            error={errors.email?.message}
-            {...register('email')}
-          />
-
-          <Input
-            label="Telefone"
+            label="WhatsApp"
             type="tel"
             placeholder="+55 11 99999-9999"
             error={errors.phone?.message}
             {...register('phone')}
           />
 
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-text-secondary">Origem</label>
-            <select
-              {...register('source')}
-              className="h-9 rounded-lg bg-brand-surface-2 border border-brand-border text-sm text-text-primary px-3 focus:outline-none focus:ring-2 focus:ring-brand-amber/15 focus:border-brand-amber/60 transition-colors"
-            >
-              <option value="manual">Manual</option>
-              <option value="form">Formulário</option>
-              <option value="import">Importação</option>
-              <option value="api">API</option>
-            </select>
-          </div>
+          <Textarea
+            label="Observação"
+            rows={3}
+            placeholder="Algo que ajude a lembrar dessa pessoa"
+            helper="Opcional"
+            error={errors.notes?.message}
+            {...register('notes')}
+          />
+
+          <Input
+            label="Email"
+            type="email"
+            placeholder="email@exemplo.com"
+            helper="Opcional"
+            error={errors.email?.message}
+            {...register('email')}
+          />
 
           <div className="flex gap-3 pt-2">
             <Button
@@ -123,7 +121,7 @@ export function CreateLeadForm({ onClose }: CreateLeadFormProps) {
               className="flex-1"
               loading={isPending}
             >
-              {isPending ? 'Criando...' : 'Criar lead'}
+              {isPending ? 'Adicionando...' : 'Adicionar cliente'}
             </Button>
           </div>
         </form>

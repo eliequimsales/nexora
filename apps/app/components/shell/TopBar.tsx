@@ -7,17 +7,10 @@ import { useOrg } from '@/lib/hooks/org/useOrg';
 import { useMobileSidebar } from './MobileSidebarContext';
 
 const SECTION_TITLES: Record<string, string> = {
-  dashboard: 'Dashboard',
+  inicio: 'Início',
   clientes: 'Clientes',
-  leads: 'Leads',
-  pipeline: 'Pipeline',
-  workflows: 'Workflows',
-  proposals: 'Propostas',
-  analytics: 'Analytics',
   settings: 'Configurações',
   profile: 'Meu perfil',
-  nexora: 'Nexora',
-  tasks: 'Tarefas',
 };
 
 function getSection(pathname: string, slug: string): string {
@@ -40,7 +33,6 @@ export function TopBar() {
         height: 'var(--header-height)',
       }}
     >
-      {/* Hamburger — só no mobile */}
       <button
         type="button"
         onClick={toggle}

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Sparkles, Users, Settings, UsersRound } from 'lucide-react';
+import { House, Settings, Users, UsersRound } from 'lucide-react';
 import { UserDropdown } from './UserDropdown';
 import { useOrg } from '@/lib/hooks/org/useOrg';
 import { useTenant } from '@/lib/hooks/org/useTenant';
@@ -16,10 +16,8 @@ interface NavItem {
   exact?: boolean;
 }
 
-// O DNA da Nexora: Customer Recovery. A navegação reflete só isso — nada de
-// pipeline/workflows/propostas/billing/IA contaminando a experiência da clínica.
 const MAIN_NAV: NavItem[] = [
-  { label: 'Recuperação', icon: Sparkles, href: 'recuperar' },
+  { label: 'Início', icon: House, href: 'inicio', exact: true },
   { label: 'Clientes', icon: Users, href: 'clientes' },
 ];
 
@@ -73,7 +71,6 @@ export function Sidebar() {
           'md:translate-x-0',
         )}
       >
-        {/* Logo + org */}
         <div className="flex items-center gap-2.5 px-4 py-4 border-b border-sidebar-border">
           <div className="w-7 h-7 rounded-lg bg-brand-amber flex items-center justify-center shrink-0">
             <span className="text-brand-bg text-xs font-bold">N</span>
@@ -84,7 +81,6 @@ export function Sidebar() {
           </div>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 px-3 py-4 scroll-y space-y-0.5">
           <p className="text-2xs font-semibold text-text-muted uppercase tracking-widest px-2 mb-2">
             Principal
@@ -115,7 +111,6 @@ export function Sidebar() {
           </div>
         </nav>
 
-        {/* User section */}
         <div className="px-3 py-3 border-t border-sidebar-border">
           <UserDropdown />
         </div>

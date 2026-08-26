@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation';
 
-interface DashboardPageProps {
+interface OrganizationPageProps {
   params: { slug: string };
 }
 
-export default function DashboardPage({ params }: DashboardPageProps) {
+export default function OrganizationPage({ params }: OrganizationPageProps) {
   redirect(`/${params.slug}/inicio`);
 }

@@ -7,7 +7,7 @@
 
 import type {
   AssisteFinanceiroIntegration as PrismaAssisteFinanceiroIntegration,
-} from '@prisma/client';
+} from '@nexora/api-prisma';
 
 export type IntegrationType = 'pipedrive' | 'email' | 'whatsapp';
 

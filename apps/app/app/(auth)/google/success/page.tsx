@@ -18,12 +18,12 @@ function GoogleSuccessInner() {
     if (!token || !slug) { router.replace('/login'); return; }
 
     // Disponibiliza o token para o interceptor do axios sem ainda marcar
-    // isAuthenticated=true (evita o dashboard renderizar com user/org null).
+    // isAuthenticated=true (evita a aplicação renderizar com user/org null).
     useAuthStore.getState().setAccessToken(token);
 
     authApi.me().then(({ data }) => {
       store.setAuth({ accessToken: token, user: data.user, org: data.organization });
-      router.replace(`/${slug}/recuperar`);
+      router.replace(`/${slug}/inicio`);
     }).catch(() => {
       useAuthStore.getState().clearAuth();
       router.replace('/login');

@@ -48,7 +48,7 @@ export default function SettingsPage() {
           Secretária operacional
         </h2>
         <p className="text-xs text-text-muted mb-4">
-          Automação de sistema que age sobre novos leads sem configuração de workflows.
+          Automação que organiza novos clientes sem configuração adicional.
         </p>
         <SecretarySettingsForm org={org} />
       </div>

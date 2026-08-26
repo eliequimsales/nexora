@@ -4,15 +4,16 @@
   "private": true,
   "description": "Nexora API — NestJS backend",
   "scripts": {
-    "dev": "pnpm --filter @nexora/shared build && nest start --watch --entryFile apps/api/src/main",
-    "build": "pnpm --filter @nexora/shared build && nest build",
+    "dev": "prisma generate && pnpm --filter @nexora/shared build && nest start --watch --entryFile apps/api/src/main",
+    "build": "prisma generate && pnpm --filter @nexora/shared build && nest build",
     "start": "node dist/apps/api/src/main",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
-    "typecheck": "tsc --noEmit",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
-    "test:cov": "jest --coverage"
+    "typecheck": "prisma generate && tsc --noEmit",
+    "test": "prisma generate && jest",
+    "test:watch": "prisma generate && jest --watch",
+    "test:e2e": "prisma generate && jest --config ./test/jest-e2e.json",
+    "test:cov": "prisma generate && jest --coverage",
+    "db:generate": "prisma generate"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.0",

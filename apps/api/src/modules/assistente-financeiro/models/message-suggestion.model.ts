@@ -7,7 +7,7 @@
 
 import type {
   AssisteFinanceiroMessageSuggestion as PrismaAssisteFinanceiroMessageSuggestion,
-} from '@prisma/client';
+} from '@nexora/api-prisma';
 
 export interface AssisteFinanceiroMessageSuggestion
   extends PrismaAssisteFinanceiroMessageSuggestion {}

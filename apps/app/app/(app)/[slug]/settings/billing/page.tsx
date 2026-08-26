@@ -163,7 +163,7 @@ export default function BillingPage() {
           <h2 className="text-sm font-medium text-text-primary mb-4">Uso este mês</h2>
           <div className="space-y-4">
             <UsageMeter
-              label="Leads capturados"
+              label="Clientes adicionados"
               current={usage.leadsThisMonth}
               max={limits.leadsPerMonth}
             />

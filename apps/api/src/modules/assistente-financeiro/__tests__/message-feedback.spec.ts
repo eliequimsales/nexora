@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@nexora/api-prisma';
 
 const prisma = new PrismaClient();
 
@@ -115,7 +115,7 @@ describe('MessageFeedback Model', () => {
     expect(feedback.responseAt).toEqual(new Date('2026-05-11T10:30:00Z'));
     expect(feedback.customerReturned).toBe(true);
     expect(feedback.returnedAt).toEqual(new Date('2026-05-11T15:00:00Z'));
-    expect(feedback.revenueRecovered).toBe(150.5);
+    expect(feedback.revenueRecovered.toNumber()).toBe(150.5);
     expect(feedback.notes).toBe('Customer responded positively and made a purchase');
     expect(feedback.createdAt).toBeDefined();
 
@@ -142,7 +142,7 @@ describe('MessageFeedback Model', () => {
     expect(feedback1.customerResponded).toBe(true);
     expect(feedback1.responseAt).toBeDefined();
     expect(feedback1.customerReturned).toBe(false);
-    expect(feedback1.revenueRecovered).toBe(0);
+    expect(feedback1.revenueRecovered.toNumber()).toBe(0);
 
     // Case 2: Return without response (customer returned but didn't respond)
     const suggestion2 = await prisma.assisteFinanceiroMessageSuggestion.create({
@@ -168,7 +168,7 @@ describe('MessageFeedback Model', () => {
     expect(feedback2.customerResponded).toBe(false);
     expect(feedback2.customerReturned).toBe(true);
     expect(feedback2.returnedAt).toBeDefined();
-    expect(feedback2.revenueRecovered).toBe(200.0);
+    expect(feedback2.revenueRecovered.toNumber()).toBe(200.0);
 
     await cleanupTestSetup(
       [feedback1.id, feedback2.id],
@@ -197,7 +197,7 @@ describe('MessageFeedback Model', () => {
     expect(feedback.responseAt).toBeNull();
     expect(feedback.customerReturned).toBeNull();
     expect(feedback.returnedAt).toBeNull();
-    expect(feedback.revenueRecovered).toBe(0);
+    expect(feedback.revenueRecovered.toNumber()).toBe(0);
     expect(feedback.notes).toBeNull();
     expect(feedback.createdAt).toBeDefined();
 
@@ -224,8 +224,8 @@ describe('MessageFeedback Model', () => {
       },
     });
 
-    expect(feedback1.revenueRecovered).toBe(0);
-    expect(feedback2.revenueRecovered).toBe(500.75);
+    expect(feedback1.revenueRecovered.toNumber()).toBe(0);
+    expect(feedback2.revenueRecovered.toNumber()).toBe(500.75);
 
     await cleanupTestSetup(
       [feedback1.id, feedback2.id],

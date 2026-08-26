@@ -7,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@nexora/api-prisma';
 import { PlanLimitException } from '../exceptions/plan-limit.exception';
 
 @Catch()

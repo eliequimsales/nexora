@@ -1,83 +1,48 @@
 'use client';
 
-import { useState } from 'react';
-import { User, Flame, Thermometer, Snowflake, ChevronLeft, ChevronRight, Users, AlertCircle, RefreshCw } from 'lucide-react';
-import { Badge } from '@/components/ui/Badge';
+import { useEffect, useState } from 'react';
+import { AlertCircle, ChevronLeft, ChevronRight, RefreshCw, Users } from 'lucide-react';
+import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useLeadsQuery } from '@/lib/hooks/leads/useLeadsQuery';
-import { LeadDetailModal } from './LeadDetailModal';
 import { formatRelativeTime } from '@/lib/utils';
-import type { Lead, LeadStatus, LeadClassification } from '@/types';
+import { LeadDetailModal } from './LeadDetailModal';
+import type { Lead } from '@/types';
 
-const STATUS_CONFIG: Record<LeadStatus, { label: string; variant: 'default' | 'info' | 'success' | 'error' | 'warning' }> = {
-  new: { label: 'Novo', variant: 'info' },
-  contacted: { label: 'Contactado', variant: 'warning' },
-  qualified: { label: 'Qualificado', variant: 'success' },
-  disqualified: { label: 'Descartado', variant: 'error' },
-  closed_won: { label: 'Ganho', variant: 'success' },
-  closed_lost: { label: 'Perdido', variant: 'default' },
-};
-
-const CLASSIFICATION_CONFIG: Record<LeadClassification, { label: string; icon: React.ElementType; variant: 'amber' | 'warning' | 'default' }> = {
-  hot: { label: 'Quente', icon: Flame, variant: 'amber' },
-  warm: { label: 'Morno', icon: Thermometer, variant: 'warning' },
-  cold: { label: 'Frio', icon: Snowflake, variant: 'default' },
-};
-
-function LeadRow({ lead, onClick }: { lead: Lead; onClick: () => void }) {
-  const status = STATUS_CONFIG[lead.status] ?? { label: lead.status, variant: 'default' as const };
-  const classification = lead.aiClassification ? CLASSIFICATION_CONFIG[lead.aiClassification] : null;
-
+function ClientRow({ client, onClick }: { client: Lead; onClick: () => void }) {
   return (
-    <div
-      role="button"
-      tabIndex={0}
+    <button
+      type="button"
       onClick={onClick}
-      onKeyDown={(e) => e.key === 'Enter' && onClick()}
-      className="flex items-center gap-4 py-3.5 border-b border-brand-border last:border-0 hover:bg-brand-surface-2/40 px-1 -mx-1 rounded transition-colors cursor-pointer"
+      className="group flex w-full items-center gap-4 rounded-lg border-b border-brand-border px-2 py-3.5 text-left transition-colors last:border-0 hover:bg-brand-surface-2/60"
     >
-      {/* Avatar placeholder */}
-      <span className="w-8 h-8 rounded-full bg-brand-surface-2 border border-brand-border flex items-center justify-center shrink-0">
-        <User size={14} className="text-text-muted" />
-      </span>
-
-      {/* Name + contact */}
+      <Avatar name={client.name} size="md" />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-text-primary truncate">{lead.name}</p>
+        <p className="text-sm font-medium text-text-primary truncate">{client.name}</p>
         <p className="text-xs text-text-muted truncate">
-          {lead.email ?? lead.phone ?? '—'}
+          {client.email ?? client.phone ?? 'Sem contato informado'}
         </p>
       </div>
 
-      {/* AI classification */}
-      {classification && (
-        <Badge variant={classification.variant} size="sm" className="hidden sm:inline-flex shrink-0">
-          <classification.icon size={10} />
-          {classification.label}
-        </Badge>
-      )}
+      <div className="hidden shrink-0 text-right sm:block">
+        <p className="text-2xs uppercase tracking-wider text-text-muted">
+          Na Nexora
+        </p>
+        <p className="mt-1 text-xs text-text-secondary">
+          {formatRelativeTime(client.createdAt)}
+        </p>
+      </div>
 
-      {/* Status */}
-      <Badge variant={status.variant} size="sm" className="shrink-0">
-        {status.label}
-      </Badge>
-
-      {/* Time */}
-      <span className="text-2xs text-text-muted shrink-0 hidden md:block">
-        {formatRelativeTime(lead.createdAt)}
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-brand-border bg-brand-surface-2 text-text-muted transition-colors group-hover:border-brand-amber/30 group-hover:text-brand-amber">
+        <ChevronRight size={14} />
       </span>
-    </div>
+    </button>
   );
 }
 
-interface LeadsListProps {
-  search?: string;
-  status?: LeadStatus;
-}
-
-function LeadsListSkeleton() {
+function ClientsListSkeleton() {
   return (
     <div className="space-y-0 divide-y divide-brand-border">
       {Array.from({ length: 6 }).map((_, index) => (
@@ -87,20 +52,30 @@ function LeadsListSkeleton() {
   );
 }
 
-export function LeadsList({ search, status }: LeadsListProps) {
+export function LeadsList({ search }: { search?: string }) {
   const [page, setPage] = useState(1);
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const { data, isLoading, isError } = useLeadsQuery({ page, limit: 20, search, status });
+  const [selectedClient, setSelectedClient] = useState<Lead | null>(null);
+  const { data, isLoading, isError, isFetching } = useLeadsQuery({
+    page,
+    limit: 20,
+    search,
+  });
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
 
   if (isLoading) {
-    return <LeadsListSkeleton />;
+    return <ClientsListSkeleton />;
   }
 
   if (isError) {
     return (
       <div className="py-12 text-center">
         <AlertCircle size={22} className="text-status-error mx-auto mb-3 opacity-70" />
-        <p className="text-sm font-medium text-text-primary">Não foi possível carregar os leads</p>
+        <p className="text-sm font-medium text-text-primary">
+          Não foi possível carregar os clientes
+        </p>
         <p className="text-xs text-text-muted mt-1 flex items-center justify-center gap-1">
           <RefreshCw size={11} />
           Recarregue a página para tentar novamente
@@ -109,20 +84,19 @@ export function LeadsList({ search, status }: LeadsListProps) {
     );
   }
 
-  const leads = data?.data ?? [];
+  const clients = data?.data ?? [];
   const total = data?.total ?? 0;
   const totalPages = data?.totalPages ?? 1;
 
-  if (leads.length === 0) {
-    const isFiltered = Boolean(search || status);
+  if (clients.length === 0) {
     return (
       <EmptyState
         icon={<Users size={24} />}
-        title={isFiltered ? 'Nenhum lead encontrado' : 'Ainda sem leads'}
+        title={search ? 'Nenhum cliente encontrado' : 'Ainda não há clientes'}
         description={
-          isFiltered
-            ? 'Tente outros filtros ou limpe a busca.'
-            : 'Clique em "Novo lead" para adicionar o primeiro.'
+          search
+            ? 'Tente buscar por outro nome, email ou telefone.'
+            : 'Use "Adicionar cliente" ou "Importar clientes" aqui em cima para começar.'
         }
       />
     );
@@ -130,26 +104,46 @@ export function LeadsList({ search, status }: LeadsListProps) {
 
   return (
     <>
-      {selectedLead && (
-        <LeadDetailModal lead={selectedLead} onClose={() => setSelectedLead(null)} />
+      {selectedClient && (
+        <LeadDetailModal lead={selectedClient} onClose={() => setSelectedClient(null)} />
       )}
 
-      <div>
-        {leads.map((lead) => (
-          <LeadRow key={lead.id} lead={lead} onClick={() => setSelectedLead(lead)} />
-        ))}
+      <div aria-busy={isFetching}>
+        <div className={isFetching ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
+          {clients.map((client) => (
+            <ClientRow
+              key={client.id}
+              client={client}
+              onClick={() => setSelectedClient(client)}
+            />
+          ))}
+        </div>
 
         {totalPages > 1 && (
           <div className="flex items-center justify-between pt-4 mt-2 border-t border-brand-border">
             <p className="text-xs text-text-muted">
-              {total} lead{total !== 1 ? 's' : ''} no total
+              {total} {total === 1 ? 'cliente' : 'clientes'} no total
             </p>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Página anterior"
+                disabled={page <= 1 || isFetching}
+                onClick={() => setPage((currentPage) => currentPage - 1)}
+              >
                 <ChevronLeft size={14} />
               </Button>
-              <span className="text-xs text-text-secondary">{page} / {totalPages}</span>
-              <Button variant="ghost" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+              <span className="text-xs text-text-secondary">
+                {page} / {totalPages}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Próxima página"
+                disabled={page >= totalPages || isFetching}
+                onClick={() => setPage((currentPage) => currentPage + 1)}
+              >
                 <ChevronRight size={14} />
               </Button>
             </div>

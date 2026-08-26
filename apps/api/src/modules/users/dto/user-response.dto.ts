@@ -1,4 +1,4 @@
-import type { User } from '@prisma/client';
+import type { User } from '@nexora/api-prisma';
 
 export interface UserResponseDto {
   id: string;

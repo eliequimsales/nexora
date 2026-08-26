@@ -89,7 +89,7 @@ describe('MessageGenerationService', () => {
           useValue: {
             get: jest.fn((key) => {
               const config: Record<string, any> = {
-                'anthropic.apiKey': 'sk-ant-test-key',
+                'llm.apiKey': 'sk-ant-test-key',
               };
               return config[key];
             }),

@@ -16,7 +16,7 @@ export function SlugGuard({ slug }: SlugGuardProps) {
   useEffect(() => {
     if (isLoading || !org) return;
     if (org.slug !== slug) {
-      router.replace(`/${org.slug}/leads`);
+      router.replace(`/${org.slug}/inicio`);
     }
   }, [slug, org, isLoading, router]);
 

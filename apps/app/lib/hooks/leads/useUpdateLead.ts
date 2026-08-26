@@ -13,10 +13,14 @@ export function useUpdateLead(id: string) {
     mutationFn: (payload: UpdateLeadPayload) => leadsApi.update(id, payload).then((r) => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
-      toast({ variant: 'success', title: 'Lead atualizado' });
+      toast({ variant: 'success', title: 'Cliente atualizado' });
     },
     onError: () => {
-      toast({ variant: 'error', title: 'Erro ao atualizar lead', description: 'Tente novamente' });
+      toast({
+        variant: 'error',
+        title: 'Não consegui atualizar o cliente',
+        description: 'Tente novamente',
+      });
     },
   });
 }

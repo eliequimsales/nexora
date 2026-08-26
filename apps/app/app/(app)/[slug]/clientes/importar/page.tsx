@@ -9,11 +9,32 @@ import {
   AlertTriangle,
   Download,
   ArrowLeft,
+  MessageCircle,
+  FileSpreadsheet,
+  Database,
+  UserPlus,
+  ArrowRight,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useImportLeads, type ImportPreview } from '@/lib/hooks/leads/useImportLeads';
 import { useToast } from '@/lib/providers/ToastProvider';
 import { downloadSampleXlsx, xlsxFileToCsv } from '@/lib/utils/xlsx';
+import { CreateLeadForm } from '@/components/modules/leads/CreateLeadForm';
+
+type Origin = 'whatsapp' | 'excel' | 'csv' | 'outro' | 'manual';
+
+const ORIGIN_OPTIONS: {
+  id: Origin;
+  label: string;
+  hint: string;
+  icon: typeof Upload;
+}[] = [
+  { id: 'whatsapp', label: 'WhatsApp', hint: 'Contatos do celular', icon: MessageCircle },
+  { id: 'excel', label: 'Excel', hint: 'Planilha .xlsx', icon: FileSpreadsheet },
+  { id: 'csv', label: 'CSV', hint: 'Arquivo .csv', icon: FileText },
+  { id: 'outro', label: 'Outro sistema', hint: 'Agenda, CRM, ERP', icon: Database },
+  { id: 'manual', label: 'Vou adicionar manualmente', hint: 'Uma pessoa por vez', icon: UserPlus },
+];
 
 export default function ImportarClientesPage() {
   const router = useRouter();
@@ -24,8 +45,17 @@ export default function ImportarClientesPage() {
   const [csvContent, setCsvContent] = useState<string>('');
   const [fileName, setFileName] = useState<string>('');
   const [preview, setPreview] = useState<ImportPreview | null>(null);
-  const [step, setStep] = useState<'select' | 'preview' | 'done'>('select');
+  const [step, setStep] = useState<'origem' | 'select' | 'preview' | 'done'>('origem');
+  const [origin, setOrigin] = useState<Origin | null>(null);
+  const [isAddingClient, setIsAddingClient] = useState(false);
   const mutation = useImportLeads();
+
+  function handleOrigin(next: Origin) {
+    setOrigin(next);
+    // Excel e CSV caem direto no fluxo de upload que já existe.
+    if (next === 'excel' || next === 'csv') setStep('select');
+    if (next === 'manual') setIsAddingClient(true);
+  }
 
   async function handleFile(file: File) {
     if (file.size > 5 * 1024 * 1024) {
@@ -131,15 +161,130 @@ export default function ImportarClientesPage() {
       </Link>
 
       <div>
-        <h1 className="text-2xl font-bold text-text-primary">Importar clientes</h1>
+        <h1 className="text-2xl font-bold text-text-primary">
+          {step === 'origem' ? 'Onde seus clientes estão hoje?' : 'Importar clientes'}
+        </h1>
         <p className="text-sm text-text-muted mt-1">
-          Suba sua lista em CSV ou Excel salvo como CSV. Dedup automática por telefone/email.
+          {step === 'origem'
+            ? 'Escolha de onde eles vêm e a Nexora cuida do resto.'
+            : 'Envie sua lista em CSV ou Excel. Clientes repetidos são identificados pelo telefone ou email.'}
         </p>
       </div>
+
+      {/* Step 0: Origem */}
+      {step === 'origem' && (
+        <>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {ORIGIN_OPTIONS.map(({ id, label, hint, icon: Icon }) => {
+              const isActive = origin === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => handleOrigin(id)}
+                  className={`group flex items-center gap-3 rounded-xl border bg-brand-surface p-4 text-left shadow-panel transition-all hover:-translate-y-px ${
+                    isActive
+                      ? 'border-brand-amber/50'
+                      : 'border-brand-border hover:border-brand-border-2'
+                  }`}
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-brand-amber/20 bg-brand-amber-subtle">
+                    <Icon size={17} className="text-brand-amber" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-text-primary">
+                      {label}
+                    </span>
+                    <span className="block text-xs text-text-muted">{hint}</span>
+                  </span>
+                  <ArrowRight
+                    size={14}
+                    className="shrink-0 text-text-muted transition-transform group-hover:translate-x-0.5"
+                  />
+                </button>
+              );
+            })}
+          </div>
+
+          {origin === 'whatsapp' && (
+            <div className="rounded-xl border border-brand-border bg-brand-surface p-5">
+              <div className="flex items-start gap-3">
+                <MessageCircle size={16} className="mt-0.5 shrink-0 text-brand-amber" />
+                <div>
+                  <p className="text-sm font-medium text-text-primary">
+                    Em breve você poderá importar do WhatsApp
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-text-muted">
+                    Por enquanto, exporte seus contatos para uma planilha ou adicione as
+                    pessoas manualmente.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {origin === 'outro' && (
+            <div className="rounded-xl border border-brand-border bg-brand-surface p-5">
+              <div className="flex items-start gap-3">
+                <Database size={16} className="mt-0.5 shrink-0 text-brand-amber" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-text-primary">
+                    Exporte seus clientes em CSV
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-text-muted">
+                    Quase todo sistema tem uma opção de exportar (procure por
+                    &ldquo;Exportar&rdquo;, &ldquo;Baixar&rdquo; ou &ldquo;CSV&rdquo;). Com
+                    o arquivo em mãos, é só continuar.
+                  </p>
+                  <button
+                    onClick={() => setStep('select')}
+                    className="mt-3 inline-flex items-center gap-2 rounded-lg border border-brand-amber/30 bg-brand-amber px-4 py-2 text-sm font-semibold text-brand-bg transition-all hover:bg-brand-amber/90"
+                  >
+                    Já tenho o arquivo
+                    <ArrowRight size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {origin === 'manual' && (
+            <div className="rounded-xl border border-brand-border bg-brand-surface p-5">
+              <div className="flex items-start gap-3">
+                <UserPlus size={16} className="mt-0.5 shrink-0 text-brand-amber" />
+                <div>
+                  <p className="text-sm font-medium text-text-primary">
+                    Adicione uma pessoa por vez
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-text-muted">
+                    Sem planilha, sem complicação. Você pode voltar aqui e importar uma
+                    lista quando quiser.
+                  </p>
+                  <button
+                    onClick={() => setIsAddingClient(true)}
+                    className="mt-3 inline-flex items-center gap-2 rounded-lg border border-brand-amber/30 bg-brand-amber px-4 py-2 text-sm font-semibold text-brand-bg transition-all hover:bg-brand-amber/90"
+                  >
+                    Adicionar cliente
+                    <ArrowRight size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
 
       {/* Step 1: Select */}
       {step === 'select' && (
         <>
+          <button
+            onClick={() => setStep('origem')}
+            className="inline-flex items-center gap-2 text-xs text-text-muted transition-colors hover:text-text-primary"
+          >
+            <ArrowLeft size={12} />
+            Escolher outra origem
+          </button>
+
           <div
             className="rounded-xl border-2 border-dashed border-brand-border bg-brand-surface p-10 text-center cursor-pointer hover:border-brand-gold transition-colors"
             onClick={() => fileInputRef.current?.click()}
@@ -354,6 +499,8 @@ export default function ImportarClientesPage() {
           </div>
         </div>
       )}
+
+      {isAddingClient && <CreateLeadForm onClose={() => setIsAddingClient(false)} />}
     </div>
   );
 }
