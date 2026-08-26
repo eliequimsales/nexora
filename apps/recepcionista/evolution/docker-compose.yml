@@ -1,0 +1,54 @@
+# Evolution API v2 para o Nexora Atendente — stack mínima de produção.
+#
+# Uso (VPS Linux ou máquina local com Docker):
+#   1. export EVOLUTION_API_KEY=$(openssl rand -hex 24)
+#   2. docker compose up -d
+#   3. docker compose logs -f evolution      # acompanhar logs
+#
+# A URL pública desta Evolution vira EVOLUTION_API_URL no Nexora Atendente,
+# e a mesma EVOLUTION_API_KEY vai na variável de mesmo nome.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: evolution
+      POSTGRES_DB: evolution
+    volumes:
+      - evolution_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evolution"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  evolution:
+    image: evoapicloud/evolution-api:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      # host:container — ajuste a porta do host se 8099 estiver em uso
+      - "8099:8080"
+    environment:
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:?defina EVOLUTION_API_KEY}
+      SERVER_URL: ${SERVER_URL:-http://localhost:8080}
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://evolution:evolution@postgres:5432/evolution
+      DATABASE_SAVE_DATA_INSTANCE: "true"
+      DATABASE_SAVE_DATA_NEW_MESSAGE: "false"
+      CACHE_REDIS_ENABLED: "false"
+      CACHE_LOCAL_ENABLED: "true"
+      LOG_LEVEL: ERROR,WARN,INFO
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080 >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  evolution_pg:

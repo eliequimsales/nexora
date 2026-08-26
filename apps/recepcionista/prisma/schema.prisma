@@ -1,0 +1,204 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/@nexora/recepcionista-prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Empresa = tenant. Todo dado do sistema pende de companyId (isolamento multiempresa).
+model Company {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  phone        String
+  // Estrutura para cobrança futura por plano (trial | pro | business)
+  plan         String   @default("trial")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile        CompanyProfile?
+  conversations  Conversation[]
+  leads          Lead[]
+  knowledgeGaps  KnowledgeGap[]
+  knowledgeItems KnowledgeItem[]
+}
+
+// Base de conhecimento da IA — tudo que a recepcionista sabe vem daqui.
+model CompanyProfile {
+  id        String  @id @default(cuid())
+  companyId String  @unique
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  description      String @default("")
+  address          String @default("")
+  productsServices String @default("")
+  pricingInfo      String @default("")
+  paymentMethods   String @default("")
+  serviceRules     String @default("")
+  aiTone           String @default("profissional, simpático e objetivo")
+  greetingMessage  String @default("")
+  awayMessage      String @default("")
+
+  // [{ day: 0-6, open: "08:00", close: "18:00", closed: false }]
+  businessHours   Json @default("[]")
+  // [{ question, answer }]
+  faqs            Json @default("[]")
+  // ["falar com atendente", "reclamação", ...]
+  handoffKeywords Json @default("[]")
+
+  // KUS: áreas de atuação da empresa — a IA só SUGERE hipóteses; quem decide
+  // (e pode escolher mais de uma) é sempre a empresa. ["Academia", "Loja..."]
+  segments           Json      @default("[]")
+  interviewStartedAt DateTime?
+
+  followUpEnabled    Boolean @default(false)
+  followUpDelayHours Int     @default(4)
+  followUpMessage    String  @default("")
+  maxFollowUps       Int     @default(2)
+
+  // Conexão WhatsApp (Evolution API) — uma instância por empresa (nexora-{companyId})
+  whatsappInstance    String?   @unique
+  whatsappStatus      String    @default("DISCONNECTED") // DISCONNECTED | WAITING_QR | CONNECTED | ERROR
+  whatsappQrCode      String?   // data URL base64 do QR atual, enquanto aguarda leitura
+  whatsappConnectedAt DateTime?
+  whatsappError       String?
+}
+
+enum ConversationStatus {
+  AI
+  WAITING_HUMAN
+  HUMAN
+  FINISHED
+}
+
+enum MessageRole {
+  CUSTOMER
+  AI
+  HUMAN
+  SYSTEM
+}
+
+model Conversation {
+  id            String             @id @default(cuid())
+  companyId     String
+  company       Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customerPhone String
+  customerName  String?
+  status        ConversationStatus @default(AI)
+
+  followUpCount         Int       @default(0)
+  lastCustomerMessageAt DateTime?
+  lastFollowUpAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages Message[]
+  lead     Lead?
+
+  @@unique([companyId, customerPhone])
+  @@index([companyId, status])
+  @@index([companyId, updatedAt])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           MessageRole
+  content        String
+  // Dedupe de retries do webhook da Evolution
+  whatsappMessageId String? @unique
+  createdAt      DateTime @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+model Lead {
+  id             String       @id @default(cuid())
+  companyId      String
+  company        Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  conversationId String       @unique
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  name           String
+  phone          String
+  interest       String?
+  createdAt      DateTime     @default(now())
+
+  @@index([companyId, createdAt])
+}
+
+// ——— NALS: Treinamento do Atendente ———
+// Regra absoluta: o Atendente só usa conhecimento APPROVED. Todo o resto é
+// observação/registro que aguarda decisão da empresa. Nunca: Detectado→Utilizado.
+
+enum KnowledgeStatus {
+  OBSERVED         // capturado do atendimento da equipe — nunca usado sem aprovação
+  PENDING_APPROVAL // resposta dada no treinamento, aguardando confirmação
+  APPROVED         // único estado que entra no conhecimento do Atendente
+  REJECTED
+}
+
+// Pergunta que o Atendente não soube responder — registrada em silêncio
+model KnowledgeGap {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  questionKey String   // normalizada para deduplicar variações da mesma dúvida
+  question    String   // exemplo mais recente, como o cliente escreveu
+  source      String   @default("CUSTOMER") // CUSTOMER (clientes reais) | INTERVIEW (integração)
+  reason      String   @default("")
+  askCount    Int      @default(1)
+  status      String   @default("OPEN") // OPEN | ANSWERED | DISMISSED
+  lastAskedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  items KnowledgeItem[]
+
+  @@unique([companyId, questionKey])
+  @@index([companyId, status, askCount])
+}
+
+// Conhecimento estruturado (pergunta → resposta) com ciclo de aprovação
+model KnowledgeItem {
+  id         String          @id @default(cuid())
+  companyId  String
+  company    Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  question   String
+  answer     String
+  source     String          // TRAINING | TEAM_OBSERVATION
+  status     KnowledgeStatus
+  gapId      String?
+  gap        KnowledgeGap?   @relation(fields: [gapId], references: [id], onDelete: SetNull)
+  createdAt  DateTime        @default(now())
+  approvedAt DateTime?
+
+  @@index([companyId, status])
+}
+
+// KUS: Template Universal de segmento — pertence à NEXORA (global, nunca da
+// empresa). Semeado pela curadoria ou gerado por IA UMA vez e reutilizado.
+// Nunca vira resposta pronta: só orienta entrevista, vocabulário e treinamento.
+model SegmentTemplate {
+  id        String   @id @default(cuid())
+  slug      String   @unique // "academia", "restaurante"...
+  name      String   // "Academia"
+  topics    Json     // [{ topic: "Plano mensal", question: "Vocês oferecem plano mensal? Como funciona?" }]
+  source    String   @default("SEED") // SEED (curadoria Nexora) | AI_GENERATED
+  createdAt DateTime @default(now())
+}
+
+model ErrorLog {
+  id        String   @id @default(cuid())
+  companyId String?
+  context   String
+  message   String
+  stack     String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
