@@ -25,6 +25,16 @@ model Company {
   leads          Lead[]
   knowledgeGaps  KnowledgeGap[]
   knowledgeItems KnowledgeItem[]
+
+  // Base de clientes e o que roda em cima dela
+  customers    Customer[]
+  services     Service[]
+  appointments Appointment[]
+  touches      RecoveryTouch[]
+  recoveries   RecoveryEntry[]
+
+  // Identificador público da página de agendamento: nexora.app/agendar/{slug}
+  slug String? @unique
 }
 
 // Base de conhecimento da IA — tudo que a recepcionista sabe vem daqui.
@@ -201,4 +211,164 @@ model ErrorLog {
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+}
+
+// ============================================================================
+// BASE DE CLIENTES + AGENDA + RECUPERAÇÃO
+// ----------------------------------------------------------------------------
+// A base de clientes é o ativo da Nexora: todo módulo (agenda, recuperação,
+// cobrança) roda em cima dela. Ela se forma sozinha por dois caminhos — o
+// cliente final marcando pela página pública, e o Resgate do Caderno
+// (importação da base histórica). O dono nunca digita cliente.
+// ============================================================================
+
+model Customer {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  name  String
+  phone String
+
+  // Como entrou na base — importante para medir se a Base Viva está funcionando.
+  // LINK (agendou sozinho) | IMPORT (Resgate do Caderno) | MANUAL
+  source String @default("LINK")
+
+  notes String @default("")
+
+  // Opt-out do Protocolo 4 Toques. Respeitar é exigência do CDC/LGPD e o
+  // toque 4 sempre oferece a saída explicitamente.
+  optOut   Boolean   @default(false)
+  optOutAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  visits       Visit[]
+  appointments Appointment[]
+  touches      RecoveryTouch[]
+  recoveries   RecoveryEntry[]
+
+  @@unique([companyId, phone])
+  @@index([companyId])
+}
+
+// Visita concluída. É daqui que sai o ciclo pessoal de cada cliente — sem
+// histórico de visitas não existe Esteira 2 nem 3, e a recuperação volta a
+// ser lista estática.
+model Visit {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  occurredAt DateTime
+  valueCents Int      @default(0)
+  service    String   @default("")
+
+  createdAt DateTime @default(now())
+
+  @@index([customerId, occurredAt])
+}
+
+model Service {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  name        String
+  durationMin Int     @default(30)
+  priceCents  Int     @default(0)
+  active      Boolean @default(true)
+  // true quando veio pré-preenchido do SegmentTemplate e o dono ainda não
+  // revisou — permite avisar sem bloquear o uso.
+  suggested   Boolean @default(false)
+
+  order Int @default(0)
+
+  appointments Appointment[]
+
+  @@index([companyId, active])
+}
+
+model Appointment {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  serviceId String?
+  service   Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  startsAt DateTime
+  endsAt   DateTime
+
+  // MARCADO | CONFIRMADO | ATENDIDO | FALTOU | CANCELADO
+  status String @default("MARCADO")
+
+  // LINK (cliente marcou sozinho) | PAINEL (dono marcou)
+  source String @default("LINK")
+
+  notes String @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId, startsAt])
+  @@index([customerId])
+}
+
+// Um toque do Protocolo 4 Toques. Quatro a cinco tentativas recuperam ~81% a
+// mais que uma só — por isso o sistema guarda em qual toque cada cliente está.
+model RecoveryTouch {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  touchNumber Int
+  // RESGATE | ATRASO | PRE_ATRASO — de qual esteira o cliente veio
+  esteira     String
+
+  sentAt DateTime @default(now())
+
+  // AGUARDANDO | VOLTOU | MARCOU | RESPONDEU | SEM_RESPOSTA | PULADO
+  outcome   String    @default("AGUARDANDO")
+  outcomeAt DateTime?
+  // motivo quando PULADO: MUDOU_CIDADE | NAO_E_CLIENTE | FALECEU | EVENTO | OUTRO
+  skipReason String   @default("")
+
+  @@index([companyId, sentAt])
+  @@index([customerId, touchNumber])
+}
+
+// Livro-Caixa da Recuperação: extrato do que voltou de verdade. Só entra o que
+// foi marcado com valor pela mão do dono ou chegou por agendamento rastreável.
+// Nada é inferido — inflar o extrato é a forma mais rápida de perder o cliente.
+model RecoveryEntry {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  returnedAt DateTime @default(now())
+  valueCents Int
+
+  daysAway    Int
+  esteira     String
+  touchNumber Int
+
+  // true quando o retorno caiu na janela de atribuição (21 dias do contato E
+  // cliente estava além de 1,5x o ciclo). Fora disso conta como "voltou sem
+  // atribuição", em coluna separada.
+  attributed Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  @@index([companyId, returnedAt])
 }
