@@ -4,7 +4,11 @@ import { getSessionCompanyId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { LogoutButton } from "@/components/logout-button";
 
+// A Onda vem primeiro porque é a única tela que gera dinheiro. Ela existia e
+// não estava no menu — o loop central do produto era inalcançável.
 const NAV = [
+  { href: "/painel/onda", label: "Onda de segunda" },
+  { href: "/painel/clientes/importar", label: "Minha base" },
   { href: "/painel/conversas", label: "Conversas" },
   { href: "/painel/treinamento", label: "Treinamento" },
   { href: "/painel/configuracoes", label: "Meu Atendente" },
@@ -26,7 +30,7 @@ export default async function PainelLayout({ children }: { children: React.React
       <header className="border-b border-panel-line bg-panel-card">
         <div className="mx-auto flex max-w-page items-center justify-between px-6 py-3">
           <div className="flex items-center gap-8">
-            <Link href="/painel/conversas" className="flex items-center gap-2">
+            <Link href="/painel/onda" className="flex items-center gap-2">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-leaf-dark font-display text-sm font-bold text-white">
                 N
               </span>

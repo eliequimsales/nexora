@@ -9,7 +9,7 @@
 import { prisma } from "@/lib/db";
 import { calcularCiclo, medianaDoSegmento, type Ciclo } from "./ciclo";
 import { classificar, type Esteira } from "./esteiras";
-import { montarOnda, TAMANHO_DA_ONDA } from "./onda";
+import { diagnosticarVazio, montarOnda, TAMANHO_DA_ONDA, type Vazio } from "./onda";
 import { mensagemDoToque, proximoToque } from "./toques";
 
 export type CardDaOnda = {
@@ -55,7 +55,13 @@ function textoDoPorque(
 export async function montarOndaDaSemana(
   companyId: string,
   opcoes: { tamanho?: number; hoje?: Date } = {},
-): Promise<{ cards: CardDaOnda[]; totalEmJogoCents: number; composicao: Record<string, number> }> {
+): Promise<{
+  cards: CardDaOnda[];
+  totalEmJogoCents: number;
+  composicao: Record<string, number>;
+  /** Preenchido só quando não há cards — diz POR QUE, e o que fazer a respeito. */
+  vazio: Vazio | null;
+}> {
   const hoje = opcoes.hoje ?? new Date();
   const tamanho = opcoes.tamanho ?? TAMANHO_DA_ONDA;
 
@@ -70,6 +76,10 @@ export async function montarOndaDaSemana(
   const medianaSegmento = medianaDoSegmento(
     segmentos[0]?.toLowerCase().replace(/\s+/g, "-") ?? null,
   );
+
+  // Total inclui quem pediu para sair. Sem essa contagem é impossível separar
+  // "base vazia" de "base inteira em opt-out" — e a tela acabaria mentindo.
+  const totalNaBase = await prisma.customer.count({ where: { companyId } });
 
   const clientes = await prisma.customer.findMany({
     where: { companyId, optOut: false },
@@ -174,5 +184,13 @@ export async function montarOndaDaSemana(
     cards,
     totalEmJogoCents: cards.reduce((s, c) => s + c.valorCents, 0),
     composicao,
+    vazio:
+      cards.length === 0
+        ? diagnosticarVazio({
+            total: totalNaBase,
+            ativos: clientes.length,
+            elegiveis: elegiveis.length,
+          })
+        : null,
   };
 }

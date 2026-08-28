@@ -29,10 +29,18 @@ type Card = {
   mensagem: string;
 };
 
+type Vazio = {
+  motivo: "SEM_BASE" | "TODOS_OPT_OUT" | "SEQUENCIA_ESGOTADA" | "NINGUEM_ATRASADO";
+  titulo: string;
+  explicacao: string;
+  acao: { texto: string; href: string };
+};
+
 type Onda = {
   cards: Card[];
   totalEmJogoCents: number;
   composicao: Record<string, number>;
+  vazio: Vazio | null;
 };
 
 const reais = (cents: number) =>
@@ -115,16 +123,29 @@ export default function PaginaOnda() {
 
   // Tela vazia honesta: encher a lista com cliente marginal mata a confiança na
   // primeira mensagem que o dono manda para alguém que esteve lá semana passada.
+  //
+  // Mas vazio tem QUATRO causas opostas, e dizer "ninguém está atrasado" para
+  // quem nunca importou nada é mentira na primeira tela do produto. O motivo
+  // vem calculado do servidor, com a ação correspondente (Regra Zero).
   if (total === 0) {
+    const vazio = onda.vazio;
     return (
       <main className="p-6 max-w-2xl">
         <h1 className="font-display text-2xl text-panel-ink mb-2">Onda de segunda</h1>
         <div className="bg-panel-card rounded-2xl border border-panel-line p-6">
-          <p className="text-panel-ink mb-2">Hoje você não precisa abrir.</p>
-          <p className="text-sm text-panel-sub">
-            Ninguém da sua base está atrasado o suficiente para valer uma mensagem esta
-            semana. Quando alguém escapar, ele aparece aqui — e a gente te avisa.
+          <p className="text-panel-ink font-medium mb-2">
+            {vazio?.titulo ?? "Hoje você não precisa abrir"}
           </p>
+          <p className="text-sm text-panel-sub">
+            {vazio?.explicacao ??
+              "Ninguém da sua base está atrasado o suficiente para valer uma mensagem esta semana."}
+          </p>
+          <a
+            href={vazio?.acao.href ?? "/painel/clientes/importar"}
+            className="mt-5 inline-flex rounded-xl bg-leaf-dark px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110"
+          >
+            {vazio?.acao.texto ?? "Importar minha lista de clientes"}
+          </a>
         </div>
       </main>
     );

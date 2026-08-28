@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { calcularCiclo, MEDIANA_POR_SEGMENTO } from "@/lib/recuperacao/ciclo";
 import { classificar } from "@/lib/recuperacao/esteiras";
-import { montarOnda } from "@/lib/recuperacao/onda";
+import { diagnosticarVazio, montarOnda } from "@/lib/recuperacao/onda";
 import { INTERVALOS_TOQUES, mensagemDoToque, proximoToque } from "@/lib/recuperacao/toques";
 
 const d = (iso: string) => new Date(`${iso}T12:00:00.000Z`);
@@ -307,5 +307,51 @@ describe("mensagemDoToque", () => {
   it("usa o primeiro nome, nunca o nome completo", () => {
     const t = mensagemDoToque(1, { ...ctx, primeiroNome: "Marcos" });
     expect(t).toContain("Marcos");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ONDA VAZIA — quatro situações completamente diferentes colapsavam num único
+// `cards: []`, e a tela dizia a mesma frase para todas: "ninguém da sua base
+// está atrasado". Para quem acabou de se cadastrar e não importou nada, isso é
+// MENTIRA — e é a primeira tela que ele vê. Verdade acima de marketing.
+// ---------------------------------------------------------------------------
+describe("diagnosticarVazio", () => {
+  it("base nunca importada é SEM_BASE, não 'ninguém atrasado'", () => {
+    const v = diagnosticarVazio({ total: 0, ativos: 0, elegiveis: 0 });
+    expect(v.motivo).toBe("SEM_BASE");
+    expect(v.explicacao.toLowerCase()).not.toContain("está atrasado");
+  });
+
+  it("base inteira em opt-out não é confundida com base vazia", () => {
+    const v = diagnosticarVazio({ total: 40, ativos: 0, elegiveis: 0 });
+    expect(v.motivo).toBe("TODOS_OPT_OUT");
+  });
+
+  it("todo mundo já recebeu os 4 toques é SEQUENCIA_ESGOTADA", () => {
+    const v = diagnosticarVazio({ total: 40, ativos: 40, elegiveis: 0 });
+    expect(v.motivo).toBe("SEQUENCIA_ESGOTADA");
+  });
+
+  it("base saudável é a única que pode dizer 'hoje você não precisa abrir'", () => {
+    const v = diagnosticarVazio({ total: 40, ativos: 40, elegiveis: 12 });
+    expect(v.motivo).toBe("NINGUEM_ATRASADO");
+  });
+
+  // Regra Zero: tela que só informa é proibida. Nenhum dos quatro estados pode
+  // deixar o dono sem nada para clicar.
+  it("TODO estado vazio termina numa ação executável", () => {
+    const casos = [
+      { total: 0, ativos: 0, elegiveis: 0 },
+      { total: 40, ativos: 0, elegiveis: 0 },
+      { total: 40, ativos: 40, elegiveis: 0 },
+      { total: 40, ativos: 40, elegiveis: 12 },
+    ];
+    for (const caso of casos) {
+      const v = diagnosticarVazio(caso);
+      expect(v.acao.texto.length).toBeGreaterThan(0);
+      expect(v.acao.href.startsWith("/")).toBe(true);
+      expect(v.titulo.length).toBeGreaterThan(0);
+    }
   });
 });
