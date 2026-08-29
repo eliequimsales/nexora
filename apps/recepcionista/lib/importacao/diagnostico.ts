@@ -234,10 +234,12 @@ export function gerarDiagnostico(
         "sei QUANTO isso vale. Me diga quanto você cobra em média que eu refaço a conta.",
       nomes,
       corteHonesto: false,
+      // Verbo irregular: o plural de "sumiu" é "sumiram", não "sumiu"+"ram".
+      // Concatenar sufixo funciona para substantivo e quebra em verbo.
       recomendacao:
-        `Achei ${sumidos.length} cliente${sumidos.length === 1 ? "" : "s"} que sumiu` +
-        `${sumidos.length === 1 ? "" : "ram"} da sua lista. Para eu dizer quanto isso é em ` +
-        `dinheiro, me informe quanto você cobra em média por atendimento.`,
+        `Achei ${sumidos.length} ${sumidos.length === 1 ? "cliente que sumiu" : "clientes que sumiram"} ` +
+        `da sua lista. Para eu dizer quanto isso é em dinheiro, me informe quanto você cobra ` +
+        `em média por atendimento.`,
       faltando: { data: false, valor: true },
     };
   }

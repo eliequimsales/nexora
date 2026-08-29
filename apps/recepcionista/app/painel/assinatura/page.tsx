@@ -115,11 +115,12 @@ export default async function PaginaAssinatura({
             <p className="mt-3 font-display text-4xl text-panel-ink tabular-nums">
               {reais(recuperadoCents)}
             </p>
+            {/* Frase inteira nas duas formas: "voltou" + "ram" dá "voltouram". */}
             <p className="mt-2 text-sm text-panel-sub">
-              {clientesDeVolta} cliente{clientesDeVolta > 1 ? "s" : ""} que tinha
-              {clientesDeVolta > 1 ? "m" : ""} sumido e voltou
-              {clientesDeVolta > 1 ? "ram" : ""} depois de uma mensagem da Onda, dentro da
-              janela de atribuição de 21 dias.
+              {clientesDeVolta === 1
+                ? "1 cliente que tinha sumido e voltou"
+                : `${clientesDeVolta} clientes que tinham sumido e voltaram`}{" "}
+              depois de uma mensagem da Onda, dentro da janela de atribuição de 21 dias.
             </p>
             <p className="mt-3 rounded-xl bg-panel-bg p-3 text-sm text-panel-ink">
               Isso é <strong>{vezes.toFixed(1)}x</strong> o valor da mensalidade de{" "}

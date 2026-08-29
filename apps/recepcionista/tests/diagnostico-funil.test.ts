@@ -124,3 +124,36 @@ describe("normalização de segmento", () => {
     for (const s of SEGMENTOS) expect(medianaDoSegmento(s)).toBeGreaterThan(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// PORTUGUÊS. Concatenar sufixo funciona em substantivo ("cliente"+"s") e quebra
+// em verbo: "sumiu"+"ram" virou "sumiuram" na tela que vende. Erro de português
+// na porta de entrada custa credibilidade antes de qualquer argumento.
+// ---------------------------------------------------------------------------
+describe("texto do diagnóstico", () => {
+  const semValor = (n: number) =>
+    gerarDiagnostico(
+      Array.from({ length: n }, (_, i) => ({
+        nome: `C${i}`,
+        telefone: `1198888${String(1000 + i)}`,
+        visitas: [
+          { data: diasAtras(260), valorCents: 0 },
+          { data: diasAtras(285), valorCents: 0 },
+          { data: diasAtras(310), valorCents: 0 },
+        ],
+      })),
+      { hoje: HOJE, medianaSegmentoDias: 24 },
+    );
+
+  it("conjuga o plural corretamente e nunca produz palavra inventada", () => {
+    const muitos = semValor(42).recomendacao;
+    expect(muitos).toContain("clientes que sumiram");
+    expect(muitos).not.toMatch(/sumiuram|voltouram|sumiuam/);
+  });
+
+  it("no singular usa a forma do singular", () => {
+    const um = semValor(1).recomendacao;
+    expect(um).toContain("cliente que sumiu");
+    expect(um).not.toContain("clientes");
+  });
+});
