@@ -80,6 +80,12 @@ function LoginForm() {
       >
         {loading ? "Entrando..." : "Entrar"}
       </button>
+      <Link
+        href="/recuperar"
+        className="block text-center text-sm text-panel-sub hover:text-panel-ink"
+      >
+        Esqueci minha senha
+      </Link>
       <div className="flex items-center gap-3 py-1">
         <span className="h-px flex-1 bg-panel-line" />
         <span className="text-xs text-panel-sub">ou</span>

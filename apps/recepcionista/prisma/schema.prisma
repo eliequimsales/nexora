@@ -68,6 +68,7 @@ model Company {
   semEmail Boolean @default(false)
 
   reengajamentos Reengajamento[]
+  passwordResets PasswordReset[]
 }
 
 // Cada e-mail de reengajamento já enviado. A unicidade por (empresa, momento) é
@@ -98,6 +99,27 @@ model Reengajamento {
 //
 // `processedAt` só é gravado DEPOIS do efeito colateral dar certo. Marcar antes
 // perderia o evento para sempre quando o handler falhasse.
+// Pedido de redefinição de senha.
+//
+// O token é gravado com HASH, nunca em claro: se o banco vazar, os hashes não
+// permitem redefinir a senha de ninguém — do contrário o vazamento viraria
+// tomada de conta imediata em toda conta com pedido em aberto.
+//
+// `usedAt` torna o link de uso único. Sem isso, quem tivesse acesso ao e-mail
+// (ou ao histórico do navegador) poderia redefinir de novo depois.
+model PasswordReset {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([companyId, createdAt])
+}
+
 model StripeEvent {
   id          String    @id
   type        String

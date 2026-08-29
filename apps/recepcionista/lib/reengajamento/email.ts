@@ -27,7 +27,11 @@ function escapar(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function montarHtml(toque: Toque, appUrl: string, urlDescadastro: string): string {
+function montarHtml(
+  toque: Mensagem,
+  appUrl: string,
+  urlDescadastro: string | undefined,
+): string {
   const paragrafos = toque.corpo
     .split("\n\n")
     .map(
@@ -47,18 +51,33 @@ function montarHtml(toque: Toque, appUrl: string, urlDescadastro: string): strin
     <a href="${appUrl}${toque.acao.href}" style="display:inline-block;margin-top:8px;background:#EAB308;color:#16150F;text-decoration:none;font-weight:700;font-size:15px;padding:13px 22px;border-radius:11px;">${escapar(
       toque.acao.texto,
     )}</a>
-    <p style="margin:28px 0 0;font-size:13px;line-height:1.5;color:#8F8973;">
+    ${
+      urlDescadastro
+        ? `<p style="margin:28px 0 0;font-size:13px;line-height:1.5;color:#8F8973;">
       Você recebe este e-mail porque criou uma conta na Nexora.
       <a href="${urlDescadastro}" style="color:#8F8973;">Não quero mais receber</a>.
-    </p>
+    </p>`
+        : ""
+    }
   </div>
 </body></html>`;
 }
 
+/** O que todo e-mail precisa ter: assunto, corpo e UMA ação. */
+export type Mensagem = Pick<Toque, "assunto" | "corpo" | "acao">;
+
+/**
+ * `urlDescadastro` é opcional de propósito.
+ *
+ * E-mail transacional — redefinir senha, recibo, aviso de cobrança — NÃO leva
+ * link de descadastro: ele não é comunicação de marketing, e oferecer saída de
+ * algo que a pessoa não pode recusar confunde e ainda faz ela sair da régua
+ * achando que está resolvendo outra coisa.
+ */
 export async function enviarEmail(
   para: string,
-  toque: Toque,
-  urlDescadastro: string,
+  toque: Mensagem,
+  urlDescadastro?: string,
 ): Promise<Envio> {
   if (!emailConfigurado()) return { enviado: false, motivo: "email-nao-configurado" };
 
@@ -77,8 +96,12 @@ export async function enviarEmail(
       html: montarHtml(toque, appUrl, urlDescadastro),
       // Texto puro junto: e-mail só-HTML tem nota pior de spam, e a régua toda
       // depende de chegar na caixa de entrada.
-      text: `${toque.corpo}\n\n${toque.acao.texto}: ${appUrl}${toque.acao.href}\n\nNão quero mais receber: ${urlDescadastro}`,
-      headers: { "List-Unsubscribe": `<${urlDescadastro}>` },
+      text:
+        `${toque.corpo}\n\n${toque.acao.texto}: ${appUrl}${toque.acao.href}` +
+        (urlDescadastro ? `\n\nNão quero mais receber: ${urlDescadastro}` : ""),
+      ...(urlDescadastro
+        ? { headers: { "List-Unsubscribe": `<${urlDescadastro}>` } }
+        : {}),
     }),
   });
 

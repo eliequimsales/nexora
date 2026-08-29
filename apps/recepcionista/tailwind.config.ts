@@ -16,7 +16,7 @@ const config: Config = {
           DEFAULT: "#2FE08B",
           dark: "#0C7A4D",
         },
-        amber: "#FFC96B",
+        amber: "#EAB308", // amarelo da marca, o mesmo dos carrosseis do Instagram
         // Painel — claro e limpo (a landing mantém o tema noturno)
         panel: {
           bg: "#F4F6F4",
