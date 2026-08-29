@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { conferirDescadastro, tokenDescadastro } from "@/lib/reengajamento/servico";
 import {
   decidirToque,
   INTERVALO_MINIMO_DIAS,
@@ -240,6 +241,48 @@ describe("decidirToque — regras que valem para todos", () => {
       HOJE,
     );
     expect(t?.corpo).not.toMatch(/R\$\s*0/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DESCADASTRO. O token é a única coisa que separa "sair da lista" de "tirar
+// qualquer empresa da lista trocando o id na URL".
+// ---------------------------------------------------------------------------
+describe("token de descadastro", () => {
+  const original = process.env.JWT_SECRET;
+
+  beforeEach(() => {
+    process.env.JWT_SECRET = "um-segredo-longo-o-bastante-para-assinar-1234567890";
+  });
+
+  afterEach(() => {
+    if (original === undefined) delete process.env.JWT_SECRET;
+    else process.env.JWT_SECRET = original;
+  });
+
+  it("aceita o token da própria empresa", () => {
+    expect(conferirDescadastro("cmp_1", tokenDescadastro("cmp_1"))).toBe(true);
+  });
+
+  it("recusa o token de OUTRA empresa", () => {
+    expect(conferirDescadastro("cmp_1", tokenDescadastro("cmp_2"))).toBe(false);
+  });
+
+  it("recusa lixo, inclusive de tamanho diferente", () => {
+    expect(conferirDescadastro("cmp_1", "")).toBe(false);
+    expect(conferirDescadastro("cmp_1", "a".repeat(32))).toBe(false);
+    expect(conferirDescadastro("cmp_1", "a".repeat(64))).toBe(false);
+  });
+
+  // HMAC com chave vazia ainda devolve um valor — só que um valor que QUALQUER
+  // pessoa calcula sem saber segredo nenhum. Isso é pior que não ter token,
+  // porque tem aparência de proteção. Sem segredo, ninguém assina nada.
+  it("falha FECHADA quando o segredo está ausente ou é curto demais", () => {
+    delete process.env.JWT_SECRET;
+    expect(() => tokenDescadastro("cmp_1")).toThrow();
+
+    process.env.JWT_SECRET = "curto";
+    expect(() => tokenDescadastro("cmp_1")).toThrow();
   });
 });
 

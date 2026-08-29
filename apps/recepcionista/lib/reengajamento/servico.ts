@@ -13,6 +13,7 @@ import { prisma } from "@/lib/db";
 import { calcularCiclo, medianaDoSegmento } from "@/lib/recuperacao/ciclo";
 import { classificar } from "@/lib/recuperacao/esteiras";
 import { logError } from "@/lib/errors";
+import { safeEqual } from "@/lib/rate-limit";
 import { enviarEmail } from "./email";
 import { decidirToque, type Momento, type Sinais } from "./motor";
 
@@ -22,15 +23,25 @@ const LOTE = 40;
 /**
  * Link de descadastro assinado: sem assinatura, qualquer um descadastraria
  * qualquer empresa só trocando o id na URL.
+ *
+ * Falha FECHADA quando o segredo não existe. Um HMAC com chave vazia continua
+ * produzindo um valor — só que um valor determinístico que qualquer pessoa
+ * calcula sem saber segredo nenhum, o que é pior do que não ter token: dá a
+ * aparência de proteção. É a mesma postura de lib/auth.ts, que já estoura
+ * quando JWT_SECRET falta.
  */
 export function tokenDescadastro(companyId: string): string {
-  const segredo = process.env.JWT_SECRET ?? "";
+  const segredo = process.env.JWT_SECRET;
+  if (!segredo || segredo.length < 32) {
+    throw new Error("JWT_SECRET ausente ou curto demais para assinar o descadastro");
+  }
   return createHmac("sha256", segredo).update(`descadastro:${companyId}`).digest("hex").slice(0, 32);
 }
 
 export function conferirDescadastro(companyId: string, token: string): boolean {
-  const esperado = tokenDescadastro(companyId);
-  return token.length === esperado.length && token === esperado;
+  // Comparação em tempo constante: `===` sai no primeiro byte diferente, e
+  // essa diferença de tempo é o que permite descobrir o token byte a byte.
+  return safeEqual(token, tokenDescadastro(companyId));
 }
 
 /**
