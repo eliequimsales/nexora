@@ -17,6 +17,8 @@
  *   executável. Tela de bloqueio que só informa é proibida como qualquer outra.
  */
 
+import { emReais, PRECO_MENSAL_CENTS } from "./preco";
+
 export type EstadoConta =
   | "TRIAL"
   | "TRIAL_EXPIRADO"
@@ -67,15 +69,20 @@ export const ACOES_SEMPRE_LIVRES: Acao[] = [
 export const TOLERANCIA_DIAS = 7;
 
 /**
- * Duração do trial. 21 dias porque o Protocolo 4 Toques manda o toque 1 no dia
- * 0, o 2 no dia 4 e o 3 no dia 11 — e a Onda é semanal. Em 21 dias o dono viu
- * três ondas e uma sequência quase inteira, que é o primeiro momento em que a
- * tela consegue mostrar um resultado sem mentir.
+ * Duração do trial: 30 dias, o "primeiro mês grátis".
  *
- * O toque 4 sai no dia 25, então ele fica DE FORA do trial. Esse é o número a
- * revisar quando houver dado real de conversão — está isolado aqui de propósito.
+ * O número não é redondo por marketing — é o primeiro dia em que a medição é
+ * honesta. O Protocolo 4 Toques manda o último toque no dia 25; antes disso a
+ * sequência não terminou e a tela seria obrigada a dizer "ainda não dá para
+ * saber" justo quando o dono precisa decidir se paga.
+ *
+ * Sem cartão na entrada: o público não tem cartão de crédito para assinatura
+ * (é por isso que boleto está ligado), e exigir cartão para TESTAR eliminaria
+ * essa fatia no ponto mais caro do funil. O custo dessa escolha é real e está
+ * pago em outro lugar: no fim do trial a assinatura PAUSA em vez de cobrar, e
+ * é o motor de reengajamento que traz o dono de volta.
  */
-export const TRIAL_DIAS = 21;
+export const TRIAL_DIAS = 30;
 
 const DIA_MS = 86_400_000;
 
@@ -133,7 +140,9 @@ const RECUSA: Record<string, { motivo: string; texto: string }> = {
     motivo:
       "Seu período de teste terminou. Sua base e seu histórico continuam aqui, inteiros — " +
       "só o envio de novas ondas está parado.",
-    texto: "Assinar por R$ 79,90/mês",
+    // Derivado da constante, nunca escrito à mão: preço em texto solto é como
+    // a tela começa a anunciar um valor diferente do que a Stripe cobra.
+    texto: `Assinar por ${emReais(PRECO_MENSAL_CENTS)}/mês`,
   },
   BLOQUEADO: {
     motivo:

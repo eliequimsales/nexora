@@ -56,6 +56,36 @@ model Company {
   falhasSeguidas       Int       @default(0)
   dunningIniciadoEm    DateTime?
   ultimoErroPagamento  String?
+
+  // Carrinho abandonado: gravado quando o dono abre o Checkout, apagado quando
+  // a assinatura nasce. Sem isso não dá para saber quem chegou até a tela de
+  // pagamento e desistiu — que é a lista mais quente que existe.
+  checkoutAbertoEm DateTime?
+  canceladoEm      DateTime?
+
+  // Ele pediu para não receber e-mail da Nexora. Diferente do opt-out do
+  // cliente final; este é o dono da conta.
+  semEmail Boolean @default(false)
+
+  reengajamentos Reengajamento[]
+}
+
+// Cada e-mail de reengajamento já enviado. A unicidade por (empresa, momento) é
+// o que impede o motor de mandar a mesma mensagem duas vezes — e-mail repetido
+// não é insistência, é o que faz o dono marcar como spam e nunca mais receber
+// nada, inclusive o aviso de cobrança.
+model Reengajamento {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  momento   String
+  enviadoEm DateTime @default(now())
+  canal     String   @default("email")
+  erro      String?
+
+  @@unique([companyId, momento])
+  @@index([companyId, enviadoEm])
 }
 
 // Evento da Stripe já visto. A Stripe REENVIA eventos e não garante ordem de

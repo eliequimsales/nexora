@@ -41,6 +41,13 @@ export async function aplicarAssinatura(sub: Stripe.Subscription): Promise<strin
   const companyId = companyIdDe(sub);
   if (!companyId) return null;
 
+  // Precisamos do valor atual porque `canceladoEm` é a data do PRIMEIRO
+  // cancelamento, não da última vez que um evento passou por aqui.
+  const atual = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: { canceladoEm: true },
+  });
+
   await prisma.company.update({
     where: { id: companyId },
     data: {
@@ -51,6 +58,22 @@ export async function aplicarAssinatura(sub: Stripe.Subscription): Promise<strin
       currentPeriodEnd: periodoFimDe(sub),
       cancelAtPeriodEnd: sub.cancel_at_period_end,
       trialEndsAt: paraData(sub.trial_end),
+
+      // A assinatura nasceu: ele não abandonou o carrinho. Sem limpar, a régua
+      // mandaria "faltou pouco para terminar" para quem já é cliente pagante.
+      checkoutAbertoEm: null,
+
+      // Marca o cancelamento UMA vez, na primeira vez que o status vira
+      // canceled. Este handler roda a cada evento; regravar a data reiniciaria
+      // o relógio do e-mail de 14 dias a cada reentrega, para sempre.
+      ...(sub.status === "canceled" && !atual?.canceladoEm
+        ? { canceladoEm: new Date() }
+        : {}),
+      // Voltou a ser cliente: o relógio some, senão ele receberia "sua base
+      // ainda está aqui" duas semanas depois de já ter reativado.
+      ...(sub.status === "active" || sub.status === "trialing"
+        ? { canceladoEm: null }
+        : {}),
       // Pagou: zera o dunning. Sem isto, uma conta que se regularizou
       // continuaria carregando o relógio de tolerância da falha anterior.
       ...(sub.status === "active" || sub.status === "trialing"

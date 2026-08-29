@@ -2,9 +2,8 @@ import { redirect } from "next/navigation";
 import { getSessionCompanyId } from "@/lib/auth";
 import { estadoDaConta, TOLERANCIA_DIAS, TRIAL_DIAS } from "@/lib/billing/acesso";
 import { convergirDoCheckout } from "@/lib/billing/converger";
-import { emReais, PRECO_LISTA_CENTS } from "@/lib/billing/preco";
+import { emReais, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
 import { stripeConfigurado } from "@/lib/billing/stripe";
-import { contarAssinantes, precoAtual } from "@/lib/billing/vagas";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
 import { BotoesAssinatura } from "./botoes";
@@ -80,11 +79,7 @@ export default async function PaginaAssinatura({
 
   const recuperadoCents = comprovado._sum.valueCents ?? 0;
   const clientesDeVolta = comprovado._count;
-
-  // O preço que ESTE dono paga: quem já assinou mantém o dele; quem ainda não
-  // vê o que valeria agora.
-  const preco = precoAtual(await contarAssinantes());
-  const vezes = recuperadoCents / preco.cents;
+  const vezes = recuperadoCents / PRECO_MENSAL_CENTS;
 
   return (
     <main className="max-w-2xl space-y-6">
@@ -128,7 +123,7 @@ export default async function PaginaAssinatura({
             </p>
             <p className="mt-3 rounded-xl bg-panel-bg p-3 text-sm text-panel-ink">
               Isso é <strong>{vezes.toFixed(1)}x</strong> o valor da mensalidade de{" "}
-              {reais(preco.cents)}.
+              {reais(PRECO_MENSAL_CENTS)}.
             </p>
             {semAtribuicao._count > 0 && (
               <p className="mt-3 text-xs text-panel-sub">
@@ -146,31 +141,13 @@ export default async function PaginaAssinatura({
           Plano
         </h2>
         <p className="mt-2 text-panel-ink">
-          <span className="font-display text-2xl">{reais(preco.cents)}</span>
+          <span className="font-display text-2xl">{reais(PRECO_MENSAL_CENTS)}</span>
           <span className="text-sm text-panel-sub"> /mês, impostos inclusos</span>
-          {preco.fundador && (
-            <span className="ml-2 text-sm text-panel-sub line-through">
-              {reais(PRECO_LISTA_CENTS)}
-            </span>
-          )}
         </p>
-
-        {/* Escassez contada pelo banco. Se um dia esse número for escrito à mão,
-            vira a publicidade enganosa que a Constituição proíbe. */}
-        {preco.fundador && (
-          <p className="mt-2 rounded-xl bg-amber/20 p-3 text-sm text-[#7A5A10]">
-            <strong>
-              Preço de fundador: {preco.vagasRestantes} vaga
-              {preco.vagasRestantes > 1 ? "s" : ""} de {20}.
-            </strong>{" "}
-            Quem entra agora paga {reais(preco.cents)} para sempre, mesmo depois que o
-            preço subir. Em troca, pedimos seu depoimento depois de 60 dias — só se a
-            Nexora tiver funcionado para você.
-          </p>
-        )}
-
         <p className="mt-2 text-sm text-panel-sub">
-          Cartão ou boleto. Cancele quando quiser — você fica com o período que já pagou.
+          Primeiro mês grátis, sem cartão — você só decide se paga depois de ver o
+          resultado. Depois, cartão ou boleto, e cancele quando quiser: você fica com o
+          período que já pagou.
         </p>
 
         {!stripeConfigurado() && (
@@ -184,7 +161,7 @@ export default async function PaginaAssinatura({
           estado={estado}
           temAssinatura={Boolean(empresa.stripeCustomerId)}
           habilitado={stripeConfigurado()}
-          precoTexto={reais(preco.cents)}
+          precoTexto={reais(PRECO_MENSAL_CENTS)}
         />
       </section>
     </main>

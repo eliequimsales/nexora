@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSessionCompanyId } from "@/lib/auth";
 import { TRIAL_DIAS } from "@/lib/billing/acesso";
-import { contarAssinantes, precoAtual } from "@/lib/billing/vagas";
 import { stripe, stripeConfigurado } from "@/lib/billing/stripe";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
@@ -60,14 +59,10 @@ export async function POST(request: Request) {
       });
     }
 
-    // A vaga de fundador é decidida AQUI, no servidor, e não pelo que a tela
-    // mostrava — entre carregar a página e clicar, a última vaga pode ter ido.
-    const preco = precoAtual(await contarAssinantes());
-
     const sessao = await stripe().checkout.sessions.create({
       mode: "subscription",
       customer: customerId,
-      line_items: [{ price: preco.priceId, quantity: 1 }],
+      line_items: [{ price: process.env.STRIPE_PRICE_PRO!, quantity: 1 }],
 
       // Trial sem cartão: no ICP brasileiro pequeno, exigir cartão para testar
       // derruba o topo do funil a ponto de não haver o que medir.
@@ -97,6 +92,14 @@ export async function POST(request: Request) {
       // dono paga, volta ao painel e lê "período de teste".
       success_url: `${appUrl}/painel/assinatura?ok=1&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/painel/assinatura?cancelado=1`,
+    });
+
+    // Carrinho abandonado: marca a intenção AGORA. Quem chegou até aqui e não
+    // voltou é a lista mais quente que existe, e sem esta marca não há como
+    // saber quem foi. É apagada quando a assinatura nasce.
+    await prisma.company.update({
+      where: { id: companyId },
+      data: { checkoutAbertoEm: new Date() },
     });
 
     return NextResponse.json({ url: sessao.url });
