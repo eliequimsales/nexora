@@ -13,6 +13,7 @@ const NAV = [
   { href: "/painel/treinamento", label: "Treinamento" },
   { href: "/painel/configuracoes", label: "Meu Atendente" },
   { href: "/painel/relatorios", label: "Relatórios" },
+  { href: "/painel/assinatura", label: "Minha conta" },
 ];
 
 export default async function PainelLayout({ children }: { children: React.ReactNode }) {

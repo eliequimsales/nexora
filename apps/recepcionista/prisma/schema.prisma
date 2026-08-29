@@ -35,6 +35,49 @@ model Company {
 
   // Identificador público da página de agendamento: nexora.app/agendar/{slug}
   slug String? @unique
+
+  // ——— Cobrança (Stripe) ———
+  // A assinatura é 1:1 com Company, que já é o tenant. Model separado só
+  // acrescentaria um join em toda checagem de acesso.
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+  // trialing | active | past_due | paused | canceled | incomplete
+  subscriptionStatus   String?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean   @default(false)
+  trialEndsAt          DateTime?
+  // card | boleto — a Stripe no Brasil não faz Pix recorrente.
+  paymentMethodType    String?
+  // CPF/CNPJ do cliente, para a NFS-e que é emitida FORA da Stripe.
+  taxId                String?
+
+  // Dunning. Escritos SÓ por invoice.payment_failed, que nunca toca em
+  // subscriptionStatus — status tem um escritor único, customer.subscription.*.
+  falhasSeguidas       Int       @default(0)
+  dunningIniciadoEm    DateTime?
+  ultimoErroPagamento  String?
+}
+
+// Evento da Stripe já visto. A Stripe REENVIA eventos e não garante ordem de
+// entrega — sem isto, um retry de `invoice.paid` registra a receita duas vezes
+// e corrompe exatamente a North Star (Receita Recuperada comprovada).
+//
+// `id` é a PK justamente para que o `create` seja a reivindicação atômica: só
+// ele estoura P2002 sob corrida. Um `upsert` aqui seria inútil — por definição
+// ele atualiza em vez de falhar, e as duas entregas concorrentes passariam.
+//
+// `processedAt` só é gravado DEPOIS do efeito colateral dar certo. Marcar antes
+// perderia o evento para sempre quando o handler falhasse.
+model StripeEvent {
+  id          String    @id
+  type        String
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime?
+  attempts    Int       @default(1)
+  companyId   String?
+  erro        String?
+
+  @@index([processedAt])
 }
 
 // Base de conhecimento da IA — tudo que a recepcionista sabe vem daqui.

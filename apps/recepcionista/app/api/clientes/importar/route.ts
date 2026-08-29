@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionCompanyId } from "@/lib/auth";
+import { exigirAcesso } from "@/lib/billing/guarda";
 import { logError } from "@/lib/errors";
 import { gravarImportacao } from "@/lib/importacao/gravar";
 import { importar } from "@/lib/importacao/parsers";
@@ -49,6 +50,14 @@ export async function POST(request: Request) {
       );
     }
     const { texto, meuNome, simular, confirmo } = parsed.data;
+
+    // A SIMULAÇÃO continua liberada mesmo sem assinatura: ver quantos clientes
+    // sumidos existem na própria lista é o argumento de venda, não o produto.
+    // Só a gravação — que é o que custa e o que entrega valor — exige acesso.
+    if (!simular) {
+      const barrado = await exigirAcesso(companyId, "IMPORTAR");
+      if (barrado) return barrado;
+    }
 
     if (!simular && !confirmo) {
       return NextResponse.json(

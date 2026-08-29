@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionCompanyId } from "@/lib/auth";
+import { exigirAcesso } from "@/lib/billing/guarda";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
 import { montarOndaDaSemana } from "@/lib/recuperacao/servico";
@@ -30,6 +31,11 @@ const marcarSchema = z.object({
 export async function GET() {
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+  // Gerar a onda é a ação de saída que o produto vende. É ela que trava sem
+  // assinatura — nunca a leitura da base, que é dado do próprio dono.
+  const barrado = await exigirAcesso(companyId, "GERAR_ONDA");
+  if (barrado) return barrado;
 
   try {
     const onda = await montarOndaDaSemana(companyId);
