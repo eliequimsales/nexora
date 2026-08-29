@@ -16,11 +16,13 @@ import Stripe from "stripe";
  */
 export const STRIPE_API_VERSION = "2026-08-26.dahlia" as const;
 
-/** R$ 79,90, com imposto EMBUTIDO — o Brasil não é suportado pelo Stripe Tax. */
-export const PRECO_MENSAL_CENTS = 7990;
-
 let cliente: Stripe | null = null;
 
+/**
+ * Só o preço de lista é obrigatório. Sem `STRIPE_PRICE_FUNDADOR` a cohort
+ * simplesmente não abre — o produto continua vendável, e é melhor cair no preço
+ * cheio do que quebrar o checkout por uma variável de campanha faltando.
+ */
 export function stripeConfigurado(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PRICE_PRO);
 }

@@ -11,10 +11,13 @@ export function BotoesAssinatura({
   estado,
   temAssinatura,
   habilitado,
+  precoTexto,
 }: {
   estado: EstadoConta;
   temAssinatura: boolean;
   habilitado: boolean;
+  /** Vem do servidor: o botão nunca anuncia um preço diferente do cobrado. */
+  precoTexto: string;
 }) {
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
@@ -48,7 +51,7 @@ export function BotoesAssinatura({
       : estado === "CANCELADO" || estado === "CANCELADO_COM_ACESSO"
         ? "Reativar minha assinatura"
         : "Gerenciar assinatura"
-    : "Assinar por R$ 79,90/mês";
+    : `Assinar por ${precoTexto}/mês`;
 
   return (
     <div className="mt-5">
