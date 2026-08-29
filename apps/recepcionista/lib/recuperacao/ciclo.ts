@@ -43,10 +43,33 @@ export const MEDIANA_POR_SEGMENTO: Record<string, number> = {
   padrao: 30,
 };
 
-export function medianaDoSegmento(segmento: string | null | undefined): number {
-  if (!segmento) return MEDIANA_POR_SEGMENTO.padrao;
-  return MEDIANA_POR_SEGMENTO[segmento] ?? MEDIANA_POR_SEGMENTO.padrao;
+/**
+ * Normaliza para a chave do mapa: sem acento, minúsculo, com hífen.
+ *
+ * "Salão de beleza" chegava como `salão-de-beleza`, que não existe no mapa, e
+ * caía no padrão de 30 dias EM SILÊNCIO — sem log, sem exceção, só um número
+ * errado. Salão tem mediana 38 (calculado com 30, gente em dia vira atrasada) e
+ * odontologia tem 180 (calculado com 30, a base inteira vira sumida).
+ */
+export function normalizarSegmento(bruto: string | null | undefined): string | null {
+  if (!bruto) return null;
+  const limpo = bruto
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-");
+  return limpo || null;
 }
+
+export function medianaDoSegmento(segmento: string | null | undefined): number {
+  const chave = normalizarSegmento(segmento);
+  if (!chave) return MEDIANA_POR_SEGMENTO.padrao;
+  return MEDIANA_POR_SEGMENTO[chave] ?? MEDIANA_POR_SEGMENTO.padrao;
+}
+
+/** Slugs válidos, derivados do próprio mapa — o select nunca dessincroniza. */
+export const SEGMENTOS = Object.keys(MEDIANA_POR_SEGMENTO).filter((s) => s !== "padrao");
 
 function mediana(valores: number[]): number {
   const ordenados = [...valores].sort((a, b) => a - b);

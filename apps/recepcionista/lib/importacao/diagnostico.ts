@@ -59,16 +59,83 @@ export type Diagnostico = {
   nomes: NomeDoTop[];
   corteHonesto: boolean;
   recomendacao: string;
+  /**
+   * Dado que a lista não trouxe.
+   *
+   * Existe para separar "não há oportunidade" de "não sei dizer" — duas coisas
+   * que o motor colapsava no mesmo `corteHonesto: true`. Recusar a venda por
+   * falta de DADO é bug; recusar por falta de OPORTUNIDADE é a Constituição.
+   */
+  faltando: { data: boolean; valor: boolean };
 };
 
 const DIA = 86_400_000;
 
+/** Diagnóstico que não pode ser feito: falta o dado, não a oportunidade. */
+function semDado(
+  base: ClienteBase[],
+  faltando: { data: boolean; valor: boolean },
+  recomendacao: string,
+): Diagnostico {
+  return {
+    totalClientes: base.length,
+    sumidos: 0,
+    percentualSumido: 0,
+    visitasEsperadasNoPeriodo: 0,
+    recuperavelCents: { min: 0, central: 0, max: 0 },
+    metodo: "",
+    confianca: "baixa",
+    motivoConfianca: recomendacao,
+    nomes: [],
+    // NÃO é Corte Honesto. O Corte Honesto é uma recusa de venda com base em
+    // evidência; isto é ausência de evidência, e tratar os dois como a mesma
+    // coisa fazia a porta de entrada da empresa recusar todo mundo que colou a
+    // conversa do WhatsApp — o caminho de menor fricção, e o mais comum.
+    corteHonesto: false,
+    recomendacao,
+    faltando,
+  };
+}
+
 export function gerarDiagnostico(
   base: ClienteBase[],
-  opcoes: { hoje?: Date; medianaSegmentoDias?: number } = {},
+  opcoes: {
+    hoje?: Date;
+    medianaSegmentoDias?: number;
+    /** Ticket informado pelo DONO quando a lista não traz valor nenhum. */
+    ticketPadraoCents?: number;
+  } = {},
 ): Diagnostico {
   const hoje = opcoes.hoje ?? new Date();
   const mediana = opcoes.medianaSegmentoDias ?? 30;
+
+  // Lista vazia é Corte Honesto de verdade: não falta um dado, falta a base.
+  // Sem esta porta, a ausência total cairia no caminho de "falta a data" e o
+  // diagnóstico pediria uma coluna para uma lista que não tem nenhuma linha.
+  const temData = base.length > 0 && base.some((c) => c.visitas.length > 0);
+  const temValor = base.some((c) => c.visitas.some((v) => v.valorCents > 0));
+  const ticketPadrao = opcoes.ticketPadraoCents ?? 0;
+
+  // Sem data não existe "sumido" — existe "não sei quando ele veio". Sem essa
+  // porta, `classificar()` recebe ultimaVisita null, devolve RESGATE para todo
+  // mundo, e a tela afirma que 100% da base sumiu. Número inflado mente tanto
+  // quanto número escondido.
+  if (base.length > 0 && !temData) {
+    return semDado(
+      base,
+      { data: true, valor: !temValor && ticketPadrao <= 0 },
+      "Sua lista não tem a data do último atendimento. Sem ela eu consigo ver quem são os " +
+        "seus clientes, mas não consigo saber quem sumiu — e eu não vou chutar. " +
+        "Inclua a data e refaça: leva dois minutos.",
+    );
+  }
+
+  // Sem a coluna de valor o cálculo do DINHEIRO não sai — mas a contagem de
+  // quem sumiu sai, porque ela só depende das datas. Esconder as duas coisas
+  // jogaria fora a metade do diagnóstico que ainda é verdadeira.
+  // `base.length > 0` de novo pelo mesmo motivo: numa lista vazia não falta o
+  // valor, falta a lista — e isso é Corte Honesto, não dado ausente.
+  const semValorUtil = base.length > 0 && !temValor && ticketPadrao <= 0;
 
   const avaliados = base.map((c) => {
     const datas = c.visitas.map((v) => v.data);
@@ -83,7 +150,10 @@ export function gerarDiagnostico(
       hoje,
     });
     const gasto = c.visitas.reduce((s, v) => s + v.valorCents, 0);
-    const ticket = c.visitas.length ? Math.round(gasto / c.visitas.length) : 0;
+    const doHistorico = c.visitas.length ? Math.round(gasto / c.visitas.length) : 0;
+    // Quando a lista não traz valor, usamos o que o DONO informou. A tela diz
+    // de onde veio o número; inventar em silêncio seria pior que não calcular.
+    const ticket = doHistorico > 0 ? doHistorico : ticketPadrao;
     return { cliente: c, ciclo, classificacao, ticket, ultima };
   });
 
@@ -110,10 +180,17 @@ export function gerarDiagnostico(
 
   const comHistorico = avaliados.filter((a) => a.ciclo.confianca === "alta").length;
   const proporcao = avaliados.length ? comHistorico / avaliados.length : 0;
-  const confianca: "alta" | "baixa" = proporcao >= 0.5 ? "alta" : "baixa";
+  // Ticket informado pelo dono derruba a confiança para baixa, sempre: o valor
+  // não saiu dos registros dele, saiu da memória dele.
+  const usouTicketInformado = !temValor && ticketPadrao > 0;
+  const confianca: "alta" | "baixa" =
+    !usouTicketInformado && proporcao >= 0.5 ? "alta" : "baixa";
 
-  const motivoConfianca =
-    confianca === "alta"
+  const motivoConfianca = usouTicketInformado
+    ? `O valor de cada atendimento foi VOCÊ que me informou (${reais(ticketPadrao)}), porque ` +
+      `sua lista não trazia esse dado. A frequência é a dos seus registros, mas o dinheiro ` +
+      `depende desse número que você deu — se ele variar muito entre clientes, o total varia junto.`
+    : confianca === "alta"
       ? `${comHistorico} de ${avaliados.length} clientes têm 3 ou mais visitas registradas — dá para calcular o ritmo de cada um.`
       : `Poucos clientes têm histórico suficiente (só ${comHistorico} de ${avaliados.length} têm 3 ou mais visitas). ` +
         `Sem isso usamos a média do segmento, e o valor pode errar bastante para mais ou para menos.`;
@@ -131,7 +208,39 @@ export function gerarDiagnostico(
       porque: porque(a),
     }));
 
-  const corteHonesto = sumidos.length < MIN_SUMIDOS || min < MIN_RECUPERAVEL_CENTS;
+  // O Corte Honesto pressupõe que dá para medir. Sem valor, `min` é 0 por falta
+  // de dado e não por falta de oportunidade — recusar aí seria recusar todo
+  // mundo que colou a exportação do WhatsApp, que é o caminho mais fácil e o
+  // mais comum. Falta de evidência não é evidência de ausência.
+  const corteHonesto = semValorUtil
+    ? false
+    : sumidos.length < MIN_SUMIDOS || min < MIN_RECUPERAVEL_CENTS;
+
+  if (semValorUtil) {
+    return {
+      totalClientes: base.length,
+      sumidos: sumidos.length,
+      percentualSumido: base.length
+        ? Math.round((sumidos.length / base.length) * 100)
+        : 0,
+      visitasEsperadasNoPeriodo: visitasEsperadas,
+      recuperavelCents: { min: 0, central: 0, max: 0 },
+      metodo:
+        "Contei quem sumiu pela frequência de cada um na sua lista. O valor eu ainda não " +
+        "consigo calcular, porque a lista não traz quanto cada atendimento custou.",
+      confianca: "baixa",
+      motivoConfianca:
+        "Sua lista não tem o valor de cada atendimento, então eu sei QUEM sumiu mas não " +
+        "sei QUANTO isso vale. Me diga quanto você cobra em média que eu refaço a conta.",
+      nomes,
+      corteHonesto: false,
+      recomendacao:
+        `Achei ${sumidos.length} cliente${sumidos.length === 1 ? "" : "s"} que sumiu` +
+        `${sumidos.length === 1 ? "" : "ram"} da sua lista. Para eu dizer quanto isso é em ` +
+        `dinheiro, me informe quanto você cobra em média por atendimento.`,
+      faltando: { data: false, valor: true },
+    };
+  }
 
   return {
     totalClientes: base.length,
@@ -155,6 +264,7 @@ export function gerarDiagnostico(
           `Volte quando a base estiver maior.`
       : `Vale a pena: são ${sumidos.length} clientes sumidos e uma faixa de ${reais(min)} a ${reais(max)} ` +
         `recuperáveis nos próximos 90 dias.`,
+    faltando: { data: false, valor: false },
   };
 }
 

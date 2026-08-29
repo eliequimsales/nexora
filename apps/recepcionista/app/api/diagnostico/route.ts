@@ -26,6 +26,10 @@ const schema = z.object({
   texto: z.string().min(10, "Cole ou envie a lista de clientes").max(2_000_000),
   segmento: z.string().max(60).optional(),
   meuNome: z.string().max(80).optional(),
+  // Preenchido pelo dono quando a lista não traz o valor de cada atendimento —
+  // sem isso a exportação do WhatsApp nunca produz número, e ela é o caminho de
+  // menor fricção. Entre R$ 5 e R$ 5.000.
+  ticketPadraoCents: z.number().int().min(500).max(500_000).optional(),
 });
 
 export async function POST(request: Request) {
@@ -42,7 +46,7 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    const { texto, segmento, meuNome } = parsed.data;
+    const { texto, segmento, meuNome, ticketPadraoCents } = parsed.data;
 
     const importacao = importar(texto, { meuNome });
 
@@ -52,6 +56,9 @@ export async function POST(request: Request) {
           error:
             "Não consegui ler nenhum cliente nessa lista. Ela precisa ter pelo menos nome e telefone. " +
             "Se estiver difícil, me manda do jeito que estiver que eu converto na mão.",
+          // Mesmo nome de campo do 200. O 422 devolvia `ignoradas` e o 200
+          // `exemplosIgnorados`, e a tela lia um e perdia o outro em silêncio.
+          exemplosIgnorados: importacao.ignoradas.slice(0, 5),
           ignoradas: importacao.ignoradas.slice(0, 5),
         },
         { status: 422 },
@@ -65,9 +72,10 @@ export async function POST(request: Request) {
     }));
 
     const diagnostico = gerarDiagnostico(base, {
-      medianaSegmentoDias: medianaDoSegmento(
-        segmento?.toLowerCase().replace(/\s+/g, "-") ?? null,
-      ),
+      // medianaDoSegmento normaliza acento e caixa por dentro. Antes disso,
+      // "Salão de beleza" caía no padrão de 30 dias em silêncio.
+      medianaSegmentoDias: medianaDoSegmento(segmento ?? null),
+      ticketPadraoCents,
     });
 
     return NextResponse.json({
