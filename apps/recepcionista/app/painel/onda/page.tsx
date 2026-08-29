@@ -53,6 +53,17 @@ const ROTULO_ESTEIRA: Record<string, { texto: string; classe: string }> = {
 };
 
 export default function PaginaOnda() {
+  // Quem chega do diagnóstico acabou de ver os próprios clientes sumidos e
+  // criou a conta por causa disso. Cair numa tela igual à de sempre quebra a
+  // promessa que a página de venda acabou de fazer — ele precisa ver, aqui,
+  // que aquela mesma lista chegou inteira.
+  const [vindoDoDiagnostico, setVindoDoDiagnostico] = useState(false);
+  useEffect(() => {
+    setVindoDoDiagnostico(
+      new URLSearchParams(window.location.search).get("origem") === "diagnostico",
+    );
+  }, []);
+
   const [onda, setOnda] = useState<Onda | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
@@ -153,6 +164,19 @@ export default function PaginaOnda() {
 
   return (
     <main className="p-4 sm:p-6 max-w-2xl space-y-4">
+      {vindoDoDiagnostico && (
+        <div className="rounded-2xl border border-panel-line bg-panel-card p-5">
+          <p className="font-display text-panel-ink">
+            Sua lista entrou inteira. Não precisa colar de novo.
+          </p>
+          <p className="mt-2 text-sm text-panel-sub">
+            Aqueles clientes que você viu na tela anterior estão aqui embaixo, com a
+            mensagem já escrita para cada um. Comece mandando para três — leva dois
+            minutos e você já sente se funciona.
+          </p>
+        </div>
+      )}
+
       <header>
         <h1 className="font-display text-2xl text-panel-ink">
           Onda de segunda — {total} clientes
