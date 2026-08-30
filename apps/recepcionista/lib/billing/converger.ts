@@ -107,8 +107,10 @@ export async function convergirDoCheckout(sessionId: string): Promise<string | n
   const companyId = companyIdDe(sessao);
   if (!companyId) return null;
 
-  // Boleto emitido e ainda não compensado chega aqui como `unpaid`. Liberar
-  // nesse ponto dá o mês de graça para quem só imprimiu o boleto.
+  // Pagamento assíncrono ainda não compensado chega aqui como `unpaid`, e
+  // liberar nesse ponto daria o mês de graça a quem só gerou a cobrança. Hoje
+  // só cartão está ligado e este caminho é raro; a guarda existe para o dia em
+  // que o boleto entrar, quando ele passa a ser o caso COMUM.
   if (!deveProvisionar(sessao)) return companyId;
 
   const sub = sessao.subscription;

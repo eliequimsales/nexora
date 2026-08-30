@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { formasDePagamentoTexto } from "@/lib/billing/preco";
 import { PainelDiagnostico } from "./painel";
 
 export const metadata: Metadata = {
@@ -163,7 +164,7 @@ export default function PaginaDiagnostico() {
               "O primeiro mês é grátis e não pedimos cartão para começar.",
               "Cancele quando quiser — você fica com o período que já pagou.",
               "Sua base é sua: dá para exportar e apagar a qualquer momento, inclusive depois de cancelar.",
-              "Cartão ou boleto.",
+              `Pagamento por ${formasDePagamentoTexto()}.`,
             ].map((item) => (
               <li key={item} className="flex gap-3">
                 <span className="mt-1 text-amber">✓</span>

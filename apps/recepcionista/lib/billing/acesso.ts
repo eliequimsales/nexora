@@ -77,7 +77,7 @@ export const TOLERANCIA_DIAS = 7;
  * saber" justo quando o dono precisa decidir se paga.
  *
  * Sem cartão na entrada: o público não tem cartão de crédito para assinatura
- * (é por isso que boleto está ligado), e exigir cartão para TESTAR eliminaria
+ * na entrada, e exigir cartão para TESTAR eliminaria
  * essa fatia no ponto mais caro do funil. O custo dessa escolha é real e está
  * pago em outro lugar: no fim do trial a assinatura PAUSA em vez de cobrar, e
  * é o motor de reengajamento que traz o dono de volta.

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getSessionCompanyId } from "@/lib/auth";
 import { estadoDaConta, TOLERANCIA_DIAS, TRIAL_DIAS } from "@/lib/billing/acesso";
 import { convergirDoCheckout } from "@/lib/billing/converger";
-import { emReais, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
+import { emReais, formasDePagamentoTexto, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
 import { stripeConfigurado } from "@/lib/billing/stripe";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
@@ -147,8 +147,8 @@ export default async function PaginaAssinatura({
         </p>
         <p className="mt-2 text-sm text-panel-sub">
           Primeiro mês grátis, sem cartão — você só decide se paga depois de ver o
-          resultado. Depois, cartão ou boleto, e cancele quando quiser: você fica com o
-          período que já pagou.
+          resultado. Depois, {formasDePagamentoTexto()}, e cancele quando quiser: você
+          fica com o período que já pagou.
         </p>
 
         {!stripeConfigurado() && (

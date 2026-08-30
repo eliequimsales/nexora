@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
  * Abre o Checkout hospedado da Stripe.
  *
  * Hospedado, e não Payment Element, porque o Checkout já entrega em pt-BR:
- * cartão com 3DS, boleto com a página do voucher, atualização de cartão quando
+ * cartão com 3DS, atualização de cartão quando
  * a renovação falha, e mantém a operação em PCI SAQ-A. Cada uma dessas telas
  * feita à mão é uma semana que não vira Receita Recuperada.
  *

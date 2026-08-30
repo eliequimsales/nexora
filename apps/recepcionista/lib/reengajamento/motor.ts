@@ -20,6 +20,8 @@
  *   3. Quem pediu para não receber não recebe nada, em nenhuma hipótese.
  */
 
+import { formasDePagamentoTexto } from "@/lib/billing/preco";
+
 export const MOMENTOS = [
   "PAGAMENTO_FALHOU",
   "COMPRA_NAO_FINALIZADA",
@@ -135,7 +137,8 @@ export function decidirToque(s: Sinais, agora: Date): Toque | null {
       corpo: comNumero(
         `${s.nome}, vi que você chegou até a tela de pagamento e não terminou. ` +
           `Sem problema — não cobrei nada e sua conta está do jeito que estava.\n\n` +
-          `Se travou em alguma coisa (cartão, boleto, uma dúvida sobre a garantia), ` +
+          `Se travou em alguma coisa (o ${formasDePagamentoTexto()}, uma dúvida ` +
+          `sobre a garantia), ` +
           `me responde este e-mail que eu resolvo com você. Se foi só a vida acontecendo, ` +
           `o link abaixo continua valendo.`,
       ),
