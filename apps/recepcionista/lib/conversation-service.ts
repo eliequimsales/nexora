@@ -7,6 +7,8 @@ import { generateReceptionistReply, type HistoryMessage } from "./ai/provider";
 import { DEFAULT_HANDOFF_TERMS, matchQuickReply } from "./ai/quick-reply";
 import { asSegments, getApprovedKnowledge, recordKnowledgeGap } from "./training";
 import { slugifySegment, type SegmentTopic } from "./segments";
+import { pediuParaParar } from "./recuperacao/optout";
+import { variantesDeTelefone } from "./recuperacao/telefone";
 import { sendWhatsAppText, type IncomingWhatsAppMessage } from "./whatsapp/evolution";
 import type { BusinessHour, Faq } from "./validation";
 
@@ -43,6 +45,15 @@ async function saveOutgoing(conversationId: string, content: string, role: "AI" 
  * (humano atendendo? gatilho de handoff?) → IA gera resposta com base no
  * cadastro → envia pelo WhatsApp → salva tudo → atualiza status/lead.
  */
+/**
+ * Resposta ao pedido de parar. Curta e sem tentativa de retenção: quem pediu
+ * para sair não quer negociar, e insistir aqui é o comportamento que faz o
+ * cliente bloquear o número da barbearia.
+ */
+const CONFIRMACAO_DESCADASTRO =
+  "Pronto, não te mando mais mensagem de retorno. " +
+  "Se um dia quiser marcar um horário, é só chamar aqui que eu te atendo normalmente.";
+
 export async function handleIncomingMessage(incoming: IncomingWhatsAppMessage): Promise<void> {
   const startedAt = Date.now();
 
@@ -114,6 +125,37 @@ export async function handleIncomingMessage(incoming: IncomingWhatsAppMessage): 
       // no índice único e deve encerrar em silêncio (não é erro real)
       if ((error as { code?: string }).code === "P2002") return;
       throw error;
+    }
+
+    // 4.5 PEDIDO DE DESCADASTRO.
+    //
+    // Vem ANTES de tudo — inclusive antes do silêncio por atendimento humano —
+    // porque isto não é preferência de atendimento, é revogação de
+    // consentimento: a LGPD manda honrar independente de quem está na conversa.
+    //
+    // O `in` com as variantes existe porque a planilha do dono guarda
+    // "11988881234" e o WhatsApp entrega "5511988881234". Comparar direto
+    // acharia zero e não reclamaria.
+    //
+    // Opt-out barra a mensagem que a Nexora MANDA (a Onda), não a conversa que
+    // o cliente inicia. Ele continua podendo chamar para marcar horário — por
+    // isso a confirmação diz exatamente isso, e nada é bloqueado aqui.
+    if (pediuParaParar(incoming.text)) {
+      await prisma.customer.updateMany({
+        where: {
+          companyId,
+          phone: { in: variantesDeTelefone(incoming.phone) },
+          optOut: false,
+        },
+        data: { optOut: true, optOutAt: now },
+      });
+
+      if (conversation.status !== "HUMAN" && conversation.status !== "WAITING_HUMAN") {
+        await sendWhatsAppText(incoming.instance, incoming.phone, CONFIRMACAO_DESCADASTRO);
+        await saveOutgoing(conversation.id, CONFIRMACAO_DESCADASTRO);
+      }
+      logTiming("descadastro", startedAt);
+      return;
     }
 
     // 5. Equipe atendendo (ou aguardando equipe): o Atendente fica em silêncio

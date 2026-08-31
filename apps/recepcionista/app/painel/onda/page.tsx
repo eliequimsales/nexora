@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { MOTIVOS_PULO, rotuloDoMotivo } from "@/lib/recuperacao/pulo";
 
 /**
  * A ONDA DE SEGUNDA
@@ -242,20 +243,14 @@ export default function PaginaOnda() {
                 <p className="mt-3 text-sm text-leaf-dark">{feito}</p>
               ) : pulando === card.id ? (
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {[
-                    ["MUDOU_CIDADE", "Mudou de cidade"],
-                    ["NAO_E_CLIENTE", "Não é mais cliente"],
-                    ["FALECEU", "Faleceu"],
-                    ["EVENTO", "Só cliente de evento"],
-                    ["OUTRO", "Outro"],
-                  ].map(([valor, texto]) => (
+                  {MOTIVOS_PULO.map((valor) => (
                     <button
                       key={valor}
                       type="button"
                       onClick={() => marcar(card, "PULADO", { motivoPulo: valor })}
                       className="text-xs rounded-lg border border-panel-line px-2.5 py-1.5 text-panel-sub hover:border-panel-sub"
                     >
-                      {texto}
+                      {rotuloDoMotivo(valor)}
                     </button>
                   ))}
                 </div>

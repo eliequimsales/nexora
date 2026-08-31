@@ -4,6 +4,7 @@ import { getSessionCompanyId } from "@/lib/auth";
 import { exigirAcesso } from "@/lib/billing/guarda";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
+import { deveSilenciar, MOTIVOS_PULO } from "@/lib/recuperacao/pulo";
 import { montarOndaDaSemana } from "@/lib/recuperacao/servico";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ const marcarSchema = z.object({
   resultado: z.enum(["VOLTOU", "MARCOU", "RESPONDEU", "SEM_RESPOSTA", "PULADO"]),
   valorCents: z.number().int().min(0).optional(),
   motivoPulo: z
-    .enum(["MUDOU_CIDADE", "NAO_E_CLIENTE", "FALECEU", "EVENTO", "OUTRO"])
+    .enum(MOTIVOS_PULO)
     .optional(),
 });
 
@@ -81,9 +82,12 @@ export async function POST(request: Request) {
       },
     });
 
-    // Pulou por "não é mais cliente"? Sai da fila de vez — a próxima onda fica
-    // mais limpa, e isso é dito ao dono na resposta.
-    if (resultado === "PULADO" && motivoPulo && motivoPulo !== "OUTRO") {
+    // Sai da fila de vez — a próxima onda fica mais limpa, e isso é dito ao
+    // dono na resposta. Quem decide é lib/recuperacao/pulo.ts: antes a regra
+    // era um `!== "OUTRO"` aqui, e "pediu para parar" nem existia como motivo,
+    // então o cliente que exercia o direito dele caía em OUTRO e continuava
+    // recebendo mensagem.
+    if (resultado === "PULADO" && deveSilenciar(motivoPulo)) {
       await prisma.customer.update({
         where: { id: clienteId },
         data: { optOut: true, optOutAt: new Date() },
