@@ -21,9 +21,9 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Nexora Atendente — Atendimento 24h no WhatsApp",
+  title: "Nexora — recuperação de clientes inativos",
   description:
-    "Um Atendente Digital que responde seus clientes 24 horas por dia no WhatsApp. Aprende sobre sua empresa, responde dúvidas, captura oportunidades e encaminha para sua equipe quando necessário.",
+    "A Nexora descobre quais clientes pararam de voltar e te entrega a mensagem pronta para trazer cada um. Primeiro mês grátis, sem cartão.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

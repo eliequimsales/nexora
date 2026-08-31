@@ -49,7 +49,7 @@ const reais = (cents: number) =>
 
 const ROTULO_ESTEIRA: Record<string, { texto: string; classe: string }> = {
   PRE_ATRASO: { texto: "Prestes a sumir", classe: "bg-amber/20 text-[#7A5A10]" },
-  ATRASO: { texto: "Atrasado", classe: "bg-leaf/15 text-leaf-dark" },
+  ATRASO: { texto: "Atrasado", classe: "bg-amber/15 text-amber-deep" },
   RESGATE: { texto: "Sumido há muito", classe: "bg-panel-line text-panel-sub" },
 };
 
@@ -154,7 +154,7 @@ export default function PaginaOnda() {
           </p>
           <a
             href={vazio?.acao.href ?? "/painel/clientes/importar"}
-            className="mt-5 inline-flex rounded-xl bg-leaf-dark px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110"
+            className="mt-5 inline-flex rounded-xl bg-amber px-5 py-3 text-sm font-semibold text-night transition hover:brightness-110"
           >
             {vazio?.acao.texto ?? "Importar minha lista de clientes"}
           </a>
@@ -191,7 +191,7 @@ export default function PaginaOnda() {
         </p>
         <div className="mt-3 h-1.5 rounded-full bg-panel-line overflow-hidden">
           <div
-            className="h-full bg-leaf-dark transition-all"
+            className="h-full bg-amber transition-all"
             style={{ width: `${(enviados / total) * 100}%` }}
           />
         </div>
@@ -240,7 +240,7 @@ export default function PaginaOnda() {
               ) : null}
 
               {feito ? (
-                <p className="mt-3 text-sm text-leaf-dark">{feito}</p>
+                <p className="mt-3 text-sm text-amber-deep">{feito}</p>
               ) : pulando === card.id ? (
                 <div className="mt-3 flex flex-wrap gap-2">
                   {MOTIVOS_PULO.map((valor) => (
@@ -263,7 +263,7 @@ export default function PaginaOnda() {
                     <button
                       type="button"
                       onClick={() => copiar(card)}
-                      className="rounded-lg bg-leaf-dark px-3 py-2 text-sm font-semibold text-white"
+                      className="rounded-lg bg-amber px-3 py-2 text-sm font-semibold text-night"
                     >
                       {copiado === card.id ? "Copiado ✓" : "Copiar mensagem"}
                     </button>
@@ -277,7 +277,7 @@ export default function PaginaOnda() {
                     <button
                       type="button"
                       onClick={() => marcar(card, "VOLTOU", { valorCents: card.ticketMedioCents })}
-                      className="rounded-lg border border-leaf-dark/40 px-3 py-2 text-sm text-leaf-dark hover:bg-leaf/10"
+                      className="rounded-lg border border-amber/40 px-3 py-2 text-sm text-amber-deep hover:bg-amber/10"
                     >
                       Voltou e pagou {reais(card.ticketMedioCents)}
                     </button>

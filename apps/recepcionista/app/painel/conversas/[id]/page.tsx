@@ -42,7 +42,7 @@ function MessageBubble({ message }: { message: MessageRow }) {
           fromCustomer
             ? "rounded-bl-md bg-panel-bg text-panel-ink"
             : message.role === "AI"
-              ? "rounded-br-md bg-leaf-dark text-white"
+              ? "rounded-br-md bg-amber text-night"
               : "rounded-br-md bg-panel-ink text-white"
         }`}
       >
@@ -141,7 +141,7 @@ export default function ConversaPage() {
     return (
       <div className="p-10 text-center">
         <p className="font-medium">Conversa não encontrada.</p>
-        <Link href="/painel/conversas" className="mt-2 inline-block text-sm text-leaf-dark underline">
+        <Link href="/painel/conversas" className="mt-2 inline-block text-sm text-amber-deep underline">
           Voltar para as conversas
         </Link>
       </div>
@@ -181,7 +181,7 @@ export default function ConversaPage() {
             <button
               onClick={() => runAction("reativar_ia")}
               disabled={busy}
-              className="rounded-lg border border-leaf-dark px-4 py-2 text-sm font-semibold text-leaf-dark transition hover:bg-leaf-dark/5 disabled:opacity-60"
+              className="rounded-lg border border-amber px-4 py-2 text-sm font-semibold text-amber-deep transition hover:bg-amber/5 disabled:opacity-60"
             >
               Devolver para o Atendente
             </button>
@@ -224,12 +224,12 @@ export default function ConversaPage() {
                 value={reply}
                 onChange={(e) => setReply(e.target.value)}
                 placeholder="Responder como equipe..."
-                className="flex-1 rounded-lg border border-panel-line px-3 py-2.5 text-sm outline-none focus:border-leaf-dark"
+                className="flex-1 rounded-lg border border-panel-line px-3 py-2.5 text-sm outline-none focus:border-amber"
               />
               <button
                 type="submit"
                 disabled={busy || !reply.trim()}
-                className="rounded-lg bg-leaf-dark px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-60"
+                className="rounded-lg bg-amber px-5 py-2.5 text-sm font-semibold text-night transition hover:brightness-110 disabled:opacity-60"
               >
                 Enviar
               </button>

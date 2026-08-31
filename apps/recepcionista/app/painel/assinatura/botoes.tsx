@@ -58,7 +58,7 @@ export function BotoesAssinatura({
       <button
         onClick={() => ir(rota)}
         disabled={carregando || !habilitado}
-        className="rounded-xl bg-leaf-dark px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-40"
+        className="rounded-xl bg-amber px-5 py-3 text-sm font-semibold text-night transition hover:brightness-110 disabled:opacity-40"
       >
         {carregando ? "Abrindo…" : texto}
       </button>

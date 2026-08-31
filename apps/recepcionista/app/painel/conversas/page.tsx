@@ -73,7 +73,7 @@ export default function ConversasPage() {
               onClick={() => setFilter(value)}
               className={`rounded-full border px-3.5 py-1.5 text-sm transition ${
                 active
-                  ? "border-leaf-dark bg-leaf-dark text-white"
+                  ? "border-amber bg-amber text-night"
                   : "border-panel-line bg-panel-card text-panel-sub hover:text-panel-ink"
               }`}
             >
@@ -91,7 +91,7 @@ export default function ConversasPage() {
             <p className="font-medium">Nenhuma conversa por aqui ainda.</p>
             <p className="mt-1 text-sm text-panel-sub">
               Conecte seu WhatsApp em{" "}
-              <Link href="/painel/configuracoes" className="text-leaf-dark underline">
+              <Link href="/painel/configuracoes" className="text-amber-deep underline">
                 Meu Atendente
               </Link>{" "}
               e as conversas aparecem aqui em tempo real.

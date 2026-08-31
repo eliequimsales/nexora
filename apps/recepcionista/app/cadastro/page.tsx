@@ -46,11 +46,11 @@ export default function CadastroPage() {
     <div className="flex min-h-screen items-center justify-center bg-panel-bg px-4 py-10 text-panel-ink">
       <div className="w-full max-w-sm">
         <Link href="/" className="mb-8 flex items-center justify-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-leaf-dark font-display text-base font-bold text-white">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber font-display text-base font-bold text-night">
             N
           </span>
           <span className="font-display text-lg font-semibold">
-            Nexora <span className="font-normal text-panel-sub">Atendente</span>
+            Nexora
           </span>
         </Link>
         <div className="rounded-2xl border border-panel-line bg-panel-card p-8 shadow-sm">
@@ -71,7 +71,7 @@ export default function CadastroPage() {
                   placeholder={field.placeholder}
                   value={form[field.key]}
                   onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
-                  className="w-full rounded-lg border border-panel-line bg-white px-3 py-2.5 text-sm text-panel-ink outline-none focus:border-leaf-dark"
+                  className="w-full rounded-lg border border-panel-line bg-white px-3 py-2.5 text-sm text-panel-ink outline-none focus:border-amber"
                 />
               </div>
             ))}
@@ -79,7 +79,7 @@ export default function CadastroPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-leaf-dark px-4 py-3 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-60"
+              className="w-full rounded-lg bg-amber px-4 py-3 text-sm font-semibold text-night transition hover:brightness-110 disabled:opacity-60"
             >
               {loading ? "Criando conta..." : "Criar meu Atendente"}
             </button>
@@ -93,7 +93,7 @@ export default function CadastroPage() {
         </div>
         <p className="mt-6 text-center text-sm text-panel-sub">
           Já tem conta?{" "}
-          <Link href="/login" className="font-semibold text-leaf-dark hover:underline">
+          <Link href="/login" className="font-semibold text-amber-deep hover:underline">
             Entrar
           </Link>
         </p>

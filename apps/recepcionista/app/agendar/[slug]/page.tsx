@@ -136,7 +136,7 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
     return (
       <main className="min-h-screen bg-panel-bg grid place-items-center p-6">
         <div className="w-full max-w-md bg-panel-card rounded-2xl border border-panel-line p-8 text-center">
-          <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-leaf/15 grid place-items-center text-2xl">
+          <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-amber/15 grid place-items-center text-2xl">
             ✓
           </div>
           <h1 className="font-display text-2xl text-panel-ink mb-2">Horário marcado</h1>
@@ -181,7 +181,7 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
                   onClick={() => trocarServico(s.id)}
                   className={`w-full flex items-center justify-between rounded-xl border px-3 py-2.5 text-left transition ${
                     servicoId === s.id
-                      ? "border-leaf-dark bg-leaf/10"
+                      ? "border-amber bg-amber/10"
                       : "border-panel-line hover:border-panel-sub"
                   }`}
                 >
@@ -213,7 +213,7 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
                   }}
                   className={`shrink-0 rounded-xl border px-3 py-2 text-sm transition ${
                     dia === d.dia
-                      ? "border-leaf-dark bg-leaf/10 text-panel-ink"
+                      ? "border-amber bg-amber/10 text-panel-ink"
                       : "border-panel-line text-panel-sub hover:border-panel-sub"
                   }`}
                 >
@@ -235,7 +235,7 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
                   onClick={() => setHora(h)}
                   className={`rounded-lg border py-2 text-sm tabular-nums transition ${
                     hora === h
-                      ? "border-leaf-dark bg-leaf/10 text-panel-ink"
+                      ? "border-amber bg-amber/10 text-panel-ink"
                       : "border-panel-line text-panel-sub hover:border-panel-sub"
                   }`}
                 >
@@ -253,14 +253,14 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
               value={nome}
               onChange={(e) => setNome(e.target.value)}
               placeholder="Seu nome"
-              className="w-full rounded-xl border border-panel-line px-3 py-2.5 text-panel-ink placeholder:text-panel-sub/70 focus:outline-none focus:border-leaf-dark"
+              className="w-full rounded-xl border border-panel-line px-3 py-2.5 text-panel-ink placeholder:text-panel-sub/70 focus:outline-none focus:border-amber"
             />
             <input
               value={telefone}
               onChange={(e) => setTelefone(mascararTelefone(e.target.value))}
               placeholder="(11) 99999-9999"
               inputMode="numeric"
-              className="w-full rounded-xl border border-panel-line px-3 py-2.5 text-panel-ink placeholder:text-panel-sub/70 focus:outline-none focus:border-leaf-dark"
+              className="w-full rounded-xl border border-panel-line px-3 py-2.5 text-panel-ink placeholder:text-panel-sub/70 focus:outline-none focus:border-amber"
             />
           </section>
         ) : null}
@@ -275,7 +275,7 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
           type="button"
           disabled={!podeMarcar || enviando}
           onClick={marcar}
-          className="w-full rounded-xl bg-leaf-dark py-3 font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed transition"
+          className="w-full rounded-xl bg-amber py-3 font-semibold text-night disabled:opacity-40 disabled:cursor-not-allowed transition"
         >
           {enviando ? "Marcando…" : "Confirmar horário"}
         </button>

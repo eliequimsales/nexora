@@ -133,7 +133,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 const inputClass =
-  "w-full rounded-lg border border-panel-line bg-white px-3 py-2.5 text-sm text-panel-ink outline-none focus:border-leaf-dark";
+  "w-full rounded-lg border border-panel-line bg-white px-3 py-2.5 text-sm text-panel-ink outline-none focus:border-amber";
 
 export default function ConfiguracoesPage() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -356,7 +356,7 @@ export default function ConfiguracoesPage() {
                 addSegment(newSegment);
                 setNewSegment("");
               }}
-              className="shrink-0 rounded-lg border border-panel-line px-4 text-sm transition hover:border-leaf-dark"
+              className="shrink-0 rounded-lg border border-panel-line px-4 text-sm transition hover:border-amber"
             >
               Adicionar
             </button>
@@ -379,7 +379,7 @@ export default function ConfiguracoesPage() {
                 }
               }}
               disabled={detecting}
-              className="shrink-0 rounded-lg border border-panel-line px-4 text-sm transition hover:border-leaf-dark disabled:opacity-50"
+              className="shrink-0 rounded-lg border border-panel-line px-4 text-sm transition hover:border-amber disabled:opacity-50"
             >
               {detecting ? "Analisando..." : "Sugerir áreas"}
             </button>
@@ -395,7 +395,7 @@ export default function ConfiguracoesPage() {
                     key={h.area}
                     type="button"
                     onClick={() => addSegment(h.area)}
-                    className="rounded-full border border-panel-line bg-panel-card px-3 py-1.5 text-sm transition hover:border-leaf-dark"
+                    className="rounded-full border border-panel-line bg-panel-card px-3 py-1.5 text-sm transition hover:border-amber"
                   >
                     {["🥇", "🥈", "🥉"][index] ?? "•"} {h.area} · {h.confidence}%
                   </button>
@@ -416,7 +416,7 @@ export default function ConfiguracoesPage() {
               key={preset.label}
               type="button"
               onClick={() => set("businessHours", preset.build())}
-              className="rounded-full border border-panel-line px-3.5 py-1.5 text-sm text-panel-sub transition hover:border-leaf-dark hover:text-leaf-dark"
+              className="rounded-full border border-panel-line px-3.5 py-1.5 text-sm text-panel-sub transition hover:border-amber hover:text-amber-deep"
             >
               {preset.label}
             </button>
@@ -524,7 +524,7 @@ export default function ConfiguracoesPage() {
         <button
           type="button"
           onClick={() => set("faqs", [...form.faqs, { question: "", answer: "" }])}
-          className="rounded-lg border border-dashed border-panel-line px-4 py-2 text-sm text-panel-sub hover:border-leaf-dark hover:text-leaf-dark"
+          className="rounded-lg border border-dashed border-panel-line px-4 py-2 text-sm text-panel-sub hover:border-amber hover:text-amber-deep"
         >
           + Adicionar pergunta
         </button>
@@ -600,7 +600,7 @@ export default function ConfiguracoesPage() {
                 }
                 setNewKeyword("");
               }}
-              className="shrink-0 rounded-lg border border-panel-line px-4 text-sm hover:border-leaf-dark"
+              className="shrink-0 rounded-lg border border-panel-line px-4 text-sm hover:border-amber"
             >
               Adicionar
             </button>
@@ -704,7 +704,7 @@ export default function ConfiguracoesPage() {
             type="button"
             onClick={connectWhatsApp}
             disabled={waBusy}
-            className="rounded-lg bg-leaf-dark px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-60"
+            className="rounded-lg bg-amber px-5 py-2.5 text-sm font-semibold text-night transition hover:brightness-110 disabled:opacity-60"
           >
             {waBusy
               ? "Conectando..."
@@ -759,7 +759,7 @@ export default function ConfiguracoesPage() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="rounded-lg bg-leaf-dark px-6 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-60"
+            className="rounded-lg bg-amber px-6 py-2.5 text-sm font-semibold text-night transition hover:brightness-110 disabled:opacity-60"
           >
             {saving ? "Salvando..." : "Salvar configurações"}
           </button>

@@ -19,7 +19,7 @@ function StatCard({ label, value, accent }: { label: string; value: number; acce
   return (
     <div className="rounded-2xl border border-panel-line bg-panel-card p-5">
       <p className="text-sm text-panel-sub">{label}</p>
-      <p className={`mt-1 font-mono text-3xl font-medium ${accent ? "text-leaf-dark" : ""}`}>
+      <p className={`mt-1 font-mono text-3xl font-medium ${accent ? "text-amber-deep" : ""}`}>
         {value}
       </p>
     </div>
@@ -54,7 +54,7 @@ export default function RelatoriosPage() {
               onClick={() => setDays(period)}
               className={`rounded-full border px-3.5 py-1.5 text-sm transition ${
                 days === period
-                  ? "border-leaf-dark bg-leaf-dark text-white"
+                  ? "border-amber bg-amber text-night"
                   : "border-panel-line bg-panel-card text-panel-sub hover:text-panel-ink"
               }`}
             >
@@ -99,7 +99,7 @@ export default function RelatoriosPage() {
             {reports.hourly.map((count, hour) => (
               <div key={hour} className="group relative flex-1">
                 <div
-                  className="w-full rounded-t bg-leaf-dark/80 transition group-hover:bg-leaf-dark"
+                  className="w-full rounded-t bg-amber/80 transition group-hover:bg-amber"
                   style={{ height: `${Math.max(2, (count / maxHourly) * 150)}px` }}
                   title={`${hour}h — ${count} mensagem${count === 1 ? "" : "s"}`}
                 />

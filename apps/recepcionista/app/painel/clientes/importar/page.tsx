@@ -97,7 +97,7 @@ export default function PaginaImportar() {
           )}
           <Link
             href="/painel/onda"
-            className="mt-5 inline-flex rounded-xl bg-leaf-dark px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110"
+            className="mt-5 inline-flex rounded-xl bg-amber px-5 py-3 text-sm font-semibold text-night transition hover:brightness-110"
           >
             Ver quem sumiu da minha base
           </Link>
@@ -128,11 +128,11 @@ export default function PaginaImportar() {
           }}
           rows={10}
           placeholder={EXEMPLO}
-          className="mt-2 w-full rounded-xl border border-panel-line bg-panel-bg p-3 font-mono text-sm text-panel-ink outline-none focus:border-leaf-dark"
+          className="mt-2 w-full rounded-xl border border-panel-line bg-panel-bg p-3 font-mono text-sm text-panel-ink outline-none focus:border-amber"
         />
 
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          <label className="cursor-pointer text-sm text-leaf-dark underline">
+          <label className="cursor-pointer text-sm text-amber-deep underline">
             ou escolher um arquivo
             <input
               type="file"
@@ -152,7 +152,7 @@ export default function PaginaImportar() {
           value={meuNome}
           onChange={(e) => setMeuNome(e.target.value)}
           placeholder="Como você aparece na conversa"
-          className="mt-2 w-full rounded-xl border border-panel-line bg-panel-bg p-3 text-sm text-panel-ink outline-none focus:border-leaf-dark"
+          className="mt-2 w-full rounded-xl border border-panel-line bg-panel-bg p-3 text-sm text-panel-ink outline-none focus:border-amber"
         />
         <p className="mt-1 text-xs text-panel-sub">
           Serve para a gente não cadastrar você mesmo como cliente.
@@ -249,7 +249,7 @@ export default function PaginaImportar() {
           <button
             onClick={() => enviar(false)}
             disabled={carregando || !confirmo || previa.criar + previa.visitasNovas === 0}
-            className="mt-4 rounded-xl bg-leaf-dark px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-40"
+            className="mt-4 rounded-xl bg-amber px-5 py-3 text-sm font-semibold text-night transition hover:brightness-110 disabled:opacity-40"
           >
             {carregando ? "Gravando…" : "Gravar na minha base"}
           </button>

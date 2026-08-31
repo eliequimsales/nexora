@@ -33,7 +33,7 @@ interface Report {
 }
 
 const inputClass =
-  "w-full rounded-lg border border-panel-line bg-white px-3 py-2.5 text-sm text-panel-ink outline-none focus:border-leaf-dark";
+  "w-full rounded-lg border border-panel-line bg-white px-3 py-2.5 text-sm text-panel-ink outline-none focus:border-amber";
 
 function Card({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -136,7 +136,7 @@ export default function TreinamentoPage() {
       </div>
 
       {/* Apresentação do Atendente */}
-      <div className="rounded-2xl border border-leaf-dark/20 bg-leaf-dark/5 p-6">
+      <div className="rounded-2xl border border-amber/20 bg-amber/5 p-6">
         <p className="text-sm leading-relaxed">
           Olá! Nesta semana participei de <strong>{stats.totalConversations}</strong> atendimento
           {stats.totalConversations === 1 ? "" : "s"} — resolvi{" "}
@@ -180,7 +180,7 @@ export default function TreinamentoPage() {
           <button
             onClick={beginInterview}
             disabled={busy === "interview" || interview.topics.every((t) => excludedTopics.has(t.topic))}
-            className="rounded-lg bg-leaf-dark px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-50"
+            className="rounded-lg bg-amber px-5 py-2.5 text-sm font-semibold text-night transition hover:brightness-110 disabled:opacity-50"
           >
             {busy === "interview" ? "Preparando..." : "Começar a entrevista"}
           </button>
@@ -229,7 +229,7 @@ export default function TreinamentoPage() {
                     )
                   }
                   disabled={busy === gap.id || !(answers[gap.id] ?? "").trim()}
-                  className="rounded-lg bg-leaf-dark px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-50"
+                  className="rounded-lg bg-amber px-4 py-2 text-sm font-semibold text-night transition hover:brightness-110 disabled:opacity-50"
                 >
                   Ensinar
                 </button>
@@ -265,7 +265,7 @@ export default function TreinamentoPage() {
                     <button
                       onClick={() => resolveInconsistency(group, option.id)}
                       disabled={busy !== null}
-                      className="shrink-0 rounded-lg border border-leaf-dark px-3 py-1.5 text-xs font-semibold text-leaf-dark transition hover:bg-leaf-dark hover:text-white disabled:opacity-50"
+                      className="shrink-0 rounded-lg border border-amber px-3 py-1.5 text-xs font-semibold text-amber-deep transition hover:bg-amber hover:text-night disabled:opacity-50"
                     >
                       Esta está correta
                     </button>
@@ -316,7 +316,7 @@ export default function TreinamentoPage() {
                       )
                     }
                     disabled={busy === item.id}
-                    className="rounded-lg bg-leaf-dark px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-50"
+                    className="rounded-lg bg-amber px-4 py-2 text-sm font-semibold text-night transition hover:brightness-110 disabled:opacity-50"
                   >
                     Aprovar — pode usar
                   </button>
@@ -339,7 +339,7 @@ export default function TreinamentoPage() {
       {/* Conhecimento do Atendente */}
       <Card title="Conhecimento do Atendente" hint="Onde vale a pena investir alguns minutos de treinamento.">
         <div className="flex items-center gap-3">
-          <span className="font-mono text-4xl font-medium text-leaf-dark">{score.overall}%</span>
+          <span className="font-mono text-4xl font-medium text-amber-deep">{score.overall}%</span>
           {score.openGaps > 0 && (
             <span className="text-sm text-panel-sub">
               {score.openGaps} dúvida{score.openGaps === 1 ? "" : "s"} em aberto
@@ -351,7 +351,7 @@ export default function TreinamentoPage() {
             <div key={area.label} className="flex items-center gap-3">
               <span className="w-44 shrink-0 text-sm text-panel-sub">{area.label}</span>
               <div className="h-2 flex-1 overflow-hidden rounded-full bg-panel-bg">
-                <div className="h-full rounded-full bg-leaf-dark/80" style={{ width: `${area.pct}%` }} />
+                <div className="h-full rounded-full bg-amber/80" style={{ width: `${area.pct}%` }} />
               </div>
               <span className="w-10 text-right font-mono text-xs text-panel-sub">{area.pct}%</span>
             </div>

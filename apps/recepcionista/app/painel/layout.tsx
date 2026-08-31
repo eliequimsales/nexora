@@ -32,11 +32,11 @@ export default async function PainelLayout({ children }: { children: React.React
         <div className="mx-auto flex max-w-page items-center justify-between px-6 py-3">
           <div className="flex items-center gap-8">
             <Link href="/painel/onda" className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-leaf-dark font-display text-sm font-bold text-white">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber font-display text-sm font-bold text-night">
                 N
               </span>
               <span className="font-display font-semibold">
-                Nexora <span className="font-normal text-panel-sub">Atendente</span>
+                Nexora
               </span>
             </Link>
             <nav className="hidden items-center gap-1 sm:flex">
