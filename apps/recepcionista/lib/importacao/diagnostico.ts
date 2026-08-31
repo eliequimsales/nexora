@@ -253,7 +253,7 @@ export function gerarDiagnostico(
     metodo:
       `Usamos o ticket e a frequência dos SEUS registros, e a faixa de 15% a 25% de retorno que ` +
       `campanhas de recuperação costumam dar em 90 dias. Projetamos ${visitasEsperadas} ` +
-      `visita${visitasEsperadas > 1 ? "s" : ""} por cliente recuperado na janela, porque quem volta retoma o ritmo dele.`,
+      `visita${visitasEsperadas > 1 ? "s" : ""} por cliente recuperado na janela, porque quem volta retoma o próprio ritmo.`,
     confianca,
     motivoConfianca,
     nomes,
@@ -296,14 +296,14 @@ function porque(a: {
 }): string {
   if (a.ciclo.confianca === "baixa") {
     return (
-      `Sumido há ${a.classificacao.diasDesdeUltima} dias, mas só ${a.ciclo.visitas} ` +
+      `Sem aparecer há ${a.classificacao.diasDesdeUltima} dias, mas só ${a.ciclo.visitas} ` +
       `visita${a.ciclo.visitas === 1 ? "" : "s"} registrada${a.ciclo.visitas === 1 ? "" : "s"} — ` +
-      `não dá para saber o ritmo dele. Trate como palpite: você conhece ele melhor que a gente.`
+      `não dá para saber o ritmo. Trate como palpite: você conhece essa pessoa melhor que a gente.`
     );
   }
   return (
     `Vinha a cada ${a.ciclo.dias} dias e sumiu há ${a.classificacao.diasDesdeUltima} dias — ` +
-    `${a.classificacao.diasAlemDoCiclo} além do normal dele. ` +
+    `${a.classificacao.diasAlemDoCiclo} além do ritmo normal. ` +
     `${a.ciclo.visitas} visitas registradas, ticket médio ${reais(a.ticket)}.`
   );
 }

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useReducer, useState } from "react";
+import { conviteDeVolta, primeiroNome } from "@/lib/recuperacao/convite";
 
 /**
  * O ÚNICO dono do estado desta página.
@@ -191,6 +192,7 @@ export function PainelDiagnostico() {
       <>
         <Resultado
           dados={e.dados}
+          meuNome={e.meuNome}
           ticketReais={e.ticketReais}
           onTicket={(v) => dispatch({ tipo: "campo", campo: "ticketReais", valor: v })}
           onRefazerComTicket={(cents) => analisar(cents)}
@@ -436,6 +438,7 @@ function FaixaRecuperavel({
 
 function Resultado({
   dados,
+  meuNome,
   ticketReais,
   onTicket,
   onRefazerComTicket,
@@ -444,6 +447,7 @@ function Resultado({
   onCriarConta,
 }: {
   dados: Resposta;
+  meuNome: string;
   ticketReais: string;
   onTicket: (v: string) => void;
   onRefazerComTicket: (cents: number) => void;
@@ -513,7 +517,7 @@ function Resultado({
             Calcular quanto isso vale
           </button>
         </div>
-        <ComandaSumidos nomes={d.nomes} />
+        <ComandaSumidos nomes={d.nomes} negocio={meuNome} />
       </div>
     );
   }
@@ -583,7 +587,7 @@ function Resultado({
         </p>
       )}
 
-      <ComandaSumidos nomes={d.nomes} />
+      <ComandaSumidos nomes={d.nomes} negocio={meuNome} />
 
       {outros > 0 && (
         <p className="mt-5 rounded-xl border border-night-line p-4 text-sm leading-relaxed text-mist/65">
@@ -615,25 +619,63 @@ function Resultado({
   );
 }
 
-function ComandaSumidos({ nomes }: { nomes: NomeDoTop[] }) {
+/**
+ * A COMANDA — e o ponto em que a tela deixa de informar e passa a agir.
+ *
+ * Antes esta lista era leitura: nome, dias sumido, porquê. Bonito e inútil, do
+ * jeito que a Regra Zero proíbe. O dono está olhando o nome de uma cliente real
+ * com o telefone dela na mão; a ação que ele quer é falar com ela AGORA.
+ *
+ * O botão abre o WhatsApp com a mensagem escrita. Ele não precisa da conta, não
+ * precisa pagar, e não precisa pensar no que dizer — os três atritos que fazem
+ * uma boa intenção morrer entre a tela e o celular.
+ */
+function ComandaSumidos({ nomes, negocio }: { nomes: NomeDoTop[]; negocio: string }) {
   if (nomes.length === 0) return null;
   return (
     <div className="mt-6">
       <p className="text-xs uppercase tracking-wide text-mist/40">
         Comece por estes — são os que voltam mais fácil
       </p>
+      <p className="mt-1 text-sm leading-relaxed text-mist/55">
+        A mensagem já vai escrita. Mande para um agora, de graça, e veja se volta antes
+        de decidir qualquer coisa sobre a gente.
+      </p>
       <div className="mt-3 grid gap-3">
-        {nomes.map((n) => (
-          <div key={n.telefone + n.nome} className="rounded-xl border border-night-line p-4">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <span className="font-display font-semibold">{n.nome}</span>
-              <span className="font-mono text-xs text-mist/45">
-                sumido há {n.diasSumido} dias
-              </span>
+        {nomes.map((n) => {
+          const convite = conviteDeVolta({
+            nome: n.nome,
+            telefone: n.telefone,
+            negocio,
+          });
+          return (
+            <div key={n.telefone + n.nome} className="rounded-xl border border-night-line p-4">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <span className="font-display font-semibold">{n.nome}</span>
+                <span className="font-mono text-xs text-mist/45">
+                  sem aparecer há {n.diasSumido} dias
+                </span>
+              </div>
+              <p className="mt-2 text-sm leading-relaxed text-mist/60">{n.porque}</p>
+
+              {convite && (
+                <>
+                  <p className="mt-3 whitespace-pre-wrap rounded-lg bg-night/60 p-3 text-sm leading-relaxed text-mist/75">
+                    {convite.texto}
+                  </p>
+                  <a
+                    href={convite.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-flex w-full items-center justify-center rounded-lg border border-amber/40 px-4 py-2.5 text-sm font-semibold text-amber transition hover:bg-amber/10"
+                  >
+                    Mandar para {primeiroNome(n.nome) || "esse cliente"} no WhatsApp
+                  </a>
+                </>
+              )}
             </div>
-            <p className="mt-2 text-sm leading-relaxed text-mist/60">{n.porque}</p>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

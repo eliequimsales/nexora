@@ -26,21 +26,21 @@ const CARDS_DEMO = [
     nome: "Marcos Andrade",
     esteira: "Prestes a sumir",
     dias: 31,
-    porque: "Vinha a cada 24 dias. Está 7 além do normal dele.",
+    porque: "Vinha a cada 24 dias. Está 7 além do ritmo normal.",
     valor: "R$ 50",
   },
   {
     nome: "Juliana Prado",
     esteira: "Atrasado",
     dias: 58,
-    porque: "Vinha a cada 21 dias. Está 37 além do normal dela.",
+    porque: "Vinha a cada 21 dias. Está 37 além do ritmo normal.",
     valor: "R$ 120",
   },
   {
     nome: "Rafael Nunes",
     esteira: "Sumido há muito",
     dias: 143,
-    porque: "Vinha a cada 26 dias. Está 117 além do normal dele.",
+    porque: "Vinha a cada 26 dias. Está 117 além do ritmo normal.",
     valor: "R$ 65",
   },
 ];
@@ -157,7 +157,7 @@ export default function Home() {
                 <p className="mt-2 text-xs leading-relaxed text-mist/55">{c.porque}</p>
                 <div className="mt-3 flex items-center justify-between border-t border-night-line pt-3">
                   <span className="font-mono text-[11px] text-mist/40">
-                    sumido há {c.dias} dias · ticket {c.valor}
+                    sem aparecer há {c.dias} dias · ticket {c.valor}
                   </span>
                   <span className="font-mono text-[11px] text-amber">copiar mensagem</span>
                 </div>

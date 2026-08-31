@@ -61,21 +61,36 @@ export type ContextoMensagem = {
   horarioSugerido?: string;
 };
 
+/**
+ * Base de planilha vem suja: linha sem nome, empresa sem nome fantasia.
+ * Interpolar direto produzia "Oi, !" e "Aqui é da ." — erro que o dono só
+ * descobre depois de já ter mandado para o cliente dele.
+ */
+function vocativo(nome: string): string {
+  return nome ? `${nome}, ` : "";
+}
+
 export function mensagemDoToque(numero: number, ctx: ContextoMensagem): string {
-  const { primeiroNome, negocio, link, horarioSugerido = "essa semana" } = ctx;
+  const { link, horarioSugerido = "essa semana" } = ctx;
+  const primeiroNome = (ctx.primeiroNome ?? "").trim();
+  const negocio = (ctx.negocio ?? "").trim();
+  const chamado = vocativo(primeiroNome);
 
   switch (numero) {
-    case 1:
-      return `Oi, ${primeiroNome}! Aqui é da ${negocio}. Passei os olhos na agenda e vi que faz um tempo que você não aparece por aqui. Tá tudo certo por aí?\n\nSe quiser, eu te encaixo essa semana.`;
+    case 1: {
+      const abertura = primeiroNome ? `Oi, ${primeiroNome}!` : "Oi!";
+      const quem = negocio ? ` Aqui é da ${negocio}.` : "";
+      return `${abertura}${quem} Passei os olhos na agenda e vi que faz um tempo que você não aparece por aqui. Tá tudo certo por aí?\n\nSe quiser, eu te encaixo essa semana.`;
+    }
 
     case 2:
-      return `${primeiroNome}, separei ${horarioSugerido} pra você. Se não der nesse horário, me fala qual dia é melhor que eu ajeito.\n\nSe preferir escolher sozinho, dá pra marcar por aqui: ${link}`;
+      return `${chamado}separei ${horarioSugerido} pra você. Se não der nesse horário, me fala qual dia é melhor que eu ajeito.\n\nSe preferir escolher sozinho, dá pra marcar por aqui: ${link}`;
 
     case 3:
-      return `${primeiroNome}, agora dá pra marcar direto por aqui, sem precisar me chamar e esperar resposta: ${link}\n\nDá uma olhada nos horários da semana que vem, tem uns bons livres.`;
+      return `${chamado}agora dá pra marcar direto por aqui, sem precisar me chamar e esperar resposta: ${link}\n\nDá uma olhada nos horários da semana que vem, tem uns bons livres.`;
 
     case 4:
-      return `${primeiroNome}, é a última vez que te chamo pra não virar chatice.\n\nSe um dia quiser voltar, é só me mandar mensagem ou usar ${link} — você é sempre bem-vindo. E se preferir que eu não te mande mais nada, responde "parar" que eu tiro seu número da lista na hora.\n\nValeu por ter sido meu cliente.`;
+      return `${chamado}é a última vez que te chamo pra não virar chatice.\n\nSe um dia quiser voltar, é só me mandar mensagem ou usar ${link} — você é sempre bem-vindo. E se preferir que eu não te mande mais nada, responde "parar" que eu tiro seu número da lista na hora.\n\nValeu por ter sido meu cliente.`;
 
     default:
       throw new Error(`Toque ${numero} não existe — o protocolo tem ${TOTAL_TOQUES} toques.`);

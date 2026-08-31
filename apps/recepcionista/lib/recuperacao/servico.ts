@@ -43,13 +43,13 @@ function textoDoPorque(
   ticketCents: number,
 ): string {
   if (ciclo.confianca === "baixa") {
-    return `${ciclo.motivo} Trate como palpite, não como previsão — você conhece ele melhor que a gente.`;
+    return `${ciclo.motivo} Trate como palpite, não como previsão — você conhece essa pessoa melhor que a gente.`;
   }
   const ticket = (ticketCents / 100).toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
   });
-  return `O ciclo dele é de ${ciclo.dias} dias. Está ${diasAlemDoCiclo} dias além do normal dele. ${visitas} visitas registradas · ticket médio ${ticket}.`;
+  return `O ciclo é de ${ciclo.dias} dias. Está ${diasAlemDoCiclo} dias além do ritmo normal. ${visitas} visitas registradas · ticket médio ${ticket}.`;
 }
 
 export async function montarOndaDaSemana(
