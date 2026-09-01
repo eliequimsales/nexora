@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useReducer, useState } from "react";
 import { conviteDeVolta, primeiroNome } from "@/lib/recuperacao/convite";
+import { DECLARACAO_BASE } from "@/lib/legal/identidade";
 
 /**
  * O ÚNICO dono do estado desta página.
@@ -807,8 +808,7 @@ function PortaEntrada({
                 className="mt-1"
               />
               <span>
-                Confirmo que esses clientes são meus e que eu posso falar com eles, e aceito
-                os{" "}
+                {DECLARACAO_BASE} Aceito também os{" "}
                 <a href="/termos" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
                   Termos de Uso
                 </a>

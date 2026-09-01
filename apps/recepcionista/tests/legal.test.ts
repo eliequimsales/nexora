@@ -112,3 +112,34 @@ describe("os documentos antigos em markdown não voltam a mentir", () => {
     });
   }
 });
+
+describe("o que o código passou a fazer tem que aparecer no documento", () => {
+  /**
+   * Retenção não divulgada é retenção ilegal, por mais bem-intencionada que
+   * seja. Guardar o HMAC do telefone de quem foi apagado é legítimo (art. 16)
+   * e é o que impede a pessoa de voltar na próxima importação — mas só é
+   * legítimo enquanto estiver escrito. Este teste existe para que apagar a
+   * frase do documento quebre o build, e não passe despercebido.
+   */
+  it("a Política avisa que um código do telefone sobrevive à exclusão", () => {
+    const t = textoDe(PRIVACIDADE).toLowerCase();
+    expect(t).toContain("código embaralhado do telefone");
+    expect(t).toContain("art. 16");
+  });
+
+  it("o Contrato de Operador explica por que o Livro-Caixa não some junto", () => {
+    const t = textoDe(OPERADOR).toLowerCase();
+    expect(t).toContain("livro-caixa");
+    expect(t).toContain("código embaralhado do telefone");
+  });
+
+  it("o Contrato de Operador cita o registro das importações (art. 37)", () => {
+    expect(textoDe(OPERADOR).toLowerCase()).toContain("art. 37");
+  });
+
+  it("os documentos dizem que exportar e apagar são botão, não pedido", () => {
+    for (const doc of [TERMOS, PRIVACIDADE, OPERADOR]) {
+      expect(textoDe(doc).toLowerCase()).toContain("minha base");
+    }
+  });
+});

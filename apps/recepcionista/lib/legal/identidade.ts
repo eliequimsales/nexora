@@ -60,3 +60,20 @@ export function camposPendentes(): string[] {
     .filter(([, v]) => v === PENDENTE || !v.trim())
     .map(([k]) => k);
 }
+
+/**
+ * A DECLARAÇÃO QUE O DONO ASSINA AO SUBIR A BASE.
+ *
+ * Texto único, gravado por extenso em RegistroImportacao junto da versão. Não
+ * é um booleano: se a frase mudar daqui a um ano, ninguém consegue dizer o que
+ * a pessoa aceitou naquele dia — e é exatamente isso que a ANPD pergunta
+ * quando um titular reclama de ter sido contatado.
+ *
+ * A tela mostra ESTA constante. tests/declaracao.test.ts quebra o build se
+ * alguma tela voltar a digitar a frase à mão.
+ */
+export const DECLARACAO_BASE =
+  "Confirmo que estes clientes são meus, que eu já tinha contato com eles antes " +
+  "de usar a Nexora e que posso falar com eles. Eu sou o responsável por esta " +
+  "base: a Nexora trata esses dados seguindo a minha instrução, e eu posso " +
+  "exportar ou apagar tudo quando quiser.";

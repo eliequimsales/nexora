@@ -76,6 +76,8 @@ model Company {
 
   reengajamentos Reengajamento[]
   passwordResets PasswordReset[]
+  importacoes    RegistroImportacao[]
+  supressoes     Supressao[]
 }
 
 // Cada e-mail de reengajamento já enviado. A unicidade por (empresa, momento) é
@@ -455,8 +457,14 @@ model RecoveryEntry {
   companyId String
   company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  customerId String
-  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  // NULAVEL de proposito. Quando um titular pede exclusao (art. 18, VI), a
+  // pessoa some mas o VALOR fica: RecoveryEntry e o Livro-Caixa do dono,
+  // registro financeiro dele, e apagar reescreveria o faturamento passado --
+  // sendo que Receita Recuperada comprovada e o North Star do produto.
+  // SetNull anonimiza; Cascade apagaria. A diferenca entre as duas palavras e
+  // a diferenca entre respeitar o titular e destruir a contabilidade do dono.
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
   returnedAt DateTime @default(now())
   valueCents Int
@@ -473,4 +481,53 @@ model RecoveryEntry {
   createdAt DateTime @default(now())
 
   @@index([companyId, returnedAt])
+}
+
+// REGISTRO DA OPERACAO DE TRATAMENTO -- LGPD art. 37.
+//
+// A rota de importacao ja exigia o `confirmo` ("estes clientes sao meus e eu
+// posso falar com eles") e ja recusava gravar sem ele -- mas nao guardava a
+// declaracao em lugar nenhum. O comentario do codigo afirmava que registrava.
+// Declaracao que ninguem consegue provar depois nao protege o operador: se um
+// titular reclamar na ANPD, a pergunta e "com que base legal esses dados
+// entraram", e a resposta precisa ter data.
+model RegistroImportacao {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // O texto exato da declaracao aceita, nao um booleano. Se a frase mudar, o
+  // registro antigo continua provando o que a pessoa leu naquele dia.
+  declaracao String
+  versao     String
+
+  clientesLidos    Int @default(0)
+  clientesCriados  Int @default(0)
+  visitasCriadas   Int @default(0)
+  // Origem detectada pelo parser: PLANILHA | CONVERSA | LISTA
+  origem String @default("")
+
+  criadoEm DateTime @default(now())
+
+  @@index([companyId, criadoEm])
+}
+
+// LISTA DE SUPRESSAO -- o opt-out que sobrevive a exclusao.
+//
+// Quem responde PARAR e depois pede para ser apagado some do banco. Na proxima
+// vez que o dono importar a MESMA planilha, essa pessoa volta e e contatada de
+// novo: a exclusao teria desfeito o direito exercido. Aqui fica o HMAC do
+// telefone -- suficiente para reconhecer e barrar, insuficiente para contatar.
+model Supressao {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // HMAC-SHA256 do telefone canonico. Nunca o numero.
+  telefoneHash String
+
+  criadoEm DateTime @default(now())
+
+  @@unique([companyId, telefoneHash])
+  @@index([companyId])
 }

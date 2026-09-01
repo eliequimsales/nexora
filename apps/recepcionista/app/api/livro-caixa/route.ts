@@ -49,7 +49,9 @@ export async function GET(request: Request) {
         ...entradas.map((e) =>
           [
             e.returnedAt.toISOString().slice(0, 10),
-            `"${e.customer.name.replace(/"/g, '""')}"`,
+            // customer é nulo quando o titular exerceu o direito de exclusão:
+            // o valor permanece no extrato, a pessoa não.
+            `"${(e.customer?.name ?? "cliente excluído").replace(/"/g, '""')}"`,
             e.daysAway,
             e.esteira,
             e.touchNumber,
@@ -105,7 +107,7 @@ export async function GET(request: Request) {
       extrato: entradas.map((e) => ({
         id: e.id,
         data: e.returnedAt.toISOString().slice(0, 10),
-        cliente: e.customer.name,
+        cliente: e.customer?.name ?? "cliente excluído",
         diasSumido: e.daysAway,
         esteira: e.esteira,
         toque: e.touchNumber,

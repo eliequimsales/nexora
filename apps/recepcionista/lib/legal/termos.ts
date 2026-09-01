@@ -104,7 +104,7 @@ export const TERMOS: { atualizadoEm: string; secoes: Secao[] } = {
       titulo: "9. Encerramento da sua conta por nós",
       paragrafos: [
         "Podemos encerrar sua conta se você usar a Nexora para disparo em massa, para mensagens ilegais, ou se subir base de clientes que não é sua. Nesses casos avisamos por e-mail, explicamos o motivo e devolvemos o valor proporcional do período pago.",
-        "Antes do encerramento, você tem 15 dias para exportar seus dados, exceto quando a lei exigir ação imediata.",
+        "Antes do encerramento, você tem 15 dias para exportar seus dados, exceto quando a lei exigir ação imediata. A exportação fica em Minha base e é um botão: não depende de você pedir nem de nós respondermos.",
       ],
     },
     {

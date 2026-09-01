@@ -88,18 +88,20 @@ export const PRIVACIDADE: { atualizadoEm: string; secoes: Secao[] } = {
     {
       titulo: "8. Por quanto tempo guardamos",
       paragrafos: [
-        "Enquanto sua conta existir. Se você cancelar, seus dados e a base dos seus clientes continuam guardados até que você peça a exclusão — hoje esse apagamento é feito por nós quando você solicita, e não automaticamente.",
+        "Enquanto sua conta existir. Se você cancelar, seus dados e a base dos seus clientes continuam guardados até que a exclusão seja pedida — não apagamos nada sozinhos, justamente para não destruir a base de quem só quis pausar.",
         "Estamos dizendo isso porque a versão anterior deste documento prometia exclusão automática depois de 2 anos, e essa rotina nunca existiu no sistema. Preferimos corrigir a promessa a mantê-la no papel.",
         "Registros necessários para obrigação legal ou fiscal, como comprovantes de pagamento, são guardados pelo prazo que a lei exigir.",
+        "Uma coisa sobrevive à exclusão, e é melhor dizer isso com clareza: quando alguém que tinha pedido PARAR é apagado, guardamos um código embaralhado do telefone dessa pessoa — não o número. Sem isso, ela voltaria na próxima vez que o negócio importasse a mesma planilha e seria contatada de novo, o que transformaria o direito exercido em incômodo repetido. Esse código não permite ligar, mandar mensagem nem descobrir de quem é; serve só para reconhecer e barrar (LGPD art. 16, III).",
       ],
     },
     {
       titulo: "9. Seus direitos, e como exercer",
       paragrafos: [
         `A LGPD (art. 18) garante que você saiba o que temos, corrija, exclua, revogue consentimento e saiba com quem compartilhamos. Para exercer qualquer um deles, escreva para ${FORNECEDOR.email}. Respondemos em até 15 dias.`,
+        "Dois desses direitos não dependem de nos escrever: em Minha base, você baixa a sua lista inteira em planilha quando quiser, e apaga um cliente que pediu para ser apagado sem precisar da nossa autorização. Direito que depende de alguém do outro lado lembrar de executar não é direito garantido.",
         `Encarregado pelo tratamento de dados (art. 41): ${FORNECEDOR.encarregado}.`,
         "Você também pode reclamar diretamente à Autoridade Nacional de Proteção de Dados (ANPD), em gov.br/anpd.",
-        "Se você é cliente de um negócio que usa a Nexora e quer parar de receber mensagens ou apagar seus dados, o caminho mais rápido é falar com o próprio negócio, que é quem controla esses dados. Responder PARAR à mensagem também registra o pedido. Se preferir, escreva para nós que encaminhamos.",
+        "Se você é cliente de um negócio que usa a Nexora e quer parar de receber mensagens ou apagar seus dados, o caminho mais rápido é falar com o próprio negócio, que é quem controla esses dados — ele consegue apagar você sozinho, na hora. Responder PARAR à mensagem também registra o pedido. Se preferir, escreva para nós que encaminhamos.",
       ],
     },
     {

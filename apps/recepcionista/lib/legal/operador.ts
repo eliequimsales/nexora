@@ -37,6 +37,7 @@ export const OPERADOR: { atualizadoEm: string; secoes: Secao[] } = {
         "Gerar o texto de mensagem que você vai ler, editar se quiser e enviar do seu próprio aparelho.",
         "Registrar o resultado que você marcar (voltou, respondeu, pediu para parar) para organizar a fila seguinte.",
         "Devolver esses dados a você quando pedir, e apagá-los quando pedir.",
+        "Guardar registro de cada importação: a data, quantos clientes entraram e o texto exato da declaração que você aceitou naquele dia (art. 37). Se um titular questionar como os dados dele entraram, a resposta existe e tem data.",
       ],
     },
     {
@@ -72,9 +73,11 @@ export const OPERADOR: { atualizadoEm: string; secoes: Secao[] } = {
     {
       titulo: "6. Quando um cliente seu exercer um direito",
       paragrafos: [
-        "O pedido do titular é dirigido a você, controlador. A Nexora ajuda a cumprir: se um cliente seu pedir acesso, correção ou exclusão, avise-nos e nós executamos no sistema dentro de 15 dias.",
+        "O pedido do titular é dirigido a você, controlador. A Nexora te dá a ferramenta: em Minha base você apaga um cliente que pediu para ser apagado e baixa a base inteira em planilha, sem depender de nos avisar e sem prazo de espera. Para o que a tela não resolver, escreva e nós executamos dentro de 15 dias.",
         "Se o pedido chegar primeiro à Nexora, encaminhamos a você e não decidimos sozinhos — porque a decisão não é nossa.",
         "Quando alguém responde PARAR a uma mensagem, o sistema registra o pedido e passa a excluir essa pessoa das próximas ondas. Isso é registro de vontade, não exclusão de dados: para apagar de fato, o pedido precisa ser feito.",
+        "Quando você apaga alguém que tinha pedido PARAR, guardamos um código embaralhado do telefone — nunca o número. É o que impede essa pessoa de voltar quando você reimportar a mesma planilha e ser contatada outra vez. Sem ele, apagar desfaria o PARAR, e o titular receberia mensagem de novo justamente por ter exercido dois direitos.",
+        "O que você apaga sai de verdade: cadastro, visitas e agendamentos futuros. O que aquela pessoa já gastou continua no seu Livro-Caixa sem o nome dela — aquele número é o seu faturamento, registro seu, e apagá-lo reescreveria a sua contabilidade.",
       ],
     },
     {
@@ -87,7 +90,7 @@ export const OPERADOR: { atualizadoEm: string; secoes: Secao[] } = {
     {
       titulo: "8. Fim do contrato",
       paragrafos: [
-        "Encerrada a assinatura, você continua podendo pedir a exportação ou a exclusão da base a qualquer momento.",
+        "Encerrada a assinatura, você continua podendo exportar ou pedir a exclusão da base a qualquer momento. A exportação não é bloqueada por falta de pagamento: reter dado que é seu como forma de cobrança é exatamente o que o art. 18 impede.",
         "Não apagamos nada automaticamente ao cancelamento, justamente para não destruir a base de quem só quis pausar. A eliminação acontece quando você pede.",
       ],
     },

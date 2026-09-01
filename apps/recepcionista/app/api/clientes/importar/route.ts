@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionCompanyId } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { DECLARACAO_BASE, VERSAO_DOCUMENTOS } from "@/lib/legal/identidade";
 import { exigirAcesso } from "@/lib/billing/guarda";
 import { logError } from "@/lib/errors";
 import { gravarImportacao } from "@/lib/importacao/gravar";
 import { importar } from "@/lib/importacao/parsers";
+import { filtrarSuprimidos } from "@/lib/dados/excluir";
 import { rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -21,8 +24,11 @@ export const dynamic = "force-dynamic";
  *   simular: false → grava. Idempotente: rodar duas vezes não duplica visita.
  *
  * LGPD: aqui, diferente de /api/diagnostico, os dados FICAM. O dono é o
- * controlador da base dele e a Nexora é operadora; `confirmo` registra que ele
- * declarou ter base legal para tratar esses dados.
+ * controlador da base dele e a Nexora é operadora. `confirmo` é a declaração
+ * de base legal — e ela vai para RegistroImportacao POR EXTENSO, com data e
+ * versão do texto (art. 37). Guardar só um booleano não responderia a pergunta
+ * que a ANPD faz: com que base legal esses dados entraram, e o que exatamente
+ * a pessoa leu antes de dizer que sim.
  */
 
 const schema = z.object({
@@ -82,7 +88,37 @@ export async function POST(request: Request) {
       );
     }
 
-    const resultado = await gravarImportacao(companyId, leitura.clientes, { simular });
+    // SUPRESSÃO. Quem pediu PARAR e foi apagado não pode voltar só porque o
+    // dono reimportou a planilha do mês passado. O filtro roda também na
+    // simulação: se o dono não vir na prévia que N pessoas ficaram de fora, a
+    // conta não fecha e ele conclui que a leitura falhou.
+    const supressoes = await prisma.supressao.findMany({
+      where: { companyId },
+      select: { telefoneHash: true },
+    });
+    const { permitidos, suprimidos } = filtrarSuprimidos(
+      leitura.clientes,
+      new Set(supressoes.map((s) => s.telefoneHash)),
+    );
+
+    const resultado = await gravarImportacao(companyId, permitidos, { simular });
+
+    // Só a gravação de verdade é uma operação de tratamento. A simulação não
+    // escreve dado nenhum, e registrar uma declaração para ela encheria o
+    // histórico de eventos que não aconteceram.
+    if (!simular) {
+      await prisma.registroImportacao.create({
+        data: {
+          companyId,
+          declaracao: DECLARACAO_BASE,
+          versao: VERSAO_DOCUMENTOS,
+          clientesLidos: permitidos.length,
+          clientesCriados: resultado.criar,
+          visitasCriadas: resultado.visitasNovas,
+          origem: leitura.origem ?? "",
+        },
+      });
+    }
 
     return NextResponse.json({
       ...resultado,
@@ -92,6 +128,9 @@ export async function POST(request: Request) {
       // como atendimento e o cálculo inteiro mente.
       aviso: leitura.aviso,
       linhasIgnoradas: leitura.ignoradas.length,
+      // Não é erro nem linha ilegível: são pessoas que exerceram o direito de
+      // não ser mais contatadas. A tela precisa dizer isso com essas palavras.
+      suprimidos,
       exemplosIgnorados: leitura.ignoradas.slice(0, 5),
     });
   } catch (error) {
