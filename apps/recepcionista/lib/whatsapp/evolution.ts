@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { problemaNoGateway } from "./endereco";
 
 /** Mensagem de texto recebida via webhook da Evolution API (v2). */
 export interface IncomingWhatsAppMessage {
@@ -76,6 +77,14 @@ function evolutionConfig(): { baseUrl: string; apiKey: string } {
   if (!baseUrl || !apiKey) {
     throw new Error("EVOLUTION_API_URL / EVOLUTION_API_KEY não configurados");
   }
+
+  // Por este endereço passa a conversa do cliente, com nome e telefone. Em
+  // produção ele não pode ser um túnel de desenvolvimento nem HTTP puro —
+  // ver lib/whatsapp/endereco.ts para o porquê de cada regra. Falhar aqui,
+  // alto, é melhor do que funcionar por um tempo e vazar depois.
+  const problema = problemaNoGateway(baseUrl, process.env.NODE_ENV);
+  if (problema) throw new Error(problema);
+
   return { baseUrl: baseUrl.replace(/\/+$/, ""), apiKey };
 }
 

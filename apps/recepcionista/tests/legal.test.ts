@@ -143,3 +143,18 @@ describe("o que o código passou a fazer tem que aparecer no documento", () => {
     }
   });
 });
+
+describe("dado sensível — o produto vende para clínica e fisioterapia", () => {
+  it("a Política trata dado de saúde e cita o art. 11", () => {
+    // A tela de diagnóstico oferece Odontologia e Fisioterapia. Ligar pessoa
+    // identificada a procedimento é dado sensível, e legítimo interesse não
+    // serve de base legal para ele.
+    const t = textoDe(PRIVACIDADE).toLowerCase();
+    expect(t).toContain("art. 11");
+    expect(t).toContain("dado de saúde");
+  });
+
+  it("o Contrato de Operador diz que o procedimento não entra nem na base nem na mensagem", () => {
+    expect(textoDe(OPERADOR).toLowerCase()).toContain("art. 11");
+  });
+});

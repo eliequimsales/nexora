@@ -134,14 +134,22 @@ export const PRIVACIDADE: { atualizadoEm: string; secoes: Secao[] } = {
       ],
     },
     {
-      titulo: "13. Crianças e adolescentes",
+      titulo: "13. Dados sensíveis, e por que a Nexora não quer os seus",
+      paragrafos: [
+        "A tela de diagnóstico oferece Odontologia, Fisioterapia e Estética entre os tipos de negócio. Precisamos ser diretos sobre o que isso significa: numa clínica, saber que uma pessoa identificada fez determinado procedimento é dado de saúde — dado sensível pela LGPD (art. 11), que exige consentimento específico e destacado do próprio titular e não pode se apoiar em legítimo interesse.",
+        "Por isso a Nexora foi construída para não precisar dessa informação. A importação lê nome, telefone, data da visita e valor — e ignora a coluna de procedimento, mesmo quando ela está na planilha. As mensagens de recuperação nunca citam qual serviço a pessoa fez: falam do tempo que passou e convidam a voltar, e nada além disso.",
+        "O que ainda pode conter dado sensível são campos que você mesmo preenche: o nome dos serviços que você cadastra e o campo de observações do cliente. Se você atua na área de saúde, esses dois campos são de sua responsabilidade como controlador, incluindo o consentimento específico do art. 11. Nossa recomendação é simples: não escreva no cadastro nada que você não escreveria num bilhete deixado no balcão.",
+      ],
+    },
+    {
+      titulo: "14. Crianças e adolescentes",
       paragrafos: [
         "A Nexora não é destinada a menores de 18 anos como assinantes.",
         "Alguns negócios atendem crianças, e a lista importada pode conter dados de menores. A LGPD (art. 14) exige, nesse caso, consentimento específico de um dos pais ou responsável, e a responsabilidade por obtê-lo é do negócio que coletou o dado — não da Nexora. Recomendamos fortemente não incluir menores na base de recuperação.",
       ],
     },
     {
-      titulo: "14. Mudanças",
+      titulo: "15. Mudanças",
       paragrafos: [
         `Versão ${VERSAO_DOCUMENTOS}. Mudanças relevantes são avisadas por e-mail com 30 dias de antecedência, e cada versão fica registrada junto com a data em que você a aceitou.`,
       ],

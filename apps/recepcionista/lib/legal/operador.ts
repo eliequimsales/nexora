@@ -38,6 +38,7 @@ export const OPERADOR: { atualizadoEm: string; secoes: Secao[] } = {
         "Registrar o resultado que você marcar (voltou, respondeu, pediu para parar) para organizar a fila seguinte.",
         "Devolver esses dados a você quando pedir, e apagá-los quando pedir.",
         "Guardar registro de cada importação: a data, quantos clientes entraram e o texto exato da declaração que você aceitou naquele dia (art. 37). Se um titular questionar como os dados dele entraram, a resposta existe e tem data.",
+        "Ignorar a coluna de procedimento na importação e nunca citar o serviço prestado nas mensagens. Se você é da área de saúde, ligar uma pessoa identificada a um procedimento é dado sensível (art. 11) e exige consentimento específico dela — obrigação sua, como controlador. A Nexora foi construída para não precisar dessa informação, e o que você escrever no nome dos serviços e no campo de observações é responsabilidade sua.",
       ],
     },
     {

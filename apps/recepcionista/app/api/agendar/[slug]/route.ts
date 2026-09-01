@@ -4,6 +4,8 @@ import { calcularSlots, type Horario } from "@/lib/agenda/disponibilidade";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
 import { rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
+import { entradaPorLink } from "@/lib/agenda/entrada-publica";
+import { hashTelefone } from "@/lib/dados/excluir";
 
 export const dynamic = "force-dynamic";
 
@@ -204,12 +206,35 @@ export async function POST(
     const startsAt = new Date(diaData.getTime() + (h * 60 + m + 180) * 60 * 1000);
     const endsAt = new Date(startsAt.getTime() + servico.durationMin * 60 * 1000);
 
-    const cliente = await prisma.customer.upsert({
+    // Esta rota é PÚBLICA e escreve na base do assinante. O que ela pode
+    // gravar está em entradaPorLink, com o porquê de cada regra: agendar não
+    // revoga o PARAR, e formulário público não reescreve a caderneta do dono.
+    const existente = await prisma.customer.findUnique({
       where: { companyId_phone: { companyId: negocio.id, phone: telefone } },
-      update: { name: nome },
-      create: { companyId: negocio.id, name: nome, phone: telefone, source: "LINK" },
       select: { id: true },
     });
+
+    const hash = hashTelefone(telefone);
+    const suprimido = hash
+      ? (await prisma.supressao.count({
+          where: { companyId: negocio.id, telefoneHash: hash },
+        })) > 0
+      : false;
+
+    const entrada = entradaPorLink({ existe: Boolean(existente), nomeInformado: nome, suprimido });
+
+    const cliente =
+      existente ??
+      (await prisma.customer.create({
+        data: {
+          companyId: negocio.id,
+          phone: telefone,
+          source: "LINK",
+          ...entrada.criar!,
+          ...(entrada.criar!.optOut ? { optOutAt: new Date() } : {}),
+        },
+        select: { id: true },
+      }));
 
     await prisma.appointment.create({
       data: {
