@@ -3,7 +3,7 @@ import { z } from "zod";
 import { gerarDiagnostico, type ClienteBase } from "@/lib/importacao/diagnostico";
 import { importar } from "@/lib/importacao/parsers";
 import { medianaDoSegmento } from "@/lib/recuperacao/ciclo";
-import { logError } from "@/lib/errors";
+import { logErroSemConteudo } from "@/lib/errors";
 import { rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    await logError("diagnostico", error);
+    await logErroSemConteudo("diagnostico", error);
     return NextResponse.json(
       { error: "Não consegui processar essa lista agora" },
       { status: 500 },

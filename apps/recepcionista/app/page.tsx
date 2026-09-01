@@ -379,8 +379,18 @@ export default function Home() {
 
       <footer className="border-t border-night-line">
         <div className="mx-auto flex max-w-page flex-col gap-4 px-6 py-10 text-sm text-mist/40 sm:flex-row sm:items-center sm:justify-between">
-          <p>Nexora — recuperação de clientes inativos para pequenos negócios de serviço.</p>
-          <div className="flex gap-5">
+          <p className="max-w-sm">
+            Nexora — recuperação de clientes inativos para pequenos negócios de serviço.
+            Serviço prestado por pessoa física; a identificação completa está nos Termos de
+            Uso.
+          </p>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            <Link href="/termos" className="transition hover:text-mist/70">
+              Termos de Uso
+            </Link>
+            <Link href="/privacidade" className="transition hover:text-mist/70">
+              Privacidade
+            </Link>
             <Link href="/login" className="transition hover:text-mist/70">
               Entrar
             </Link>

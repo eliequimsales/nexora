@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { createSessionToken, hashPassword, setSessionCookie } from "@/lib/auth";
 import { logError } from "@/lib/errors";
 import { signupSchema } from "@/lib/validation";
+import { VERSAO_DOCUMENTOS } from "@/lib/legal/identidade";
 import { clientIp, rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
@@ -33,6 +34,10 @@ export async function POST(request: Request) {
         email,
         phone,
         passwordHash: await hashPassword(password),
+        // Grava DATA e VERSAO do que foi aceito. Sem a versao o registro e
+        // inutil: o texto muda e ninguem sabe mais o que a pessoa leu.
+        termosAceitosEm: new Date(),
+        termosVersao: VERSAO_DOCUMENTOS,
         profile: { create: {} },
       },
     });

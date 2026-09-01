@@ -12,6 +12,11 @@ export const signupSchema = z.object({
   email: z.string().trim().toLowerCase().email("E-mail inválido").max(200),
   password: z.string().min(8, "Senha deve ter pelo menos 8 caracteres").max(72),
   phone: phoneSchema,
+  // Aceite explicito e obrigatorio. `literal(true)` recusa o cadastro se o
+  // campo vier ausente ou false -- opt-in de verdade nao tem valor padrao.
+  aceite: z.literal(true, {
+    errorMap: () => ({ message: "É preciso aceitar os Termos e a Política de Privacidade" }),
+  }),
 });
 
 export const loginSchema = z.object({

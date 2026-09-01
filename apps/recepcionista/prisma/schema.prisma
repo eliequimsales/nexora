@@ -67,6 +67,13 @@ model Company {
   // cliente final; este é o dono da conta.
   semEmail Boolean @default(false)
 
+  // ACEITE DOS DOCUMENTOS. Consentimento sem data e sem VERSAO nao prova nada:
+  // se o texto mudar depois, ninguem consegue dizer o que a pessoa aceitou.
+  // O termo antigo afirmava que o aceite ficava em `organizations.lgpdAcceptedAt`
+  // -- coluna que nunca existiu neste produto. Agora existe, e e gravada.
+  termosAceitosEm DateTime?
+  termosVersao    String?
+
   reengajamentos Reengajamento[]
   passwordResets PasswordReset[]
 }

@@ -712,7 +712,7 @@ function PortaEntrada({
       const conta = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, aceite: confirmo }),
       });
       const jc = await conta.json();
       if (!conta.ok) {
@@ -806,7 +806,22 @@ function PortaEntrada({
                 onChange={(ev) => setConfirmo(ev.target.checked)}
                 className="mt-1"
               />
-              <span>Confirmo que esses clientes são meus e que eu posso falar com eles.</span>
+              <span>
+                Confirmo que esses clientes são meus e que eu posso falar com eles, e aceito
+                os{" "}
+                <a href="/termos" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+                  Termos de Uso
+                </a>
+                , a{" "}
+                <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+                  Política de Privacidade
+                </a>{" "}
+                e o{" "}
+                <a href="/operador" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+                  Contrato de Operador
+                </a>
+                .
+              </span>
             </label>
 
             {erro && <p className="mt-3 text-sm text-red-300">{erro}</p>}

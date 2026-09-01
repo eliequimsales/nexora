@@ -172,10 +172,27 @@ export default function PaginaDiagnostico() {
               </li>
             ))}
           </ul>
+          {/*
+            Este parágrafo afirmava que a Nexora "é operada por pessoa jurídica
+            registrada" e que "o CNPJ fica visível no rodapé e no e-mail de
+            confirmação". Nenhuma das três coisas era verdade: não há CNPJ, o
+            rodapé nunca mostrou nada, e não existe e-mail de confirmação de
+            assinatura no produto. Mentir no parágrafo cuja função é tranquilizar
+            juridicamente é o pior lugar possível para errar — e é o tipo de frase
+            que um cliente lesado leva impressa para o Procon.
+          */}
           <p className="mt-8 max-w-2xl text-sm leading-relaxed text-mist/55">
-            A Nexora é operada por pessoa jurídica registrada, e o contrato de prestação de
-            serviço é com ela. Os dados de identificação e o CNPJ ficam visíveis no rodapé e
-            no e-mail de confirmação da assinatura.
+            O serviço é prestado por pessoa física, e o contrato é com ela. A
+            identificação de quem presta o serviço, o preço total e as condições de
+            cancelamento estão nos{" "}
+            <Link href="/termos" className="text-mist/80 underline underline-offset-4">
+              Termos de Uso
+            </Link>
+            , e o que fazemos com os dados está na{" "}
+            <Link href="/privacidade" className="text-mist/80 underline underline-offset-4">
+              Política de Privacidade
+            </Link>
+            .
           </p>
         </div>
       </section>

@@ -17,6 +17,7 @@ export default function CadastroPage() {
   const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [aceite, setAceite] = useState(false);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -26,7 +27,7 @@ export default function CadastroPage() {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, aceite }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -56,7 +57,7 @@ export default function CadastroPage() {
         <div className="rounded-2xl border border-panel-line bg-panel-card p-8 shadow-sm">
           <h1 className="font-display text-xl font-bold">Criar conta da empresa</h1>
           <p className="mb-6 mt-1 text-sm text-panel-sub">
-            Em poucos minutos seu Atendente estará no ar.
+            Primeiro mês grátis, sem cartão. Você importa sua lista logo depois.
           </p>
           <form onSubmit={handleSubmit} className="space-y-4">
             {FIELDS.map((field) => (
@@ -75,13 +76,41 @@ export default function CadastroPage() {
                 />
               </div>
             ))}
+            {/*
+              Aceite explícito, sem marcação prévia. Checkbox já marcado não é
+              consentimento — é armadilha, e o CDC trata cláusula assim como não
+              escrita. A data e a versão do texto ficam gravadas no cadastro.
+            */}
+            <label className="flex gap-3 text-sm leading-relaxed text-panel-sub">
+              <input
+                type="checkbox"
+                checked={aceite}
+                onChange={(e) => setAceite(e.target.checked)}
+                className="mt-1"
+              />
+              <span>
+                Li e aceito os{" "}
+                <Link href="/termos" target="_blank" className="font-semibold text-amber-deep hover:underline">
+                  Termos de Uso
+                </Link>
+                , a{" "}
+                <Link href="/privacidade" target="_blank" className="font-semibold text-amber-deep hover:underline">
+                  Política de Privacidade
+                </Link>{" "}
+                e o{" "}
+                <Link href="/operador" target="_blank" className="font-semibold text-amber-deep hover:underline">
+                  Contrato de Operador
+                </Link>
+                .
+              </span>
+            </label>
             {error && <p className="text-sm text-red-600">{error}</p>}
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !aceite}
               className="w-full rounded-lg bg-amber px-4 py-3 text-sm font-semibold text-night transition hover:brightness-110 disabled:opacity-60"
             >
-              {loading ? "Criando conta..." : "Criar meu Atendente"}
+              {loading ? "Criando conta..." : "Criar minha conta"}
             </button>
             <div className="flex items-center gap-3 py-1">
               <span className="h-px flex-1 bg-panel-line" />
@@ -89,6 +118,10 @@ export default function CadastroPage() {
               <span className="h-px flex-1 bg-panel-line" />
             </div>
             <GoogleButton label="Cadastrar com o Google" />
+            <p className="text-center text-xs leading-relaxed text-panel-sub">
+              Entrar com o Google também significa aceitar os Termos de Uso, a Política de
+              Privacidade e o Contrato de Operador.
+            </p>
           </form>
         </div>
         <p className="mt-6 text-center text-sm text-panel-sub">
