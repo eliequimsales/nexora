@@ -74,6 +74,11 @@ model Company {
   termosAceitosEm DateTime?
   termosVersao    String?
 
+  // Confirmacao da contratacao (Decreto 7.962/2013, art. 4o, V). Marca de
+  // envio unico: aplicarAssinatura roda a cada evento da Stripe e reentrega e
+  // rotina -- sem isto o dono receberia a mesma confirmacao a cada webhook.
+  confirmacaoEnviadaEm DateTime?
+
   reengajamentos Reengajamento[]
   passwordResets PasswordReset[]
   importacoes    RegistroImportacao[]

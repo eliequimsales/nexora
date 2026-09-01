@@ -4,6 +4,7 @@ import { TRIAL_DIAS } from "@/lib/billing/acesso";
 import { stripe, stripeConfigurado } from "@/lib/billing/stripe";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
+import { camposPendentes, identificacaoCompleta } from "@/lib/legal/identidade";
 import { rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -26,6 +27,27 @@ export async function POST(request: Request) {
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
   if (!stripeConfigurado()) {
+    return NextResponse.json(
+      { error: "A cobrança ainda não está configurada. Fale com a gente." },
+      { status: 503 },
+    );
+  }
+
+  // TRAVA LEGAL, e não lembrete.
+  //
+  // O Decreto 7.962/2013, art. 2º exige nome, CPF ou CNPJ e endereço do
+  // fornecedor em destaque ANTES de qualquer cobrança. Enquanto a
+  // identificação estiver incompleta, cobrar é irregular — e o e-mail de
+  // confirmação sairia com lacuna no lugar de quem cobrou.
+  //
+  // A checagem mora aqui, no único caminho que cria cobrança, para que isso
+  // seja impossível em vez de ser algo que alguém precisa lembrar.
+  if (!identificacaoCompleta()) {
+    await logError(
+      "checkout-bloqueado-identificacao",
+      new Error(`Identificação do fornecedor incompleta: ${camposPendentes().join(", ")}`),
+      companyId,
+    );
     return NextResponse.json(
       { error: "A cobrança ainda não está configurada. Fale com a gente." },
       { status: 503 },

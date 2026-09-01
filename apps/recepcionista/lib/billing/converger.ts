@@ -21,6 +21,9 @@ import type Stripe from "stripe";
 import { prisma } from "@/lib/db";
 import { companyIdDe, deveProvisionar, periodoFimDe } from "./eventos";
 import { stripe } from "./stripe";
+import { deveConfirmar, montarConfirmacao } from "./confirmacao";
+import { enviarEmail } from "@/lib/reengajamento/email";
+import { logError } from "@/lib/errors";
 
 function paraData(seg: number | null | undefined): Date | null {
   return typeof seg === "number" && Number.isFinite(seg) ? new Date(seg * 1000) : null;
@@ -45,7 +48,7 @@ export async function aplicarAssinatura(sub: Stripe.Subscription): Promise<strin
   // cancelamento, não da última vez que um evento passou por aqui.
   const atual = await prisma.company.findUnique({
     where: { id: companyId },
-    select: { canceladoEm: true },
+    select: { canceladoEm: true, confirmacaoEnviadaEm: true, name: true, email: true },
   });
 
   await prisma.company.update({
@@ -82,7 +85,56 @@ export async function aplicarAssinatura(sub: Stripe.Subscription): Promise<strin
     },
   });
 
+  await confirmarContratacao(companyId, sub, atual);
+
   return companyId;
+}
+
+/**
+ * CONFIRMAÇÃO DA CONTRATAÇÃO — Decreto 7.962/2013, art. 4º, V.
+ *
+ * Fica aqui, e não no motor de reengajamento, porque é e-mail transacional: não
+ * respeita o intervalo mínimo entre envios, não entra na fila de "um e-mail por
+ * dia" e não é bloqueado por `semEmail`. Recusar marketing não é recusar o
+ * comprovante daquilo que se contratou.
+ *
+ * Nunca derruba a convergência. Se o Resend estiver fora do ar, o estado da
+ * assinatura já foi gravado e é isso que decide o acesso do dono — deixar o
+ * e-mail quebrar a gravação trocaria um problema legal por um cliente pagante
+ * sem acesso ao que pagou.
+ */
+async function confirmarContratacao(
+  companyId: string,
+  sub: Stripe.Subscription,
+  atual: { confirmacaoEnviadaEm: Date | null; name: string; email: string } | null,
+): Promise<void> {
+  if (!atual) return;
+  if (!deveConfirmar(sub.status, atual.confirmacaoEnviadaEm)) return;
+
+  try {
+    const envio = await enviarEmail(
+      atual.email,
+      montarConfirmacao({
+        nome: atual.name,
+        emTeste: sub.status === "trialing",
+        proximaCobranca: periodoFimDe(sub),
+      }),
+      // Sem link de descadastro, de propósito: ninguém pode optar por não
+      // receber a confirmação do contrato que acabou de assinar.
+    );
+
+    // A marca só é gravada quando o envio deu certo. Se o Resend falhar hoje,
+    // o próximo evento da Stripe tenta de novo — e é melhor tentar duas vezes
+    // do que ficar sem a confirmação que o decreto exige.
+    if (envio.enviado) {
+      await prisma.company.update({
+        where: { id: companyId },
+        data: { confirmacaoEnviadaEm: new Date() },
+      });
+    }
+  } catch (erro) {
+    await logError("confirmacao-contratacao", erro, companyId);
+  }
 }
 
 /** Re-busca a assinatura na Stripe e converge. */
