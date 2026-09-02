@@ -575,3 +575,28 @@ model VerificacaoEmail {
 
   @@index([companyId])
 }
+
+// EVENTO DE FUNIL. Cinco nomes fechados, definidos em lib/funil.ts.
+//
+// Existe porque o app inteiro nao tinha UM evento: "4% completam o diagnostico"
+// era chute, e gastar em anuncio sem isso compra aprendizado nenhum -- voce sabe
+// quanto gastou e quantos assinaram, e nada sobre ONDE as pessoas desistem.
+//
+// NUNCA guarda conteudo. Nem nome de cliente, nem trecho de lista, nem telefone.
+// A pagina promete "sua lista nao e gravada" sem ressalva, e evento de analytics
+// e gravacao como qualquer outra.
+model EventoFunil {
+  id   String @id @default(cuid())
+  nome String
+
+  // De qual anuncio veio (?c= da URL, higienizado em lib/funil.ts).
+  criativo String?
+  // Identificador anonimo, so para ligar as etapas da MESMA visita entre si.
+  // Nao identifica pessoa e nao sobrevive ao fechamento do navegador.
+  sessao String?
+
+  criadoEm DateTime @default(now())
+
+  @@index([nome, criadoEm])
+  @@index([criativo, criadoEm])
+}

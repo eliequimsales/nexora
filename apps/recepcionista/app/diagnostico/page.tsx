@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { formasDePagamentoTexto } from "@/lib/billing/preco";
 import { PainelDiagnostico } from "./painel";
+import { EventoAoMontar } from "@/components/funil";
 
 export const metadata: Metadata = {
   title: "Descubra quais clientes seus sumiram — Nexora",
@@ -73,6 +74,8 @@ const OBJECOES = [
 export default function PaginaDiagnostico() {
   return (
     <div className="min-h-screen bg-night text-mist">
+      {/* Sem isto, "quanto custou trazer alguem" e chute. Ver lib/funil.ts. */}
+      <EventoAoMontar nome="chegou" />
       <header className="border-b border-night-line">
         <div className="mx-auto flex max-w-page items-center justify-between px-6 py-4">
           <Link href="/" className="flex items-center gap-2.5">

@@ -4,6 +4,9 @@ import { useRouter } from "next/navigation";
 import { useReducer, useState } from "react";
 import { conviteDeVolta, primeiroNome } from "@/lib/recuperacao/convite";
 import { DECLARACAO_BASE } from "@/lib/legal/identidade";
+import { AcaoConvite } from "@/components/acao-convite";
+import { TresNomes } from "@/components/diagnostico/tres-nomes";
+import { EventoAoMontar, registrar } from "@/components/funil";
 
 /**
  * O ÚNICO dono do estado desta página.
@@ -125,9 +128,30 @@ const reais = (cents: number) =>
 
 const contarLinhas = (t: string) => t.split(/\r?\n/).filter((l) => l.trim()).length;
 
+/**
+ * O ticket que o dono digitou, em centavos.
+ *
+ * Devolve undefined quando ele não informou — e nesse caso a tela não mostra
+ * dinheiro nenhum, de propósito. Inventar valor a partir de três nomes seria
+ * número com cara de dado, e a Constituição proíbe.
+ *
+ * A faixa é a mesma que o zod da rota aceita (R$ 5 a R$ 5.000), para as duas
+ * portas não divergirem.
+ */
+function ticketEmCents(bruto: string): number | undefined {
+  const limpo = (bruto ?? "").replace(/[^0-9,.]/g, "").replace(",", ".");
+  const n = Number.parseFloat(limpo);
+  if (!Number.isFinite(n) || n <= 0) return undefined;
+  const cents = Math.round(n * 100);
+  return cents >= 500 && cents <= 500_000 ? cents : undefined;
+}
+
 export function PainelDiagnostico() {
   const [e, dispatch] = useReducer(reducer, INICIAL);
   const [abrirConta, setAbrirConta] = useState(false);
+  // "memoria" e o padrao: e a unica porta que abre no celular, que e de onde
+  // vem o trafego de anuncio.
+  const [porta, setPorta] = useState<"memoria" | "lista">("memoria");
 
   const analisar = async (ticketCents?: number) => {
     dispatch({ tipo: "processando" });
@@ -214,8 +238,32 @@ export function PainelDiagnostico() {
   }
 
   // -------------------------------------------------------------------------
+  // DUAS PORTAS, e a de memória vem primeiro.
+  //
+  // A porta da lista exige um computador: colar do Excel e escolher arquivo são
+  // gestos de mesa, e o tráfego de anúncio chega pelo celular. Quem já tem a
+  // lista na mão continua tendo o caminho — mas ele deixa de ser o único, e
+  // deixa de ser o primeiro.
+  if (porta === "memoria") {
+    return (
+      <TresNomes
+        segmento={e.segmento}
+        negocio={e.meuNome}
+        ticketCents={ticketEmCents(e.ticketReais)}
+        aoQuererLista={() => setPorta("lista")}
+      />
+    );
+  }
+
   return (
     <div className="rounded-2xl border border-night-line bg-night-soft/60 p-6 sm:p-7">
+      <button
+        onClick={() => setPorta("memoria")}
+        className="mb-5 text-sm text-mist/45 underline underline-offset-4 hover:text-mist/70"
+      >
+        ← Não tenho a lista aqui agora
+      </button>
+
       <label htmlFor="lista" className="font-display text-lg font-semibold">
         Cola sua lista de clientes aqui
       </label>
@@ -664,14 +712,11 @@ function ComandaSumidos({ nomes, negocio }: { nomes: NomeDoTop[]; negocio: strin
                   <p className="mt-3 whitespace-pre-wrap rounded-lg bg-night/60 p-3 text-sm leading-relaxed text-mist/75">
                     {convite.texto}
                   </p>
-                  <a
+                  <AcaoConvite
+                    texto={convite.texto}
                     href={convite.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-3 inline-flex w-full items-center justify-center rounded-lg border border-amber/40 px-4 py-2.5 text-sm font-semibold text-amber transition hover:bg-amber/10"
-                  >
-                    Mandar para {primeiroNome(n.nome) || "esse cliente"} no WhatsApp
-                  </a>
+                    nome={primeiroNome(n.nome)}
+                  />
                 </>
               )}
             </div>
@@ -737,6 +782,9 @@ function PortaEntrada({
         }),
       });
 
+      // Fecha o funil: chegou -> comecou_entrada -> viu_numero -> clicou_mensagem
+      // -> criou_conta. Sem este ultimo, nao da para calcular CAC nenhum.
+      registrar("criou_conta");
       router.push("/painel/onda?origem=diagnostico");
     } catch {
       setErro("Falha de conexão. Tenta de novo?");

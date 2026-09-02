@@ -9,6 +9,9 @@ import { LogoutButton } from "@/components/logout-button";
 // não estava no menu — o loop central do produto era inalcançável.
 const NAV = [
   { href: "/painel/onda", label: "Onda de segunda" },
+  // Logo depois da Onda: a prova de valor tem que estar no caminho de todo
+  // dia, nao atras do botao de cancelar (que era onde ela morava).
+  { href: "/painel/livro-caixa", label: "Livro-Caixa" },
   { href: "/painel/clientes/importar", label: "Minha base" },
   { href: "/painel/conversas", label: "Conversas" },
   { href: "/painel/treinamento", label: "Treinamento" },

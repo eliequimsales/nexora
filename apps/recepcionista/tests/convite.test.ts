@@ -31,7 +31,7 @@ describe("convite de volta", () => {
     const c = conviteDeVolta(base);
     expect(c).not.toBeNull();
     expect(c!.href).toMatch(/^https:\/\/wa\.me\/5511988881234\?text=/);
-    expect(decodeURIComponent(c!.href.split("?text=")[1])).toBe(c!.texto);
+    expect(decodeURIComponent(c!.href!.split("?text=")[1])).toBe(c!.texto);
   });
 
   it("usa o primeiro nome e o nome do negócio", () => {
@@ -64,8 +64,16 @@ describe("convite de volta", () => {
   });
 
   it("telefone inválido não vira link quebrado", () => {
-    expect(conviteDeVolta({ ...base, telefone: "123" })).toBeNull();
-    expect(conviteDeVolta({ ...base, telefone: "" })).toBeNull();
+    // MUDANÇA DELIBERADA. Antes a função inteira devolvia null aqui, e a ação
+    // sumia da tela. Isso passou a ser errado quando o Diagnóstico de Três
+    // Nomes chegou: lá o telefone é OPCIONAL, e sumir com o botão
+    // transformaria "quase pronto" em "não dá". Agora o texto sai sempre e só
+    // o link fica nulo — o dono copia e escolhe o contato na agenda dele.
+    for (const telefone of ["123", ""]) {
+      const c = conviteDeVolta({ ...base, telefone });
+      expect(c.href, telefone).toBeNull();
+      expect(c.texto.length, telefone).toBeGreaterThan(20);
+    }
   });
 
   it("aceita telefone já com país e não duplica o 55", () => {
@@ -73,3 +81,49 @@ describe("convite de volta", () => {
     expect(c.href).toMatch(/wa\.me\/5511988881234\?/);
   });
 })
+
+describe("sem telefone, a mensagem tem que sair do mesmo jeito", () => {
+  /**
+   * ESTE ERA O BLOQUEIO.
+   *
+   * `conviteDeVolta` devolvia null quando o telefone não dava para virar wa.me —
+   * matando a ação inteira. Isso é aceitável quando a lista veio de uma planilha
+   * com telefone, mas passa a ser fatal no fluxo de Três Nomes, onde o dono
+   * digita o nome de cabeça e o telefone é OPCIONAL.
+   *
+   * Sem telefone ele ainda consegue agir: copia o texto e escolhe o contato na
+   * agenda dele — gesto que ele faz cinquenta vezes por dia. Devolver null
+   * transformava "quase pronto" em "não dá".
+   */
+  const negocio = "Barbearia do Zé";
+
+  it("cliente sem telefone ainda recebe o texto pronto", () => {
+    const c = conviteDeVolta({ nome: "Maria Silva", telefone: "", negocio });
+    expect(c).not.toBeNull();
+    expect(c!.texto).toContain("Maria");
+    expect(c!.texto.length).toBeGreaterThan(20);
+  });
+
+  it("sem telefone não inventa link", () => {
+    const c = conviteDeVolta({ nome: "Maria", telefone: "", negocio });
+    expect(c!.href).toBeNull();
+  });
+
+  it("telefone ilegível cai no mesmo caminho de 'sem telefone'", () => {
+    const c = conviteDeVolta({ nome: "Maria", telefone: "abc123", negocio });
+    expect(c).not.toBeNull();
+    expect(c!.href).toBeNull();
+  });
+
+  it("com telefone válido, o link continua vindo pronto", () => {
+    const c = conviteDeVolta({ nome: "Maria", telefone: "11988887777", negocio });
+    expect(c!.href).toContain("wa.me/5511988887777");
+    expect(c!.href).toContain(encodeURIComponent(c!.texto));
+  });
+
+  it("o texto é o mesmo com ou sem telefone — é o mesmo Toque 1", () => {
+    const com = conviteDeVolta({ nome: "Maria", telefone: "11988887777", negocio });
+    const sem = conviteDeVolta({ nome: "Maria", telefone: "", negocio });
+    expect(sem!.texto).toBe(com!.texto);
+  });
+});

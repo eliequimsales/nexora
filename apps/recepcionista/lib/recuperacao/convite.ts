@@ -23,8 +23,16 @@ import { variantesDeTelefone } from "./telefone";
 export type Convite = {
   /** O texto exato, para pré-visualizar e para copiar. */
   texto: string;
-  /** wa.me já com país e mensagem embutida — abre a conversa pronta. */
-  href: string;
+  /**
+   * wa.me já com país e mensagem embutida — abre a conversa pronta.
+   *
+   * NULO quando não há telefone legível, e isso não é falha: no fluxo de Três
+   * Nomes o dono digita o nome de cabeça e o telefone é opcional. Antes, a
+   * função inteira devolvia null nesse caso e a ação sumia — transformando
+   * "quase pronto" em "não dá". Sem número ele copia o texto e escolhe o
+   * contato na agenda dele, que é gesto que ele faz cinquenta vezes por dia.
+   */
+  href: string | null;
 };
 
 /**
@@ -53,9 +61,9 @@ export function conviteDeVolta(cliente: {
   nome: string;
   telefone: string;
   negocio: string;
-}): Convite | null {
+}): Convite {
+  // O TEXTO SAI SEMPRE. Só o link depende do telefone.
   const numero = paraWaMe(cliente.telefone);
-  if (!numero) return null;
 
   const texto = mensagemDoToque(1, {
     primeiroNome: primeiroNome(cliente.nome),
@@ -65,5 +73,8 @@ export function conviteDeVolta(cliente: {
     link: "",
   });
 
-  return { texto, href: `https://wa.me/${numero}?text=${encodeURIComponent(texto)}` };
+  return {
+    texto,
+    href: numero ? `https://wa.me/${numero}?text=${encodeURIComponent(texto)}` : null,
+  };
 }
