@@ -6,6 +6,10 @@ import { logError } from "@/lib/errors";
 import { rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 import { entradaPorLink } from "@/lib/agenda/entrada-publica";
 import { hashTelefone } from "@/lib/dados/excluir";
+import { ehConflitoDeConcorrencia } from "@/lib/agenda/concorrencia";
+
+/** Sinaliza, de dentro da transação, que o horário foi ocupado no caminho. */
+class ConflitoDeHorario extends Error {}
 
 export const dynamic = "force-dynamic";
 
@@ -170,82 +174,117 @@ export async function POST(
     const diaData = new Date(`${dia}T00:00:00.000Z`);
     const agora = new Date();
 
-    const ocupados = await prisma.appointment.findMany({
-      where: {
-        companyId: negocio.id,
-        status: { in: ["MARCADO", "CONFIRMADO"] },
-        startsAt: {
-          gte: diaData,
-          lt: new Date(diaData.getTime() + 48 * 60 * 60 * 1000),
+    // A MARCAÇÃO INTEIRA NUMA TRANSAÇÃO SERIALIZÁVEL.
+    //
+    // Antes, a rota checava `livres.includes(hora)` e só depois criava o
+    // agendamento. Entre as duas coisas havia uma janela em que outra
+    // requisição pegava o mesmo horário — e não existe constraint no banco
+    // para impedir, só um índice. O comentário logo abaixo já dizia que dupla
+    // marcação é o pior defeito possível numa agenda; a corrida produzia
+    // exatamente isso, por um endpoint PÚBLICO, e dava para provocá-la de
+    // propósito para sabotar a agenda de um negócio.
+    //
+    // Constraint única em (companyId, startsAt) não serviria: agendamento
+    // CANCELADO ou FALTOU libera o horário, e a constraint bloquearia a
+    // remarcação legítima. Serializável resolve sem mentir sobre o domínio —
+    // o Postgres aborta a transação perdedora, que vira o mesmo 409 de sempre.
+    let ocupou = false;
+
+    try {
+      await prisma.$transaction(
+        async (tx) => {
+          const ocupados = await tx.appointment.findMany({
+            where: {
+              companyId: negocio.id,
+              status: { in: ["MARCADO", "CONFIRMADO"] },
+              startsAt: {
+                gte: diaData,
+                lt: new Date(diaData.getTime() + 48 * 60 * 60 * 1000),
+              },
+            },
+            select: { startsAt: true, endsAt: true },
+          });
+
+          // Recalcula no servidor: a lista que o navegador viu pode estar
+          // velha, e dupla marcação é o pior defeito possível numa agenda — o
+          // cliente aparece e não tem cadeira.
+          const livres = calcularSlots({
+            dia: diaData,
+            horarios: horariosDoPerfil(negocio.profile?.businessHours),
+            duracaoMin: servico.durationMin,
+            ocupados,
+            agora,
+            antecedenciaMinutos: ANTECEDENCIA_MIN,
+          });
+
+          if (!livres.includes(hora)) {
+            ocupou = true;
+            throw new ConflitoDeHorario();
+          }
+
+          const [h, m] = hora.split(":").map(Number);
+          // Horário local de Brasília convertido para o instante UTC.
+          const startsAt = new Date(diaData.getTime() + (h * 60 + m + 180) * 60 * 1000);
+          const endsAt = new Date(startsAt.getTime() + servico.durationMin * 60 * 1000);
+
+          // Esta rota é PÚBLICA e escreve na base do assinante. O que ela pode
+          // gravar está em entradaPorLink, com o porquê de cada regra: agendar
+          // não revoga o PARAR, e formulário público não reescreve a caderneta.
+          const existente = await tx.customer.findUnique({
+            where: { companyId_phone: { companyId: negocio.id, phone: telefone } },
+            select: { id: true },
+          });
+
+          const hash = hashTelefone(telefone);
+          const suprimido = hash
+            ? (await tx.supressao.count({
+                where: { companyId: negocio.id, telefoneHash: hash },
+              })) > 0
+            : false;
+
+          const entrada = entradaPorLink({
+            existe: Boolean(existente),
+            nomeInformado: nome,
+            suprimido,
+          });
+
+          const cliente =
+            existente ??
+            (await tx.customer.create({
+              data: {
+                companyId: negocio.id,
+                phone: telefone,
+                source: "LINK",
+                ...entrada.criar!,
+                ...(entrada.criar!.optOut ? { optOutAt: new Date() } : {}),
+              },
+              select: { id: true },
+            }));
+
+          await tx.appointment.create({
+            data: {
+              companyId: negocio.id,
+              customerId: cliente.id,
+              serviceId: servico.id,
+              startsAt,
+              endsAt,
+              source: "LINK",
+            },
+          });
         },
-      },
-      select: { startsAt: true, endsAt: true },
-    });
-
-    // Recalcula no servidor: a lista que o navegador viu pode estar velha, e
-    // dupla marcação é o pior defeito possível numa agenda — o cliente aparece
-    // e não tem cadeira.
-    const livres = calcularSlots({
-      dia: diaData,
-      horarios: horariosDoPerfil(negocio.profile?.businessHours),
-      duracaoMin: servico.durationMin,
-      ocupados,
-      agora,
-      antecedenciaMinutos: ANTECEDENCIA_MIN,
-    });
-
-    if (!livres.includes(hora)) {
-      return NextResponse.json(
-        { error: "Esse horário acabou de ser ocupado. Escolhe outro?" },
-        { status: 409 },
+        { isolationLevel: "Serializable" },
       );
+    } catch (erro) {
+      // Perder a corrida não é falha do sistema: é o horário ter acabado de ser
+      // ocupado — que é o que a pessoa precisa ler, e não um 500.
+      if (ocupou || ehConflitoDeConcorrencia(erro)) {
+        return NextResponse.json(
+          { error: "Esse horário acabou de ser ocupado. Escolhe outro?" },
+          { status: 409 },
+        );
+      }
+      throw erro;
     }
-
-    const [h, m] = hora.split(":").map(Number);
-    // Horário local de Brasília convertido para o instante UTC.
-    const startsAt = new Date(diaData.getTime() + (h * 60 + m + 180) * 60 * 1000);
-    const endsAt = new Date(startsAt.getTime() + servico.durationMin * 60 * 1000);
-
-    // Esta rota é PÚBLICA e escreve na base do assinante. O que ela pode
-    // gravar está em entradaPorLink, com o porquê de cada regra: agendar não
-    // revoga o PARAR, e formulário público não reescreve a caderneta do dono.
-    const existente = await prisma.customer.findUnique({
-      where: { companyId_phone: { companyId: negocio.id, phone: telefone } },
-      select: { id: true },
-    });
-
-    const hash = hashTelefone(telefone);
-    const suprimido = hash
-      ? (await prisma.supressao.count({
-          where: { companyId: negocio.id, telefoneHash: hash },
-        })) > 0
-      : false;
-
-    const entrada = entradaPorLink({ existe: Boolean(existente), nomeInformado: nome, suprimido });
-
-    const cliente =
-      existente ??
-      (await prisma.customer.create({
-        data: {
-          companyId: negocio.id,
-          phone: telefone,
-          source: "LINK",
-          ...entrada.criar!,
-          ...(entrada.criar!.optOut ? { optOutAt: new Date() } : {}),
-        },
-        select: { id: true },
-      }));
-
-    await prisma.appointment.create({
-      data: {
-        companyId: negocio.id,
-        customerId: cliente.id,
-        serviceId: servico.id,
-        startsAt,
-        endsAt,
-        source: "LINK",
-      },
-    });
 
     return NextResponse.json(
       {

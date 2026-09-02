@@ -228,3 +228,37 @@ describe("o CSV do Livro-Caixa não executa fórmula na máquina do dono", () =>
     expect(fonte).toContain("neutralizarFormula(");
   });
 });
+
+describe("dupla marcação na agenda pública", () => {
+  /**
+   * TOCTOU. A rota checa `livres.includes(hora)` e só depois cria o
+   * agendamento. Entre a checagem e a criação, outra requisição pega o mesmo
+   * horário — e não há constraint no banco para impedir, só um índice.
+   *
+   * O próprio comentário do código diz "dupla marcação é o pior defeito
+   * possível numa agenda — o cliente aparece e não tem cadeira". O código
+   * recalcula os livres no servidor justamente por causa disso, e mesmo assim
+   * a corrida passa.
+   *
+   * A rota é PÚBLICA: dá para encher a agenda de um negócio com conflitos de
+   * propósito.
+   *
+   * Constraint única em (companyId, startsAt) não serve: agendamento CANCELADO
+   * ou FALTOU libera o horário, e a constraint bloquearia a remarcação. A saída
+   * é transação serializável — o Postgres aborta a segunda, e ela vira o mesmo
+   * 409 que o usuário já veria.
+   */
+  const rota = readFileSync(
+    join(__dirname, "..", "app/api/agendar/[slug]/route.ts"),
+    "utf8",
+  );
+
+  it("a checagem de horário livre e a criação acontecem na mesma transação", () => {
+    expect(rota).toContain("$transaction");
+    expect(rota).toContain("Serializable");
+  });
+
+  it("conflito de concorrência vira 409, não 500", () => {
+    expect(rota).toContain("ehConflitoDeConcorrencia");
+  });
+});
