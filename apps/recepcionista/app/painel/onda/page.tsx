@@ -37,11 +37,23 @@ type Vazio = {
   acao: { texto: string; href: string };
 };
 
+type Pendente = {
+  id: string;
+  clienteId: string;
+  nome: string;
+  toqueNumero: number;
+  esteira: string;
+  ticketMedioCents: number;
+  enviadoEm: string;
+};
+
 type Onda = {
   cards: Card[];
   totalEmJogoCents: number;
   composicao: Record<string, number>;
   vazio: Vazio | null;
+  /** Contatos de semanas anteriores ainda sem desfecho. */
+  perguntar?: Pendente[];
 };
 
 const reais = (cents: number) =>
@@ -112,6 +124,35 @@ export default function PaginaOnda() {
       setFeitos((f) => ({ ...f, [card.id]: json.efeito }));
       setPulando("");
     }
+  };
+
+  /**
+   * Marca o desfecho de um contato de SEMANAS ANTERIORES.
+   *
+   * Some da lista na hora, e não depois de recarregar: a pergunta "quem
+   * apareceu?" só funciona se responder for instantâneo. Recarregar a onda
+   * inteira a cada clique faria o dono desistir na terceira pessoa.
+   */
+  const marcarPendente = async (
+    p: Pendente,
+    resultado: string,
+    extra: Record<string, unknown> = {},
+  ) => {
+    setOnda((atual) =>
+      atual ? { ...atual, perguntar: (atual.perguntar ?? []).filter((x) => x.id !== p.id) } : atual,
+    );
+
+    await fetch("/api/onda", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        clienteId: p.clienteId,
+        toque: p.toqueNumero,
+        esteira: p.esteira,
+        resultado,
+        ...extra,
+      }),
+    });
   };
 
   if (carregando) {
@@ -197,6 +238,57 @@ export default function PaginaOnda() {
         </div>
       </header>
 
+      {/*
+        QUEM APARECEU?
+        Vem ANTES dos 12 cartões porque é dinheiro que já pode ter voltado e
+        ainda não está contado. "Enviei" grava AGUARDANDO (que é a verdade), e
+        sem esta pergunta tudo ficaria AGUARDANDO para sempre — o Livro-Caixa
+        ficaria mais vazio do que quando o botão mentia.
+      */}
+      {(onda.perguntar?.length ?? 0) > 0 && (
+        <div className="rounded-2xl border border-amber/40 bg-amber/10 p-5">
+          <h2 className="font-display font-semibold text-panel-ink">
+            Semana passada você falou com {onda.perguntar!.length}{" "}
+            {onda.perguntar!.length === 1 ? "pessoa" : "pessoas"}. Quem apareceu?
+          </h2>
+          <p className="mt-1 text-sm text-panel-sub">
+            Só entra no seu Livro-Caixa o que você marcar. Pode pular — volto a perguntar.
+          </p>
+
+          <ul className="mt-4 space-y-2">
+            {onda.perguntar!.map((p) => (
+              <li
+                key={p.id}
+                className="flex flex-wrap items-center gap-2 rounded-xl border border-panel-line bg-panel-card px-4 py-3"
+              >
+                <span className="font-medium text-panel-ink">{p.nome}</span>
+                <span className="text-xs text-panel-sub">
+                  faz {Math.floor((Date.now() - new Date(p.enviadoEm).getTime()) / 86_400_000)} dias
+                </span>
+                <div className="ml-auto flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      marcarPendente(p, "VOLTOU", { valorCents: p.ticketMedioCents })
+                    }
+                    className="rounded-lg border border-amber/40 px-3 py-1.5 text-sm text-amber-deep hover:bg-amber/10"
+                  >
+                    Voltou{p.ticketMedioCents > 0 ? ` (${reais(p.ticketMedioCents)})` : ""}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => marcarPendente(p, "SEM_RESPOSTA")}
+                    className="rounded-lg border border-panel-line px-3 py-1.5 text-sm text-panel-sub hover:text-panel-ink"
+                  >
+                    Não veio
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="space-y-3">
         {onda.cards.map((card) => {
           const feito = feitos[card.id];
@@ -269,7 +361,11 @@ export default function PaginaOnda() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => marcar(card, "SEM_RESPOSTA")}
+                      // AGUARDANDO, nao SEM_RESPOSTA. O cliente acabou de
+                      // receber -- chamar isso de "nao respondeu" descartava
+                      // todo retorno que viesse depois, e o Livro-Caixa e
+                      // exatamente o que prova que a Nexora vale a mensalidade.
+                      onClick={() => marcar(card, "AGUARDANDO")}
                       className="rounded-lg border border-panel-line px-3 py-2 text-sm text-panel-ink hover:border-panel-sub"
                     >
                       Enviei

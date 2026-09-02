@@ -10,6 +10,11 @@ import { LIMITES, limitar } from "@/lib/limites";
 import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 import { ehAtribuivel } from "@/lib/recuperacao/atribuicao";
 import { calcularCiclo, medianaDoSegmento } from "@/lib/recuperacao/ciclo";
+import {
+  MAX_DIAS_PARA_COBRAR,
+  MIN_DIAS_PARA_COBRAR,
+  vencidosParaPerguntar,
+} from "@/lib/recuperacao/desfecho";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +31,10 @@ const marcarSchema = z.object({
   clienteId: z.string().min(1),
   toque: z.number().int().min(1).max(4),
   esteira: z.enum(["PRE_ATRASO", "ATRASO", "RESGATE"]),
-  resultado: z.enum(["VOLTOU", "MARCOU", "RESPONDEU", "SEM_RESPOSTA", "PULADO"]),
+  // AGUARDANDO entra na lista: "enviei" NAO e "nao respondeu". Gravar
+  // SEM_RESPOSTA no instante do envio perdia todo retorno que acontecia
+  // depois -- ver lib/recuperacao/desfecho.ts.
+  resultado: z.enum(["AGUARDANDO", "VOLTOU", "MARCOU", "RESPONDEU", "SEM_RESPOSTA", "PULADO"]),
   valorCents: z.number().int().min(0).optional(),
   motivoPulo: z
     .enum(MOTIVOS_PULO)
@@ -48,7 +56,50 @@ export async function GET() {
 
   try {
     const onda = await montarOndaDaSemana(companyId);
-    return NextResponse.json(onda);
+
+    // OS PENDENTES DA SEMANA PASSADA.
+    //
+    // "Enviei" agora grava AGUARDANDO, que é a verdade — mas sem alguém
+    // perguntar depois, tudo ficaria AGUARDANDO para sempre e o Livro-Caixa
+    // ficaria mais vazio do que antes. Esta lista é a outra metade do conserto.
+    const pendentes = await prisma.recoveryTouch.findMany({
+      where: {
+        companyId,
+        outcome: "AGUARDANDO",
+        sentAt: {
+          gte: new Date(Date.now() - (MAX_DIAS_PARA_COBRAR + 1) * 86_400_000),
+          lte: new Date(Date.now() - MIN_DIAS_PARA_COBRAR * 86_400_000),
+        },
+      },
+      select: {
+        id: true,
+        customerId: true,
+        touchNumber: true,
+        esteira: true,
+        sentAt: true,
+        customer: { select: { name: true, visits: { select: { valueCents: true }, take: 20 } } },
+      },
+      orderBy: { sentAt: "asc" },
+    });
+
+    const perguntar = vencidosParaPerguntar(
+      pendentes.map((t) => ({
+        id: t.id,
+        clienteId: t.customerId,
+        nome: t.customer?.name ?? "cliente",
+        toqueNumero: t.touchNumber,
+        esteira: t.esteira,
+        ticketMedioCents:
+          t.customer && t.customer.visits.length > 0
+            ? Math.round(
+                t.customer.visits.reduce((s, v) => s + v.valueCents, 0) / t.customer.visits.length,
+              )
+            : 0,
+        enviadoEm: t.sentAt,
+      })),
+    );
+
+    return NextResponse.json({ ...onda, perguntar });
   } catch (error) {
     await logError("onda-get", error, companyId);
     return NextResponse.json({ error: "Não consegui montar a onda agora" }, { status: 500 });
@@ -92,17 +143,44 @@ export async function POST(request: Request) {
     });
     if (!cliente) return NextResponse.json({ error: "Cliente não encontrado" }, { status: 404 });
 
-    await prisma.recoveryTouch.create({
-      data: {
-        companyId,
-        customerId: clienteId,
-        touchNumber: toque,
-        esteira,
-        outcome: resultado,
-        outcomeAt: new Date(),
-        skipReason: motivoPulo ?? "",
-      },
+    // RESOLVE o toque pendente em vez de criar outro.
+    //
+    // Antes esta rota sempre criava. Como "Enviei" agora grava AGUARDANDO e a
+    // tela pergunta depois "quem apareceu?", criar de novo produziria DOIS
+    // toques para o mesmo contato: um AGUARDANDO eterno na lista de perguntas,
+    // e um segundo com o desfecho. O contador de toques do cliente também
+    // andaria sozinho, e ele receberia o toque 3 sem nunca ter recebido o 2.
+    const pendente = await prisma.recoveryTouch.findFirst({
+      where: { companyId, customerId: clienteId, touchNumber: toque, outcome: "AGUARDANDO" },
+      orderBy: { sentAt: "desc" },
+      select: { id: true },
     });
+
+    if (pendente) {
+      await prisma.recoveryTouch.update({
+        where: { id: pendente.id },
+        data: {
+          esteira,
+          outcome: resultado,
+          // AGUARDANDO continua sem data de desfecho: ela marca quando a
+          // história acabou, e ela ainda não acabou.
+          outcomeAt: resultado === "AGUARDANDO" ? null : new Date(),
+          skipReason: motivoPulo ?? "",
+        },
+      });
+    } else {
+      await prisma.recoveryTouch.create({
+        data: {
+          companyId,
+          customerId: clienteId,
+          touchNumber: toque,
+          esteira,
+          outcome: resultado,
+          outcomeAt: resultado === "AGUARDANDO" ? null : new Date(),
+          skipReason: motivoPulo ?? "",
+        },
+      });
+    }
 
     // Sai da fila de vez — a próxima onda fica mais limpa, e isso é dito ao
     // dono na resposta. Quem decide é lib/recuperacao/pulo.ts: antes a regra
