@@ -92,24 +92,37 @@ secret). O webhook já está criado, com 9 eventos e a versão de API
 `2026-08-26.dahlia`, que é a mesma do código — não mexa nela sem mexer no
 código junto: `current_period_end` mudou de lugar entre versões.
 
-### O domínio do remetente
+### O domínio do remetente — agora no caminho crítico da receita
 
-`EMAIL_REMETENTE` precisa de domínio verificado no Resend. `nexora.com.br` não
-existe hoje, e a Política de Privacidade diz isso com todas as letras. Sem
-domínio próprio o e-mail sai do domínio de testes do Resend e a confirmação da
-assinatura chega com cara de fraude — justamente o e-mail que existe para dar
-segurança ao consumidor.
+`EMAIL_REMETENTE` precisa de domínio verificado no Resend. Isso deixou de ser
+detalhe de acabamento em 02/09/2026 e virou pré-requisito para faturar.
+
+A corrente é esta:
+
+1. `enviarEmail` degrada em silêncio sem `RESEND_API_KEY` e `EMAIL_REMETENTE`.
+2. Sem e-mail, o link de verificação nunca chega.
+3. Sem verificação, `emailVerificadoEm` fica nulo.
+4. `/api/billing/checkout` recusa cobrar de e-mail não comprovado — 403.
+
+Ou seja: **sem Resend configurado, ninguém que se cadastrou por senha consegue
+assinar.** A trava está certa (o Decreto 7.962/2013 obriga a mandar o
+comprovante da contratação, e não dá para mandar sem e-mail funcionando), mas
+precisa ser conhecida.
+
+**A saída lateral:** quem entra com o Google nasce com `emailVerificadoEm`
+preenchido, porque o Google já provou a posse do endereço. `GOOGLE_CLIENT_ID` e
+`GOOGLE_CLIENT_SECRET` já estão no Railway. Então dá para faturar com login
+Google antes de o Resend existir — mas a confirmação que a lei exige continua
+sem sair, e a recuperação de senha continua sem funcionar. É uma ponte, não um
+destino.
 
 ---
 
-## 3. Levar o schema para o banco
+## 3. O schema vai sozinho
 
-O schema mudou em 01/09/2026 e o projeto usa `db push`, não migrations:
-
-```bash
-cd apps/recepcionista
-railway run pnpm db:push
-```
+Não há passo manual: o `CMD` do Dockerfile roda `npx prisma db push
+--skip-generate` a cada boot, antes de subir o app. Confira nos logs do primeiro
+deploy que ele passou.
 
 O que entra: `RegistroImportacao`, `Supressao`,
 `Company.confirmacaoEnviadaEm`, `Company.termosAceitosEm`,
@@ -138,9 +151,11 @@ railway logs --service recepcionista
 3. Criar conta → o aceite é obrigatório e grava `termosAceitosEm`.
 4. `/painel/clientes/importar` → **Baixar minha base em planilha** devolve um
    CSV que abre no Excel com acento correto.
-5. Assinar com um cartão de teste → chega o e-mail de confirmação, com preço,
+5. Confirmar o e-mail pelo link, ou entrar com o Google. Sem isso o checkout
+   responde 403 — é a trava do Decreto 7.962/2013, não um bug.
+6. Assinar com um cartão de teste → chega o e-mail de confirmação, com preço,
    data da próxima cobrança, o art. 49 e a identificação do fornecedor.
-6. `stripe listen` ou o painel de webhooks: os 9 eventos entregam 200.
+7. `stripe listen` ou o painel de webhooks: os 9 eventos entregam 200.
 
 ---
 
