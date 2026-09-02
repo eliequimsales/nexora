@@ -3,6 +3,8 @@ import { getSessionCompanyId } from "@/lib/auth";
 import { stripe, stripeConfigurado } from "@/lib/billing/stripe";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
+import { LIMITES, limitar } from "@/lib/limites";
+import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,6 +25,10 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+  if (!limitar("portal", companyId, LIMITES.terceiro)) {
+    return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
+  }
 
   if (!stripeConfigurado()) {
     return NextResponse.json(

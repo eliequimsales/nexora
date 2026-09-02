@@ -3,12 +3,18 @@ import { prisma } from "@/lib/db";
 import { getSessionCompanyId } from "@/lib/auth";
 import { logError } from "@/lib/errors";
 import { profileSchema } from "@/lib/validation";
+import { LIMITES, limitar } from "@/lib/limites";
+import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+  if (!limitar("perfil", companyId, LIMITES.leitura)) {
+    return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
+  }
 
   const company = await prisma.company.findUnique({
     where: { id: companyId },
@@ -22,6 +28,10 @@ export async function GET() {
 export async function PUT(request: Request) {
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+  if (!limitar("perfil", companyId, LIMITES.leitura)) {
+    return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
+  }
 
   try {
     const body = await request.json().catch(() => null);

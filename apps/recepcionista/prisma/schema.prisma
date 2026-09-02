@@ -99,6 +99,7 @@ model Company {
   passwordResets PasswordReset[]
   importacoes    RegistroImportacao[]
   supressoes     Supressao[]
+  verificacoes   VerificacaoEmail[]
 }
 
 // Cada e-mail de reengajamento já enviado. A unicidade por (empresa, momento) é
@@ -550,5 +551,27 @@ model Supressao {
   criadoEm DateTime @default(now())
 
   @@unique([companyId, telefoneHash])
+  @@index([companyId])
+}
+
+// Verificacao de posse do e-mail. Mesmo desenho do PasswordReset: o banco
+// guarda so o sha256 do token, o link vale uma vez e expira. Se o banco vazar,
+// os hashes nao verificam conta nenhuma.
+//
+// A conta funciona sem verificar -- bloquear o painel inteiro mataria o
+// primeiro minuto do produto. O que a verificacao trava e a COBRANCA: antes de
+// tirar dinheiro de alguem e preciso saber que da para falar com essa pessoa,
+// e o Decreto 7.962/2013 obriga a mandar o comprovante para la.
+model VerificacaoEmail {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  tokenHash String    @unique
+  expiraEm  DateTime
+  usadoEm   DateTime?
+
+  criadoEm DateTime @default(now())
+
   @@index([companyId])
 }

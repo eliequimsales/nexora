@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import type { ConversationStatus } from "@nexora/recepcionista-prisma";
 import { prisma } from "@/lib/db";
 import { getSessionCompanyId } from "@/lib/auth";
+import { LIMITES, limitar } from "@/lib/limites";
+import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +12,10 @@ const VALID_STATUSES = ["AI", "WAITING_HUMAN", "HUMAN", "FINISHED"] as const;
 export async function GET(request: Request) {
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+  if (!limitar("conversas", companyId, LIMITES.leitura)) {
+    return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
+  }
 
   const statusParam = new URL(request.url).searchParams.get("status");
   const status = VALID_STATUSES.includes(statusParam as ConversationStatus)

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getSessionCompanyId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { refreshWhatsAppStatus } from "@/lib/whatsapp/instance";
+import { LIMITES, limitar } from "@/lib/limites";
+import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +15,10 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+  if (!limitar("whatsapp-status", companyId, LIMITES.leitura)) {
+    return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
+  }
 
   const sync = new URL(request.url).searchParams.get("sync") === "1";
 

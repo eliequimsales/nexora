@@ -5,12 +5,18 @@ import { logError } from "@/lib/errors";
 import { humanMessageSchema } from "@/lib/validation";
 import { recordTeamObservation } from "@/lib/training";
 import { sendWhatsAppText } from "@/lib/whatsapp/evolution";
+import { LIMITES, limitar } from "@/lib/limites";
+import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+  if (!limitar("responder", companyId, LIMITES.escrita)) {
+    return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
+  }
 
   const body = await request.json().catch(() => null);
   const parsed = humanMessageSchema.safeParse(body);

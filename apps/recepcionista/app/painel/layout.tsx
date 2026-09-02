@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionCompanyId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { AvisoVerificarEmail } from "./aviso-verificar";
 import { LogoutButton } from "@/components/logout-button";
 
 // A Onda vem primeiro porque é a única tela que gera dinheiro. Ela existia e
@@ -22,12 +23,21 @@ export default async function PainelLayout({ children }: { children: React.React
 
   const company = await prisma.company.findUnique({
     where: { id: companyId },
-    select: { name: true, plan: true },
+    select: { name: true, plan: true, emailVerificadoEm: true },
   });
   if (!company) redirect("/login");
 
   return (
     <div className="min-h-screen bg-panel-bg text-panel-ink">
+      {/*
+        Aviso de e-mail não confirmado.
+        Fica no topo de TODO o painel, e não escondido em configurações, porque
+        a pessoa só descobriria o problema na hora de assinar — que é o pior
+        momento possível para encontrar fricção. Não bloqueia nada aqui: o
+        primeiro minuto do produto é onde o dono decide se fica.
+      */}
+      {!company.emailVerificadoEm && <AvisoVerificarEmail />}
+
       <header className="border-b border-panel-line bg-panel-card">
         <div className="mx-auto flex max-w-page items-center justify-between px-6 py-3">
           <div className="flex items-center gap-8">

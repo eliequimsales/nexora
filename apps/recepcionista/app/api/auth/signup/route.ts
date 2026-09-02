@@ -5,6 +5,8 @@ import { logError } from "@/lib/errors";
 import { signupSchema } from "@/lib/validation";
 import { VERSAO_DOCUMENTOS } from "@/lib/legal/identidade";
 import { clientIp, rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
+import { abrirVerificacao, VALIDADE_HORAS } from "@/lib/auth/verificacao";
+import { enviarEmail } from "@/lib/reengajamento/email";
 
 export async function POST(request: Request) {
   try {
@@ -41,6 +43,32 @@ export async function POST(request: Request) {
         profile: { create: {} },
       },
     });
+
+    // A conta entra funcionando: bloquear o painel aqui mataria o primeiro
+    // minuto do produto, que é onde o dono decide se fica. O que a verificação
+    // trava é a COBRANÇA, em /api/billing/checkout.
+    //
+    // Falha de envio não derruba o cadastro nem vaza para a resposta: a pessoa
+    // pode pedir outro link pelo painel, e um 500 aqui perderia a conta inteira
+    // por causa do e-mail.
+    try {
+      const token = await abrirVerificacao(company.id);
+      await enviarEmail(company.email, {
+        assunto: "Confirme seu e-mail na Nexora",
+        corpo:
+          `${name}, falta um passo: confirmar que este e-mail é seu.
+
+` +
+          `Isso garante que você consiga recuperar a senha depois, e que o ` +
+          `comprovante da assinatura chegue até você quando decidir assinar.
+
+` +
+          `O link abaixo vale por ${VALIDADE_HORAS} horas.`,
+        acao: { texto: "Confirmar meu e-mail", href: `/verificar?token=${encodeURIComponent(token)}` },
+      });
+    } catch (erro) {
+      await logError("signup-verificacao", erro, company.id);
+    }
 
     setSessionCookie(await createSessionToken(company.id, company.sessaoEpoca));
     return NextResponse.json({ ok: true });

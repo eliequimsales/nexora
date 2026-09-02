@@ -3,12 +3,18 @@ import type { ConversationStatus } from "@nexora/recepcionista-prisma";
 import { prisma } from "@/lib/db";
 import { getSessionCompanyId } from "@/lib/auth";
 import { conversationActionSchema } from "@/lib/validation";
+import { LIMITES, limitar } from "@/lib/limites";
+import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+  if (!limitar("conversa", companyId, LIMITES.leitura)) {
+    return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
+  }
 
   const conversation = await prisma.conversation.findFirst({
     where: { id: params.id, companyId },
@@ -31,6 +37,10 @@ const ACTION_MAP: Record<string, { status: ConversationStatus; note: string }> =
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+  if (!limitar("conversa", companyId, LIMITES.leitura)) {
+    return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
+  }
 
   const body = await request.json().catch(() => null);
   const parsed = conversationActionSchema.safeParse(body);

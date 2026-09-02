@@ -3,6 +3,8 @@ import { getSessionCompanyId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
 import { neutralizarFormula } from "@/lib/dados/exportar";
+import { LIMITES, limitar } from "@/lib/limites";
+import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +25,10 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+  if (!limitar("livro-caixa", companyId, LIMITES.pesado)) {
+    return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
+  }
 
   try {
     const url = new URL(request.url);

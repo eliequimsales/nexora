@@ -5,6 +5,8 @@ import { logError } from "@/lib/errors";
 import { getTemplatesForSegments, startInterview } from "@/lib/segments";
 import { asSegments } from "@/lib/training";
 import { interviewSchema } from "@/lib/validation";
+import { LIMITES, limitar } from "@/lib/limites";
+import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -16,6 +18,10 @@ export const maxDuration = 60;
 export async function POST(request: Request) {
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+  if (!limitar("treino-entrevista", companyId, LIMITES.ia)) {
+    return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
+  }
 
   const body = await request.json().catch(() => null);
   const parsed = interviewSchema.safeParse(body);

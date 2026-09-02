@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
 import { camposPendentes, identificacaoCompleta } from "@/lib/legal/identidade";
 import { rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
+import { podeCobrar } from "@/lib/auth/verificacao";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -61,9 +62,24 @@ export async function POST(request: Request) {
   try {
     const empresa = await prisma.company.findUnique({
       where: { id: companyId },
-      select: { id: true, name: true, email: true, stripeCustomerId: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        stripeCustomerId: true,
+        emailVerificadoEm: true,
+      },
     });
     if (!empresa) return NextResponse.json({ error: "Empresa não encontrada" }, { status: 404 });
+
+    // Antes de tirar dinheiro de alguém é preciso saber que dá para falar com
+    // essa pessoa — e o Decreto 7.962/2013 obriga a mandar o comprovante da
+    // contratação para o e-mail dela. Cobrar de um endereço não comprovado é
+    // cobrar sem conseguir cumprir a obrigação que vem junto.
+    const cobranca = podeCobrar(empresa);
+    if (!cobranca.pode) {
+      return NextResponse.json({ error: cobranca.motivo }, { status: 403 });
+    }
 
     const appUrl = process.env.APP_URL ?? new URL(request.url).origin;
 

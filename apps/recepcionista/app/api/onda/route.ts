@@ -6,6 +6,8 @@ import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
 import { deveSilenciar, MOTIVOS_PULO } from "@/lib/recuperacao/pulo";
 import { montarOndaDaSemana } from "@/lib/recuperacao/servico";
+import { LIMITES, limitar } from "@/lib/limites";
+import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +35,10 @@ export async function GET() {
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
+  if (!limitar("onda", companyId, LIMITES.pesado)) {
+    return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
+  }
+
   // Gerar a onda é a ação de saída que o produto vende. É ela que trava sem
   // assinatura — nunca a leitura da base, que é dado do próprio dono.
   const barrado = await exigirAcesso(companyId, "GERAR_ONDA");
@@ -50,6 +56,10 @@ export async function GET() {
 export async function POST(request: Request) {
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+  if (!limitar("onda", companyId, LIMITES.pesado)) {
+    return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
+  }
 
   try {
     const parsed = marcarSchema.safeParse(await request.json());

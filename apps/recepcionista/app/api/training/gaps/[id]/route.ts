@@ -3,6 +3,8 @@ import { getSessionCompanyId } from "@/lib/auth";
 import { logError } from "@/lib/errors";
 import { dismissGap } from "@/lib/training";
 import { gapActionSchema } from "@/lib/validation";
+import { LIMITES, limitar } from "@/lib/limites";
+import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +12,10 @@ export const dynamic = "force-dynamic";
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+  if (!limitar("treino-gap", companyId, LIMITES.escrita)) {
+    return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
+  }
 
   const body = await request.json().catch(() => null);
   if (!gapActionSchema.safeParse(body).success) {
