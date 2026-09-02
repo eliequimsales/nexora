@@ -5,6 +5,7 @@ import { importar } from "@/lib/importacao/parsers";
 import { medianaDoSegmento } from "@/lib/recuperacao/ciclo";
 import { logErroSemConteudo } from "@/lib/errors";
 import { clientIp, rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
+import { FRASE_SOCORRO, temCanalDeSocorro } from "@/lib/contato";
 
 export const dynamic = "force-dynamic";
 
@@ -57,8 +58,8 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "Não consegui ler nenhum cliente nessa lista. Ela precisa ter pelo menos nome e telefone. " +
-            "Se estiver difícil, me manda do jeito que estiver que eu converto na mão.",
+            "Não consegui ler nenhum cliente nessa lista. Ela precisa ter pelo menos nome e telefone." +
+            (temCanalDeSocorro() ? ` ${FRASE_SOCORRO}` : ""),
           // Mesmo nome de campo do 200. O 422 devolvia `ignoradas` e o 200
           // `exemplosIgnorados`, e a tela lia um e perdia o outro em silêncio.
           exemplosIgnorados: importacao.ignoradas.slice(0, 5),

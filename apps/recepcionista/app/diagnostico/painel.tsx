@@ -7,6 +7,7 @@ import { DECLARACAO_BASE } from "@/lib/legal/identidade";
 import { AcaoConvite } from "@/components/acao-convite";
 import { TresNomes } from "@/components/diagnostico/tres-nomes";
 import { EventoAoMontar, registrar } from "@/components/funil";
+import { FRASE_SOCORRO, linkDeSocorro } from "@/lib/contato";
 
 /**
  * O ÚNICO dono do estado desta página.
@@ -145,6 +146,8 @@ function ticketEmCents(bruto: string): number | undefined {
   const cents = Math.round(n * 100);
   return cents >= 500 && cents <= 500_000 ? cents : undefined;
 }
+
+const socorro = linkDeSocorro("ler a lista");
 
 export function PainelDiagnostico() {
   const [e, dispatch] = useReducer(reducer, INICIAL);
@@ -434,8 +437,15 @@ function ErroLeitura({
         Corrigir e tentar de novo
       </button>
       <p className="mt-3 text-sm text-mist/50">
-        Sua lista continua aqui na caixa — não precisa colar de novo. Se estiver difícil,
-        me manda do jeito que estiver que eu converto na mão.
+        Sua lista continua aqui na caixa — não precisa colar de novo.
+        {socorro && (
+          <>
+            {" "}
+            <a href={socorro} target="_blank" rel="noopener noreferrer" className="text-amber underline underline-offset-4">
+              {FRASE_SOCORRO}
+            </a>
+          </>
+        )}
       </p>
     </div>
   );

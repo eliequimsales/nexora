@@ -3,6 +3,7 @@ import Link from "next/link";
 import { formasDePagamentoTexto } from "@/lib/billing/preco";
 import { PainelDiagnostico } from "./painel";
 import { EventoAoMontar } from "@/components/funil";
+import { FRASE_SOCORRO, temCanalDeSocorro } from "@/lib/contato";
 
 export const metadata: Metadata = {
   title: "Descubra quais clientes seus sumiram — Nexora",
@@ -51,7 +52,13 @@ const OBJECOES = [
   },
   {
     p: "Eu não tenho planilha, tenho um caderno.",
-    r: "Serve. Digita como der: um cliente por linha, nome e telefone, e a data se você lembrar. Também aceito a conversa exportada do WhatsApp e a colagem direta do Excel. Se estiver difícil, me manda do jeito que estiver que eu converto na mão.",
+    // A frase de socorro só entra quando o canal existe. Ver lib/contato.ts:
+    // prometer atendimento sem porta quebra justamente com quem mais precisa.
+    r:
+      "Serve. Nem precisa do caderno agora: escreve três nomes que você lembra que " +
+      "sumiram e eu escrevo a mensagem para cada um. Se tiver a lista à mão, também " +
+      "aceito colagem do Excel, CSV e arquivo de texto." +
+      (temCanalDeSocorro() ? ` ${FRASE_SOCORRO}` : ""),
   },
   {
     p: "Vocês vão vender para os meus clientes?",

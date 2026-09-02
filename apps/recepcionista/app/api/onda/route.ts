@@ -8,6 +8,8 @@ import { deveSilenciar, MOTIVOS_PULO } from "@/lib/recuperacao/pulo";
 import { montarOndaDaSemana } from "@/lib/recuperacao/servico";
 import { LIMITES, limitar } from "@/lib/limites";
 import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
+import { ehAtribuivel } from "@/lib/recuperacao/atribuicao";
+import { calcularCiclo, medianaDoSegmento } from "@/lib/recuperacao/ciclo";
 
 export const dynamic = "force-dynamic";
 
@@ -75,7 +77,17 @@ export async function POST(request: Request) {
       where: { id: clienteId, companyId },
       select: {
         id: true,
-        visits: { orderBy: { occurredAt: "desc" }, take: 1, select: { occurredAt: true } },
+        // Histórico, e não só a última visita: sem ele não dá para calcular o
+        // ciclo pessoal, e sem ciclo não dá para dizer se ele voltou porque a
+        // Nexora chamou ou porque já estava na hora dele.
+        visits: { orderBy: { occurredAt: "desc" }, take: 40, select: { occurredAt: true } },
+        // O toque que originou este retorno, para medir a janela de 21 dias.
+        touches: {
+          where: { touchNumber: toque },
+          orderBy: { sentAt: "desc" },
+          take: 1,
+          select: { sentAt: true },
+        },
       },
     });
     if (!cliente) return NextResponse.json({ error: "Cliente não encontrado" }, { status: 404 });
@@ -113,6 +125,27 @@ export async function POST(request: Request) {
         ? Math.floor((Date.now() - ultima.getTime()) / (24 * 60 * 60 * 1000))
         : 0;
 
+      // ATRIBUIÇÃO. Antes este campo caía no @default(true) do schema e TODO
+      // retorno era contado como recuperado pela Nexora — inclusive quem ia
+      // voltar sozinho. A tela de assinatura, enquanto isso, afirmava aplicar
+      // a janela de 21 dias. Ver lib/recuperacao/atribuicao.ts.
+      const ciclo = calcularCiclo(
+        cliente.visits.map((v) => v.occurredAt),
+        medianaDoSegmento(null),
+      );
+      const enviadoEm = cliente.touches[0]?.sentAt ?? null;
+      const diasDesdeOToque = enviadoEm
+        ? Math.floor((Date.now() - enviadoEm.getTime()) / (24 * 60 * 60 * 1000))
+        : Number.POSITIVE_INFINITY;
+
+      const atribuido = ehAtribuivel({
+        diasDesdeOToque,
+        diasSumido: diasAway,
+        // Ciclo de confiança baixa não sustenta a afirmação de que ele estava
+        // fora do ritmo. Na dúvida o extrato fica menor, nunca maior.
+        cicloDias: ciclo.confianca === "alta" ? ciclo.dias : 0,
+      });
+
       await prisma.recoveryEntry.create({
         data: {
           companyId,
@@ -121,6 +154,7 @@ export async function POST(request: Request) {
           daysAway: diasAway,
           esteira,
           touchNumber: toque,
+          attributed: atribuido,
         },
       });
       await prisma.visit.create({
