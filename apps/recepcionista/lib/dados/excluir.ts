@@ -66,7 +66,16 @@ export function telefoneCanonico(bruto: string): string | null {
 export function hashTelefone(bruto: string): string | null {
   const canonico = telefoneCanonico(bruto);
   if (!canonico) return null;
-  const chave = process.env.SUPRESSAO_SECRET ?? process.env.JWT_SECRET ?? "";
+
+  // FALHA FECHADO, como tokenDescadastro já fazia. A versão anterior terminava
+  // em `?? ""`: com chave vazia o HMAC vira um digest simples, e telefone
+  // brasileiro tem 11 dígitos — quebrável por força bruta em minutos. A lista
+  // de supressão viraria uma lista de telefones com um passo a mais.
+  const chave = process.env.SUPRESSAO_SECRET || process.env.JWT_SECRET;
+  if (!chave || chave.length < 32) {
+    throw new Error("SUPRESSAO_SECRET/JWT_SECRET ausente ou curto demais para a lista de supressão");
+  }
+
   return createHmac("sha256", chave).update(`telefone:${canonico}`).digest("hex");
 }
 

@@ -4,7 +4,7 @@ import { gerarDiagnostico, type ClienteBase } from "@/lib/importacao/diagnostico
 import { importar } from "@/lib/importacao/parsers";
 import { medianaDoSegmento } from "@/lib/recuperacao/ciclo";
 import { logErroSemConteudo } from "@/lib/errors";
-import { rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
+import { clientIp, rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +33,10 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "anon";
+  // clientIp e nao a leitura crua: o primeiro elemento de X-Forwarded-For e o
+  // que o CLIENTE mandou, e com ele o atacante trocava de identidade a cada
+  // requisicao. Duas rotas ainda tinham a versao antiga copiada.
+  const ip = clientIp(request);
   if (!rateLimit(`diagnostico:${ip}`, { limit: 8, windowMs: 10 * 60_000 })) {
     return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
   }

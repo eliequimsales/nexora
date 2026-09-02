@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
-import { rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
+import { clientIp, rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 import { conferirDescadastro } from "@/lib/reengajamento/servico";
 
 export const runtime = "nodejs";
@@ -27,7 +27,10 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "anon";
+  // clientIp e nao a leitura crua: o primeiro elemento de X-Forwarded-For e o
+  // que o CLIENTE mandou, e com ele o atacante trocava de identidade a cada
+  // requisicao. Duas rotas ainda tinham a versao antiga copiada.
+  const ip = clientIp(request);
   if (!rateLimit(`descadastro:${ip}`, { limit: 20, windowMs: 10 * 60_000 })) {
     return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
   }
