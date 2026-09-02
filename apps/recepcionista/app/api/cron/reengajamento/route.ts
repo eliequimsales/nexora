@@ -3,6 +3,7 @@ import { logError } from "@/lib/errors";
 import { safeEqual } from "@/lib/rate-limit";
 import { rodarRegua } from "@/lib/reengajamento/servico";
 import { chamarParaAOnda } from "@/lib/reengajamento/chamada-semanal";
+import { podarEventos } from "@/lib/funil-poda";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,7 +36,17 @@ export async function POST(request: Request) {
     const regua = await rodarRegua();
     const chamada = await chamarParaAOnda(hoje);
 
-    return NextResponse.json({ ok: true, ...regua, chamadaSemanal: chamada });
+    // A tabela de eventos de funil é a única alimentada por rota PÚBLICA de
+    // escrita. Sem poda ela cresce para sempre num Postgres de plano Hobby.
+    // Falha aqui não derruba a régua: métrica não vale um e-mail de cobrança.
+    let eventosPodados = 0;
+    try {
+      eventosPodados = await podarEventos(hoje);
+    } catch (erro) {
+      await logError("podar-eventos", erro);
+    }
+
+    return NextResponse.json({ ok: true, ...regua, chamadaSemanal: chamada, eventosPodados });
   } catch (erro) {
     await logError("cron-reengajamento", erro);
     return NextResponse.json({ error: "Falha ao rodar a régua" }, { status: 500 });

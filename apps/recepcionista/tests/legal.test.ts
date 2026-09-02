@@ -158,3 +158,32 @@ describe("dado sensível — o produto vende para clínica e fisioterapia", () =
     expect(textoDe(OPERADOR).toLowerCase()).toContain("art. 11");
   });
 });
+
+describe("a seção de cookies acompanha o que o navegador realmente guarda", () => {
+  /**
+   * REGRESSÃO MINHA, encontrada na segunda passada de segurança.
+   *
+   * A política dizia "um único cookie" e "não haveria nada para você recusar".
+   * As duas frases ficaram falsas quando eu mesmo acrescentei o cookie de state
+   * do OAuth (rd_oauth) e a medição de funil em sessionStorage — a mesma classe
+   * de erro que passei o dia inteiro consertando em outros lugares.
+   */
+  const t = textoDe(PRIVACIDADE);
+
+  it("nomeia os dois cookies que existem", () => {
+    expect(t).toContain("rd_session");
+    expect(t).toContain("rd_oauth");
+  });
+
+  it("declara a medição de funil e onde ela mora", () => {
+    expect(t.toLowerCase()).toContain("sessionstorage");
+  });
+
+  it("não afirma mais que não há nada a recusar", () => {
+    expect(t).not.toContain("não haveria nada para você recusar");
+  });
+
+  it("não afirma mais que é um cookie só", () => {
+    expect(t).not.toContain("um único cookie");
+  });
+});

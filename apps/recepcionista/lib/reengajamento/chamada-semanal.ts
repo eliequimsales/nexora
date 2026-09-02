@@ -22,6 +22,19 @@ import { deveChamarParaOnda, momentoDaOnda, textoDaChamada } from "./onda-semana
 
 export type ResultadoChamada = { enviados: number; pulados: number; falhas: number };
 
+/**
+ * TETO POR EXECUÇÃO.
+ *
+ * O laço faz três consultas por empresa. Sem teto, com muitas contas a execução
+ * estoura o tempo da requisição e NINGUÉM recebe — inclusive quem já ia receber
+ * antes do timeout.
+ *
+ * A sobra fica para a execução do dia seguinte, e a chave da semana
+ * (`ONDA:2026-W36`) garante que quem já recebeu não receba duas vezes. Ou seja:
+ * o teto atrasa alguém em um dia, no pior caso, em vez de derrubar todo mundo.
+ */
+const TETO_POR_EXECUCAO = 300;
+
 export async function chamarParaAOnda(hoje: Date): Promise<ResultadoChamada> {
   const resultado: ResultadoChamada = { enviados: 0, pulados: 0, falhas: 0 };
   const momento = momentoDaOnda(hoje);
@@ -33,6 +46,11 @@ export async function chamarParaAOnda(hoje: Date): Promise<ResultadoChamada> {
       subscriptionStatus: { in: ["active", "trialing", "past_due"] },
     },
     select: { id: true, name: true, email: true, subscriptionStatus: true, semEmail: true },
+    take: TETO_POR_EXECUCAO,
+    // Quem ainda não recebeu nesta semana vem primeiro na próxima execução:
+    // sem ordem estável, o teto poderia devolver sempre as mesmas contas e as
+    // do fim da fila nunca receberiam.
+    orderBy: { id: "asc" },
   });
 
   for (const empresa of empresas) {

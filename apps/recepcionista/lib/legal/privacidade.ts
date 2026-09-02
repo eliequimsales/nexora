@@ -127,10 +127,12 @@ export const PRIVACIDADE: { atualizadoEm: string; secoes: Secao[] } = {
       ],
     },
     {
-      titulo: "12. Cookies",
+      titulo: "12. Cookies, e o que mais fica no seu navegador",
       paragrafos: [
-        "Usamos um único cookie, chamado rd_session, que serve para manter você conectado depois do login. Ele é estritamente necessário para o serviço funcionar e por isso não depende de consentimento.",
-        "Não usamos cookie de publicidade, não temos pixel de rede social e não fazemos rastreamento de comportamento entre sites. Por isso você não vê banner de cookies aqui: não haveria nada para você recusar.",
+        "Dois cookies, os dois estritamente necessários e nenhum deles de publicidade. O rd_session mantém você conectado depois do login. O rd_oauth vive dez minutos e existe só enquanto você entra com o Google: ele é o que impede alguém de te levar para dentro de uma conta que não é sua.",
+        "Guardamos também um número sorteado na memória da aba (sessionStorage), que some quando você fecha a aba. Ele serve para uma coisa só: saber em que ponto as pessoas desistem do diagnóstico — se travam ao colar a lista, se desistem antes de ver o número. Não identifica você, não atravessa visitas e não sai daqui.",
+        "Não usamos cookie de publicidade, não temos pixel de rede social e não fazemos rastreamento de comportamento entre sites. Como a medição é só nossa, é do que acontece nesta página e não identifica ninguém, ela não depende de consentimento — mas preferimos dizer que ela existe a deixar você descobrir sozinho.",
+        "Antes esta seção dizia que havia um cookie só e que não existia nada a recusar. Deixou de ser verdade quando acrescentamos a proteção do login com Google e a medição do funil, e corrigimos assim que percebemos.",
       ],
     },
     {

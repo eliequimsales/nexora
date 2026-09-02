@@ -24,6 +24,20 @@ export const dynamic = "force-dynamic";
 
 const DIAS = 14;
 
+/**
+ * TETO DE CRIATIVOS NO RELATÓRIO.
+ *
+ * `limparCriativo` aceita qualquer identificador de até 32 caracteres — e é o
+ * certo, porque é isso que um identificador de criativo é. Mas a rota que grava
+ * é PÚBLICA: alguém manda vinte mil eventos com vinte mil criativos diferentes,
+ * todos válidos, e este relatório vira vinte mil blocos. A ferramenta que existe
+ * para decidir onde gastar R$ 5.000 fica ilegível.
+ *
+ * Não se resolve validando mais. Resolve-se limitando o relatório — e dizendo
+ * quantos ficaram de fora, porque corte silencioso lê-se como "cobri tudo".
+ */
+const TETO_CRIATIVOS = 20;
+
 const ROTULO: Record<NomeDeEvento, string> = {
   chegou: "chegou na página",
   comecou_entrada: "começou a escrever",
@@ -53,9 +67,15 @@ export async function GET(request: Request) {
       .filter((l) => l.nome === nome && (criativo === undefined || l.criativo === criativo))
       .reduce((s, l) => s + l._count._all, 0);
 
-  const criativos = [...new Set(linhas.map((l) => l.criativo))].sort((a, b) =>
-    (a ?? "").localeCompare(b ?? ""),
-  );
+  // Ordena por VOLUME e não por nome: com muitos criativos, os que importam são
+  // os que trouxeram gente, não os que vêm primeiro no alfabeto.
+  const porCriativo = new Map<string | null, number>();
+  for (const l of linhas) {
+    porCriativo.set(l.criativo, (porCriativo.get(l.criativo) ?? 0) + l._count._all);
+  }
+  const ordenados = [...porCriativo.entries()].sort((a, b) => b[1] - a[1]).map(([c]) => c);
+  const criativos = ordenados.slice(0, TETO_CRIATIVOS);
+  const omitidos = ordenados.length - criativos.length;
 
   const bloco = (titulo: string, criativo?: string | null) => {
     const base = total("chegou", criativo);
@@ -83,6 +103,14 @@ export async function GET(request: Request) {
       ? criativos.map((c) => bloco(`CRIATIVO: ${c ?? "(sem etiqueta)"}`, c))
       : []),
     "",
+    ...(omitidos > 0
+      ? [
+          `${omitidos} criativos com menos volume ficaram de fora desta lista.`,
+          "Se você não criou tantos, alguém está mandando evento com etiqueta",
+          "inventada para a rota pública — os totais em TODOS continuam corretos.",
+          "",
+        ]
+      : []),
     "Sem evento nenhum? O app pode não ter recebido visita, ou o schema não",
     "chegou no banco. Confira nos logs se o `prisma db push` do boot passou.",
   ].join("\n");

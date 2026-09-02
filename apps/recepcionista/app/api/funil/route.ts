@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { ehEventoValido, limparCriativo } from "@/lib/funil";
+import { cabeMaisEvento, ehEventoValido, limparCriativo } from "@/lib/funil";
 import { prisma } from "@/lib/db";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
@@ -25,21 +25,40 @@ const schema = z.object({
   sessao: z.string().max(64).optional().nullable(),
 });
 
-const OK = new NextResponse(null, { status: 204 });
+/**
+ * FUNÇÃO, e não constante de módulo.
+ *
+ * `const OK = new NextResponse(...)` no topo seria compartilhado por TODAS as
+ * requisições do processo. Resposta é objeto com corpo e headers mutáveis;
+ * devolver a mesma instância concorrentemente leva a "Body is unusable" ou a
+ * header de uma requisição aparecendo em outra.
+ */
+const ok = () => new NextResponse(null, { status: 204 });
+
+/** Janela do teto global, alinhada com a do limite por IP. */
+const JANELA_MS = 10 * 60_000;
 
 export async function POST(request: Request) {
   // Teto por IP: é rota pública de escrita. Generoso porque uma visita legítima
   // dispara até cinco eventos, mas não infinito.
   if (!rateLimit(`funil:${clientIp(request)}`, { limit: 60, windowMs: 10 * 60_000 })) {
-    return OK;
+    return ok();
   }
 
   try {
     const parsed = schema.safeParse(await request.json());
-    if (!parsed.success) return OK;
+    if (!parsed.success) return ok();
 
     const { nome } = parsed.data;
-    if (!ehEventoValido(nome)) return OK;
+    if (!ehEventoValido(nome)) return ok();
+
+    // DISJUNTOR GLOBAL. O limite por IP não segura tráfego distribuído: mil
+    // IPs passam por ele sem esforço, e esta é a única rota pública que
+    // ESCREVE. Perder métrica num pico é irrelevante; perder o banco não é.
+    const jaGravados = await prisma.eventoFunil.count({
+      where: { criadoEm: { gte: new Date(Date.now() - JANELA_MS) } },
+    });
+    if (!cabeMaisEvento(jaGravados)) return ok();
 
     await prisma.eventoFunil.create({
       data: {
@@ -53,5 +72,5 @@ export async function POST(request: Request) {
     // Falha de métrica nunca vira erro para quem está usando o produto.
   }
 
-  return OK;
+  return ok();
 }

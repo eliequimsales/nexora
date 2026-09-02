@@ -62,3 +62,35 @@ export function limparCriativo(bruto: string | null | undefined): string | null 
   const limpo = bruto.trim().toLowerCase();
   return FORMATO.test(limpo) ? limpo : null;
 }
+
+/**
+ * PRAZO DE VALIDADE DA TABELA.
+ *
+ * `/api/funil` é a primeira rota pública de ESCRITA do produto — o resto exige
+ * sessão, e ela não pode, porque o funil começa antes de existir conta. Isso
+ * muda o modelo de ameaça dela.
+ *
+ * Um IP sozinho grava ~8.600 linhas por dia dentro do limite; cem IPs gravam
+ * perto de 1 GB por mês. Não havia limpeza nenhuma, e o banco é um Postgres de
+ * plano Hobby. O relatório só olha 14 dias; guardar 90 dá folga para comparar
+ * um mês com o anterior, e nada além disso é custo sem uso.
+ */
+export const RETENCAO_DIAS = 90;
+
+/**
+ * TETO GLOBAL POR JANELA.
+ *
+ * O rate limit por IP não protege contra tráfego distribuído: mil IPs de um
+ * botnet passam por ele sem esforço. Este é o disjuntor — acima dele o evento
+ * é descartado em silêncio.
+ *
+ * Perder métrica num pico é irrelevante; perder o banco não é. E o número é
+ * folgado o suficiente para nunca ser atingido por tráfego real: 20 mil eventos
+ * em 10 minutos são ~4.000 visitas legítimas no mesmo intervalo.
+ */
+export const TETO_GLOBAL_POR_JANELA = 20_000;
+
+export function cabeMaisEvento(jaGravados: number): boolean {
+  if (!Number.isFinite(jaGravados) || jaGravados < 0) return false;
+  return jaGravados < TETO_GLOBAL_POR_JANELA;
+}

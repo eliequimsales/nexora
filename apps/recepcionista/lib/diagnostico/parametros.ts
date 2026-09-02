@@ -54,9 +54,19 @@ function lerTicket(bruto: string | string[] | undefined): string {
   const cents = Math.round(n * 100);
   if (cents < MIN_CENTS || cents > MAX_CENTS) return "";
 
-  // Devolve o que ele digitou, e nao o normalizado: "49,90" some da tela e
-  // vira "49.9" seria o tipo de detalhe que faz parecer defeito.
-  return v;
+  // Devolve o valor LIMPO, nunca a string original.
+  //
+  // A versao anterior extraia o numero e devolvia `v` inteiro: com
+  // `?ticket=50<script>` o retorno era "50<script>", que ia parar no value de
+  // um input. Nao era XSS, porque o React escapa -- mas e entrada nao validada
+  // atravessando a fronteira, e vira XSS no dia em que esse valor for parar num
+  // atributo, numa URL ou num innerHTML. Validar o valor inteiro custa uma
+  // linha; descobrir depois custa um incidente.
+  //
+  // Preserva a virgula que ele digitou: "49,90" virar "49.9" na tela e o tipo
+  // de detalhe que faz o produto parecer defeituoso.
+  const limpoParaExibir = v.replace(/[^0-9,.]/g, "");
+  return limpoParaExibir;
 }
 
 export function lerParametros(
