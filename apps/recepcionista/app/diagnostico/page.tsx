@@ -4,6 +4,7 @@ import { formasDePagamentoTexto } from "@/lib/billing/preco";
 import { PainelDiagnostico } from "./painel";
 import { EventoAoMontar } from "@/components/funil";
 import { FRASE_SOCORRO, temCanalDeSocorro } from "@/lib/contato";
+import { lerParametros } from "@/lib/diagnostico/parametros";
 
 export const metadata: Metadata = {
   title: "Descubra quais clientes seus sumiram — Nexora",
@@ -78,7 +79,30 @@ const OBJECOES = [
   },
 ];
 
-export default function PaginaDiagnostico() {
+/**
+ * Como o ramo aparece no título. "Barbeiro: você tem clientes que sumiram"
+ * conversa com quem clicou num anúncio de barbearia; o genérico conversa com
+ * ninguém em específico.
+ */
+const VOCATIVO: Record<string, string> = {
+  barbearia: "Barbeiro",
+  salao: "Dono de salão",
+  estetica: "Dono de clínica de estética",
+  petshop: "Dono de pet shop",
+  odontologia: "Dentista",
+  fisioterapia: "Fisioterapeuta",
+  academia: "Dono de academia",
+  clinica: "Dono de clínica",
+};
+
+export default function PaginaDiagnostico({
+  searchParams,
+}: {
+  searchParams: Record<string, string | string[] | undefined>;
+}) {
+  const { ramo, ticketReais } = lerParametros(searchParams);
+  const vocativo = ramo ? VOCATIVO[ramo] : null;
+
   return (
     <div className="min-h-screen bg-night text-mist">
       {/* Sem isto, "quanto custou trazer alguem" e chute. Ver lib/funil.ts. */}
@@ -105,7 +129,7 @@ export default function PaginaDiagnostico() {
               Sem cadastro · Sem cartão · Sua lista não é gravada
             </p>
             <h1 className="mt-5 font-display text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl">
-              Você tem clientes que sumiram e não sabe quem são.
+              {vocativo ? `${vocativo}: você tem clientes que sumiram e não sabe quem são.` : "Você tem clientes que sumiram e não sabe quem são."}
             </h1>
             <p className="mt-6 text-lg leading-relaxed text-mist/70">
               Cola aqui a lista que você já tem — planilha do Excel, caderno digitado, até o
@@ -120,7 +144,7 @@ export default function PaginaDiagnostico() {
             </p>
           </div>
 
-          <PainelDiagnostico />
+          <PainelDiagnostico ramoInicial={ramo} ticketInicial={ticketReais} />
         </div>
       </section>
 

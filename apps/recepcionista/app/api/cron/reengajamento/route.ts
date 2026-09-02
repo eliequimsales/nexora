@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { logError } from "@/lib/errors";
 import { safeEqual } from "@/lib/rate-limit";
 import { rodarRegua } from "@/lib/reengajamento/servico";
+import { chamarParaAOnda } from "@/lib/reengajamento/chamada-semanal";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,7 +25,17 @@ export async function POST(request: Request) {
   }
 
   try {
-    return NextResponse.json({ ok: true, ...(await rodarRegua()) });
+    const hoje = new Date();
+
+    // A régua de ciclo de vida (um momento por conta, uma vez na vida) e a
+    // chamada semanal são coisas diferentes e rodam juntas, na mesma execução.
+    // A chamada tem trava própria pelo @@unique da semana, então rodar todo dia
+    // não manda todo dia: manda uma vez por semana, no primeiro dia em que o
+    // cron passar com onda montada.
+    const regua = await rodarRegua();
+    const chamada = await chamarParaAOnda(hoje);
+
+    return NextResponse.json({ ok: true, ...regua, chamadaSemanal: chamada });
   } catch (erro) {
     await logError("cron-reengajamento", erro);
     return NextResponse.json({ error: "Falha ao rodar a régua" }, { status: 500 });

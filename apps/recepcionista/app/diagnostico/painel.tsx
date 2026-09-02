@@ -149,8 +149,20 @@ function ticketEmCents(bruto: string): number | undefined {
 
 const socorro = linkDeSocorro("ler a lista");
 
-export function PainelDiagnostico() {
-  const [e, dispatch] = useReducer(reducer, INICIAL);
+export function PainelDiagnostico({
+  ramoInicial,
+  ticketInicial,
+}: {
+  /** Vem de /diagnostico?ramo=barbearia — ver lib/diagnostico/parametros.ts. */
+  ramoInicial?: string | null;
+  ticketInicial?: string;
+} = {}) {
+  const [e, dispatch] = useReducer(reducer, {
+    ...INICIAL,
+    // O anúncio já disse o ramo; perguntar de novo é fricção pura.
+    segmento: ramoInicial ?? INICIAL.segmento,
+    ticketReais: ticketInicial ?? INICIAL.ticketReais,
+  });
   const [abrirConta, setAbrirConta] = useState(false);
   // "memoria" e o padrao: e a unica porta que abre no celular, que e de onde
   // vem o trafego de anuncio.
