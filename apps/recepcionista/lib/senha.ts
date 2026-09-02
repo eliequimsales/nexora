@@ -102,7 +102,18 @@ export async function redefinir(token: string, novaSenha: string): Promise<Resul
 
     await tx.company.update({
       where: { id: pedido.companyId },
-      data: { passwordHash: senhaHash },
+      data: {
+        passwordHash: senhaHash,
+        // Trocar a senha DERRUBA todas as sessões abertas. Sem isto, o cookie
+        // roubado continuava valendo por até 7 dias — sobrevivendo justamente
+        // à ação que a vítima toma para se proteger. Redefinir a senha é o que
+        // uma pessoa faz quando desconfia que alguém entrou; ela precisa
+        // significar "e agora saia".
+        sessaoEpoca: { increment: 1 },
+        // Ela provou posse do e-mail ao usar o link. Isso libera o vínculo com
+        // o Google depois, sem abrir a porta do pré-sequestro de conta.
+        emailVerificadoEm: new Date(),
+      },
     });
   });
 

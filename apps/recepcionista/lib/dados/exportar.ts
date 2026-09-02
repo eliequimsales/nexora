@@ -65,7 +65,7 @@ const emNumero = (cents: number): string => (cents / 100).toFixed(2).replace("."
  * próprio backup é o vetor de ataque. Aspa simples à frente é a defesa que a
  * OWASP recomenda e que mantém o texto legível na tela.
  */
-function neutralizarFormula(valor: string): string {
+export function neutralizarFormula(valor: string): string {
   return /^[=+\-@\t\r]/.test(valor) ? `'${valor}` : valor;
 }
 

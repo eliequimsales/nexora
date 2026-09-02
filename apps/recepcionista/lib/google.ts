@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify, createRemoteJWKSet } from "jose";
+import { createHash, randomBytes, timingSafeEqual } from "crypto";
 
 /**
  * OAuth do Google (login/cadastro). Fluxo authorization-code clássico:
@@ -30,19 +31,57 @@ export function googleConfig(): { clientId: string; clientSecret: string; redire
   };
 }
 
-/** State anti-CSRF: token assinado com validade de 10 minutos. */
-export async function createOauthState(): Promise<string> {
-  return new SignJWT({ purpose: "google-oauth" })
+/**
+ * State anti-CSRF AMARRADO AO NAVEGADOR.
+ *
+ * A versão anterior assinava só `{ purpose: "google-oauth" }`. Um JWT assim
+ * vale em QUALQUER navegador — deixa de ser token anti-CSRF e vira um carimbo
+ * de "veio da Nexora". Com ele dava para fazer login CSRF:
+ *
+ *   1. O atacante inicia o fluxo no próprio navegador, consente com a conta
+ *      Google DELE e intercepta a URL de callback antes de ela ser seguida.
+ *      O `code` continua intacto, não foi trocado.
+ *   2. Manda o link de callback para a vítima. É navegação GET de topo, então
+ *      SameSite=lax não impede.
+ *   3. O servidor valida o state (assina, confere), troca o code, recebe o
+ *      e-mail do ATACANTE e abre a sessão DELE no navegador da vítima.
+ *   4. A vítima, no domínio verdadeiro e com cadeado, importa a base de
+ *      clientes dela dentro da conta do atacante.
+ *
+ * A correção é o par: um valor aleatório vai num cookie httpOnly de vida curta
+ * e o HASH dele vai dentro do state. Sem o cookie do mesmo navegador, o state
+ * não serve para nada.
+ */
+export const OAUTH_STATE_COOKIE = "rd_oauth";
+
+export function novoSegredoDeState(): string {
+  return randomBytes(32).toString("hex");
+}
+
+function digestDoSegredo(segredo: string): string {
+  return createHash("sha256").update(segredo).digest("hex");
+}
+
+export async function createOauthState(segredo: string): Promise<string> {
+  return new SignJWT({ purpose: "google-oauth", bind: digestDoSegredo(segredo) })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("10m")
     .sign(secretKey());
 }
 
-export async function verifyOauthState(state: string): Promise<boolean> {
+/** Só passa quando o state foi emitido PARA o cookie que este navegador tem. */
+export async function verifyOauthState(state: string, segredoDoCookie: string | undefined): Promise<boolean> {
+  if (!segredoDoCookie) return false;
   try {
-    const { payload } = await jwtVerify(state, secretKey());
-    return payload.purpose === "google-oauth";
+    const { payload } = await jwtVerify(state, secretKey(), { algorithms: ["HS256"] });
+    if (payload.purpose !== "google-oauth") return false;
+    if (typeof payload.bind !== "string") return false;
+
+    const esperado = Buffer.from(digestDoSegredo(segredoDoCookie));
+    const recebido = Buffer.from(payload.bind);
+    if (esperado.length !== recebido.length) return false;
+    return timingSafeEqual(esperado, recebido);
   } catch {
     return false;
   }
@@ -74,6 +113,8 @@ export function buildAuthUrl(state: string): string {
 export interface GoogleUser {
   email: string;
   name: string | null;
+  /** Identificador estável da conta Google. É ISTO que é identidade, não o e-mail. */
+  sub: string;
 }
 
 /** Troca o code por tokens e valida o id_token (assinatura, emissor, audiência). */
@@ -110,5 +151,10 @@ export async function exchangeCodeForUser(code: string): Promise<GoogleUser> {
     throw new Error("Conta Google sem e-mail verificado");
   }
 
-  return { email, name: typeof payload.name === "string" ? payload.name : null };
+  // `sub` é o identificador estável da conta Google. Sem ele não há identidade
+  // para amarrar, e a conta voltaria a ser encontrada só pelo e-mail.
+  const sub = typeof payload.sub === "string" ? payload.sub : null;
+  if (!sub) throw new Error("Google não retornou o identificador da conta");
+
+  return { email, sub, name: typeof payload.name === "string" ? payload.name : null };
 }

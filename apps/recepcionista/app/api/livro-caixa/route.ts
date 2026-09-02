@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionCompanyId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
+import { neutralizarFormula } from "@/lib/dados/exportar";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,12 @@ export async function GET(request: Request) {
     });
 
     // Exportar é livre e sem fricção: a base e o histórico são dele. Saída Limpa.
+    //
+    // O nome do cliente é neutralizado antes de entrar na célula: ele vem da
+    // lista que o dono colou, que veio da agenda dele — texto de terceiro. Um
+    // nome começando com = + - @ é executado como FÓRMULA pelo Excel, e as
+    // aspas do CSV não impedem: o Excel tira a marcação e avalia o conteúdo.
+    // Sem isto, abrir o próprio extrato é o vetor de ataque.
     if (formato === "csv") {
       const linhas = [
         "data,cliente,dias_sumido,esteira,toque,valor_reais,atribuido",
@@ -51,7 +58,7 @@ export async function GET(request: Request) {
             e.returnedAt.toISOString().slice(0, 10),
             // customer é nulo quando o titular exerceu o direito de exclusão:
             // o valor permanece no extrato, a pessoa não.
-            `"${(e.customer?.name ?? "cliente excluído").replace(/"/g, '""')}"`,
+            `"${neutralizarFormula(e.customer?.name ?? "cliente excluído").replace(/"/g, '""')}"`,
             e.daysAway,
             e.esteira,
             e.touchNumber,

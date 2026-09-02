@@ -32,9 +32,14 @@ function LoginForm() {
         setError(data.error ?? "Erro ao entrar");
         return;
       }
-      // Só aceita caminhos internos — evita open redirect via ?next=
+      // Só aceita caminho interno. A checagem anterior era startsWith("/") e
+      // !startsWith("//") — furada por "/\evil.com": passa nas duas, e o
+      // navegador normaliza a barra invertida para "//", virando URL
+      // protocolo-relativa e saindo do domínio. A lista de permitidos abaixo
+      // troca "recusa o que eu lembrei de proibir" por "só aceita o que eu
+      // reconheço", que é a única forma que não envelhece mal.
       const next = searchParams.get("next");
-      const target = next && next.startsWith("/") && !next.startsWith("//") ? next : "/painel";
+      const target = next && /^\/[A-Za-z0-9\-._~/]*$/.test(next) ? next : "/painel";
       router.push(target);
       router.refresh();
     } catch {

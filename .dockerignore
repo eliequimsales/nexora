@@ -1,0 +1,45 @@
+# ATENCAO: este arquivo precisa ficar na RAIZ DO CONTEXTO DE BUILD.
+#
+# O Dockerfile de apps/recepcionista declara na primeira linha que o contexto e
+# a raiz do monorepo (upload do `railway up`). O Docker so le o .dockerignore da
+# raiz do contexto -- havia um em apps/recepcionista/ que, por isso, NUNCA teve
+# efeito nenhum. Como o Dockerfile faz `COPY apps/recepcionista/ ./`, qualquer
+# .env naquela pasta entraria na imagem, e camada de imagem nao se apaga.
+#
+# Achado da auditoria de seguranca de 01/09/2026. Nao mover este arquivo.
+
+node_modules
+**/node_modules
+
+# Segredos: nunca entram na imagem. As variaveis vem do ambiente do Railway.
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+**/!.env.example
+
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Build local nao pode sombrear o build do conteiner.
+.next
+**/.next
+dist
+**/dist
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+.git
+.github
+tests
+**/tests
+docs
+brain
+*.md
+!README.md
+
+.claude
+.remember

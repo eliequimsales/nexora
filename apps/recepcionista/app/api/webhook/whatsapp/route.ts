@@ -18,12 +18,18 @@ export const maxDuration = 60;
  * Eventos: MESSAGES_UPSERT, CONNECTION_UPDATE, QRCODE_UPDATED.
  */
 export async function POST(request: Request) {
+  // FALHA FECHADO. A versão anterior era `if (expectedToken) { ...confere... }`:
+  // sem a variável no ambiente, o bloco inteiro era pulado e o webhook ficava
+  // aberto para qualquer um. Dava para plantar QR Code falso no painel de um
+  // assinante (fazendo ele ligar o WhatsApp dele à sessão do atacante) e
+  // injetar mensagens como se fossem de clientes dele.
+  //
+  // As rotas de cron já faziam certo — `if (!secret || !safeEqual(...))`. Esta
+  // ficou para trás, e é a mesma escolha em toda parte: sem segredo, recusa.
   const expectedToken = process.env.WEBHOOK_TOKEN;
-  if (expectedToken) {
-    const token = new URL(request.url).searchParams.get("token") ?? "";
-    if (!safeEqual(token, expectedToken)) {
-      return NextResponse.json({ error: "Token inválido" }, { status: 401 });
-    }
+  const token = new URL(request.url).searchParams.get("token") ?? "";
+  if (!expectedToken || !safeEqual(token, expectedToken)) {
+    return NextResponse.json({ error: "Token inválido" }, { status: 401 });
   }
 
   try {

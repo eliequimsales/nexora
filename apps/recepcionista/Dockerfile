@@ -13,7 +13,11 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends openssl && r
 RUN npm i -g pnpm@10.33.0
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=build /app ./
+# A imagem node ja traz o usuario `node` sem privilegio. Sem esta linha o
+# processo roda como root: qualquer execucao de codigo dentro do app acontece
+# com poder total sobre o container. Achado da auditoria de 01/09/2026.
+COPY --from=build --chown=node:node /app ./
+USER node
 EXPOSE 3000
 # Aplica o schema no boot (rede interna, idempotente) e sobe o app —
 # elimina a necessidade de rodar migrações de fora do Railway.

@@ -79,6 +79,22 @@ model Company {
   // rotina -- sem isto o dono receberia a mesma confirmacao a cada webhook.
   confirmacaoEnviadaEm DateTime?
 
+  // IDENTIDADE DO GOOGLE, e nao apenas o e-mail.
+  //
+  // O callback achava a empresa por `where: { email }` e abria sessao. Como o
+  // cadastro por senha aceita QUALQUER e-mail sem confirmar posse, um atacante
+  // cadastrava o e-mail comercial do alvo e esperava: quando o dono real
+  // entrasse pelo Google, caia dentro da conta do atacante e importava a base
+  // dele la. E-mail nao e identidade; o `sub` do Google e.
+  googleSub         String?   @unique
+  emailVerificadoEm DateTime?
+
+  // EPOCA DA SESSAO. O JWT dura 7 dias e nao tinha revogacao: trocar a senha
+  // so reescrevia o hash e o logout so apagava o cookie do proprio navegador.
+  // Quem roubasse o cookie ficava dentro por uma semana, inclusive DEPOIS de a
+  // vitima trocar a senha. Incrementar isto invalida todos os tokens de uma vez.
+  sessaoEpoca Int @default(0)
+
   reengajamentos Reengajamento[]
   passwordResets PasswordReset[]
   importacoes    RegistroImportacao[]

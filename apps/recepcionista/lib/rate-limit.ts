@@ -32,10 +32,41 @@ export function rateLimit(key: string, { limit, windowMs }: RateLimitOptions): b
   return true;
 }
 
-/** IP do cliente atrás de proxy (Railway/Vercel setam x-forwarded-for). */
+const IPV4 = /^\d{1,3}(\.\d{1,3}){3}$/;
+const IPV6 = /^[0-9a-f:]{2,45}$/i;
+
+/**
+ * IP do cliente atrás do proxy.
+ *
+ * A versão anterior pegava `.split(",")[0]` — o PRIMEIRO elemento do
+ * X-Forwarded-For. Nenhum proxy reescreve esse header: ele APENDA o IP real ao
+ * fim da cadeia. O primeiro elemento é, portanto, o que o cliente mandou, e o
+ * atacante trocava de identidade a cada requisição — anulando o rate limit do
+ * login, do cadastro e da recuperação de senha, e enchendo o mapa de baldes
+ * com chaves inventadas.
+ *
+ * O elemento confiável é o ÚLTIMO: foi escrito pelo proxy mais próximo.
+ *
+ * O formato é validado antes de virar chave. Sem isso o atacante escolhe a
+ * chave do balde e transforma o rate limit num vetor de consumo de memória.
+ */
 export function clientIp(request: Request): string {
-  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const cadeia = request.headers.get("x-forwarded-for");
+  if (!cadeia) return DESCONHECIDO;
+
+  const partes = cadeia.split(",").map((p) => p.trim()).filter(Boolean);
+  const ultimo = partes[partes.length - 1];
+  if (!ultimo) return DESCONHECIDO;
+
+  return IPV4.test(ultimo) || IPV6.test(ultimo) ? ultimo : DESCONHECIDO;
 }
+
+/**
+ * Todos os clientes sem IP legível caem no MESMO balde, de propósito. Isso
+ * aperta o limite para eles em conjunto — que é o comportamento seguro quando
+ * não dá para distinguir quem é quem.
+ */
+const DESCONHECIDO = "desconhecido";
 
 export const TOO_MANY_ATTEMPTS = "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
 

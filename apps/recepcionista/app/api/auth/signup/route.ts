@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       },
     });
 
-    setSessionCookie(await createSessionToken(company.id));
+    setSessionCookie(await createSessionToken(company.id, company.sessaoEpoca));
     return NextResponse.json({ ok: true });
   } catch (error) {
     await logError("auth-signup", error);
