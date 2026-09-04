@@ -9,7 +9,7 @@ import { lerParametros } from "@/lib/diagnostico/parametros";
 export const metadata: Metadata = {
   title: "Descubra quais clientes seus sumiram — Nexora",
   description:
-    "Cole a lista de clientes que você já tem e veja, com nome e sobrenome, quem parou de voltar e quanto dinheiro isso é. De graça, sem cadastro, e sua lista não é gravada.",
+    "Cole a lista de clientes que você já tem e veja, com nome e sobrenome, quem parou de voltar e quanto dinheiro isso é. De graça, sem cadastro, e sem precisar de planilha.",
 };
 
 /**
@@ -126,15 +126,16 @@ export default function PaginaDiagnostico({
         <div className="grid gap-12 lg:grid-cols-[1fr_1.05fr] lg:gap-16">
           <div>
             <p className="font-mono text-xs uppercase tracking-[0.16em] text-amber">
-              Sem cadastro · Sem cartão · Sua lista não é gravada
+              Sem cadastro · Sem cartão · Não sai do seu celular
             </p>
             <h1 className="mt-5 font-display text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl">
               {vocativo ? `${vocativo}: você tem clientes que sumiram e não sabe quem são.` : "Você tem clientes que sumiram e não sabe quem são."}
             </h1>
             <p className="mt-6 text-lg leading-relaxed text-mist/70">
-              Cola aqui a lista que você já tem — planilha do Excel, caderno digitado, até o
-              texto exportado de uma conversa do WhatsApp. Em menos de um minuto eu te digo,
-              com nome e sobrenome, quem parou de voltar e quanto dinheiro isso é.
+              Escreve três clientes que você lembra que sumiram — não precisa de lista, nem
+              de planilha, nem sair do celular. Eu escrevo a mensagem para cada um e você
+              manda hoje. Se tiver a lista aí, eu leio ela inteira e digo, com nome e
+              sobrenome, quem mais parou de voltar.
             </p>
 
             <p className="mt-8 border-l-2 border-amber pl-4 text-sm leading-relaxed text-mist/60">

@@ -50,6 +50,7 @@ export const TERMOS: { atualizadoEm: string; secoes: Secao[] } = {
       paragrafos: [
         `O serviço custa ${PRECO} por mês, com impostos inclusos. Esse é o valor total: não há taxa de adesão, taxa de instalação nem cobrança por cliente cadastrado.`,
         `Os primeiros ${TRIAL_DIAS} dias são gratuitos e não pedimos cartão para começar. Terminado o período gratuito, se você não tiver cadastrado forma de pagamento, a conta simplesmente pausa — nada é cobrado e nada é apagado.`,
+        "Para assinar é preciso confirmar o e-mail antes. Mandamos um link no cadastro e você pode pedir outro pelo painel. A exigência não é burocracia: a lei nos obriga a mandar o comprovante da contratação para o seu e-mail, e não dá para cumprir isso sem ter certeza de que o endereço é seu. Quem entra com o Google já vem confirmado.",
         `A cobrança é mensal e recorrente, processada pela Stripe. Se um pagamento falhar, você continua com acesso normal por ${TOLERANCIA_DIAS} dias enquanto resolve; depois desse prazo o envio de novas ondas para de funcionar, mas seus dados continuam acessíveis para leitura e exportação.`,
         "Aumentos de preço só valem para você depois de avisados por e-mail com pelo menos 30 dias de antecedência. Se não concordar, é só cancelar antes de a nova cobrança acontecer.",
       ],

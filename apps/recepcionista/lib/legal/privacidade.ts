@@ -37,6 +37,9 @@ export const PRIVACIDADE: { atualizadoEm: string; secoes: Secao[] } = {
         "Cadastro: nome do negócio, seu nome, e-mail e senha (guardada como hash bcrypt, nunca em texto legível). Se você entrar com o Google, recebemos do Google seu nome e e-mail.",
         "Cobrança: os dados de pagamento são digitados direto na Stripe e não passam pelos nossos servidores. Guardamos apenas identificadores da assinatura, situação do pagamento e, se você informar, telefone, endereço e documento fiscal para a nota.",
         "Uso: registros técnicos de erro, que guardam o tipo do erro e a linha do código — não o conteúdo que você digitou.",
+        "Medição do funil: contamos em que ponto as pessoas desistem do diagnóstico — se travam ao colar a lista, se saem antes de ver o número. O registro guarda o nome da etapa, de qual anúncio a visita veio e um número sorteado que some quando você fecha a aba. Nunca guarda o que foi digitado.",
+        "Se você entra com o Google, guardamos também o identificador da sua conta Google. É ele que impede alguém de tomar sua conta cadastrando o seu e-mail antes de você — e-mail sozinho não prova quem é quem.",
+        "Confirmação de e-mail: um código de uso único, com prazo, guardado embaralhado. Serve para provar que o endereço é seu antes de qualquer cobrança.",
       ],
     },
     {
@@ -44,6 +47,7 @@ export const PRIVACIDADE: { atualizadoEm: string; secoes: Secao[] } = {
       paragrafos: [
         "No Diagnóstico gratuito, a lista NÃO é gravada. Ela é lida na memória do servidor, o resultado volta para a sua tela e é descartada junto com a resposta. Não vai para banco de dados, não vira arquivo e não aparece em registro de erro — inclusive quando dá erro, o sistema registra apenas o tipo da falha, sem o conteúdo colado.",
         "Depois que você cria a conta e importa a base, aí sim os dados ficam guardados: nome, telefone, datas de atendimento e valores. Ficam isolados na sua conta — nenhuma outra empresa do sistema consegue ver, porque toda consulta ao banco é filtrada pela sua conta.",
+        "Existe um caminho ainda mais restrito: se em vez da lista você escrever de cabeça três clientes que sumiram, esse dado NÃO SAI DO SEU NAVEGADOR. A conta é feita no seu próprio aparelho e as mensagens são montadas ali — nome e telefone dessas pessoas nunca chegam ao nosso servidor, nem para serem descartados depois.",
         "Nada do que você sobe é usado para treinar modelo de inteligência artificial, vendido, alugado ou compartilhado com outros assinantes.",
       ],
     },
@@ -91,11 +95,23 @@ export const PRIVACIDADE: { atualizadoEm: string; secoes: Secao[] } = {
         "Enquanto sua conta existir. Se você cancelar, seus dados e a base dos seus clientes continuam guardados até que a exclusão seja pedida — não apagamos nada sozinhos, justamente para não destruir a base de quem só quis pausar.",
         "Estamos dizendo isso porque a versão anterior deste documento prometia exclusão automática depois de 2 anos, e essa rotina nunca existiu no sistema. Preferimos corrigir a promessa a mantê-la no papel.",
         "Registros necessários para obrigação legal ou fiscal, como comprovantes de pagamento, são guardados pelo prazo que a lei exigir.",
+        "A medição do funil tem prazo curto: 90 dias, e depois disso é apagada sozinha, todo dia, sem ninguém precisar pedir. Códigos de confirmação de e-mail e de redefinição de senha valem uma vez e expiram em horas.",
         "Uma coisa sobrevive à exclusão, e é melhor dizer isso com clareza: quando alguém que tinha pedido PARAR é apagado, guardamos um código embaralhado do telefone dessa pessoa — não o número. Sem isso, ela voltaria na próxima vez que o negócio importasse a mesma planilha e seria contatada de novo, o que transformaria o direito exercido em incômodo repetido. Esse código não permite ligar, mandar mensagem nem descobrir de quem é; serve só para reconhecer e barrar (LGPD art. 16, III).",
       ],
     },
     {
-      titulo: "9. Seus direitos, e como exercer",
+      titulo: "9. Que e-mails enviamos, e como parar de receber",
+      paragrafos: [
+        "Dois tipos, e eles funcionam de forma diferente.",
+      ],
+      itens: [
+        "TRANSACIONAL: confirmação da contratação, aviso de cobrança que não passou, link de redefinir senha, confirmação de e-mail. Não têm link de descadastro porque ninguém pode optar por não receber o comprovante daquilo que contratou nem o aviso de que a assinatura vai parar.",
+        "RELACIONAMENTO: a chamada semanal da sua Onda de segunda, avisos de que o período gratuito está acabando, e lembretes se você parar de usar. Esses todos trazem link de descadastro, e clicar nele desliga de uma vez todos os e-mails desse tipo.",
+        "Nunca mandamos e-mail para os SEUS clientes. A Nexora escreve a mensagem e quem manda é você, do seu WhatsApp.",
+      ],
+    },
+    {
+      titulo: "10. Seus direitos, e como exercer",
       paragrafos: [
         `A LGPD (art. 18) garante que você saiba o que temos, corrija, exclua, revogue consentimento e saiba com quem compartilhamos. Para exercer qualquer um deles, escreva para ${FORNECEDOR.email}. Respondemos em até 15 dias.`,
         "Dois desses direitos não dependem de nos escrever: em Minha base, você baixa a sua lista inteira em planilha quando quiser, e apaga um cliente que pediu para ser apagado sem precisar da nossa autorização. Direito que depende de alguém do outro lado lembrar de executar não é direito garantido.",
@@ -105,7 +121,7 @@ export const PRIVACIDADE: { atualizadoEm: string; secoes: Secao[] } = {
       ],
     },
     {
-      titulo: "10. Como protegemos — e o que ainda falta",
+      titulo: "11. Como protegemos — e o que ainda falta",
       paragrafos: [
         "O que existe hoje, de verdade:",
       ],
@@ -119,7 +135,7 @@ export const PRIVACIDADE: { atualizadoEm: string; secoes: Secao[] } = {
       ],
     },
     {
-      titulo: "11. O que ainda não temos",
+      titulo: "12. O que ainda não temos",
       paragrafos: [
         "Esta seção existe porque a versão anterior prometia autenticação em dois fatores, e ela não existe. Preferimos listar o que falta a deixar você achar que tem.",
         "Não temos: autenticação em dois fatores, certificação de segurança auditada por terceiro, e rotina automática de expurgo de dados antigos.",
@@ -127,7 +143,7 @@ export const PRIVACIDADE: { atualizadoEm: string; secoes: Secao[] } = {
       ],
     },
     {
-      titulo: "12. Cookies, e o que mais fica no seu navegador",
+      titulo: "13. Cookies, e o que mais fica no seu navegador",
       paragrafos: [
         "Dois cookies, os dois estritamente necessários e nenhum deles de publicidade. O rd_session mantém você conectado depois do login. O rd_oauth vive dez minutos e existe só enquanto você entra com o Google: ele é o que impede alguém de te levar para dentro de uma conta que não é sua.",
         "Guardamos também um número sorteado na memória da aba (sessionStorage), que some quando você fecha a aba. Ele serve para uma coisa só: saber em que ponto as pessoas desistem do diagnóstico — se travam ao colar a lista, se desistem antes de ver o número. Não identifica você, não atravessa visitas e não sai daqui.",
@@ -136,7 +152,7 @@ export const PRIVACIDADE: { atualizadoEm: string; secoes: Secao[] } = {
       ],
     },
     {
-      titulo: "13. Dados sensíveis, e por que a Nexora não quer os seus",
+      titulo: "14. Dados sensíveis, e por que a Nexora não quer os seus",
       paragrafos: [
         "A tela de diagnóstico oferece Odontologia, Fisioterapia e Estética entre os tipos de negócio. Precisamos ser diretos sobre o que isso significa: numa clínica, saber que uma pessoa identificada fez determinado procedimento é dado de saúde — dado sensível pela LGPD (art. 11), que exige consentimento específico e destacado do próprio titular e não pode se apoiar em legítimo interesse.",
         "Por isso a Nexora foi construída para não precisar dessa informação. A importação lê nome, telefone, data da visita e valor — e ignora a coluna de procedimento, mesmo quando ela está na planilha. As mensagens de recuperação nunca citam qual serviço a pessoa fez: falam do tempo que passou e convidam a voltar, e nada além disso.",
@@ -144,14 +160,14 @@ export const PRIVACIDADE: { atualizadoEm: string; secoes: Secao[] } = {
       ],
     },
     {
-      titulo: "14. Crianças e adolescentes",
+      titulo: "15. Crianças e adolescentes",
       paragrafos: [
         "A Nexora não é destinada a menores de 18 anos como assinantes.",
         "Alguns negócios atendem crianças, e a lista importada pode conter dados de menores. A LGPD (art. 14) exige, nesse caso, consentimento específico de um dos pais ou responsável, e a responsabilidade por obtê-lo é do negócio que coletou o dado — não da Nexora. Recomendamos fortemente não incluir menores na base de recuperação.",
       ],
     },
     {
-      titulo: "15. Mudanças",
+      titulo: "16. Mudanças",
       paragrafos: [
         `Versão ${VERSAO_DOCUMENTOS}. Mudanças relevantes são avisadas por e-mail com 30 dias de antecedência, e cada versão fica registrada junto com a data em que você a aceitou.`,
       ],

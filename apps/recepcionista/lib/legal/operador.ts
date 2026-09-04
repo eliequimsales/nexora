@@ -25,6 +25,7 @@ export const OPERADOR: { atualizadoEm: string; secoes: Secao[] } = {
       paragrafos: [
         "Você, assinante, é o CONTROLADOR dos dados dos seus clientes: foi você quem os coletou no seu atendimento e é você quem decide para que eles servem.",
         `${FORNECEDOR.nome}, prestando o serviço Nexora, é o OPERADOR: trata esses dados exclusivamente para executar o que você contratou, seguindo a sua instrução.`,
+        "Há um caso em que a Nexora não chega nem a ser operadora: quando você escreve de cabeça três clientes que sumiram, em vez de subir a lista. Esse dado é processado no seu próprio aparelho e não chega ao nosso servidor — não há tratamento nosso para contratar, porque não há dado nosso para tratar.",
         "Esta divisão não é formalidade: é o que o art. 39 da LGPD exige que esteja escrito. Ela define quem responde perante a ANPD e perante o titular, e vale mesmo que nenhum de nós goste do resultado em um caso concreto.",
       ],
     },

@@ -187,3 +187,73 @@ describe("a seção de cookies acompanha o que o navegador realmente guarda", ()
     expect(t).not.toContain("um único cookie");
   });
 });
+
+describe("o que o produto passou a fazer e os documentos ainda não diziam", () => {
+  const priv = textoDe(PRIVACIDADE);
+  const termos = textoDe(TERMOS);
+
+  /**
+   * OS TRÊS NOMES NUNCA SAEM DO NAVEGADOR.
+   *
+   * Verifiquei no código: `diagnosticarTresNomes` roda no cliente, e o único
+   * dado que vai para o servidor é o NOME DO EVENTO ("viu_numero"), nunca o
+   * nome do cliente. É uma garantia mais forte do que a do caminho da lista —
+   * que ao menos passa pela memória do servidor — e não estava escrita em lugar
+   * nenhum. Garantia não declarada não protege ninguém e não vale nada como
+   * argumento.
+   */
+  it("a Política explica que os três nomes não chegam ao servidor", () => {
+    expect(priv.toLowerCase()).toContain("não sai do seu navegador");
+  });
+
+  /**
+   * A RÉGUA DE E-MAIL NÃO ESTAVA DECLARADA.
+   *
+   * São oito momentos de ciclo de vida mais a chamada semanal da Onda —
+   * comunicação de marketing recorrente. O descadastro existe e funciona desde
+   * sempre, mas a Política não dizia que os e-mails existiam nem como sair
+   * deles.
+   */
+  it("a Política declara os e-mails que a Nexora envia", () => {
+    const t = priv.toLowerCase();
+    expect(t).toContain("descadastr");
+    expect(t).toMatch(/e-mails que enviamos|que e-mails/);
+  });
+
+  it("separa transacional de marketing — só um deles é recusável", () => {
+    expect(priv.toLowerCase()).toContain("transacional");
+  });
+
+  it("a medição de funil aparece no inventário, não só na seção de cookies", () => {
+    expect(priv.toLowerCase()).toMatch(/em que ponto|onde as pessoas desistem/);
+  });
+
+  it("o identificador do Google é declarado", () => {
+    // Não é só nome e e-mail: guardamos o `sub`, que é o que impede alguém de
+    // tomar a conta cadastrando o mesmo e-mail antes do dono.
+    expect(priv.toLowerCase()).toContain("identificador");
+  });
+
+  it("a retenção cita o prazo dos eventos de funil", () => {
+    expect(priv).toContain("90 dias");
+  });
+
+  it("os Termos dizem que confirmar o e-mail é condição para assinar", () => {
+    expect(termos.toLowerCase()).toContain("confirmar o e-mail");
+  });
+});
+
+describe("a landing não promete caminho de entrada que não funciona", () => {
+  const landing = readFileSync(join(RAIZ, "app", "diagnostico", "page.tsx"), "utf8");
+
+  it("não anuncia a exportação de conversa do WhatsApp como jeito de subir a base", () => {
+    /**
+     * Verificado em lib/importacao/parsers.ts: o parser agrupa por NOME DE
+     * REMETENTE. Numa conversa individual há dois — o cliente e o dono — e o
+     * dono é filtrado. Ou seja: uma exportação rende UM cliente, sem telefone.
+     * Anunciar isso como caminho para a base inteira é promessa falsa, e ela
+     * quebra exatamente com quem tenta.
+     */
+    expect(landing).not.toContain("texto exportado de uma conversa do WhatsApp");
+  });
+});

@@ -64,6 +64,18 @@ export function TresNomes({
           sumiram — eu escrevo a mensagem para cada uma e você manda hoje mesmo.
         </p>
 
+        {/*
+          A garantia fica ONDE a ação acontece, e não num rodapé.
+          Ele está prestes a digitar o nome de gente de verdade; é aqui que
+          precisa saber para onde esse nome vai. E vai para lugar nenhum: a
+          conta roda no aparelho dele.
+        */}
+        <p className="mt-3 border-l-[3px] border-amber pl-4 text-sm leading-relaxed text-mist/65">
+          Esses nomes <strong className="text-mist">não saem do seu celular</strong>. A conta é
+          feita aqui mesmo, no seu aparelho, e as mensagens também. Nada disso chega no nosso
+          servidor — nem para ser apagado depois.
+        </p>
+
         <div className="mt-6 grid gap-5">
           {nomes.map((n, i) => (
             <div key={i} className="rounded-xl border border-night-line bg-night p-4">
