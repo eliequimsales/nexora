@@ -138,7 +138,8 @@ export const PRIVACIDADE: { atualizadoEm: string; secoes: Secao[] } = {
       titulo: "12. O que ainda não temos",
       paragrafos: [
         "Esta seção existe porque a versão anterior prometia autenticação em dois fatores, e ela não existe. Preferimos listar o que falta a deixar você achar que tem.",
-        "Não temos: autenticação em dois fatores, certificação de segurança auditada por terceiro, e rotina automática de expurgo de dados antigos.",
+        "Não temos: autenticação em dois fatores e certificação de segurança auditada por terceiro.",
+        "Expurgo automático existe para a medição do funil, que é apagada sozinha depois de 90 dias, e para os códigos de senha e de confirmação, que expiram em horas. NÃO existe para a sua conta nem para a base dos seus clientes: esses só saem quando você pede. É de propósito — apagar sozinho a base de quem só quis pausar seria destruir o trabalho da pessoa em nome de uma boa prática.",
         "Se acontecer um incidente de segurança que possa causar risco relevante a você ou aos seus clientes, avisaremos você e a ANPD, na forma do art. 48 da LGPD.",
       ],
     },

@@ -257,3 +257,40 @@ describe("a landing não promete caminho de entrada que não funciona", () => {
     expect(landing).not.toContain("texto exportado de uma conversa do WhatsApp");
   });
 });
+
+describe("os documentos não se contradizem entre si nem consigo mesmos", () => {
+  /**
+   * Achado na leitura cruzada: a seção "o que ainda não temos" afirmava que
+   * não havia rotina automática de expurgo, enquanto a seção de retenção —
+   * escrita no mesmo dia, algumas horas antes — dizia que a medição do funil é
+   * apagada sozinha a cada 90 dias.
+   *
+   * Contradição dentro do MESMO documento é pior do que omissão: quem lê os
+   * dois trechos conclui que um dos dois é mentira, e não tem como saber qual.
+   */
+  const priv = textoDe(PRIVACIDADE);
+
+  it("não nega ter expurgo automático enquanto descreve um", () => {
+    const negaExpurgo = /não temos:[^.]*expurgo/i.test(priv);
+    const descreveExpurgo = /apagada sozinha|apagados sozinh/i.test(priv);
+    expect(negaExpurgo && descreveExpurgo).toBe(false);
+  });
+
+  it("deixa claro que a base do assinante NÃO é apagada sozinha", () => {
+    // A distinção importa: expurgo existe para métrica e token, e não existe
+    // para a base — que é justamente o que o dono teme perder.
+    expect(priv.toLowerCase()).toMatch(/não existe para a sua conta|só saem quando você pede/);
+  });
+
+  it("Termos e Operador concordam: cancelar não apaga a base", () => {
+    expect(textoDe(TERMOS)).toContain("Cancelar não apaga seus dados automaticamente");
+    expect(textoDe(OPERADOR)).toContain("Não apagamos nada automaticamente ao cancelamento");
+  });
+
+  it("os três documentos concordam no prazo de resposta ao titular", () => {
+    // 15 dias em todos. Prazo diferente entre documentos é a contradição mais
+    // cara possível: o titular escolhe o menor e cobra por ele.
+    expect(textoDe(PRIVACIDADE)).toContain("15 dias");
+    expect(textoDe(OPERADOR)).toContain("15 dias");
+  });
+});
