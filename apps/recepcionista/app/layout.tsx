@@ -2,22 +2,28 @@ import type { Metadata } from "next";
 import { Bricolage_Grotesque, Instrument_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
+// preload: false nas três. Elas servem painel, jurídico e agendamento; o funil
+// público usa a Geist (components/tema-nexora.tsx). Pré-carregadas, desciam em
+// toda página — inclusive no 4G de quem chega pelo anúncio e nunca as vê.
 const display = Bricolage_Grotesque({
   subsets: ["latin"],
   variable: "--font-display",
   weight: ["500", "600", "700", "800"],
+  preload: false,
 });
 
 const body = Instrument_Sans({
   subsets: ["latin"],
   variable: "--font-body",
   weight: ["400", "500", "600"],
+  preload: false,
 });
 
 const mono = IBM_Plex_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
   weight: ["400", "500"],
+  preload: false,
 });
 
 export const metadata: Metadata = {
