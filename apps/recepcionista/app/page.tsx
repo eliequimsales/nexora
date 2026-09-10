@@ -234,8 +234,8 @@ export default function Home() {
           <div className="mx-auto grid max-w-5xl gap-14 lg:grid-cols-2 lg:items-center">
             <div>
               <h2 className="text-3xl font-bold sm:text-4xl">Um preço, sem pegadinha</h2>
-              <p className="mt-8 flex items-baseline gap-2">
-                <span className="text-7xl font-bold tracking-tight">R$ 97</span>
+              <p className="mt-8 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span className="whitespace-nowrap text-7xl font-bold tracking-tight">R$ 97</span>
                 <span className="text-nx-secondary">/mês, impostos inclusos</span>
               </p>
               <p className="mt-6 max-w-md leading-relaxed text-nx-secondary">
