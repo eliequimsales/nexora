@@ -43,14 +43,14 @@ function Formulario() {
   if (!token) {
     return (
       <>
-        <h1 className="mt-7 font-display text-2xl text-mist">Link incompleto</h1>
-        <p className="mt-3 text-sm leading-relaxed text-mist/70">
+        <h1 className="mt-7 text-2xl text-nx-primary">Link incompleto</h1>
+        <p className="mt-3 text-sm leading-relaxed text-nx-secondary">
           Esse endereço não tem o código de verificação. Abre o link direto do e-mail que
           você recebeu, ou pede outro.
         </p>
         <Link
           href="/recuperar"
-          className="mt-6 inline-block rounded-xl bg-amber px-5 py-3 font-display font-bold text-night"
+          className="mt-6 inline-block rounded-xl bg-nx-gold shadow-nx-glow-sm px-5 py-3 font-bold text-nx-bg"
         >
           Pedir outro link
         </Link>
@@ -61,8 +61,8 @@ function Formulario() {
   if (estado === "feito") {
     return (
       <>
-        <h1 className="mt-7 font-display text-2xl text-mist">Senha trocada</h1>
-        <p className="mt-3 text-sm text-mist/70">
+        <h1 className="mt-7 text-2xl text-nx-primary">Senha trocada</h1>
+        <p className="mt-3 text-sm text-nx-secondary">
           Pronto. Já estou te levando para o login.
         </p>
       </>
@@ -71,12 +71,12 @@ function Formulario() {
 
   return (
     <>
-      <h1 className="mt-7 font-display text-2xl text-mist">Criar uma senha nova</h1>
-      <p className="mt-3 text-sm text-mist/65">
+      <h1 className="mt-7 text-2xl text-nx-primary">Criar uma senha nova</h1>
+      <p className="mt-3 text-sm text-nx-secondary">
         Este link só funciona uma vez. Depois de trocar, ele deixa de valer.
       </p>
 
-      <label htmlFor="senha" className="mt-6 block text-xs text-mist/50">
+      <label htmlFor="senha" className="mt-6 block text-xs text-nx-secondary">
         Nova senha
       </label>
       <input
@@ -86,11 +86,11 @@ function Formulario() {
         value={senha}
         onChange={(e) => setSenha(e.target.value)}
         placeholder="mínimo 8 caracteres"
-        className="mt-1 w-full rounded-xl border border-night-line bg-night p-3 text-mist outline-none placeholder:text-mist/25 focus:border-amber"
+        className="mt-1 w-full rounded-xl border border-nx-border bg-nx-surface-2 p-3 text-nx-primary outline-none placeholder:text-nx-muted focus:border-nx-gold/60 focus:ring-2 focus:ring-nx-gold/15"
       />
-      {curta && <p className="mt-1 text-xs text-mist/50">Faltam {8 - senha.length} caracteres.</p>}
+      {curta && <p className="mt-1 text-xs text-nx-secondary">Faltam {8 - senha.length} caracteres.</p>}
 
-      <label htmlFor="repetir" className="mt-4 block text-xs text-mist/50">
+      <label htmlFor="repetir" className="mt-4 block text-xs text-nx-secondary">
         Repita a senha
       </label>
       <input
@@ -100,16 +100,16 @@ function Formulario() {
         value={repetir}
         onChange={(e) => setRepetir(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && podeEnviar && enviar()}
-        className="mt-1 w-full rounded-xl border border-night-line bg-night p-3 text-mist outline-none focus:border-amber"
+        className="mt-1 w-full rounded-xl border border-nx-border bg-nx-surface-2 p-3 text-nx-primary outline-none focus:border-nx-gold/60 focus:ring-2 focus:ring-nx-gold/15"
       />
-      {diferente && <p className="mt-1 text-xs text-red-300">As duas senhas não batem.</p>}
+      {diferente && <p className="mt-1 text-xs text-nx-error">As duas senhas não batem.</p>}
 
-      {erro && <p className="mt-3 text-sm text-red-300">{erro}</p>}
+      {erro && <p className="mt-3 text-sm text-nx-error">{erro}</p>}
 
       <button
         onClick={enviar}
         disabled={!podeEnviar || estado === "enviando"}
-        className="mt-5 w-full rounded-xl bg-amber px-6 py-3.5 font-display font-bold text-night transition hover:brightness-105 disabled:opacity-30"
+        className="mt-5 w-full rounded-xl bg-nx-gold shadow-nx-glow-sm px-6 py-3.5 font-bold text-nx-bg transition hover:bg-nx-gold/90 active:scale-[0.98] disabled:opacity-30"
       >
         {estado === "enviando" ? "Trocando…" : "Trocar minha senha"}
       </button>
@@ -120,15 +120,15 @@ function Formulario() {
 export default function PaginaRedefinir() {
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16">
-      <div className="rounded-2xl border border-night-line bg-night-soft p-8">
+      <div className="rounded-2xl border border-nx-border bg-nx-surface p-8">
         <Link href="/" className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber font-display text-lg font-bold text-night">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-nx-gold text-lg font-bold text-nx-bg">
             N
           </span>
-          <span className="font-display font-semibold text-mist">Nexora</span>
+          <span className="font-semibold text-nx-primary">Nexora</span>
         </Link>
         {/* useSearchParams exige Suspense no App Router; sem ele o build falha. */}
-        <Suspense fallback={<p className="mt-7 text-sm text-mist/50">Carregando…</p>}>
+        <Suspense fallback={<p className="mt-7 text-sm text-nx-secondary">Carregando…</p>}>
           <Formulario />
         </Suspense>
       </div>

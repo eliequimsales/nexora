@@ -61,7 +61,7 @@ function LoginForm() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-lg border border-panel-line bg-white px-3 py-2.5 text-sm text-panel-ink outline-none focus:border-amber"
+          className="w-full rounded-lg border border-nx-border bg-nx-surface-2 px-3 py-2.5 placeholder:text-nx-muted text-sm text-nx-primary outline-none focus:border-nx-gold/60 focus:ring-2 focus:ring-nx-gold/15"
         />
       </div>
       <div>
@@ -74,27 +74,27 @@ function LoginForm() {
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded-lg border border-panel-line bg-white px-3 py-2.5 text-sm text-panel-ink outline-none focus:border-amber"
+          className="w-full rounded-lg border border-nx-border bg-nx-surface-2 px-3 py-2.5 placeholder:text-nx-muted text-sm text-nx-primary outline-none focus:border-nx-gold/60 focus:ring-2 focus:ring-nx-gold/15"
         />
       </div>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-nx-error">{error}</p>}
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-lg bg-amber px-4 py-3 text-sm font-semibold text-night transition hover:brightness-110 disabled:opacity-60"
+        className="w-full rounded-lg bg-nx-gold shadow-nx-glow-sm px-4 py-3 text-sm font-semibold text-nx-bg transition hover:bg-nx-gold/90 active:scale-[0.98] disabled:opacity-60"
       >
         {loading ? "Entrando..." : "Entrar"}
       </button>
       <Link
         href="/recuperar"
-        className="block text-center text-sm text-panel-sub hover:text-panel-ink"
+        className="block text-center text-sm text-nx-secondary hover:text-nx-primary"
       >
         Esqueci minha senha
       </Link>
       <div className="flex items-center gap-3 py-1">
-        <span className="h-px flex-1 bg-panel-line" />
-        <span className="text-xs text-panel-sub">ou</span>
-        <span className="h-px flex-1 bg-panel-line" />
+        <span className="h-px flex-1 bg-nx-border" />
+        <span className="text-xs text-nx-secondary">ou</span>
+        <span className="h-px flex-1 bg-nx-border" />
       </div>
       <GoogleButton label="Entrar com o Google" />
     </form>
@@ -103,25 +103,25 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-panel-bg px-4 text-panel-ink">
+    <div className="flex min-h-screen items-center justify-center bg-nx-bg px-4 text-nx-primary">
       <div className="w-full max-w-sm">
         <Link href="/" className="mb-8 flex items-center justify-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber font-display text-base font-bold text-night">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-nx-gold text-base font-bold text-nx-bg">
             N
           </span>
-          <span className="font-display text-lg font-semibold">
+          <span className="text-lg font-semibold">
             Nexora
           </span>
         </Link>
-        <div className="rounded-2xl border border-panel-line bg-panel-card p-8 shadow-sm">
-          <h1 className="mb-6 font-display text-xl font-bold">Entrar na sua conta</h1>
+        <div className="rounded-2xl border border-nx-border bg-nx-surface p-8 shadow-nx-panel">
+          <h1 className="mb-6 text-xl font-bold">Entrar na sua conta</h1>
           <Suspense>
             <LoginForm />
           </Suspense>
         </div>
-        <p className="mt-6 text-center text-sm text-panel-sub">
+        <p className="mt-6 text-center text-sm text-nx-secondary">
           Ainda não tem conta?{" "}
-          <Link href="/cadastro" className="font-semibold text-amber-deep hover:underline">
+          <Link href="/cadastro" className="font-semibold text-nx-gold hover:underline">
             Criar conta grátis
           </Link>
         </p>

@@ -44,19 +44,19 @@ export default function CadastroPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-panel-bg px-4 py-10 text-panel-ink">
+    <div className="flex min-h-screen items-center justify-center bg-nx-bg px-4 py-10 text-nx-primary">
       <div className="w-full max-w-sm">
         <Link href="/" className="mb-8 flex items-center justify-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber font-display text-base font-bold text-night">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-nx-gold text-base font-bold text-nx-bg">
             N
           </span>
-          <span className="font-display text-lg font-semibold">
+          <span className="text-lg font-semibold">
             Nexora
           </span>
         </Link>
-        <div className="rounded-2xl border border-panel-line bg-panel-card p-8 shadow-sm">
-          <h1 className="font-display text-xl font-bold">Criar conta da empresa</h1>
-          <p className="mb-6 mt-1 text-sm text-panel-sub">
+        <div className="rounded-2xl border border-nx-border bg-nx-surface p-8 shadow-nx-panel">
+          <h1 className="text-xl font-bold">Criar conta da empresa</h1>
+          <p className="mb-6 mt-1 text-sm text-nx-secondary">
             Primeiro mês grátis, sem cartão. Você importa sua lista logo depois.
           </p>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -72,7 +72,7 @@ export default function CadastroPage() {
                   placeholder={field.placeholder}
                   value={form[field.key]}
                   onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
-                  className="w-full rounded-lg border border-panel-line bg-white px-3 py-2.5 text-sm text-panel-ink outline-none focus:border-amber"
+                  className="w-full rounded-lg border border-nx-border bg-nx-surface-2 px-3 py-2.5 placeholder:text-nx-muted text-sm text-nx-primary outline-none focus:border-nx-gold/60 focus:ring-2 focus:ring-nx-gold/15"
                 />
               </div>
             ))}
@@ -81,7 +81,7 @@ export default function CadastroPage() {
               consentimento — é armadilha, e o CDC trata cláusula assim como não
               escrita. A data e a versão do texto ficam gravadas no cadastro.
             */}
-            <label className="flex gap-3 text-sm leading-relaxed text-panel-sub">
+            <label className="flex gap-3 text-sm leading-relaxed text-nx-secondary">
               <input
                 type="checkbox"
                 checked={aceite}
@@ -90,43 +90,43 @@ export default function CadastroPage() {
               />
               <span>
                 Li e aceito os{" "}
-                <Link href="/termos" target="_blank" className="font-semibold text-amber-deep hover:underline">
+                <Link href="/termos" target="_blank" className="font-semibold text-nx-gold hover:underline">
                   Termos de Uso
                 </Link>
                 , a{" "}
-                <Link href="/privacidade" target="_blank" className="font-semibold text-amber-deep hover:underline">
+                <Link href="/privacidade" target="_blank" className="font-semibold text-nx-gold hover:underline">
                   Política de Privacidade
                 </Link>{" "}
                 e o{" "}
-                <Link href="/operador" target="_blank" className="font-semibold text-amber-deep hover:underline">
+                <Link href="/operador" target="_blank" className="font-semibold text-nx-gold hover:underline">
                   Contrato de Operador
                 </Link>
                 .
               </span>
             </label>
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-nx-error">{error}</p>}
             <button
               type="submit"
               disabled={loading || !aceite}
-              className="w-full rounded-lg bg-amber px-4 py-3 text-sm font-semibold text-night transition hover:brightness-110 disabled:opacity-60"
+              className="w-full rounded-lg bg-nx-gold shadow-nx-glow-sm px-4 py-3 text-sm font-semibold text-nx-bg transition hover:bg-nx-gold/90 active:scale-[0.98] disabled:opacity-60"
             >
               {loading ? "Criando conta..." : "Criar minha conta"}
             </button>
             <div className="flex items-center gap-3 py-1">
-              <span className="h-px flex-1 bg-panel-line" />
-              <span className="text-xs text-panel-sub">ou</span>
-              <span className="h-px flex-1 bg-panel-line" />
+              <span className="h-px flex-1 bg-nx-border" />
+              <span className="text-xs text-nx-secondary">ou</span>
+              <span className="h-px flex-1 bg-nx-border" />
             </div>
             <GoogleButton label="Cadastrar com o Google" />
-            <p className="text-center text-xs leading-relaxed text-panel-sub">
+            <p className="text-center text-xs leading-relaxed text-nx-secondary">
               Entrar com o Google também significa aceitar os Termos de Uso, a Política de
               Privacidade e o Contrato de Operador.
             </p>
           </form>
         </div>
-        <p className="mt-6 text-center text-sm text-panel-sub">
+        <p className="mt-6 text-center text-sm text-nx-secondary">
           Já tem conta?{" "}
-          <Link href="/login" className="font-semibold text-amber-deep hover:underline">
+          <Link href="/login" className="font-semibold text-nx-gold hover:underline">
             Entrar
           </Link>
         </p>

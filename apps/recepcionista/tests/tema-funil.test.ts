@@ -171,3 +171,17 @@ describe("a home", () => {
     }
   });
 });
+
+describe("cadastro, login e as telas de senha", () => {
+  for (const arquivo of ACESSO) {
+    it(`${arquivo} usa só o tema do funil`, () => {
+      expect(achadosDoTemaAntigo(arquivo)).toEqual([]);
+    });
+  }
+
+  for (const rota of ["cadastro", "login", "recuperar", "redefinir", "verificar"]) {
+    it(`/${rota} recebe o TemaNexora pelo layout`, () => {
+      aplicaTema(`app/${rota}/layout.tsx`);
+    });
+  }
+});
