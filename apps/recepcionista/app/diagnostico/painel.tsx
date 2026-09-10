@@ -271,21 +271,21 @@ export function PainelDiagnostico({
   }
 
   return (
-    <div className="rounded-2xl border border-night-line bg-night-soft/60 p-6 sm:p-7">
+    <div className="rounded-2xl border border-nx-border bg-nx-surface/60 p-6 sm:p-7">
       <button
         onClick={() => setPorta("memoria")}
-        className="mb-5 text-sm text-mist/45 underline underline-offset-4 hover:text-mist/70"
+        className="mb-5 text-sm text-nx-muted underline underline-offset-4 hover:text-nx-primary"
       >
         ← Não tenho a lista aqui agora
       </button>
 
-      <label htmlFor="lista" className="font-display text-lg font-semibold">
+      <label htmlFor="lista" className="text-lg font-semibold">
         Cola sua lista de clientes aqui
       </label>
 
       {/* A frase de privacidade vem ANTES da caixa. Depois dela, só seria lida
           por quem já colou — ou seja, por quem não precisava dela. */}
-      <p className="mt-3 border-l-[3px] border-amber pl-4 text-sm leading-relaxed text-mist/65">
+      <p className="mt-3 border-l-[3px] border-nx-gold pl-4 text-sm leading-relaxed text-nx-secondary">
         Sua lista não fica com a gente. Ela é lida na memória do servidor, o resultado
         aparece aqui na tela e ela é jogada fora junto com a resposta — não vai para banco
         de dados, não vira arquivo, não cai no e-mail de ninguém. Se você fechar essa aba
@@ -298,11 +298,11 @@ export function PainelDiagnostico({
         onChange={(ev) => dispatch({ tipo: "campo", campo: "texto", valor: ev.target.value })}
         rows={8}
         placeholder={EXEMPLO_PLACEHOLDER}
-        className="mt-4 w-full rounded-xl border border-night-line bg-night p-4 font-mono text-[13px] leading-relaxed text-mist outline-none placeholder:text-mist/25 focus:border-amber"
+        className="mt-4 w-full rounded-xl border border-nx-border bg-nx-surface-2 p-4 font-mono text-[13px] leading-relaxed text-nx-primary outline-none placeholder:text-nx-muted focus:border-nx-gold/60 focus:ring-2 focus:ring-nx-gold/15"
       />
 
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-        <label className="cursor-pointer text-amber underline underline-offset-4">
+        <label className="cursor-pointer text-nx-gold underline underline-offset-4">
           ou escolher um arquivo
           <input
             type="file"
@@ -311,34 +311,34 @@ export function PainelDiagnostico({
             onChange={(ev) => lerArquivo(ev.target.files?.[0])}
           />
         </label>
-        <span className="text-xs text-mist/40">
-          {e.texto ? `${contarLinhas(e.texto)} linhas coladas` : "CSV, TXT ou conversa do WhatsApp"}
+        <span className="text-xs text-nx-muted">
+          {e.texto ? `${contarLinhas(e.texto)} linhas coladas` : "CSV ou TXT"}
         </span>
       </div>
 
       <details className="mt-4 text-sm">
-        <summary className="cursor-pointer text-mist/60 hover:text-mist">
+        <summary className="cursor-pointer text-nx-secondary hover:text-nx-primary">
           Não sei mexer em planilha
         </summary>
-        <div className="mt-3 grid gap-3 text-mist/60">
+        <div className="mt-3 grid gap-3 text-nx-secondary">
           <p>
-            <strong className="text-mist">Tenho no Excel:</strong> seleciona as células,
+            <strong className="text-nx-primary">Tenho no Excel:</strong> seleciona as células,
             Ctrl+C, e cola aqui. Só isso — não precisa salvar arquivo nem exportar.
           </p>
           <p>
-            <strong className="text-mist">Tenho no caderno:</strong> digita como der, um
+            <strong className="text-nx-primary">Tenho no caderno:</strong> digita como der, um
             cliente por linha, nome e telefone. Data e valor se você lembrar.
           </p>
           <p>
-            <strong className="text-mist">Só tenho o WhatsApp:</strong> abre a conversa,
-            Mais → Exportar conversa → Sem mídia, e cola o texto aqui.
+            <strong className="text-nx-primary">Só tenho o WhatsApp:</strong> abre as conversas e
+            digita aqui nome e número de quem sumiu, um por linha.
           </p>
         </div>
       </details>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         <div>
-          <label htmlFor="seg" className="text-xs uppercase tracking-wide text-mist/45">
+          <label htmlFor="seg" className="text-xs uppercase tracking-wide text-nx-muted">
             Seu ramo
           </label>
           <select
@@ -347,7 +347,7 @@ export function PainelDiagnostico({
             onChange={(ev) =>
               dispatch({ tipo: "campo", campo: "segmento", valor: ev.target.value })
             }
-            className="mt-1 w-full rounded-xl border border-night-line bg-night p-3 text-sm text-mist outline-none focus:border-amber"
+            className="mt-1 w-full rounded-xl border border-nx-border bg-nx-surface-2 p-3 text-sm text-nx-primary outline-none focus:border-nx-gold/60 focus:ring-2 focus:ring-nx-gold/15"
           >
             <option value="">Prefiro não dizer</option>
             {SEGMENTOS.map((s) => (
@@ -358,7 +358,7 @@ export function PainelDiagnostico({
           </select>
         </div>
         <div>
-          <label htmlFor="meu" className="text-xs uppercase tracking-wide text-mist/45">
+          <label htmlFor="meu" className="text-xs uppercase tracking-wide text-nx-muted">
             Seu nome no WhatsApp
           </label>
           <input
@@ -368,7 +368,7 @@ export function PainelDiagnostico({
               dispatch({ tipo: "campo", campo: "meuNome", valor: ev.target.value })
             }
             placeholder="só se colou uma conversa"
-            className="mt-1 w-full rounded-xl border border-night-line bg-night p-3 text-sm text-mist outline-none placeholder:text-mist/25 focus:border-amber"
+            className="mt-1 w-full rounded-xl border border-nx-border bg-nx-surface-2 p-3 text-sm text-nx-primary outline-none placeholder:text-nx-muted focus:border-nx-gold/60 focus:ring-2 focus:ring-nx-gold/15"
           />
         </div>
       </div>
@@ -376,11 +376,11 @@ export function PainelDiagnostico({
       <button
         onClick={() => analisar()}
         disabled={e.texto.trim().length < 10}
-        className="mt-6 w-full rounded-xl bg-amber px-6 py-4 font-display text-base font-bold text-night transition hover:brightness-105 disabled:opacity-30"
+        className="mt-6 w-full rounded-xl bg-nx-gold shadow-nx-glow-sm px-6 py-4 text-base font-bold text-nx-bg transition hover:bg-nx-gold/90 active:scale-[0.98] disabled:opacity-30"
       >
         Ver quem sumiu
       </button>
-      <p className="mt-3 text-center font-mono text-xs text-mist/40">
+      <p className="mt-3 text-center font-mono text-xs text-nx-muted">
         De graça. Não precisa criar conta pra ver o resultado.
       </p>
     </div>
@@ -394,8 +394,8 @@ function Processando({ linhas }: { linhas: number }) {
   // qualquer percentual seria inventado. Mentir na tela de carregamento da
   // página que vende honestidade é incoerência de graça.
   return (
-    <div className="rounded-2xl border border-night-line bg-night-soft/60 p-8">
-      <div className="space-y-3 font-mono text-sm text-mist/60">
+    <div className="rounded-2xl border border-nx-border bg-nx-surface/60 p-8">
+      <div className="space-y-3 font-mono text-sm text-nx-secondary">
         <p className="animate-pulse">Lendo {linhas} linhas…</p>
         <p className="animate-pulse [animation-delay:400ms]">
           Separando quem é cliente de quem é cabeçalho…
@@ -418,22 +418,22 @@ function ErroLeitura({
   onVoltar: () => void;
 }) {
   return (
-    <div className="rounded-2xl border border-night-line bg-night-soft/60 p-6 sm:p-7">
-      <h2 className="font-display text-xl font-bold">{mensagem}</h2>
+    <div className="rounded-2xl border border-nx-border bg-nx-surface/60 p-6 sm:p-7">
+      <h2 className="text-xl font-bold">{mensagem}</h2>
 
       {linhas.length > 0 && (
         <>
-          <p className="mt-4 text-sm text-mist/60">
+          <p className="mt-4 text-sm text-nx-secondary">
             Olha o que eu tentei ler e não consegui:
           </p>
-          <div className="mt-3 overflow-x-auto rounded-xl border border-night-line">
+          <div className="mt-3 overflow-x-auto rounded-xl border border-nx-border">
             <table className="w-full font-mono text-xs">
               <tbody>
                 {linhas.map((l) => (
-                  <tr key={l.linha} className="border-b border-night-line last:border-0">
-                    <td className="p-2 text-mist/40">L{l.linha}</td>
-                    <td className="max-w-[220px] truncate p-2 text-mist/70">{l.conteudo}</td>
-                    <td className="p-2 text-amber">{l.motivo}</td>
+                  <tr key={l.linha} className="border-b border-nx-border last:border-0">
+                    <td className="p-2 text-nx-muted">L{l.linha}</td>
+                    <td className="max-w-[220px] truncate p-2 text-nx-secondary">{l.conteudo}</td>
+                    <td className="p-2 text-nx-gold">{l.motivo}</td>
                   </tr>
                 ))}
               </tbody>
@@ -444,16 +444,16 @@ function ErroLeitura({
 
       <button
         onClick={onVoltar}
-        className="mt-5 w-full rounded-xl bg-amber px-6 py-3.5 font-display font-bold text-night transition hover:brightness-105"
+        className="mt-5 w-full rounded-xl bg-nx-gold shadow-nx-glow-sm px-6 py-3.5 font-bold text-nx-bg transition hover:bg-nx-gold/90 active:scale-[0.98]"
       >
         Corrigir e tentar de novo
       </button>
-      <p className="mt-3 text-sm text-mist/50">
+      <p className="mt-3 text-sm text-nx-secondary">
         Sua lista continua aqui na caixa — não precisa colar de novo.
         {socorro && (
           <>
             {" "}
-            <a href={socorro} target="_blank" rel="noopener noreferrer" className="text-amber underline underline-offset-4">
+            <a href={socorro} target="_blank" rel="noopener noreferrer" className="text-nx-gold underline underline-offset-4">
               {FRASE_SOCORRO}
             </a>
           </>
@@ -484,23 +484,23 @@ function FaixaRecuperavel({
 }) {
   return (
     <div>
-      <p className="font-display text-3xl font-bold leading-tight sm:text-4xl">
+      <p className="text-3xl font-bold leading-tight sm:text-4xl">
         Tem entre {reais(min)} e {reais(max)} parados na sua lista.
       </p>
-      <div className="mt-5 rounded-xl bg-night/60 p-4">
-        <p className="text-xs uppercase tracking-wide text-mist/40">
+      <div className="mt-5 rounded-xl bg-nx-bg/60 p-4">
+        <p className="text-xs uppercase tracking-wide text-nx-muted">
           Como eu cheguei nesse número
         </p>
-        <p className="mt-2 text-sm leading-relaxed text-mist/70">{metodo}</p>
+        <p className="mt-2 text-sm leading-relaxed text-nx-secondary">{metodo}</p>
         <p className="mt-3 flex flex-wrap items-center gap-2 text-sm">
           <span
             className={`rounded-md px-2 py-0.5 font-mono text-xs ${
-              confianca === "alta" ? "bg-amber/20 text-amber" : "bg-mist/10 text-mist/60"
+              confianca === "alta" ? "bg-nx-gold/20 text-nx-gold" : "bg-nx-surface-2 text-nx-secondary"
             }`}
           >
             confiança {confianca}
           </span>
-          <span className="text-mist/55">{motivoConfianca}</span>
+          <span className="text-nx-secondary">{motivoConfianca}</span>
         </p>
       </div>
     </div>
@@ -530,7 +530,7 @@ function Resultado({
   const imp = dados.importacao;
 
   const cabecalho = (
-    <p className="font-mono text-xs uppercase tracking-[0.14em] text-mist/40">
+    <p className="font-mono text-xs uppercase tracking-[0.14em] text-nx-muted">
       sua lista · {imp.lidos} clientes lidos
       {imp.ignoradas > 0 && ` · ${imp.ignoradas} linhas não lidas`}
     </p>
@@ -539,15 +539,15 @@ function Resultado({
   // Falta a DATA: não dá para dizer quem sumiu. Nunca mostrar número aqui.
   if (d.faltando.data) {
     return (
-      <div className="rounded-2xl border border-night-line bg-night-soft/60 p-6 sm:p-7">
+      <div className="rounded-2xl border border-nx-border bg-nx-surface/60 p-6 sm:p-7">
         {cabecalho}
-        <h2 className="mt-4 font-display text-2xl font-bold">
+        <h2 className="mt-4 text-2xl font-bold">
           Consigo ver seus clientes, mas não consigo saber quem sumiu.
         </h2>
-        <p className="mt-4 leading-relaxed text-mist/70">{d.recomendacao}</p>
+        <p className="mt-4 leading-relaxed text-nx-secondary">{d.recomendacao}</p>
         <button
           onClick={onVoltar}
-          className="mt-6 w-full rounded-xl bg-amber px-6 py-3.5 font-display font-bold text-night transition hover:brightness-105"
+          className="mt-6 w-full rounded-xl bg-nx-gold shadow-nx-glow-sm px-6 py-3.5 font-bold text-nx-bg transition hover:bg-nx-gold/90 active:scale-[0.98]"
         >
           Incluir a data e refazer
         </button>
@@ -559,16 +559,16 @@ function Resultado({
   if (d.faltando.valor) {
     const cents = Math.round(Number(ticketReais.replace(",", ".")) * 100);
     return (
-      <div className="rounded-2xl border border-night-line bg-night-soft/60 p-6 sm:p-7">
+      <div className="rounded-2xl border border-nx-border bg-nx-surface/60 p-6 sm:p-7">
         {cabecalho}
-        <h2 className="mt-4 font-display text-3xl font-bold leading-tight">
+        <h2 className="mt-4 text-3xl font-bold leading-tight">
           {d.sumidos} clientes seus pararam de voltar.
         </h2>
-        <p className="mt-4 leading-relaxed text-mist/70">
+        <p className="mt-4 leading-relaxed text-nx-secondary">
           Sua lista não trazia quanto cada atendimento custa, então eu ainda não sei dizer
           quanto isso é em dinheiro — e eu não invento número.
         </p>
-        <label htmlFor="ticket" className="mt-6 block text-sm text-mist">
+        <label htmlFor="ticket" className="mt-6 block text-sm text-nx-primary">
           Quanto você cobra, em média, por atendimento?
         </label>
         <div className="mt-2 flex gap-2">
@@ -578,12 +578,12 @@ function Resultado({
             value={ticketReais}
             onChange={(ev) => onTicket(ev.target.value)}
             placeholder="50,00"
-            className="w-36 rounded-xl border border-night-line bg-night p-3 text-mist outline-none focus:border-amber"
+            className="w-36 rounded-xl border border-nx-border bg-nx-surface-2 p-3 text-nx-primary outline-none focus:border-nx-gold/60 focus:ring-2 focus:ring-nx-gold/15"
           />
           <button
             onClick={() => onRefazerComTicket(cents)}
             disabled={!Number.isFinite(cents) || cents < 500}
-            className="flex-1 rounded-xl bg-amber px-5 py-3 font-display font-bold text-night transition hover:brightness-105 disabled:opacity-30"
+            className="flex-1 rounded-xl bg-nx-gold shadow-nx-glow-sm px-5 py-3 font-bold text-nx-bg transition hover:bg-nx-gold/90 active:scale-[0.98] disabled:opacity-30"
           >
             Calcular quanto isso vale
           </button>
@@ -597,24 +597,24 @@ function Resultado({
   // a confiança se custar visivelmente caro para quem recusa.
   if (d.corteHonesto) {
     return (
-      <div className="rounded-2xl bg-[#FAF8F2] p-6 text-[#0A0A0F] sm:p-7">
-        <p className="font-mono text-xs uppercase tracking-[0.14em] text-[#8A6A00]">
+      <div className="rounded-2xl border border-nx-gold/30 bg-nx-surface p-6 text-nx-primary sm:p-7">
+        <p className="font-mono text-xs uppercase tracking-[0.14em] text-nx-gold">
           minha recomendação
         </p>
-        <h2 className="mt-3 font-display text-3xl font-bold">
+        <h2 className="mt-3 text-3xl font-bold">
           {d.sumidos === 0
             ? "Boa notícia: não achei ninguém sumido na sua lista."
             : "Não compre a Nexora agora."}
         </h2>
-        <p className="mt-4 leading-relaxed text-[#3A372C]">{d.recomendacao}</p>
-        <p className="mt-4 leading-relaxed text-[#3A372C]">
+        <p className="mt-4 leading-relaxed text-nx-secondary">{d.recomendacao}</p>
+        <p className="mt-4 leading-relaxed text-nx-secondary">
           Eu podia ter arredondado esse número pra cima. Dava. Só que você ia pagar no mês
           que vem, mandar mensagem pra oito pessoas, não ver ninguém voltar e cancelar
           achando que foi enganado — e você teria razão. Prefiro te perder hoje, de graça.
         </p>
 
         <p className="mt-6 font-semibold">Antes de aceitar isso, confere três coisas:</p>
-        <ul className="mt-3 grid gap-2 text-sm text-[#3A372C]">
+        <ul className="mt-3 grid gap-2 text-sm text-nx-secondary">
           <li>
             Você colou só os últimos meses? Quem sumiu está no ano passado, não no mês
             passado.
@@ -625,11 +625,11 @@ function Resultado({
 
         <button
           onClick={onVoltar}
-          className="mt-6 w-full rounded-xl bg-[#0A0A0F] px-6 py-3.5 font-display font-bold text-[#FAF8F2] transition hover:brightness-125"
+          className="mt-6 w-full rounded-xl border border-nx-border bg-nx-surface-2 px-6 py-3.5 font-bold text-nx-primary transition hover:brightness-125"
         >
           Refazer com a lista completa
         </button>
-        <p className="mt-3 text-sm text-[#6B6553]">
+        <p className="mt-3 text-sm text-nx-muted">
           Volte quando tiver uns 25 clientes que não aparecem há mais tempo do que o normal
           deles. Leva dois minutos refazer, e continua de graça.
         </p>
@@ -640,7 +640,7 @@ function Resultado({
   const outros = Math.max(0, d.sumidos - d.nomes.length);
 
   return (
-    <div className="rounded-2xl border border-night-line bg-night-soft/60 p-6 sm:p-7">
+    <div className="rounded-2xl border border-nx-border bg-nx-surface/60 p-6 sm:p-7">
       {cabecalho}
       <div className="mt-4">
         <FaixaRecuperavel
@@ -653,7 +653,7 @@ function Resultado({
       </div>
 
       {imp.aviso && (
-        <p className="mt-4 rounded-xl bg-amber/10 p-3 text-sm leading-relaxed text-amber">
+        <p className="mt-4 rounded-xl bg-nx-gold/10 p-3 text-sm leading-relaxed text-nx-gold">
           {imp.aviso}
         </p>
       )}
@@ -661,8 +661,8 @@ function Resultado({
       <ComandaSumidos nomes={d.nomes} negocio={meuNome} />
 
       {outros > 0 && (
-        <p className="mt-5 rounded-xl border border-night-line p-4 text-sm leading-relaxed text-mist/65">
-          Encontrei <strong className="text-mist">{d.sumidos}</strong> clientes sumidos.
+        <p className="mt-5 rounded-xl border border-nx-border p-4 text-sm leading-relaxed text-nx-secondary">
+          Encontrei <strong className="text-nx-primary">{d.sumidos}</strong> clientes sumidos.
           Mostrei {d.nomes.length}. Os outros {outros} estão nessa mesma lista que você
           acabou de colar — eu não guardei ela, então quando você criar a conta ela entra
           inteira de uma vez e você não vai colar de novo.
@@ -671,18 +671,18 @@ function Resultado({
 
       <button
         onClick={onCriarConta}
-        className="mt-5 w-full rounded-xl bg-amber px-6 py-4 font-display text-base font-bold text-night transition hover:brightness-105"
+        className="mt-5 w-full rounded-xl bg-nx-gold shadow-nx-glow-sm px-6 py-4 text-base font-bold text-nx-bg transition hover:bg-nx-gold/90 active:scale-[0.98]"
       >
         Criar minha conta e trazer esses {d.sumidos} de volta
       </button>
-      <p className="mt-3 text-sm leading-relaxed text-mist/55">
+      <p className="mt-3 text-sm leading-relaxed text-nx-secondary">
         R$ 97 por mês, e o primeiro mês é grátis. Não pedimos cartão agora. Cancele quando
         quiser — você fica com o período que já pagou.
       </p>
 
       <button
         onClick={onApagar}
-        className="mt-5 text-sm text-mist/45 underline underline-offset-4 hover:text-mist/70"
+        className="mt-5 text-sm text-nx-muted underline underline-offset-4 hover:text-nx-primary"
       >
         Apagar minha lista desta tela
       </button>
@@ -705,10 +705,10 @@ function ComandaSumidos({ nomes, negocio }: { nomes: NomeDoTop[]; negocio: strin
   if (nomes.length === 0) return null;
   return (
     <div className="mt-6">
-      <p className="text-xs uppercase tracking-wide text-mist/40">
+      <p className="text-xs uppercase tracking-wide text-nx-muted">
         Comece por estes — são os que voltam mais fácil
       </p>
-      <p className="mt-1 text-sm leading-relaxed text-mist/55">
+      <p className="mt-1 text-sm leading-relaxed text-nx-secondary">
         A mensagem já vai escrita. Mande para um agora, de graça, e veja se volta antes
         de decidir qualquer coisa sobre a gente.
       </p>
@@ -720,18 +720,18 @@ function ComandaSumidos({ nomes, negocio }: { nomes: NomeDoTop[]; negocio: strin
             negocio,
           });
           return (
-            <div key={n.telefone + n.nome} className="rounded-xl border border-night-line p-4">
+            <div key={n.telefone + n.nome} className="rounded-xl border border-nx-border p-4">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <span className="font-display font-semibold">{n.nome}</span>
-                <span className="font-mono text-xs text-mist/45">
+                <span className="font-semibold">{n.nome}</span>
+                <span className="font-mono text-xs text-nx-muted">
                   sem aparecer há {n.diasSumido} dias
                 </span>
               </div>
-              <p className="mt-2 text-sm leading-relaxed text-mist/60">{n.porque}</p>
+              <p className="mt-2 text-sm leading-relaxed text-nx-secondary">{n.porque}</p>
 
               {convite && (
                 <>
-                  <p className="mt-3 whitespace-pre-wrap rounded-lg bg-night/60 p-3 text-sm leading-relaxed text-mist/75">
+                  <p className="mt-3 whitespace-pre-wrap rounded-lg bg-nx-bg/60 p-3 text-sm leading-relaxed text-nx-secondary">
                     {convite.texto}
                   </p>
                   <AcaoConvite
@@ -818,24 +818,24 @@ function PortaEntrada({
     form.name.trim() && form.phone.trim() && form.email.trim() && form.password.length >= 8;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-night/90 p-4">
-      <div className="max-h-full w-full max-w-md overflow-y-auto rounded-2xl border border-night-line bg-night-soft p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-nx-bg/90 p-4">
+      <div className="max-h-full w-full max-w-md overflow-y-auto rounded-2xl border border-nx-border bg-nx-surface p-6">
         {passo !== "form" ? (
           <div className="py-8 text-center">
-            <p className="font-display text-lg">
+            <p className="text-lg">
               {passo === "criando" ? "Criando sua conta…" : "Trazendo sua lista…"}
             </p>
-            <p className="mt-2 text-sm text-mist/55">
+            <p className="mt-2 text-sm text-nx-secondary">
               Não feche essa tela. Já já você está vendo as mensagens prontas.
             </p>
           </div>
         ) : (
           <>
-            <h2 className="font-display text-xl font-bold">
+            <h2 className="text-xl font-bold">
               Trazer meus {sumidos} clientes de volta
             </h2>
 
-            <ol className="mt-4 grid gap-2 text-sm text-mist/60">
+            <ol className="mt-4 grid gap-2 text-sm text-nx-secondary">
               <li>1. Você escolhe e-mail e senha. Só isso.</li>
               <li>2. Essa mesma lista entra na sua conta — você não vai colar de novo.</li>
               <li>
@@ -858,19 +858,19 @@ function PortaEntrada({
                 { k: "password", r: "Crie uma senha", t: "password", p: "mínimo 8 caracteres" },
               ].map((c) => (
                 <div key={c.k}>
-                  <label className="text-xs text-mist/50">{c.r}</label>
+                  <label className="text-xs text-nx-secondary">{c.r}</label>
                   <input
                     type={c.t}
                     placeholder={c.p}
                     value={form[c.k as keyof typeof form]}
                     onChange={(ev) => setForm({ ...form, [c.k]: ev.target.value })}
-                    className="mt-1 w-full rounded-xl border border-night-line bg-night p-3 text-sm text-mist outline-none placeholder:text-mist/25 focus:border-amber"
+                    className="mt-1 w-full rounded-xl border border-nx-border bg-nx-surface-2 p-3 text-sm text-nx-primary outline-none placeholder:text-nx-muted focus:border-nx-gold/60 focus:ring-2 focus:ring-nx-gold/15"
                   />
                 </div>
               ))}
             </div>
 
-            <label className="mt-4 flex items-start gap-2 text-sm text-mist/60">
+            <label className="mt-4 flex items-start gap-2 text-sm text-nx-secondary">
               <input
                 type="checkbox"
                 checked={confirmo}
@@ -894,18 +894,18 @@ function PortaEntrada({
               </span>
             </label>
 
-            {erro && <p className="mt-3 text-sm text-red-300">{erro}</p>}
+            {erro && <p className="mt-3 text-sm text-nx-error">{erro}</p>}
 
             <button
               onClick={enviar}
               disabled={!completo || !confirmo}
-              className="mt-5 w-full rounded-xl bg-amber px-6 py-3.5 font-display font-bold text-night transition hover:brightness-105 disabled:opacity-30"
+              className="mt-5 w-full rounded-xl bg-nx-gold shadow-nx-glow-sm px-6 py-3.5 font-bold text-nx-bg transition hover:bg-nx-gold/90 active:scale-[0.98] disabled:opacity-30"
             >
               Criar conta e trazer minha lista
             </button>
             <button
               onClick={onFechar}
-              className="mt-3 w-full text-sm text-mist/45 hover:text-mist/70"
+              className="mt-3 w-full text-sm text-nx-muted hover:text-nx-primary"
             >
               Agora não
             </button>

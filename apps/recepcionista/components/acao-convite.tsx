@@ -32,8 +32,8 @@ export function AcaoConvite({
 
   const cor =
     variante === "escuro"
-      ? "border-amber/40 text-amber hover:bg-amber/10"
-      : "border-paper-line text-paper-ink hover:border-amber";
+      ? "border-nx-gold/40 text-nx-gold hover:bg-nx-gold/10"
+      : "border-nx-border text-nx-primary hover:border-nx-gold";
 
   const copiar = async () => {
     try {

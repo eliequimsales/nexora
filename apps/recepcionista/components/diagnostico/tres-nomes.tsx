@@ -55,11 +55,11 @@ export function TresNomes({
 
   if (!mostrou) {
     return (
-      <div className="rounded-2xl border border-night-line bg-night-soft p-6">
-        <h2 className="font-display text-xl font-semibold text-mist">
+      <div className="rounded-2xl border border-nx-border bg-nx-surface p-6">
+        <h2 className="text-xl font-semibold text-nx-primary">
           Quem some da sua cabeça primeiro?
         </h2>
-        <p className="mt-2 text-sm leading-relaxed text-mist/60">
+        <p className="mt-2 text-sm leading-relaxed text-nx-secondary">
           Não precisa de lista nem de planilha. Escreve três pessoas que você lembra que
           sumiram — eu escrevo a mensagem para cada uma e você manda hoje mesmo.
         </p>
@@ -70,15 +70,15 @@ export function TresNomes({
           precisa saber para onde esse nome vai. E vai para lugar nenhum: a
           conta roda no aparelho dele.
         */}
-        <p className="mt-3 border-l-[3px] border-amber pl-4 text-sm leading-relaxed text-mist/65">
-          Esses nomes <strong className="text-mist">não saem do seu celular</strong>. A conta é
+        <p className="mt-3 border-l-[3px] border-nx-gold pl-4 text-sm leading-relaxed text-nx-secondary">
+          Esses nomes <strong className="text-nx-primary">não saem do seu celular</strong>. A conta é
           feita aqui mesmo, no seu aparelho, e as mensagens também. Nada disso chega no nosso
           servidor — nem para ser apagado depois.
         </p>
 
         <div className="mt-6 grid gap-5">
           {nomes.map((n, i) => (
-            <div key={i} className="rounded-xl border border-night-line bg-night p-4">
+            <div key={i} className="rounded-xl border border-nx-border bg-nx-bg p-4">
               <input
                 value={n.nome}
                 onChange={(ev) => {
@@ -87,10 +87,10 @@ export function TresNomes({
                 }}
                 placeholder={EXEMPLOS[i]}
                 autoComplete="off"
-                className="w-full bg-transparent text-base text-mist outline-none placeholder:text-mist/25"
+                className="w-full bg-transparent text-base text-nx-primary outline-none placeholder:text-nx-muted"
               />
 
-              <p className="mt-4 text-xs uppercase tracking-[0.14em] text-mist/40">
+              <p className="mt-4 text-xs uppercase tracking-[0.14em] text-nx-muted">
                 Sem aparecer há quanto tempo?
               </p>
 
@@ -107,8 +107,8 @@ export function TresNomes({
                     onClick={() => atualizar(i, { diasSumido: q.dias })}
                     className={`rounded-lg border px-3 py-2 text-sm transition ${
                       n.diasSumido === q.dias
-                        ? "border-amber bg-amber/15 font-semibold text-amber"
-                        : "border-night-line text-mist/60 hover:border-mist/30"
+                        ? "border-nx-gold bg-nx-gold/15 font-semibold text-nx-gold"
+                        : "border-nx-border text-nx-secondary hover:border-nx-border-2"
                     }`}
                   >
                     {q.rotulo}
@@ -122,7 +122,7 @@ export function TresNomes({
                 placeholder="Telefone (opcional — sem ele eu te dou o texto pronto)"
                 inputMode="tel"
                 autoComplete="off"
-                className="mt-4 w-full border-t border-night-line bg-transparent pt-3 text-sm text-mist outline-none placeholder:text-mist/25"
+                className="mt-4 w-full border-t border-nx-border bg-transparent pt-3 text-sm text-nx-primary outline-none placeholder:text-nx-muted"
               />
             </div>
           ))}
@@ -131,7 +131,7 @@ export function TresNomes({
         <button
           onClick={ver}
           disabled={preenchidos.length === 0}
-          className="mt-6 w-full rounded-xl bg-amber px-5 py-4 font-display text-base font-bold text-night transition hover:brightness-110 disabled:opacity-40"
+          className="mt-6 w-full rounded-xl bg-nx-gold shadow-nx-glow-sm px-5 py-4 text-base font-bold text-nx-bg transition hover:bg-nx-gold/90 active:scale-[0.98] disabled:opacity-40"
         >
           {preenchidos.length === 0
             ? "Escreve pelo menos um nome"
@@ -142,7 +142,7 @@ export function TresNomes({
 
         <button
           onClick={aoQuererLista}
-          className="mt-3 w-full text-sm text-mist/45 underline underline-offset-4 hover:text-mist/70"
+          className="mt-3 w-full text-sm text-nx-muted underline underline-offset-4 hover:text-nx-primary"
         >
           Tenho a lista aqui — quero ver a base inteira
         </button>
@@ -153,13 +153,13 @@ export function TresNomes({
   const d = diagnosticarTresNomes(preenchidos, { segmento, negocio, ticketCents });
 
   return (
-    <div className="rounded-2xl border border-night-line bg-night-soft p-6">
-      <h2 className="font-display text-xl font-semibold text-mist">
+    <div className="rounded-2xl border border-nx-border bg-nx-surface p-6">
+      <h2 className="text-xl font-semibold text-nx-primary">
         {d.cartoes.length === 1 ? "A mensagem está pronta" : "As mensagens estão prontas"}
       </h2>
 
       {d.textoDoValor && (
-        <p className="mt-2 text-sm leading-relaxed text-mist/60">{d.textoDoValor}</p>
+        <p className="mt-2 text-sm leading-relaxed text-nx-secondary">{d.textoDoValor}</p>
       )}
 
       {/*
@@ -167,20 +167,20 @@ export function TresNomes({
         memória não são uma base, e a tela que abre a relação não pode começar
         exagerando a própria precisão.
       */}
-      <p className="mt-4 rounded-xl border border-night-line bg-night/60 p-3 text-xs leading-relaxed text-mist/50">
+      <p className="mt-4 rounded-xl border border-nx-border bg-nx-bg/60 p-3 text-xs leading-relaxed text-nx-secondary">
         {d.ressalva}
       </p>
 
       <div className="mt-6 grid gap-4">
         {d.cartoes.map((c, i) => (
-          <div key={`${c.nome}-${i}`} className="rounded-xl border border-night-line bg-night p-4">
+          <div key={`${c.nome}-${i}`} className="rounded-xl border border-nx-border bg-nx-bg p-4">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <span className="font-display font-semibold text-mist">{c.nome}</span>
-              <span className="font-mono text-xs text-mist/40">há {c.diasSumido} dias</span>
+              <span className="font-semibold text-nx-primary">{c.nome}</span>
+              <span className="font-mono text-xs text-nx-muted">há {c.diasSumido} dias</span>
             </div>
-            <p className="mt-2 text-sm leading-relaxed text-mist/60">{c.porque}</p>
+            <p className="mt-2 text-sm leading-relaxed text-nx-secondary">{c.porque}</p>
 
-            <p className="mt-3 whitespace-pre-wrap rounded-lg bg-night-soft p-3 text-sm leading-relaxed text-mist/80">
+            <p className="mt-3 whitespace-pre-wrap rounded-lg bg-nx-surface p-3 text-sm leading-relaxed text-nx-secondary">
               {c.convite.texto}
             </p>
 
@@ -203,19 +203,19 @@ export function TresNomes({
         exatamente o erro que a tela antiga cometia ao terminar em "criar conta".
       */}
       {enviados.size > 0 && (
-        <div className="mt-7 rounded-xl border border-amber/30 bg-amber/10 p-5">
-          <p className="font-display font-semibold text-mist">
+        <div className="mt-7 rounded-xl border border-nx-gold/30 bg-nx-gold/10 p-5">
+          <p className="font-semibold text-nx-primary">
             {enviados.size === 1 ? "Mandou uma." : `Mandou ${enviados.size}.`} Agora a parte
             que você não consegue fazer de cabeça:
           </p>
-          <p className="mt-2 text-sm leading-relaxed text-mist/70">
+          <p className="mt-2 text-sm leading-relaxed text-nx-secondary">
             Você lembrou de três. Na sua lista tem mais — e eu calculo o ritmo de cada
             cliente, um por um, para dizer quem está sumindo agora, antes de virar hábito
             não voltar.
           </p>
           <button
             onClick={aoQuererLista}
-            className="mt-4 w-full rounded-xl bg-amber px-5 py-3.5 font-display font-bold text-night transition hover:brightness-110"
+            className="mt-4 w-full rounded-xl bg-nx-gold shadow-nx-glow-sm px-5 py-3.5 font-bold text-nx-bg transition hover:bg-nx-gold/90 active:scale-[0.98]"
           >
             Ver quem mais sumiu na minha lista
           </button>
@@ -224,7 +224,7 @@ export function TresNomes({
 
       <button
         onClick={() => setMostrou(false)}
-        className="mt-4 w-full text-sm text-mist/45 underline underline-offset-4 hover:text-mist/70"
+        className="mt-4 w-full text-sm text-nx-muted underline underline-offset-4 hover:text-nx-primary"
       >
         Voltar e mudar os nomes
       </button>

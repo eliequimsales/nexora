@@ -104,18 +104,18 @@ export default function PaginaDiagnostico({
   const vocativo = ramo ? VOCATIVO[ramo] : null;
 
   return (
-    <div className="min-h-screen bg-night text-mist">
+    <div className="min-h-screen bg-nx-bg text-nx-primary">
       {/* Sem isto, "quanto custou trazer alguem" e chute. Ver lib/funil.ts. */}
       <EventoAoMontar nome="chegou" />
-      <header className="border-b border-night-line">
+      <header className="border-b border-nx-border">
         <div className="mx-auto flex max-w-page items-center justify-between px-6 py-4">
           <Link href="/" className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber font-display text-base font-bold text-night">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-nx-gold text-base font-bold text-nx-bg">
               N
             </span>
-            <span className="font-display font-semibold">Nexora</span>
+            <span className="font-semibold">Nexora</span>
           </Link>
-          <Link href="/login" className="text-sm text-mist/70 hover:text-mist">
+          <Link href="/login" className="text-sm text-nx-secondary hover:text-nx-primary">
             Entrar
           </Link>
         </div>
@@ -125,20 +125,20 @@ export default function PaginaDiagnostico({
       <section className="mx-auto max-w-page px-6 pb-20 pt-14 sm:pt-20">
         <div className="grid gap-12 lg:grid-cols-[1fr_1.05fr] lg:gap-16">
           <div>
-            <p className="font-mono text-xs uppercase tracking-[0.16em] text-amber">
+            <p className="font-mono text-xs uppercase tracking-[0.16em] text-nx-gold">
               Sem cadastro · Sem cartão · Não sai do seu celular
             </p>
-            <h1 className="mt-5 font-display text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl">
+            <h1 className="mt-5 text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl">
               {vocativo ? `${vocativo}: você tem clientes que sumiram e não sabe quem são.` : "Você tem clientes que sumiram e não sabe quem são."}
             </h1>
-            <p className="mt-6 text-lg leading-relaxed text-mist/70">
+            <p className="mt-6 text-lg leading-relaxed text-nx-secondary">
               Escreve três clientes que você lembra que sumiram — não precisa de lista, nem
               de planilha, nem sair do celular. Eu escrevo a mensagem para cada um e você
               manda hoje. Se tiver a lista aí, eu leio ela inteira e digo, com nome e
               sobrenome, quem mais parou de voltar.
             </p>
 
-            <p className="mt-8 border-l-2 border-amber pl-4 text-sm leading-relaxed text-mist/60">
+            <p className="mt-8 border-l-2 border-nx-gold pl-4 text-sm leading-relaxed text-nx-secondary">
               O prejuízo de cliente que some é o único que não faz barulho. Ninguém cancela
               nada, ninguém reclama — a pessoa só vai espaçando até parar. E como o movimento
               do dia continua, você não percebe.
@@ -150,19 +150,19 @@ export default function PaginaDiagnostico({
       </section>
 
       {/* ATO 2 — o mecanismo. Vem depois da caixa de propósito. */}
-      <section className="border-t border-night-line bg-night-soft/30">
+      <section className="border-t border-nx-border bg-nx-surface/30">
         <div className="mx-auto max-w-page px-6 py-20">
-          <h2 className="font-display text-2xl font-bold sm:text-3xl">
+          <h2 className="text-2xl font-bold sm:text-3xl">
             Como eu descubro isso
           </h2>
           <div className="mt-10 grid gap-8 md:grid-cols-3">
             {PASSOS.map((p, i) => (
               <div key={p.titulo}>
-                <span className="font-mono text-xs text-amber">
+                <span className="font-mono text-xs text-nx-gold">
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                <h3 className="mt-3 font-display text-lg font-semibold">{p.titulo}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-mist/65">{p.corpo}</p>
+                <h3 className="mt-3 text-lg font-semibold">{p.titulo}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-nx-secondary">{p.corpo}</p>
               </div>
             ))}
           </div>
@@ -171,15 +171,15 @@ export default function PaginaDiagnostico({
 
       {/* ATO 3 — separar do que ele já conhece e não quer. */}
       <section className="mx-auto max-w-page px-6 py-20">
-        <div className="rounded-2xl border border-night-line bg-night-soft/40 p-8 sm:p-10">
-          <h2 className="font-display text-2xl font-bold">Isso não é disparo em massa</h2>
-          <p className="mt-4 max-w-2xl leading-relaxed text-mist/70">
+        <div className="rounded-2xl border border-nx-border bg-nx-surface/40 p-8 sm:p-10">
+          <h2 className="text-2xl font-bold">Isso não é disparo em massa</h2>
+          <p className="mt-4 max-w-2xl leading-relaxed text-nx-secondary">
             Ferramenta de disparo manda a mesma mensagem para a lista inteira. Duas coisas
             acontecem: o WhatsApp bane o número, e quem esteve na sua loja ontem recebe uma
             mensagem de saudade — e percebe que é robô.
           </p>
-          <p className="mt-4 max-w-2xl leading-relaxed text-mist/70">
-            A Nexora manda <strong className="text-mist">doze por semana</strong>, escolhidas
+          <p className="mt-4 max-w-2xl leading-relaxed text-nx-secondary">
+            A Nexora manda <strong className="text-nx-primary">doze por semana</strong>, escolhidas
             pelo ritmo de cada um, e quem tem horário marcado nunca entra na lista. Você lê
             cada uma antes de mandar. É mais devagar de propósito.
           </p>
@@ -187,14 +187,14 @@ export default function PaginaDiagnostico({
       </section>
 
       {/* ATO 4 — preço, garantia e quem responde por ela. */}
-      <section className="border-y border-night-line bg-night-soft/30">
+      <section className="border-y border-nx-border bg-nx-surface/30">
         <div className="mx-auto max-w-page px-6 py-20">
-          <h2 className="font-display text-2xl font-bold sm:text-3xl">Quanto custa</h2>
+          <h2 className="text-2xl font-bold sm:text-3xl">Quanto custa</h2>
           <p className="mt-6">
-            <span className="font-display text-5xl font-bold">R$ 97</span>
-            <span className="ml-2 text-mist/50">/mês, impostos inclusos</span>
+            <span className="text-5xl font-bold">R$ 97</span>
+            <span className="ml-2 text-nx-secondary">/mês, impostos inclusos</span>
           </p>
-          <ul className="mt-8 grid max-w-2xl gap-3 text-mist/75">
+          <ul className="mt-8 grid max-w-2xl gap-3 text-nx-secondary">
             {[
               "O primeiro mês é grátis e não pedimos cartão para começar.",
               "Cancele quando quiser — você fica com o período que já pagou.",
@@ -202,7 +202,7 @@ export default function PaginaDiagnostico({
               `Pagamento por ${formasDePagamentoTexto()}.`,
             ].map((item) => (
               <li key={item} className="flex gap-3">
-                <span className="mt-1 text-amber">✓</span>
+                <span className="mt-1 text-nx-gold">✓</span>
                 {item}
               </li>
             ))}
@@ -216,15 +216,15 @@ export default function PaginaDiagnostico({
             juridicamente é o pior lugar possível para errar — e é o tipo de frase
             que um cliente lesado leva impressa para o Procon.
           */}
-          <p className="mt-8 max-w-2xl text-sm leading-relaxed text-mist/55">
+          <p className="mt-8 max-w-2xl text-sm leading-relaxed text-nx-secondary">
             O serviço é prestado por pessoa física, e o contrato é com ela. A
             identificação de quem presta o serviço, o preço total e as condições de
             cancelamento estão nos{" "}
-            <Link href="/termos" className="text-mist/80 underline underline-offset-4">
+            <Link href="/termos" className="text-nx-secondary underline underline-offset-4">
               Termos de Uso
             </Link>
             , e o que fazemos com os dados está na{" "}
-            <Link href="/privacidade" className="text-mist/80 underline underline-offset-4">
+            <Link href="/privacidade" className="text-nx-secondary underline underline-offset-4">
               Política de Privacidade
             </Link>
             .
@@ -234,21 +234,21 @@ export default function PaginaDiagnostico({
 
       {/* ATO 5 — objeções, na ordem em que aparecem de verdade. */}
       <section className="mx-auto max-w-page px-6 py-20">
-        <h2 className="font-display text-2xl font-bold sm:text-3xl">
+        <h2 className="text-2xl font-bold sm:text-3xl">
           O que costumam me perguntar
         </h2>
         <div className="mt-10 grid gap-6 md:grid-cols-2">
           {OBJECOES.map((o) => (
-            <div key={o.p} className="rounded-xl border border-night-line p-6">
-              <h3 className="font-display font-semibold">{o.p}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-mist/65">{o.r}</p>
+            <div key={o.p} className="rounded-xl border border-nx-border p-6">
+              <h3 className="font-semibold">{o.p}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-nx-secondary">{o.r}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <footer className="border-t border-night-line">
-        <div className="mx-auto max-w-page px-6 py-10 text-sm text-mist/45">
+      <footer className="border-t border-nx-border">
+        <div className="mx-auto max-w-page px-6 py-10 text-sm text-nx-muted">
           <p>
             Nexora — recuperação de clientes inativos para pequenos negócios de serviço.
           </p>

@@ -185,3 +185,23 @@ describe("cadastro, login e as telas de senha", () => {
     });
   }
 });
+
+describe("o diagnóstico", () => {
+  for (const arquivo of DIAGNOSTICO) {
+    it(`${arquivo} usa só o tema do funil`, () => {
+      expect(achadosDoTemaAntigo(arquivo)).toEqual([]);
+    });
+  }
+
+  it("/diagnostico recebe o TemaNexora pelo layout", () => {
+    aplicaTema("app/diagnostico/layout.tsx");
+  });
+
+  it("nenhum arquivo do diagnóstico promete a exportação de conversa do WhatsApp", () => {
+    // tests/legal.test.ts só lia app/diagnostico/page.tsx, e a mesma promessa
+    // sobreviveu em painel.tsx. A trava agora cobre o diagnóstico inteiro.
+    for (const arquivo of DIAGNOSTICO) {
+      expect(leia(arquivo), arquivo).not.toMatch(PROMESSA_EXPORTACAO);
+    }
+  });
+});
