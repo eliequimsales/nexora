@@ -42,3 +42,6 @@ artifacts/
 output/
 .playwright-cli/
 *.tsbuildinfo
+
+# Rascunhos do companheiro visual de brainstorming — nunca vao para o git
+.superpowers/
