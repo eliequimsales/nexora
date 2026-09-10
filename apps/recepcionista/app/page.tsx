@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { TemaNexora } from "@/components/tema-nexora";
+import { TAMANHO_DA_ONDA } from "@/lib/recuperacao/onda";
 
 export const metadata: Metadata = {
   title: "Nexora — ganhe dinheiro trazendo seus clientes sumidos de volta",
@@ -10,124 +12,41 @@ export const metadata: Metadata = {
 /**
  * A LANDING.
  *
- * Ela vendia o Nexora Atendente — recepcionista de IA no WhatsApp, em verde, a
- * R$ 149 e R$ 349. O tráfego do Instagram fala de cliente sumido, em amarelo, a
- * R$ 97. Trilha de cheiro quebrada entre o anúncio e a página é onde a
- * conversão morre sem aparecer em métrica nenhuma: o visitante não se reconhece
- * e sai em dois segundos.
- *
  * O CTA principal não é "criar conta" — é o Diagnóstico. Prova de primeira
  * pessoa sobre a base DELE converte muito mais que promessa sobre o produto, e
  * é a única prova que a gente tem enquanto não existe depoimento.
  *
  * ---
  *
- * DIREÇÃO VISUAL (31/08/2026). A página era verde-escura de ponta a ponta e
- * lia como clone de WhatsApp — associação barata, e ainda por cima confusa,
- * porque o argumento central é justamente que a Nexora NÃO é disparador. Agora
- * ela usa o mesmo sistema dos carrosséis: preto neutro, papel quente, âmbar.
+ * DIREÇÃO VISUAL (10/09/2026). Os anúncios da Meta rodaram em cima da Nexora
+ * antiga (apps/app), e quem clica espera aquela cara: Geist, hero centralizado,
+ * dourado com brilho. A página volta para aquele visual e para a ordem daquela
+ * home — a dor, a conta, e onde os clientes aparecem. O conteúdo de baixo é o
+ * desta base, porque é o que o código cumpre (tests/promessas-da-landing.test.ts).
+ * As seções da antiga que prometiam o que não existe mais ficaram de fora.
  *
- * A página alterna faixa ESCURA e faixa PAPEL, do jeito que os slides alternam.
- * A alternância é o que dá hierarquia sem precisar de mais nenhuma cor: escuro
- * onde se argumenta, papel onde se explica e onde se cobra.
- *
- * A ousadia está concentrada em UM lugar — a Régua de Ritmo. O resto é
- * disciplina: uma cor de destaque, três pesos de tipo, e respiro.
+ * Desenho: docs/superpowers/specs/2026-09-10-visual-antigo-no-funil-design.md
  */
 
-// ---------------------------------------------------------------------------
-// A RÉGUA DE RITMO — a assinatura da página.
-//
-// Todo concorrente diz "clientes inativos". A Nexora diz outra coisa: que
-// inatividade é RELATIVA ao ritmo de cada pessoa. Isso é difícil de explicar em
-// texto e óbvio em um desenho: batidas regulares, a batida que era esperada e
-// não veio, e o silêncio depois.
-//
-// É informação, não enfeite — cada marca é uma visita real, e o comprimento do
-// vão é o tamanho do prejuízo. Por isso ela aparece dentro do card do cliente,
-// no lugar onde antes havia só uma frase.
-// ---------------------------------------------------------------------------
-function ReguaDeRitmo({ ciclo, dias }: { ciclo: number; dias: number }) {
-  const VISITAS = 8;
-  const ultima = (VISITAS - 1) * ciclo;
-  const total = ultima + dias;
-  const pct = (d: number) => (d / total) * 100;
+const SELOS = ["Grátis pra começar", "Sem cartão", "Sem integração", "Funciona com planilha"];
 
-  const esperada = ultima + ciclo;
-  const cabeEsperada = esperada < total;
-
-  return (
-    <div
-      className="relative mt-3 h-7"
-      role="img"
-      aria-label={`Vinha a cada ${ciclo} dias e está há ${dias} dias sem aparecer.`}
-    >
-      {/* linha de base */}
-      <div className="absolute inset-x-0 top-3 h-px bg-white/10" />
-
-      {/* o vão: onde deixou de vir */}
-      <div
-        className="absolute top-3 h-px"
-        style={{
-          left: `${pct(ultima)}%`,
-          right: 0,
-          backgroundImage:
-            "repeating-linear-gradient(to right, rgba(234,179,8,.55) 0 3px, transparent 3px 7px)",
-        }}
-      />
-
-      {/* as visitas que aconteceram */}
-      {Array.from({ length: VISITAS }, (_, i) => (
-        <span
-          key={i}
-          className="absolute top-1 h-5 w-[2px] rounded-full bg-mist/45"
-          style={{ left: `${pct(i * ciclo)}%` }}
-        />
-      ))}
-
-      {/* a visita que era esperada e não veio — o produto inteiro em um traço */}
-      {cabeEsperada && (
-        <span
-          className="absolute top-0 h-7 w-[2px] rounded-full bg-amber"
-          style={{ left: `${pct(esperada)}%` }}
-        />
-      )}
-    </div>
-  );
-}
-
-const CARDS_DEMO = [
-  {
-    nome: "Marcos Andrade",
-    esteira: "Prestes a sumir",
-    dias: 31,
-    ciclo: 24,
-    porque: "Vinha a cada 24 dias. Está 7 além do ritmo normal.",
-    valor: "R$ 50",
-  },
-  {
-    nome: "Juliana Prado",
-    esteira: "Atrasado",
-    dias: 58,
-    ciclo: 21,
-    porque: "Vinha a cada 21 dias. Está 37 além do ritmo normal.",
-    valor: "R$ 120",
-  },
-  {
-    nome: "Rafael Nunes",
-    esteira: "Sumido há muito",
-    dias: 143,
-    ciclo: 26,
-    porque: "Vinha a cada 26 dias. Está 117 além do ritmo normal.",
-    valor: "R$ 65",
-  },
+/**
+ * Exemplo, e a tela diz que é exemplo. Os ritmos são plausíveis para uma
+ * barbearia; os nomes não são de ninguém.
+ */
+const ONDA_EXEMPLO = [
+  { nome: "Marcos", ciclo: 28, dias: 64 },
+  { nome: "Dona Cida", ciclo: 35, dias: 90 },
+  { nome: "Júnior", ciclo: 21, dias: 45 },
 ];
 
 const PASSOS = [
   {
     titulo: "Você manda sua lista do jeito que ela está",
+    // O WhatsApp não entra aqui: o importador agrupa a exportação por remetente,
+    // e uma conversa rende um cliente só, sem telefone.
     corpo:
-      "Planilha do Excel, caderno digitado, conversa exportada do WhatsApp. A Nexora entende e diz em português o que não conseguiu ler.",
+      "Colado do Excel, arquivo CSV ou caderno digitado. A Nexora entende e diz em português o que não conseguiu ler.",
   },
   {
     titulo: "Ela descobre o ritmo de cada cliente",
@@ -150,256 +69,244 @@ const INCLUI = [
   "Cancele quando quiser — você fica com o período que já pagou",
 ];
 
+/** O botão dourado da Nexora antiga, com o brilho. */
+const BOTAO_DOURADO =
+  "inline-flex items-center justify-center gap-2 rounded-lg bg-nx-gold font-semibold text-nx-bg shadow-nx-glow-sm transition-all hover:bg-nx-gold/90 active:scale-[0.98]";
+
 export default function Home() {
   return (
-    <div className="min-h-screen bg-night text-mist">
-      <header className="sticky top-0 z-40 border-b border-night-line bg-night/85 backdrop-blur">
-        <div className="mx-auto flex max-w-page items-center justify-between px-6 py-3.5">
+    <TemaNexora>
+      <header className="sticky top-0 z-40 border-b border-nx-border bg-nx-bg/85 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
           <Link href="/" className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber font-display text-base font-bold text-night">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-nx-gold text-base font-bold text-nx-bg">
               N
             </span>
-            <span className="font-display font-semibold">Nexora</span>
+            <span className="font-semibold">Nexora</span>
           </Link>
-          <nav className="hidden items-center gap-7 text-sm text-mist/60 md:flex">
-            <a href="#como-funciona" className="transition hover:text-mist">
-              Como funciona
-            </a>
-            <a href="#preco" className="transition hover:text-mist">
-              Preço
-            </a>
-          </nav>
-          <div className="flex items-center gap-2">
-            <Link href="/login" className="px-3 py-2 text-sm text-mist/70 transition hover:text-mist">
+          <div className="flex items-center gap-4">
+            <Link
+              href="/login"
+              className="text-sm font-medium text-nx-secondary transition-colors hover:text-nx-primary"
+            >
               Entrar
             </Link>
-            <Link
-              href="/diagnostico"
-              className="rounded-lg bg-amber px-4 py-2 text-sm font-semibold text-night transition hover:brightness-105"
-            >
-              Ver quem sumiu
+            <Link href="/diagnostico" className={`${BOTAO_DOURADO} px-4 py-2 text-sm`}>
+              Ver meus clientes <span aria-hidden="true">→</span>
             </Link>
           </div>
         </div>
       </header>
 
-      {/* ATO 1 — o prejuízo que não faz barulho. */}
-      <section className="mx-auto grid max-w-page items-center gap-14 px-6 pb-24 pt-16 lg:grid-cols-[1.05fr_0.95fr] lg:pt-24">
-        <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-amber">
-            Recuperação de clientes inativos
-          </p>
-          <h1 className="mt-6 font-display text-[2.6rem] font-bold leading-[1.02] tracking-[-0.03em] sm:text-6xl lg:text-[4.1rem]">
-            Sua agenda não está vazia.
-            <br />
-            <span className="text-mist/45">Sua base está parada.</span>
-          </h1>
-          <p className="mt-7 max-w-xl text-lg leading-relaxed text-mist/65">
-            Ninguém cancela nada. O cliente só vai espaçando — 20 dias, depois 40, depois
-            some de vez. E como o movimento do dia continua, você não percebe. É o único
-            prejuízo que não faz barulho.
-          </p>
-
-          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-            <Link
-              href="/diagnostico"
-              className="rounded-lg bg-amber px-7 py-4 text-center font-display font-bold text-night transition hover:brightness-105"
-            >
-              Descobrir quem sumiu da minha base
-            </Link>
-            <a
-              href="#como-funciona"
-              className="rounded-lg border border-night-line px-7 py-4 text-center text-sm text-mist/75 transition hover:border-mist/30 hover:text-mist"
-            >
-              Ver como funciona
-            </a>
-          </div>
-          <p className="mt-5 font-mono text-[11px] uppercase tracking-[0.14em] text-mist/35">
-            De graça · sem cadastro · sua lista não é gravada
-          </p>
-        </div>
-
-        {/* A demonstração é o produto de verdade: a Onda. */}
-        <div className="rounded-xl border border-night-line bg-night-soft/70 p-5">
-          <div className="flex items-baseline justify-between border-b border-night-line pb-3">
-            <p className="font-display font-semibold">Onda de segunda</p>
-            <span className="font-mono text-[11px] text-mist/40">12 clientes · ~9 min</span>
-          </div>
-          <div className="mt-4 grid gap-3">
-            {CARDS_DEMO.map((c) => (
-              <div key={c.nome} className="rounded-lg border border-night-line bg-night p-4">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="font-display text-sm font-semibold">{c.nome}</span>
-                  <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-mist/40">
-                    {c.esteira}
-                  </span>
-                </div>
-
-                <ReguaDeRitmo ciclo={c.ciclo} dias={c.dias} />
-
-                <div className="mt-1 flex items-center justify-between">
-                  <span className="font-mono text-[11px] text-mist/40">
-                    a cada {c.ciclo} dias
-                  </span>
-                  <span className="font-mono text-[11px] text-amber">
-                    {c.dias} dias sem vir
-                  </span>
-                </div>
-
-                <div className="mt-3 flex items-center justify-between border-t border-night-line pt-3">
-                  <span className="font-mono text-[11px] text-mist/40">ticket {c.valor}</span>
-                  <span className="font-mono text-[11px] text-amber">copiar mensagem</span>
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="mt-4 flex items-center justify-center gap-2 font-mono text-[11px] text-mist/30">
-            <span className="inline-block h-3 w-[2px] rounded-full bg-amber align-middle" />
-            a batida que era esperada e não veio
-          </p>
-        </div>
-      </section>
-
-      {/* ATO 2 — a conta que ele nunca fez. */}
-      <section className="border-y border-night-line">
-        <div className="mx-auto max-w-page px-6 py-20">
-          <p className="mx-auto max-w-3xl text-center font-display text-2xl leading-[1.4] tracking-[-0.01em] sm:text-3xl">
-            Faz a conta agora: quantos clientes te mandaram mensagem no ano passado e nunca
-            mais voltaram? Multiplica pelo seu ticket médio.{" "}
-            <span className="text-amber">Esse número já foi seu uma vez.</span>
-          </p>
-        </div>
-      </section>
-
-      {/* ATO 3 — o mecanismo. Papel: aqui se explica, e explicação pede luz. */}
-      <section id="como-funciona" className="bg-paper text-paper-ink">
-        <div className="mx-auto max-w-page px-6 py-24">
-          <h2 className="font-display text-3xl font-bold tracking-[-0.02em] sm:text-4xl">
-            Como funciona
-          </h2>
-          <div className="mt-14 grid gap-10 md:grid-cols-3">
-            {PASSOS.map((p, i) => (
-              <div key={p.titulo} className="border-t border-paper-line pt-5">
-                <span className="font-mono text-[11px] tracking-[0.14em] text-amber-deep">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <h3 className="mt-4 font-display text-lg font-semibold leading-snug">
-                  {p.titulo}
-                </h3>
-                <p className="mt-3 text-sm leading-relaxed text-paper-sub">{p.corpo}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ATO 4 — separar do que ele já conhece e rejeita. */}
-      <section className="border-t border-night-line">
-        <div className="mx-auto max-w-page px-6 py-24">
-          <h2 className="font-display text-2xl font-bold tracking-[-0.02em] sm:text-3xl">
-            Isso não é disparo em massa
-          </h2>
-          <div className="mt-8 grid max-w-3xl gap-5 text-mist/65">
-            <p className="leading-relaxed">
-              Ferramenta de disparo manda a mesma mensagem para a lista inteira. Duas coisas
-              acontecem: o WhatsApp bane o número — e o número da sua empresa é a sua agenda
-              inteira — e quem esteve na sua loja ontem recebe uma mensagem de saudade e
-              percebe que é robô.
+      <main>
+        {/* HERO — o texto da Nexora antiga. */}
+        <section className="px-6 pb-12 pt-16 sm:pt-20">
+          <div className="mx-auto max-w-4xl space-y-6 text-center">
+            <h1 className="text-4xl font-bold leading-[1.06] tracking-tight sm:text-5xl lg:text-[3.75rem]">
+              Seus clientes não avisam que estão indo embora.
+              <br className="hidden sm:block" />{" "}
+              <span className="text-nx-gold">Eles só param de voltar.</span>
+            </h1>
+            <p className="mx-auto max-w-2xl text-lg leading-relaxed text-nx-secondary sm:text-xl">
+              A Nexora mostra quem parou de comprar, quanto dinheiro isso representa e a
+              mensagem exata pra trazer cada um de volta.
             </p>
-            <p className="leading-relaxed">
-              A Nexora manda <strong className="font-semibold text-mist">doze por semana</strong>,
-              escolhidas pelo ritmo de cada um. Quem tem horário marcado nunca entra na
-              lista. Quem já respondeu sai na hora. E você lê cada mensagem antes de mandar.
-              É mais devagar de propósito.
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-3">
+              <Link href="/diagnostico" className={`${BOTAO_DOURADO} px-7 py-4 text-base`}>
+                Descobrir meus clientes <span aria-hidden="true">→</span>
+              </Link>
+              <a
+                href="#como-funciona"
+                className="rounded-lg border border-nx-border px-6 py-4 text-base font-medium transition-colors hover:bg-nx-surface"
+              >
+                Ver como funciona
+              </a>
+            </div>
+            <ul className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-3 text-xs text-nx-muted">
+              {SELOS.map((selo) => (
+                <li key={selo} className="inline-flex items-center gap-1.5">
+                  <span aria-hidden="true" className="text-nx-success">
+                    ✓
+                  </span>
+                  {selo}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* A CONTA — o lugar da calculadora (sub-projeto 2). Até ela chegar, a
+            conta vai escrita, e nenhum botão da página promete calcular nada. */}
+        <section className="px-6 pb-20 pt-4">
+          <div className="mx-auto max-w-4xl rounded-2xl border border-nx-border bg-nx-surface p-8 text-center sm:p-12">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-nx-gold">
+              A conta que ninguém faz
+            </p>
+            <p className="mx-auto mt-4 max-w-3xl text-2xl font-semibold leading-[1.4] tracking-tight sm:text-3xl">
+              Faz a conta agora: quantos clientes te mandaram mensagem no ano passado e nunca
+              mais voltaram? Multiplica pelo seu ticket médio.{" "}
+              <span className="text-nx-gold">Esse número já foi seu uma vez.</span>
             </p>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ATO 5 — preço. Papel de novo: o preço é o momento de mais luz da página. */}
-      <section id="preco" className="bg-paper text-paper-ink">
-        <div className="mx-auto max-w-page px-6 py-24">
-          <div className="grid gap-14 lg:grid-cols-2 lg:items-center">
-            <div>
-              <h2 className="font-display text-3xl font-bold tracking-[-0.02em] sm:text-4xl">
-                Um preço, sem pegadinha
-              </h2>
-              <p className="mt-8 flex items-baseline gap-2">
-                <span className="font-display text-7xl font-bold tracking-[-0.04em]">
-                  R$ 97
+        {/* ONDE ELES APARECEM — no lugar do painel de exemplo da antiga. */}
+        <section className="px-6 pb-20">
+          <div className="mx-auto max-w-4xl">
+            <h2 className="mb-10 text-center text-2xl font-bold sm:text-3xl">
+              E é aqui que esses clientes aparecem
+            </h2>
+            <div className="mx-auto max-w-xl rounded-2xl border border-nx-border bg-nx-surface p-5 shadow-nx-glow-sm">
+              <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-nx-border pb-3">
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold">Onda de segunda</p>
+                  <span className="rounded-full border border-nx-border bg-nx-surface-2 px-2 py-0.5 text-[11px] font-medium text-nx-muted">
+                    exemplo
+                  </span>
+                </div>
+                <span className="font-mono text-[11px] text-nx-muted">
+                  {TAMANHO_DA_ONDA} clientes · ~9 min
                 </span>
-                <span className="text-paper-sub">/mês, impostos inclusos</span>
+              </div>
+              <ul>
+                {ONDA_EXEMPLO.map((c) => (
+                  <li
+                    key={c.nome}
+                    className="flex items-center justify-between gap-4 border-b border-nx-border py-3 last:border-b-0 last:pb-0"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold">{c.nome}</p>
+                      <p className="text-xs text-nx-secondary">
+                        vinha a cada {c.ciclo} dias · sumiu há {c.dias}
+                      </p>
+                    </div>
+                    {/* Etiqueta, não botão: numa lista de exemplo, nada finge ser clicável. */}
+                    <span className="shrink-0 rounded-md border border-nx-gold/25 bg-nx-gold/10 px-3 py-1 text-xs font-semibold text-nx-gold">
+                      Mandar
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section id="como-funciona" className="scroll-mt-20 bg-nx-surface-2/30 px-6 py-20">
+          <div className="mx-auto max-w-5xl">
+            <h2 className="text-center text-3xl font-bold sm:text-4xl">Como funciona</h2>
+            <div className="mt-12 grid gap-6 md:grid-cols-3">
+              {PASSOS.map((p, i) => (
+                <div key={p.titulo} className="rounded-xl border border-nx-border bg-nx-surface p-6">
+                  <span className="font-mono text-xs font-bold tracking-[0.14em] text-nx-gold">
+                    PASSO {i + 1}
+                  </span>
+                  <h3 className="mt-3 font-semibold leading-snug">{p.titulo}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-nx-secondary">{p.corpo}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="px-6 py-20">
+          <div className="mx-auto max-w-3xl">
+            <h2 className="text-center text-3xl font-bold sm:text-4xl">
+              Isso não é disparo em massa
+            </h2>
+            <div className="mt-8 grid gap-5 text-lg leading-relaxed text-nx-secondary">
+              <p>
+                Ferramenta de disparo manda a mesma mensagem para a lista inteira. Duas coisas
+                acontecem: o WhatsApp bane o número — e o número da sua empresa é a sua agenda
+                inteira — e quem esteve na sua loja ontem recebe uma mensagem de saudade e
+                percebe que é robô.
               </p>
-              <p className="mt-6 max-w-md leading-relaxed text-paper-sub">
+              <p>
+                A Nexora manda <strong className="font-semibold text-nx-primary">doze por semana</strong>,
+                escolhidas pelo ritmo de cada um. Quem tem horário marcado nunca entra na
+                lista. Quem já respondeu sai na hora. E você lê cada mensagem antes de mandar.
+                É mais devagar de propósito.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section id="preco" className="scroll-mt-20 bg-nx-surface-2/30 px-6 py-20">
+          <div className="mx-auto grid max-w-5xl gap-14 lg:grid-cols-2 lg:items-center">
+            <div>
+              <h2 className="text-3xl font-bold sm:text-4xl">Um preço, sem pegadinha</h2>
+              <p className="mt-8 flex items-baseline gap-2">
+                <span className="text-7xl font-bold tracking-tight">R$ 97</span>
+                <span className="text-nx-secondary">/mês, impostos inclusos</span>
+              </p>
+              <p className="mt-6 max-w-md leading-relaxed text-nx-secondary">
                 O primeiro mês é grátis e não pedimos cartão para começar. Você decide se
                 assina depois de ver, na tela, quem voltou e quanto pagou.
               </p>
-              <Link
-                href="/diagnostico"
-                className="mt-9 inline-block rounded-lg bg-night px-7 py-4 font-display font-bold text-mist transition hover:brightness-150"
-              >
-                Começar pelo diagnóstico grátis
+              <Link href="/diagnostico" className={`${BOTAO_DOURADO} mt-9 px-7 py-4`}>
+                Começar pelo diagnóstico grátis <span aria-hidden="true">→</span>
               </Link>
             </div>
-
-            <ul className="grid gap-0 border-t border-paper-line">
+            <ul className="rounded-xl border border-nx-border bg-nx-surface px-6">
               {INCLUI.map((item) => (
                 <li
                   key={item}
-                  className="flex gap-4 border-b border-paper-line py-4 text-[15px] leading-relaxed"
+                  className="flex gap-4 border-b border-nx-border py-4 text-[15px] leading-relaxed last:border-b-0"
                 >
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber" />
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-nx-gold" />
                   <span>{item}</span>
                 </li>
               ))}
             </ul>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ATO 6 — fecho. */}
-      <section className="mx-auto max-w-page px-6 py-28">
-        <div className="text-center">
-          <h2 className="mx-auto max-w-2xl font-display text-3xl font-bold leading-[1.1] tracking-[-0.03em] sm:text-5xl">
-            Antes de decidir, veja o tamanho do buraco.
-          </h2>
-          <p className="mx-auto mt-6 max-w-xl leading-relaxed text-mist/60">
-            Cola a lista que você já tem e a Nexora te mostra, com nome e sobrenome, quem
-            parou de voltar. Não precisa criar conta para ver, e a lista não fica com a
-            gente.
-          </p>
-          <Link
-            href="/diagnostico"
-            className="mt-10 inline-block rounded-lg bg-amber px-9 py-4 font-display text-lg font-bold text-night transition hover:brightness-105"
-          >
-            Ver quem sumiu da minha base
-          </Link>
-        </div>
-      </section>
+        <section className="px-6 pb-24 pt-20">
+          <div className="mx-auto max-w-3xl rounded-2xl border border-nx-gold/30 bg-nx-surface p-8 text-center sm:p-12">
+            <h2 className="text-3xl font-bold leading-tight sm:text-4xl">
+              Antes de decidir, veja o tamanho do buraco.
+            </h2>
+            <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-nx-secondary">
+              Cola a lista que você já tem e a Nexora te mostra, com nome e sobrenome, quem
+              parou de voltar. Não precisa criar conta para ver, e a lista não fica com a
+              gente.
+            </p>
+            <Link href="/diagnostico" className={`${BOTAO_DOURADO} mt-8 px-8 py-4 text-lg`}>
+              Ver quem sumiu da minha base <span aria-hidden="true">→</span>
+            </Link>
+          </div>
+        </section>
+      </main>
 
-      <footer className="border-t border-night-line">
-        <div className="mx-auto flex max-w-page flex-col gap-4 px-6 py-10 text-sm text-mist/40 sm:flex-row sm:items-center sm:justify-between">
+      <footer className="border-t border-nx-border px-6 pb-24 pt-10 sm:pb-8">
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 text-sm text-nx-muted sm:flex-row sm:items-center sm:justify-between">
           <p className="max-w-sm">
             Nexora — recuperação de clientes inativos para pequenos negócios de serviço.
             Serviço prestado por pessoa física; a identificação completa está nos Termos de
             Uso.
           </p>
           <div className="flex flex-wrap gap-x-5 gap-y-2">
-            <Link href="/termos" className="transition hover:text-mist/70">
+            <Link href="/termos" className="transition-colors hover:text-nx-primary">
               Termos de Uso
             </Link>
-            <Link href="/privacidade" className="transition hover:text-mist/70">
+            <Link href="/privacidade" className="transition-colors hover:text-nx-primary">
               Privacidade
             </Link>
-            <Link href="/login" className="transition hover:text-mist/70">
+            <Link href="/login" className="transition-colors hover:text-nx-primary">
               Entrar
             </Link>
-            <Link href="/diagnostico" className="transition hover:text-mist/70">
+            <Link href="/diagnostico" className="transition-colors hover:text-nx-primary">
               Diagnóstico grátis
             </Link>
           </div>
         </div>
       </footer>
-    </div>
+
+      {/* No celular o botão nunca sai da tela — veio da Nexora antiga. */}
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-nx-border bg-nx-bg/95 p-3 backdrop-blur-md sm:hidden">
+        <Link href="/diagnostico" className={`${BOTAO_DOURADO} w-full px-5 py-3.5`}>
+          Descobrir meus clientes <span aria-hidden="true">→</span>
+        </Link>
+      </div>
+    </TemaNexora>
   );
 }

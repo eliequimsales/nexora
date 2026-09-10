@@ -134,3 +134,40 @@ describe("a fundação do tema", () => {
     expect(layout.match(/preload:\s*false/g) ?? []).toHaveLength(3);
   });
 });
+
+describe("a home", () => {
+  it("usa só o tema do funil", () => {
+    expect(achadosDoTemaAntigo("app/page.tsx")).toEqual([]);
+  });
+
+  it("recebe o TemaNexora", () => {
+    aplicaTema("app/page.tsx");
+  });
+
+  it("não promete subir a base pela exportação de conversa do WhatsApp", () => {
+    expect(leia("app/page.tsx")).not.toMatch(PROMESSA_EXPORTACAO);
+  });
+
+  it("a lista de exemplo se declara exemplo e usa o tamanho real da Onda", () => {
+    const home = leia("app/page.tsx");
+    expect(home).toMatch(
+      /import\s*\{\s*TAMANHO_DA_ONDA\s*\}\s*from\s*["']@\/lib\/recuperacao\/onda["']/,
+    );
+    expect(home).toMatch(/Onda de segunda[\s\S]{0,600}exemplo/);
+    expect(home).toContain("{TAMANHO_DA_ONDA} clientes");
+  });
+
+  it("todo link da home leva a algum lugar que existe", () => {
+    // Âncora sem seção e rota sem página são o mesmo defeito: botão que leva a
+    // lugar nenhum. A home antiga mandava para /register e /contato, que não
+    // existem nesta base — e é dela que o visual está vindo.
+    const home = leia("app/page.tsx");
+    for (const [, id] of home.matchAll(/href="#([\w-]+)"/g)) {
+      expect(home, `#${id}`).toContain(`id="${id}"`);
+    }
+    for (const [, rota] of home.matchAll(/href="(\/[\w\-/]*)"/g)) {
+      const pagina = rota === "/" ? "app/page.tsx" : `app${rota}/page.tsx`;
+      expect(existsSync(join(RAIZ, pagina)), rota).toBe(true);
+    }
+  });
+});
