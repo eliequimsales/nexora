@@ -205,3 +205,58 @@ describe("o diagnóstico", () => {
     }
   });
 });
+
+describe("a fronteira do funil", () => {
+  const TOKEN_NX = new RegExp(`(?<![\\w-])(?:[a-z-]+:)*${PREFIXO}-nx-[\\w/-]*`, "g");
+
+  function listar(dir: string): string[] {
+    return readdirSync(join(RAIZ, dir), { withFileTypes: true }).flatMap((e) => {
+      const rel = `${dir}/${e.name}`;
+      if (e.isDirectory()) return listar(rel);
+      return /\.tsx?$/.test(e.name) ? [rel] : [];
+    });
+  }
+
+  function importsLocais(rel: string): string[] {
+    const fonte = leia(rel);
+    return [...fonte.matchAll(/from\s+["']((?:@\/components\/|\.{1,2}\/)[^"']+)["']/g)].map(
+      ([, alvo]) => {
+        const base = alvo.startsWith("@/")
+          ? join(RAIZ, alvo.slice(2))
+          : resolve(dirname(join(RAIZ, rel)), alvo);
+        const achado = [".tsx", ".ts", "/index.tsx", "/index.ts"]
+          .map((ext) => base + ext)
+          .find((p) => existsSync(p));
+        return achado ? relative(RAIZ, achado).split(sep).join("/") : `${alvo} (não resolvido)`;
+      },
+    );
+  }
+
+  it("fora do funil ninguém usa nx-* nem o TemaNexora", () => {
+    const fora = [...listar("app"), ...listar("components")].filter((f) => !FUNIL.includes(f));
+    const vazamentos = fora.flatMap((arquivo) => {
+      const fonte = leia(arquivo);
+      const achados = [...(fonte.match(TOKEN_NX) ?? [])];
+      if (fonte.includes("tema-nexora")) achados.push("import do TemaNexora");
+      return achados.map((a) => `${arquivo}: ${a}`);
+    });
+    expect(vazamentos).toEqual([]);
+  });
+
+  it("todo componente que o funil importa está na lista do funil", () => {
+    // Uma lista escrita à mão envelhece no primeiro componente novo. Seguindo
+    // os imports, quem entrar no diagnóstico amanhã entra na trava junto.
+    const escapados = FUNIL.flatMap((arquivo) =>
+      importsLocais(arquivo)
+        .filter((destino) => !FUNIL.includes(destino))
+        .map((destino) => `${arquivo} importa ${destino}`),
+    );
+    expect(escapados).toEqual([]);
+  });
+
+  it("nenhuma tela do funil promete a exportação de conversa do WhatsApp", () => {
+    for (const arquivo of FUNIL) {
+      expect(leia(arquivo), arquivo).not.toMatch(PROMESSA_EXPORTACAO);
+    }
+  });
+});
