@@ -6,6 +6,8 @@ import { conviteDeVolta, primeiroNome } from "@/lib/recuperacao/convite";
 import { DECLARACAO_BASE } from "@/lib/legal/identidade";
 import { AcaoConvite } from "@/components/acao-convite";
 import { TresNomes } from "@/components/diagnostico/tres-nomes";
+import { CustoVsRetorno } from "@/components/diagnostico/custo-vs-retorno";
+import { emReais, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
 import { EventoAoMontar, registrar } from "@/components/funil";
 import { FRASE_SOCORRO, linkDeSocorro } from "@/lib/contato";
 
@@ -669,6 +671,14 @@ function Resultado({
         </p>
       )}
 
+      {/* O preço aparece AO LADO do que ele traz, antes do botão: quem decide criar
+          a conta já viu, com os números da lista dele, se a conta fecha. */}
+      <CustoVsRetorno
+        min={d.recuperavelCents.min}
+        max={d.recuperavelCents.max}
+        confianca={d.confianca}
+      />
+
       <button
         onClick={onCriarConta}
         className="mt-5 w-full rounded-xl bg-nx-gold shadow-nx-glow-sm px-6 py-4 text-base font-bold text-nx-bg transition hover:bg-nx-gold/90 active:scale-[0.98]"
@@ -676,8 +686,8 @@ function Resultado({
         Criar minha conta e trazer esses {d.sumidos} de volta
       </button>
       <p className="mt-3 text-sm leading-relaxed text-nx-secondary">
-        R$ 97 por mês, e o primeiro mês é grátis. Não pedimos cartão agora. Cancele quando
-        quiser — você fica com o período que já pagou.
+        {emReais(PRECO_MENSAL_CENTS)} por mês, e o primeiro mês é grátis. Não pedimos cartão
+        agora. Cancele quando quiser — você fica com o período que já pagou.
       </p>
 
       <button

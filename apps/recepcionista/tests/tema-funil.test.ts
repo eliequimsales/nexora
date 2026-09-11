@@ -81,6 +81,7 @@ const DIAGNOSTICO = [
   "app/diagnostico/page.tsx",
   "app/diagnostico/painel.tsx",
   "components/diagnostico/tres-nomes.tsx",
+  "components/diagnostico/custo-vs-retorno.tsx",
   "components/acao-convite.tsx",
   "components/funil.tsx",
   "app/diagnostico/layout.tsx",
