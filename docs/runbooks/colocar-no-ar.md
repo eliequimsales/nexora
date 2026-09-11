@@ -1,9 +1,24 @@
 # Colocar a Nexora no ar
 
-Estado em 01/09/2026: **o código está pronto e nada está no ar.** O último
-deploy é de 06/07/2026 e todos aparecem como `REMOVED` — o trial do Railway
-expirou e derrubou os serviços. Os volumes sobreviveram (`postgres-volume`,
-140 MB).
+Estado em 11/09/2026, conferido no Railway só com leitura: **o código está
+pronto e nada está no ar.**
+
+- Conta `nalasalesff@gmail.com`, workspace "eliequimsales's Projects", projeto
+  `nexora` (`333cc641-17b3-4796-80a7-dac16eb3625c`), único ambiente
+  `production`. Existe um segundo projeto `nexora` (`c6942513-…`), vazio.
+- Serviços: `recepcionista`, `api` e `app` (os dois últimos são a Nexora
+  antiga), `Postgres` e `Redis`. Nenhum tem deploy ativo, e não há um único
+  acesso HTTP registrado.
+- O último deploy do `recepcionista` é de 06/07/2026: o build **terminou**
+  (imagem gerada e enviada), o contêiner nunca chegou a rodar e o deploy está
+  `REMOVED`. Não houve nenhuma tentativa depois disso.
+- `Postgres` e `Redis` nunca tiveram deploy neste projeto. Os volumes
+  sobreviveram (`postgres-volume`, 140 MB, visto em 01/09).
+
+A causa não é código: em 01/09 o `railway up` respondia *"Your trial has
+expired. Please select a plan to continue"*, e em 11/09 o código atual passou
+nos 684 testes e no `next build`. O que destrava é a etapa 0. Para confirmar o
+plano: railway.com → workspace "eliequimsales's Projects" → Billing.
 
 Execute nesta ordem. Cada etapa depende da anterior.
 
@@ -61,7 +76,9 @@ subir sozinho depois da assinatura, crie pelo painel e reaponte
 
 ## 2. Variáveis que faltam
 
-Já estão no serviço: `DATABASE_URL`, `JWT_SECRET`, `APP_URL`, `CRON_SECRET`,
+Em 01/09 já estavam no serviço (lista não reconferida em 11/09: a consulta de
+variáveis devolve os valores junto com os nomes, e segredo não passa por aqui —
+confira os nomes no painel, aba Variables do `recepcionista`): `DATABASE_URL`, `JWT_SECRET`, `APP_URL`, `CRON_SECRET`,
 `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GROQ_API_KEY`, `GROQ_MODEL`,
 `AI_PROVIDER`, `EVOLUTION_API_URL`, `EVOLUTION_API_KEY`, `WEBHOOK_TOKEN`,
 `RAILWAY_DOCKERFILE_PATH`.
@@ -140,6 +157,22 @@ existente, resolva antes de seguir — nunca com `--accept-data-loss`.
 railway up --service recepcionista
 railway logs --service recepcionista
 ```
+
+Na primeira subida, confira duas coisas no log, porque elas nunca rodaram num
+deploy real:
+
+1. **O app roda como usuário `node`, não como root** (`USER node` e
+   `COPY --chown=node:node`, desde 01/09). O último build que chegou ao Railway,
+   em 06/07, ainda rodava como root. Se aparecer `EACCES` ou `permission denied`
+   em `node_modules`, `.next` ou no cache do `npx`, o problema é esse. Não tire
+   o `USER node` para "resolver": ajuste o dono do diretório que falhou.
+2. **`npx prisma db push --skip-generate` termina antes do `pnpm start`.** Sem o
+   Postgres de pé ele falha e o contêiner reinicia em laço, sinal de que a
+   etapa 1 (banco) não foi concluída.
+
+O empacotamento foi conferido em 11/09: o `.dockerignore` da raiz tira
+`node_modules`, `.next`, todos os `.env` e chaves do upload, então nem o
+`node_modules` do Windows nem segredo nenhum entram na imagem.
 
 ---
 
