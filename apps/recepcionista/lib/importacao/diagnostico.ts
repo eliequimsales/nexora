@@ -18,18 +18,15 @@
 
 import { calcularCiclo } from "@/lib/recuperacao/ciclo";
 import { classificar } from "@/lib/recuperacao/esteiras";
-
-/** Faixa de reativação observada em campanhas de recuperação, em 90 dias. */
-const TAXA_MIN = 0.15;
-const TAXA_MAX = 0.25;
-const JANELA_DIAS = 90;
-/** Teto de visitas projetadas. Ciclo semanal daria 13 na janela — projetar
- *  isso é fantasia, ninguém recupera alguém e mantém 13 idas seguidas. */
-const MAX_VISITAS_PROJETADAS = 4;
-
-/** Abaixo disto não há o que recuperar: o Corte Honesto entra. */
-const MIN_SUMIDOS = 25;
-const MIN_RECUPERAVEL_CENTS = 50_000;
+// A fórmula do dinheiro mora em lib/recuperacao/estimativa.ts, e a calculadora
+// da home usa a mesma. Nunca declarar taxa ou limite aqui de novo.
+import {
+  FAIXA_EM_TEXTO,
+  JANELA_DIAS,
+  abaixoDoCorte,
+  faixaRecuperavel,
+  visitasNaJanela,
+} from "@/lib/recuperacao/estimativa";
 
 export type ClienteBase = {
   nome: string;
@@ -161,22 +158,15 @@ export function gerarDiagnostico(
     (a) => a.classificacao.esteira === "ATRASO" || a.classificacao.esteira === "RESGATE",
   );
 
-  // Quantas vezes o cliente recuperado voltaria na janela, retomando o ciclo
-  // dele. Contar só uma subestima em 3x — subestimar também é impreciso.
   const cicloMedio = sumidos.length
     ? Math.round(sumidos.reduce((s, a) => s + a.ciclo.dias, 0) / sumidos.length)
     : mediana;
-  const visitasEsperadas = Math.max(
-    1,
-    Math.min(MAX_VISITAS_PROJETADAS, Math.round(JANELA_DIAS / Math.max(1, cicloMedio))),
-  );
+  const visitasEsperadas = visitasNaJanela(cicloMedio);
 
   const somaTickets = sumidos.reduce((s, a) => s + a.ticket, 0);
   const potencial = somaTickets * visitasEsperadas;
 
-  const min = Math.round(potencial * TAXA_MIN);
-  const max = Math.round(potencial * TAXA_MAX);
-  const central = Math.round((min + max) / 2);
+  const { min, central, max } = faixaRecuperavel(potencial);
 
   const comHistorico = avaliados.filter((a) => a.ciclo.confianca === "alta").length;
   const proporcao = avaliados.length ? comHistorico / avaliados.length : 0;
@@ -214,7 +204,7 @@ export function gerarDiagnostico(
   // mais comum. Falta de evidência não é evidência de ausência.
   const corteHonesto = semValorUtil
     ? false
-    : sumidos.length < MIN_SUMIDOS || min < MIN_RECUPERAVEL_CENTS;
+    : abaixoDoCorte(sumidos.length, min);
 
   if (semValorUtil) {
     return {
@@ -251,8 +241,8 @@ export function gerarDiagnostico(
     visitasEsperadasNoPeriodo: visitasEsperadas,
     recuperavelCents: { min, central, max },
     metodo:
-      `Usamos o ticket e a frequência dos SEUS registros, e a faixa de 15% a 25% de retorno que ` +
-      `campanhas de recuperação costumam dar em 90 dias. Projetamos ${visitasEsperadas} ` +
+      `Usamos o ticket e a frequência dos SEUS registros, e a faixa de ${FAIXA_EM_TEXTO} de retorno que ` +
+      `campanhas de recuperação costumam dar em ${JANELA_DIAS} dias. Projetamos ${visitasEsperadas} ` +
       `visita${visitasEsperadas > 1 ? "s" : ""} por cliente recuperado na janela, porque quem volta retoma o próprio ritmo.`,
     confianca,
     motivoConfianca,
@@ -265,7 +255,7 @@ export function gerarDiagnostico(
           `com cerca de ${reais(min)} recuperáveis. É pouco para justificar a mensalidade — minha recomendação honesta é NÃO comprar agora. ` +
           `Volte quando a base estiver maior.`
       : `Vale a pena: são ${sumidos.length} clientes sumidos e uma faixa de ${reais(min)} a ${reais(max)} ` +
-        `recuperáveis nos próximos 90 dias.`,
+        `recuperáveis nos próximos ${JANELA_DIAS} dias.`,
     faltando: { data: false, valor: false },
   };
 }
