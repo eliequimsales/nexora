@@ -13,13 +13,19 @@ import { EVENTOS, ehEventoValido, limparCriativo, type EventoFunil } from "@/lib
  * quanto gastou e quantos assinaram, e NADA sobre onde as pessoas desistem —
  * que é a única informação capaz de dizer o que consertar.
  *
- * Cinco eventos, nem um a mais. Nunca conteúdo, só o fato de ter acontecido.
+ * Sete eventos, nem um a mais. Nunca conteúdo, só o fato de ter acontecido.
  */
 
 describe("a lista de eventos é fechada e pequena", () => {
-  it("são exatamente cinco", () => {
-    // Cinco cobre o funil inteiro. Vinte viram ninguém olhando nenhum.
-    expect(EVENTOS).toHaveLength(5);
+  it("são exatamente sete", () => {
+    // Cinco cobrem do diagnóstico até a conta; os dois da calculadora dizem se a
+    // conta da home leva gente ao diagnóstico. Vinte viram ninguém olhando nenhum.
+    expect(EVENTOS).toHaveLength(7);
+  });
+
+  it("medem a calculadora da home: uso e clique para o diagnóstico", () => {
+    expect(EVENTOS).toContain("usou_calculadora");
+    expect(EVENTOS).toContain("clicou_calculadora");
   });
 
   it("cobrem da chegada até a conta", () => {

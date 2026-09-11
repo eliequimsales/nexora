@@ -39,12 +39,21 @@ const DIAS = 14;
 const TETO_CRIATIVOS = 20;
 
 const ROTULO: Record<NomeDeEvento, string> = {
+  usou_calculadora: "usou a calculadora (home)",
+  clicou_calculadora: "clicou para o diagnóstico (calculadora)",
   chegou: "chegou na página",
   comecou_entrada: "começou a escrever",
   viu_numero: "viu o número",
   clicou_mensagem: "clicou para mandar",
   criou_conta: "criou conta",
 };
+
+/**
+ * Eventos da home. O percentual das outras linhas é sobre "chegou", que é a
+ * chegada no DIAGNÓSTICO — outra página. Para a calculadora, a taxa que decide
+ * é a dela mesma: de quem usou, quantos clicaram.
+ */
+const DA_HOME: readonly NomeDeEvento[] = ["usou_calculadora", "clicou_calculadora"];
 
 export async function GET(request: Request) {
   const segredo = process.env.CRON_SECRET;
@@ -82,8 +91,16 @@ export async function GET(request: Request) {
     const saida = [titulo];
     for (const e of EVENTOS) {
       const n = total(e, criativo);
-      const pct = base > 0 ? ((100 * n) / base).toFixed(1).padStart(5) : "    -";
+      const pct =
+        base > 0 && !DA_HOME.includes(e) ? ((100 * n) / base).toFixed(1).padStart(5) : "    -";
       saida.push(`  ${String(n).padStart(6)}  ${pct}%  ${ROTULO[e]}`);
+    }
+    const usou = total("usou_calculadora", criativo);
+    if (usou > 0) {
+      const clicou = total("clicou_calculadora", criativo);
+      saida.push(
+        `  ---> calculadora: ${((100 * clicou) / usou).toFixed(1)}% de quem usou clicou para o diagnóstico`,
+      );
     }
     // A taxa que decide tudo: a porta abriu?
     const chegou = total("chegou", criativo);

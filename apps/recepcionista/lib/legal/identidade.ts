@@ -20,7 +20,7 @@
  */
 
 /** Muda sempre que o texto de Termos ou Privacidade mudar. Formato: AAAA-MM-DD. */
-export const VERSAO_DOCUMENTOS = "2026-09-01";
+export const VERSAO_DOCUMENTOS = "2026-09-10";
 
 /**
  * Preencher antes da primeira cobrança. O titular legal é o irmão adulto do

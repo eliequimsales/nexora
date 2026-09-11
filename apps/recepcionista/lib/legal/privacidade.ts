@@ -37,7 +37,7 @@ export const PRIVACIDADE: { atualizadoEm: string; secoes: Secao[] } = {
         "Cadastro: nome do negócio, seu nome, e-mail e senha (guardada como hash bcrypt, nunca em texto legível). Se você entrar com o Google, recebemos do Google seu nome e e-mail.",
         "Cobrança: os dados de pagamento são digitados direto na Stripe e não passam pelos nossos servidores. Guardamos apenas identificadores da assinatura, situação do pagamento e, se você informar, telefone, endereço e documento fiscal para a nota.",
         "Uso: registros técnicos de erro, que guardam o tipo do erro e a linha do código — não o conteúdo que você digitou.",
-        "Medição do funil: contamos em que ponto as pessoas desistem do diagnóstico — se travam ao colar a lista, se saem antes de ver o número. O registro guarda o nome da etapa, de qual anúncio a visita veio e um número sorteado que some quando você fecha a aba. Nunca guarda o que foi digitado.",
+        "Medição do funil: contamos em que ponto as pessoas desistem — se usam a calculadora da página inicial e seguem para o diagnóstico, se travam ao colar a lista, se saem antes de ver o número. O registro guarda o nome da etapa, de qual anúncio a visita veio e um número sorteado que some quando você fecha a aba. Nunca guarda o que foi digitado — nem na lista, nem na calculadora.",
         "Se você entra com o Google, guardamos também o identificador da sua conta Google. É ele que impede alguém de tomar sua conta cadastrando o seu e-mail antes de você — e-mail sozinho não prova quem é quem.",
         "Confirmação de e-mail: um código de uso único, com prazo, guardado embaralhado. Serve para provar que o endereço é seu antes de qualquer cobrança.",
       ],
@@ -147,7 +147,7 @@ export const PRIVACIDADE: { atualizadoEm: string; secoes: Secao[] } = {
       titulo: "13. Cookies, e o que mais fica no seu navegador",
       paragrafos: [
         "Dois cookies, os dois estritamente necessários e nenhum deles de publicidade. O rd_session mantém você conectado depois do login. O rd_oauth vive dez minutos e existe só enquanto você entra com o Google: ele é o que impede alguém de te levar para dentro de uma conta que não é sua.",
-        "Guardamos também um número sorteado na memória da aba (sessionStorage), que some quando você fecha a aba. Ele serve para uma coisa só: saber em que ponto as pessoas desistem do diagnóstico — se travam ao colar a lista, se desistem antes de ver o número. Não identifica você, não atravessa visitas e não sai daqui.",
+        "Guardamos também, na memória da aba (sessionStorage), um número sorteado e uma marca de que a calculadora da página inicial já foi usada — os dois somem quando você fecha a aba. Servem para uma coisa só: saber em que ponto as pessoas desistem — se usam a calculadora e seguem para o diagnóstico, se travam ao colar a lista, se desistem antes de ver o número. Não identificam você, não guardam os números que você digita, não atravessam visitas e não saem daqui.",
         "Não usamos cookie de publicidade, não temos pixel de rede social e não fazemos rastreamento de comportamento entre sites. Como a medição é só nossa, é do que acontece nesta página e não identifica ninguém, ela não depende de consentimento — mas preferimos dizer que ela existe a deixar você descobrir sozinho.",
         "Antes esta seção dizia que havia um cookie só e que não existia nada a recusar. Deixou de ser verdade quando acrescentamos a proteção do login com Google e a medição do funil, e corrigimos assim que percebemos.",
       ],

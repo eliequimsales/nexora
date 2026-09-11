@@ -1,5 +1,5 @@
 /**
- * INSTRUMENTAÇÃO DO FUNIL — cinco eventos, nem um a mais.
+ * INSTRUMENTAÇÃO DO FUNIL — sete eventos, nem um a mais.
  *
  * Achado da auditoria: em todo o app não existia UM evento de funil. Zero
  * gtag, zero fbq, zero tabela. Consequência prática: "4% completam o
@@ -10,22 +10,27 @@
  * gastou e quantos assinaram, e NADA sobre onde as pessoas desistem — que é a
  * única informação capaz de dizer o que consertar.
  *
- * POR QUE CINCO, E NÃO VINTE. Cinco cobrem o funil inteiro e cabem numa frase.
+ * POR QUE SETE, E NÃO VINTE. Sete cobrem o funil inteiro e cabem numa frase.
  * Vinte viram um painel que ninguém abre, e o Artigo X proíbe dashboard de
  * vaidade. Cada evento aqui responde a uma pergunta que muda uma decisão:
  *
- *   chegou           quanto custou trazer alguém
- *   comecou_entrada  o anúncio prometeu o que a página entrega?
- *   viu_numero       a PORTA abriu? (a etapa que a sensibilidade apontou)
- *   clicou_mensagem  ele agiu, ou só olhou?
- *   criou_conta      virou relação
+ *   usou_calculadora    a conta da home prende quem chegou do anúncio?
+ *   clicou_calculadora  a conta da home leva ao diagnóstico?
+ *   chegou              quanto custou trazer alguém
+ *   comecou_entrada     o anúncio prometeu o que a página entrega?
+ *   viu_numero          a PORTA abriu? (a etapa que a sensibilidade apontou)
+ *   clicou_mensagem     ele agiu, ou só olhou?
+ *   criou_conta         virou relação
  *
  * O QUE NUNCA ENTRA: conteúdo. Nem nome de cliente, nem trecho de lista, nem
- * telefone. A página promete "sua lista não é gravada" sem ressalva, e um
- * evento de analytics é gravação como qualquer outra.
+ * telefone, nem os números digitados na calculadora. A página promete "sua
+ * lista não é gravada" sem ressalva, e um evento de analytics é gravação como
+ * qualquer outra.
  */
 
 export const EVENTOS = [
+  "usou_calculadora",
+  "clicou_calculadora",
   "chegou",
   "comecou_entrada",
   "viu_numero",

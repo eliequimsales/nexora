@@ -294,3 +294,21 @@ describe("os documentos não se contradizem entre si nem consigo mesmos", () => 
     expect(textoDe(OPERADOR)).toContain("15 dias");
   });
 });
+
+describe("a medição da calculadora está declarada", () => {
+  const priv = textoDe(PRIVACIDADE).toLowerCase();
+
+  it("a política diz que a calculadora entra na medição", () => {
+    expect(priv).toContain("calculadora");
+  });
+
+  it("e que os números digitados na calculadora não são guardados", () => {
+    expect(priv).toContain("não guardam os números que você digita");
+  });
+
+  it("a data dos documentos acompanha a mudança", () => {
+    // Mudar o texto sem mudar a data faria a própria política mentir sobre quando
+    // foi atualizada.
+    expect(VERSAO_DOCUMENTOS >= "2026-09-10").toBe(true);
+  });
+});

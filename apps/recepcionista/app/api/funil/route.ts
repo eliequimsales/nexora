@@ -40,7 +40,7 @@ const JANELA_MS = 10 * 60_000;
 
 export async function POST(request: Request) {
   // Teto por IP: é rota pública de escrita. Generoso porque uma visita legítima
-  // dispara até cinco eventos, mas não infinito.
+  // dispara até sete eventos, mas não infinito.
   if (!rateLimit(`funil:${clientIp(request)}`, { limit: 60, windowMs: 10 * 60_000 })) {
     return ok();
   }
