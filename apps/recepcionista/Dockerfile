@@ -21,4 +21,4 @@ USER node
 EXPOSE 3000
 # Aplica o schema no boot (rede interna, idempotente) e sobe o app —
 # elimina a necessidade de rodar migrações de fora do Railway.
-CMD ["sh", "-c", "npx prisma db push --skip-generate && pnpm start"]
+CMD ["sh", "-c", "npx prisma db push --skip-generate --accept-data-loss && pnpm start"]
