@@ -35,17 +35,22 @@ continue"*. Só `recepcionista` e `Postgres` precisam rodar.
 
 ### 0.2 Identificação do fornecedor
 
-Preencha `apps/recepcionista/lib/legal/identidade.ts`:
+**Nas variáveis do serviço `recepcionista` no Railway, nunca no código.** O
+repositório no GitHub é público: CPF e endereço escritos em arquivo ficariam
+expostos para sempre no histórico, e `tests/identidade.test.ts` reprova o build
+se um CPF válido aparecer em `app/`, `components/` ou `lib/`.
 
-```ts
-export const FORNECEDOR: Fornecedor = {
-  nome: "",        // nome completo de quem presta o serviço
-  documento: "",   // CPF, formatado
-  endereco: "",    // endereço físico completo, com CEP
-  email: "",       // e-mail de contato para o titular exercer direitos
-  encarregado: "", // nome de quem responde por proteção de dados (art. 41)
-};
-```
+| Variável | O quê |
+|---|---|
+| `FORNECEDOR_NOME` | nome civil completo do titular legal (adulto) que presta o serviço |
+| `FORNECEDOR_DOCUMENTO` | CPF, pode ser só os dígitos — a tela formata |
+| `FORNECEDOR_ENDERECO` | endereço completo: rua, número, complemento, bairro, cidade/UF e CEP |
+| `FORNECEDOR_EMAIL` | e-mail de contato que alguém lê, para o titular exercer direitos |
+| `FORNECEDOR_ENCARREGADO` | opcional — sem ela, o encarregado de dados (art. 41) é o próprio fornecedor |
+
+As páginas jurídicas são geradas a cada acesso e o código lê as variáveis quando
+o serviço sobe: depois de salvar, basta aplicar o deploy que o Railway oferecer,
+sem mudar código.
 
 **Isto não é papelada opcional.** O Decreto 7.962/2013, art. 2º exige nome,
 CPF e endereço em destaque antes de qualquer cobrança, e

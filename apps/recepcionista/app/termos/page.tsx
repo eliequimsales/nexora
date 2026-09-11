@@ -7,6 +7,10 @@ export const metadata: Metadata = {
   description: "As condições do serviço, o preço total, como cancelar e de que cada lado é responsável.",
 };
 
+// A identificação do fornecedor vem das variáveis do servidor (lib/legal/identidade.ts).
+// Gerada no build, esta página sairia com "[DEFINIR]" mesmo com o Railway preenchido.
+export const dynamic = "force-dynamic";
+
 export default function Termos() {
   return (
     <DocumentoLegal

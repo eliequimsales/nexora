@@ -68,7 +68,8 @@ export function DocumentoLegal({
             <p className="mt-2 text-sm leading-relaxed">
               Faltam dados obrigatórios de identificação do prestador ({faltando.join(", ")}).
               O Decreto 7.962/2013 exige nome, CPF ou CNPJ e endereço em destaque antes de
-              qualquer cobrança. Preencha em <code>lib/legal/identidade.ts</code>.
+              qualquer cobrança. Preencha as variáveis <code>FORNECEDOR_*</code> do serviço no
+              Railway (passo a passo em <code>docs/runbooks/colocar-no-ar.md</code>).
             </p>
           </div>
         )}

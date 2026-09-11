@@ -7,6 +7,10 @@ export const metadata: Metadata = {
   description: "Que dados a Nexora trata, com base em quê, quem mais recebe, em que país, e como exercer seus direitos.",
 };
 
+// A identificação do fornecedor vem das variáveis do servidor (lib/legal/identidade.ts).
+// Gerada no build, esta página sairia com "[DEFINIR]" mesmo com o Railway preenchido.
+export const dynamic = "force-dynamic";
+
 export default function Privacidade() {
   return (
     <DocumentoLegal

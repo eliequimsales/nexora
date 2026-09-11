@@ -7,6 +7,10 @@ export const metadata: Metadata = {
   description: "O contrato exigido pelo art. 39 da LGPD entre você, controlador da sua base, e a Nexora, operadora.",
 };
 
+// A identificação do fornecedor vem das variáveis do servidor (lib/legal/identidade.ts).
+// Gerada no build, esta página sairia com "[DEFINIR]" mesmo com o Railway preenchido.
+export const dynamic = "force-dynamic";
+
 export default function Operador() {
   return (
     <DocumentoLegal
