@@ -63,7 +63,7 @@ function aplicaTema(rel: string): void {
   expect(fonte, rel).toMatch(/<TemaNexora>/);
 }
 
-const HOME = ["app/page.tsx"];
+const HOME = ["app/page.tsx", "components/calculadora.tsx"];
 const ACESSO = [
   "app/cadastro/page.tsx",
   "app/login/page.tsx",
@@ -142,6 +142,17 @@ describe("a home", () => {
 
   it("recebe o TemaNexora", () => {
     aplicaTema("app/page.tsx");
+  });
+
+  it("a calculadora usa só o tema do funil", () => {
+    expect(achadosDoTemaAntigo("components/calculadora.tsx")).toEqual([]);
+  });
+
+  it("o hero leva à calculadora, e a calculadora está na home", () => {
+    const home = leia("app/page.tsx");
+    expect(home).toMatch(/href="#calculadora"[\s\S]{0,300}Calcular quanto estou perdendo/);
+    expect(home).toMatch(/import\s*\{\s*Calculadora\s*\}\s*from\s*["']@\/components\/calculadora["']/);
+    expect(home).toContain("<Calculadora />");
   });
 
   it("não promete subir a base pela exportação de conversa do WhatsApp", () => {

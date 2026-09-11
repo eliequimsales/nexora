@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   CICLO_DA_CALCULADORA,
@@ -97,5 +99,36 @@ describe("o botão leva o ticket ao diagnóstico pela URL", () => {
     expect(link).toBe("/diagnostico?ticket=150&c=bar-a1");
     expect(ler(link).criativo).toBe("bar-a1");
     expect(linkDoDiagnostico({ ticketReais: 150, criativo: "<script>" })).toBe("/diagnostico?ticket=150");
+  });
+});
+
+describe("o componente não inventa número nem guarda o que foi digitado", () => {
+  const semComentarios = (s: string) =>
+    s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+  const componente = () =>
+    semComentarios(readFileSync(join(__dirname, "..", "components/calculadora.tsx"), "utf8"));
+
+  it("nenhum número de regra escrito à mão", () => {
+    const fonte = componente();
+    for (const literal of ["15%", "25%", "0.15", "0.25", "90 dias", "30 dias", "30%"]) {
+      expect(fonte, literal).not.toContain(literal);
+    }
+  });
+
+  it("só registra os dois eventos da calculadora", () => {
+    const registrados = [...componente().matchAll(/registrar\(\s*["']([a-z_]+)["']\s*\)/g)]
+      .map(([, nome]) => nome)
+      .sort();
+    expect(registrados).toEqual(["clicou_calculadora", "usou_calculadora"]);
+  });
+
+  it("o navegador só guarda a marca de uso, nunca os números", () => {
+    const fonte = componente();
+    const gravacoes = [...fonte.matchAll(/sessionStorage\.setItem\(([^)]*)\)/g)].map(([, args]) =>
+      args.replace(/\s+/g, ""),
+    );
+    expect(gravacoes).toEqual(['MARCA_DE_USO,"1"']);
+    expect(fonte).toContain('const MARCA_DE_USO = "nx_calc"');
+    expect(fonte).not.toMatch(/localStorage|document\.cookie/);
   });
 });

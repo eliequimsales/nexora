@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Calculadora } from "@/components/calculadora";
 import { TemaNexora } from "@/components/tema-nexora";
 import { TAMANHO_DA_ONDA } from "@/lib/recuperacao/onda";
 
@@ -116,10 +117,10 @@ export default function Home() {
                 Descobrir meus clientes <span aria-hidden="true">→</span>
               </Link>
               <a
-                href="#como-funciona"
+                href="#calculadora"
                 className="rounded-lg border border-nx-border px-6 py-4 text-base font-medium transition-colors hover:bg-nx-surface"
               >
-                Ver como funciona
+                Calcular quanto estou perdendo
               </a>
             </div>
             <ul className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-3 text-xs text-nx-muted">
@@ -135,18 +136,20 @@ export default function Home() {
           </div>
         </section>
 
-        {/* A CONTA — o lugar da calculadora (sub-projeto 2). Até ela chegar, a
-            conta vai escrita, e nenhum botão da página promete calcular nada. */}
-        <section className="px-6 pb-20 pt-4">
-          <div className="mx-auto max-w-4xl rounded-2xl border border-nx-border bg-nx-surface p-8 text-center sm:p-12">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-nx-gold">
+        {/* A CONTA — vem antes da lista de propósito: quanto mais cedo o visitante
+            põe os números dele, mais o problema vira problema DELE. */}
+        <section id="calculadora" className="scroll-mt-20 px-6 pb-20 pt-4">
+          <div className="mx-auto max-w-4xl">
+            <p className="text-center text-[11px] font-semibold uppercase tracking-widest text-nx-gold">
               A conta que ninguém faz
             </p>
-            <p className="mx-auto mt-4 max-w-3xl text-2xl font-semibold leading-[1.4] tracking-tight sm:text-3xl">
-              Faz a conta agora: quantos clientes te mandaram mensagem no ano passado e nunca
-              mais voltaram? Multiplica pelo seu ticket médio.{" "}
-              <span className="text-nx-gold">Esse número já foi seu uma vez.</span>
+            <h2 className="mt-3 text-center text-3xl font-bold leading-tight sm:text-4xl">
+              Quanto dinheiro está parado na sua base?
+            </h2>
+            <p className="mx-auto mb-10 mt-4 max-w-xl text-center text-nx-muted">
+              Três números seus. A conta aparece na hora, com a fórmula à vista.
             </p>
+            <Calculadora />
           </div>
         </section>
 
