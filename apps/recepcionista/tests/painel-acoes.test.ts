@@ -43,10 +43,14 @@ describe("a recusa de assinatura vira botão, não beco", () => {
   for (const tela of TELAS) {
     it(`${tela} mostra o motivo e o botão que o servidor mandou`, () => {
       const fonte = leia(tela);
-      expect(fonte, "precisa ler json.acao da resposta 402").toMatch(/\.acao\b/);
-      expect(fonte, "precisa levar o dono para onde ele resolve").toContain("acao.href");
+      // Preso ao `recusa` de propósito, e não a um `acao.href` qualquer: a Onda
+      // tem OUTRA ação na tela (a do estado vazio), e ela sozinha satisfazia o
+      // guarda — dava verde com o caminho do 402 quebrado. Provado plantando a
+      // quebra em 12/09/2026.
+      expect(fonte, "precisa guardar a recusa 402 que o servidor mandou").toContain("setRecusa");
+      expect(fonte, "precisa levar o dono para onde ele resolve").toContain("recusa.acao.href");
       expect(fonte, "precisa mostrar o texto do botão que veio do servidor").toContain(
-        "acao.texto",
+        "recusa.acao.texto",
       );
     });
   }
