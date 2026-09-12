@@ -130,6 +130,20 @@ describe("o conteúdo do cliente sobrevive ao formato", () => {
     expect(linhas(csv)[1]).toContain(";sim;");
     expect(linhas(csv)[2]).toContain(";não;");
   });
+
+  /**
+   * A coluna "Como entrou" despejava o enum do banco: o dono abria um arquivo
+   * inteiramente em português e encontrava IMPORT, em inglês e em caixa alta.
+   */
+  it("diz de onde o cliente veio em português, não com o enum do banco", () => {
+    const csv = clientesParaCsv([
+      cliente({ origem: "IMPORT" }),
+      cliente({ nome: "Bruno", telefone: "11933334444", origem: "LINK" }),
+    ]);
+    expect(linhas(csv)[1]).toContain("Veio da minha lista");
+    expect(linhas(csv)[1]).not.toContain("IMPORT");
+    expect(linhas(csv)[2]).toContain("Agendou pelo link");
+  });
 });
 
 describe("o CSV não pode virar ataque quando o dono abrir a planilha", () => {

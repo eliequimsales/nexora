@@ -107,6 +107,18 @@ describe("importar — planilha", () => {
     expect(r.ignoradas[0].motivo).toMatch(/telefone/i);
   });
 
+  /**
+   * Este texto aparece na tela, linha a linha, para quem acabou de colar a
+   * lista. "Sem telefone válido (precisa de 10 a 13 dígitos)" é diagnóstico de
+   * máquina: ninguém confere telefone contando dígito.
+   */
+  it("o motivo é escrito para o dono, não para o programador", () => {
+    const r = importar("nome,telefone\nAna,11999998888\nSem Telefone,");
+    const motivo = r.ignoradas[0].motivo;
+    expect(motivo).toMatch(/telefone/i);
+    expect(motivo).not.toMatch(/dígitos?|ilegível|inválid/i);
+  });
+
   it("sobrevive a arquivo sem cabeçalho, adivinhando pelas colunas", () => {
     const r = importar("Ana Paula,11999998888,01/03/2026");
     expect(r.clientes).toHaveLength(1);

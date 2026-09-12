@@ -41,6 +41,19 @@ const COLUNAS = [
 // numa célula só, e o dono conclui que a exportação está quebrada.
 const SEP = ";";
 
+/**
+ * O enum do banco não vai para a planilha do dono.
+ *
+ * A coluna "Como entrou" despejava `IMPORT` — inglês, em caixa alta, dentro de
+ * um arquivo inteiramente em português que ele abre no Excel e às vezes manda
+ * para o contador.
+ */
+const COMO_ENTROU: Record<string, string> = {
+  LINK: "Agendou pelo link",
+  IMPORT: "Veio da minha lista",
+  MANUAL: "Cadastrado à mão",
+};
+
 // Sem BOM o Excel abre em Latin-1 e "João" vira "JoÃ£o". É o detalhe que
 // decide se o arquivo parece profissional ou amador.
 const BOM = "﻿";
@@ -94,7 +107,7 @@ export function clientesParaCsv(clientes: ClienteExportado[]): string {
         emNumero(total),
         c.optOut ? "sim" : "não",
         emData(c.optOutAt),
-        c.origem,
+        COMO_ENTROU[c.origem] ?? c.origem,
         emData(c.criadoEm),
         c.observacoes,
       ]

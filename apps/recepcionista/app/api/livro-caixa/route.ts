@@ -22,6 +22,25 @@ export const dynamic = "force-dynamic";
  * streak, porque o número que sobe é dinheiro, e dinheiro não é punitivo.
  */
 
+/** Mesma convenção de lib/dados/exportar.ts: Excel pt-BR lê ponto-e-vírgula. */
+const SEP_CSV = ";";
+/** Sem BOM o Excel abre em Latin-1 e "Situação" vira "SituaÃ§Ã£o". */
+const BOM_CSV = "﻿";
+
+/** O nome que a Onda já usa na tela. O enum do banco não vai para a planilha. */
+const SITUACAO: Record<string, string> = {
+  PRE_ATRASO: "Prestes a sumir",
+  ATRASO: "Atrasado",
+  RESGATE: "Sumido há muito",
+};
+
+const dataBR = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: "America/Sao_Paulo",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
+
 export async function GET(request: Request) {
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
@@ -57,24 +76,37 @@ export async function GET(request: Request) {
     // aspas do CSV não impedem: o Excel tira a marcação e avalia o conteúdo.
     // Sem isto, abrir o próprio extrato é o vetor de ataque.
     if (formato === "csv") {
+      // Quem abre este arquivo é o dono, no Excel, e às vezes o contador dele.
+      // Antes saía `dias_sumido,esteira,toque,atribuido` — nome de coluna de
+      // banco de dados, separado por vírgula (que o Excel brasileiro joga numa
+      // célula só) e sem BOM (que faz "excluído" virar "excluÃ­do").
       const linhas = [
-        "data,cliente,dias_sumido,esteira,toque,valor_reais,atribuido",
+        [
+          "Data",
+          "Cliente",
+          "Dias sumido",
+          "Situação",
+          "Qual mensagem",
+          "Valor (R$)",
+          "Conta como recuperado?",
+        ].join(SEP_CSV),
         ...entradas.map((e) =>
           [
-            e.returnedAt.toISOString().slice(0, 10),
+            dataBR.format(e.returnedAt),
             // customer é nulo quando o titular exerceu o direito de exclusão:
             // o valor permanece no extrato, a pessoa não.
-            `"${neutralizarFormula(e.customer?.name ?? "cliente excluído").replace(/"/g, '""')}"`,
+            `"${neutralizarFormula(e.customer?.name ?? "cliente que você apagou").replace(/"/g, '""')}"`,
             e.daysAway,
-            e.esteira,
-            e.touchNumber,
-            (e.valueCents / 100).toFixed(2),
-            e.attributed ? "sim" : "nao",
-          ].join(","),
+            SITUACAO[e.esteira] ?? e.esteira,
+            `${e.touchNumber}ª mensagem`,
+            // Vírgula decimal e sem "R$": assim o Excel soma a coluna.
+            (e.valueCents / 100).toFixed(2).replace(".", ","),
+            e.attributed ? "sim" : "não",
+          ].join(SEP_CSV),
         ),
       ].join("\n");
 
-      return new NextResponse(linhas, {
+      return new NextResponse(BOM_CSV + linhas, {
         headers: {
           "Content-Type": "text/csv; charset=utf-8",
           "Content-Disposition": 'attachment; filename="livro-caixa-nexora.csv"',

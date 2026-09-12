@@ -1,24 +1,25 @@
 # Colocar a Nexora no ar
 
-Estado em 11/09/2026, conferido no Railway só com leitura: **o código está
-pronto e nada está no ar.**
+Estado em 12/09/2026, conferido no Railway: **a Nexora ESTÁ NO AR** em
+https://recepcionista-production-2eea.up.railway.app.
 
 - Conta `nalasalesff@gmail.com`, workspace "eliequimsales's Projects", projeto
   `nexora` (`333cc641-17b3-4796-80a7-dac16eb3625c`), único ambiente
   `production`. Existe um segundo projeto `nexora` (`c6942513-…`), vazio.
-- Serviços: `recepcionista`, `api` e `app` (os dois últimos são a Nexora
-  antiga), `Postgres` e `Redis`. Nenhum tem deploy ativo, e não há um único
-  acesso HTTP registrado.
-- O último deploy do `recepcionista` é de 06/07/2026: o build **terminou**
-  (imagem gerada e enviada), o contêiner nunca chegou a rodar e o deploy está
-  `REMOVED`. Não houve nenhuma tentativa depois disso.
-- `Postgres` e `Redis` nunca tiveram deploy neste projeto. Os volumes
-  sobreviveram (`postgres-volume`, 140 MB, visto em 01/09).
+- `recepcionista`: deploy `5140a087`, status SUCCESS, instância RUNNING, do
+  commit `31fdf00`. `Postgres` de pé desde 11/09 (volume 141 MB).
+- `api` e `app` (a Nexora antiga) continuam com deploy FAILED de maio. `Redis`
+  existe e nunca foi implantado. Nenhum dos três é usado pelo recepcionista.
+- **O serviço NÃO tem repositório conectado.** `git push` não faz deploy: cada
+  atualização exige `railway up --service recepcionista` rodado por uma pessoa.
+  Conectar o repo ao serviço resolveria isso de uma vez.
 
-A causa não é código: em 01/09 o `railway up` respondia *"Your trial has
-expired. Please select a plan to continue"*, e em 11/09 o código atual passou
-nos 684 testes e no `next build`. O que destrava é a etapa 0. Para confirmar o
-plano: railway.com → workspace "eliequimsales's Projects" → Billing.
+O que destravou foi a etapa 0 (plano pago). O código passa nos 971 testes, no
+`tsc --noEmit` e no `next build`.
+
+**Falta para faturar:** as quatro variáveis `FORNECEDOR_*` da etapa 0.2. Sem
+elas o checkout responde 503 e as páginas jurídicas mostram `[DEFINIR]` — dá
+para conferir sem login em /termos.
 
 Execute nesta ordem. Cada etapa depende da anterior.
 
@@ -81,23 +82,39 @@ subir sozinho depois da assinatura, crie pelo painel e reaponte
 
 ## 2. Variáveis que faltam
 
-Em 01/09 já estavam no serviço (lista não reconferida em 11/09: a consulta de
-variáveis devolve os valores junto com os nomes, e segredo não passa por aqui —
-confira os nomes no painel, aba Variables do `recepcionista`): `DATABASE_URL`, `JWT_SECRET`, `APP_URL`, `CRON_SECRET`,
-`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GROQ_API_KEY`, `GROQ_MODEL`,
-`AI_PROVIDER`, `EVOLUTION_API_URL`, `EVOLUTION_API_KEY`, `WEBHOOK_TOKEN`,
-`RAILWAY_DOCKERFILE_PATH`.
-
-Faltam cinco, e sem elas a cobrança não existe:
+Conferido em 12/09/2026, lendo só os NOMES: a consulta de variáveis devolve os
+valores junto, e segredo não passa por chat nem por log. Para repetir a
+checagem sem expor nada:
 
 ```bash
-railway variables --service recepcionista \
-  --set STRIPE_SECRET_KEY=sk_live_... \
-  --set STRIPE_WEBHOOK_SECRET=whsec_... \
-  --set STRIPE_PRICE_PRO=price_1UAHmvQWkA652EBrPK4Wglek \
-  --set RESEND_API_KEY=re_... \
-  --set EMAIL_REMETENTE="Nexora <contato@SEU-DOMINIO>"
+railway variables --service recepcionista --environment production --json |
+  ConvertFrom-Json | ForEach-Object { $_.psobject.Properties.Name } | Sort-Object
 ```
+
+**Já estão no serviço:** `DATABASE_URL`, `JWT_SECRET`, `APP_URL`, `CRON_SECRET`,
+`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GROQ_API_KEY`, `GROQ_MODEL`,
+`AI_PROVIDER`, `ANTHROPIC_MODEL`, `EVOLUTION_API_URL`, `EVOLUTION_API_KEY`,
+`WEBHOOK_TOKEN`, `FOLLOWUP_INTERVAL_MINUTES`, `RAILWAY_DOCKERFILE_PATH`,
+`STRIPE_SECRET_KEY`, `STRIPE_PRICE_PRO`, `STRIPE_WEBHOOK_SECRET`,
+`RESEND_API_KEY`, `EMAIL_REMETENTE`.
+
+**Faltam quatro, e são elas que travam a cobrança:** `FORNECEDOR_NOME`,
+`FORNECEDOR_DOCUMENTO`, `FORNECEDOR_ENDERECO`, `FORNECEDOR_EMAIL` (etapa 0.2).
+Opcional e ausente: `SUPRESSAO_SECRET`.
+
+Existir não é estar certa — o nome está lá, o valor não foi conferido. Três
+armadilhas que só quem tem acesso ao painel enxerga:
+
+1. **Modo misturado.** Chave `sk_test_` com preço de produção (ou o contrário)
+   faz o checkout falhar ao criar a sessão.
+2. **Webhook apontando para outro lugar.** `STRIPE_WEBHOOK_SECRET` tem que ser
+   do endpoint que aponta para
+   `https://recepcionista-production-2eea.up.railway.app/api/billing/webhook`.
+   Errado, a assinatura nasce na Stripe e o app nunca fica sabendo: o dono paga
+   e continua vendo "período de teste".
+3. **Remetente sem domínio verificado.** O Resend recusa `@gmail.com` como
+   remetente. Sem domínio próprio, o painel oferece liberar a conta sem o
+   e-mail — e avisa que foi sem prova.
 
 Opcional, mas recomendada:
 
@@ -143,8 +160,12 @@ destino.
 ## 3. O schema vai sozinho
 
 Não há passo manual: o `CMD` do Dockerfile roda `npx prisma db push
---skip-generate` a cada boot, antes de subir o app. Confira nos logs do primeiro
-deploy que ele passou.
+--skip-generate` a cada boot, antes de subir o app.
+
+**Conferido em 12/09/2026**, no deploy `5140a087`: o log trouxe *"The database
+is already in sync with the Prisma schema"* e o app ficou pronto em 324ms — sem
+`--accept-data-loss`, que foi removido no mesmo dia. `tests/boot-do-container.test.ts`
+impede que o flag volte em silêncio.
 
 O que entra: `RegistroImportacao`, `Supressao`,
 `Company.confirmacaoEnviadaEm`, `Company.termosAceitosEm`,
@@ -163,8 +184,8 @@ railway up --service recepcionista
 railway logs --service recepcionista
 ```
 
-Na primeira subida, confira duas coisas no log, porque elas nunca rodaram num
-deploy real:
+As duas checagens abaixo **já passaram** no deploy `5140a087` de 12/09/2026.
+Ficam aqui porque são o que olhar quando um boot futuro falhar:
 
 1. **O app roda como usuário `node`, não como root** (`USER node` e
    `COPY --chown=node:node`, desde 01/09). O último build que chegou ao Railway,

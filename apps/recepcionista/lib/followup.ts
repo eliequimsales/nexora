@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { logError } from "./errors";
+import { problemaNoGateway } from "./whatsapp/endereco";
 import { sendWhatsAppText } from "./whatsapp/evolution";
 
 export interface FollowUpCandidate {
@@ -29,8 +30,38 @@ export function isEligibleForFollowUp(candidate: FollowUpCandidate, now: Date = 
   return true;
 }
 
+const avisoDoGateway = globalThis as unknown as { __gatewayAvisado?: boolean };
+
+/**
+ * O WhatsApp tem para onde enviar? Checado UMA VEZ, antes do laço.
+ *
+ * Sem isto, cada conversa elegível chamava `sendWhatsAppText`, que lançava o
+ * mesmo erro de configuração, e o catch de dentro do laço gravava uma linha em
+ * ErrorLog e imprimia no console — por conversa, a cada 5 minutos, para sempre.
+ * Em produção isso encheu o log com a mesma frase repetida dezenas de vezes, o
+ * que esconde o primeiro erro de verdade que aparecer.
+ *
+ * O problema é de configuração, não de conversa: ou vale para todas, ou para
+ * nenhuma. Então a rodada inteira é pulada e o aviso sai uma vez por processo.
+ */
+function gatewayIndisponivel(): string | null {
+  if (!process.env.EVOLUTION_API_URL || !process.env.EVOLUTION_API_KEY) {
+    return "EVOLUTION_API_URL / EVOLUTION_API_KEY não configurados";
+  }
+  return problemaNoGateway(process.env.EVOLUTION_API_URL, process.env.NODE_ENV);
+}
+
 /** Percorre as empresas com follow-up ativo e envia as mensagens devidas. */
 export async function runFollowUps(): Promise<number> {
+  const problema = gatewayIndisponivel();
+  if (problema) {
+    if (!avisoDoGateway.__gatewayAvisado) {
+      avisoDoGateway.__gatewayAvisado = true;
+      console.warn(`[follow-up] lembretes parados até o WhatsApp ter um servidor fixo: ${problema}`);
+    }
+    return 0;
+  }
+
   let sent = 0;
 
   const profiles = await prisma.companyProfile.findMany({

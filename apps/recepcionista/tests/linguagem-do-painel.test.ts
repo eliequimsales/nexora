@@ -179,3 +179,34 @@ describe("os dois nomes próprios continuam de pé", () => {
     expect(livro).toMatch(/sem você gastar/i);
   });
 });
+
+/**
+ * A PLANILHA TAMBÉM É TELA.
+ *
+ * O dono abre o extrato no Excel e às vezes manda para o contador. Saía
+ * `data,cliente,dias_sumido,esteira,toque,valor_reais,atribuido`: nome de
+ * coluna de banco de dados, separado por vírgula (que o Excel brasileiro joga
+ * numa célula só) e sem BOM, o que faz "excluído" virar "excluÃ­do".
+ */
+describe("a planilha do Livro-Caixa abre no Excel do dono", () => {
+  // Sem comentários: o código EXPLICA por que o cabeçalho antigo saiu, citando
+  // os nomes crus. O guarda persegue o que vai para a planilha, não a
+  // justificativa de quem consertou.
+  const rota = semComentarios(readFileSync(join(RAIZ, "app/api/livro-caixa/route.ts"), "utf8"));
+
+  it("o cabeçalho está em português", () => {
+    expect(rota).toContain('"Dias sumido"');
+    expect(rota).toContain('"Conta como recuperado?"');
+  });
+
+  it("não usa nome de coluna de banco de dados", () => {
+    for (const cru of ["dias_sumido", "valor_reais"]) {
+      expect(rota, cru).not.toContain(cru);
+    }
+  });
+
+  it("traz BOM e ponto-e-vírgula, a mesma convenção da outra planilha do app", () => {
+    expect(rota).toContain("BOM_CSV");
+    expect(rota).toMatch(/SEP_CSV\s*=\s*";"/);
+  });
+});

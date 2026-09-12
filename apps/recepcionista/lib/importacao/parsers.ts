@@ -166,7 +166,14 @@ function importarWhatsApp(texto: string, meuNome?: string): Importacao {
 
     const data = lerData(dataTxt);
     if (!data) {
-      ignoradas.push({ linha: i + 1, conteudo: linha.slice(0, 60), motivo: "Data ilegível" });
+      ignoradas.push({
+        linha: i + 1,
+        conteudo: linha.slice(0, 60),
+        // Este texto vai para a tela. "Data ilegível" é diagnóstico de máquina;
+        // na primeira pessoa, o dono entende que a falha foi de leitura e que
+        // ele pode arrumar aquela linha.
+        motivo: "Não entendi a data dessa linha.",
+      });
       return;
     }
     const chave = semAcento(nome);
@@ -189,7 +196,8 @@ function importarWhatsApp(texto: string, meuNome?: string): Importacao {
     origem: "whatsapp",
     aviso:
       "Estas datas são de CONVERSA, não de atendimento. A pessoa pode ter falado com você sem ter ido. " +
-      "Use como ponto de partida e confirme antes de tratar como visita — tratar conversa como visita infla o cálculo.",
+      "Confira antes de tratar como visita: senão a Nexora vai achar que ela esteve aí, e pode mandar " +
+      "mensagem de saudade para quem nunca apareceu.",
   };
 }
 
@@ -234,7 +242,9 @@ export function importar(
       ignoradas.push({
         linha: i + (temCabecalho ? 2 : 1),
         conteudo: linha.slice(0, 60),
-        motivo: "Sem telefone válido (precisa de 10 a 13 dígitos)",
+        // Ninguém confere telefone contando dígito. A contagem é regra interna
+        // (lerTelefone), não explicação para quem colou a lista.
+        motivo: "O telefone dessa linha está faltando ou incompleto.",
       });
       return;
     }
