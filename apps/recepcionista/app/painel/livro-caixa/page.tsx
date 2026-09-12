@@ -6,55 +6,70 @@ import { emReais } from "@/lib/billing/preco";
 
 export const dynamic = "force-dynamic";
 
+/** Quantas linhas o extrato MOSTRA. Não tem relação com os totais. */
+const LINHAS_NO_EXTRATO = 200;
+
 /**
- * LIVRO-CAIXA DA RECUPERAÇÃO — a prova de que a Nexora vale o que cobra.
+ * LIVRO-CAIXA — a prova de que a Nexora se paga.
  *
- * A rota /api/livro-caixa estava completa há tempos — mês, acumulado, extrato,
- * coluna sem atribuição, exportação em CSV — e NENHUMA página a consumia. O
- * único lugar onde o dono via quanto recuperou era /painel/assinatura.
+ * SOMA NO BANCO, LISTA NA TELA. Antes, os dois totais eram somados em memória
+ * sobre as mesmas 200 linhas do extrato: passando de 200 retornos, o acumulado
+ * parava de crescer e divergia de /painel/assinatura, que agrega sem limite. O
+ * dono via dois valores para o mesmo dinheiro em duas telas do mesmo produto —
+ * e esse número agora é o destaque da página. Agregação e listagem viraram
+ * consultas separadas de propósito.
  *
- * Ou seja: a prova de que vale R$ 97 morava atrás do botão de cancelar. Ele só
- * encontrava o argumento para ficar no exato momento em que já tinha decidido
- * sair. Isso não é detalhe de navegação — é a North Star escondida do dono.
- *
- * Server Component, consultando direto: a rota continua existindo para o CSV e
- * para quem quiser os dados crus, mas a tela não precisa de ida e volta.
- *
- * SEM GRÁFICO, de propósito. O Artigo X proíbe dashboard de vaidade: aqui é
- * extrato, cada linha é um retorno que aconteceu, e o número é conferível
- * contra o caixa dele.
+ * SEM GRÁFICO, de propósito: aqui é extrato, cada linha é um retorno que
+ * aconteceu, e o número é conferível contra o caixa dele.
  */
 export default async function LivroCaixaPage() {
   const companyId = await getSessionCompanyId();
   if (!companyId) redirect("/login");
 
-  const entradas = await prisma.recoveryEntry.findMany({
-    where: { companyId },
-    orderBy: { returnedAt: "desc" },
-    take: 200,
-    select: {
-      id: true,
-      returnedAt: true,
-      valueCents: true,
-      daysAway: true,
-      esteira: true,
-      touchNumber: true,
-      attributed: true,
-      customer: { select: { name: true } },
-    },
-  });
+  // O Brasil não tem mais horário de verão, então o fuso é fixo em UTC-3. Sem
+  // isto, num servidor em UTC (Railway) os retornos da virada do mês caem no
+  // mês errado do cartão "Este mês".
+  const agoraEmSaoPaulo = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }),
+  );
+  const inicioDoMes = new Date(
+    Date.UTC(agoraEmSaoPaulo.getFullYear(), agoraEmSaoPaulo.getMonth(), 1, 3, 0, 0),
+  );
 
-  const inicioDoMes = new Date();
-  inicioDoMes.setDate(1);
-  inicioDoMes.setHours(0, 0, 0, 0);
+  const [mes, acumulado, totalDeEntradas, extrato, aguardando] = await Promise.all([
+    prisma.recoveryEntry.aggregate({
+      where: { companyId, attributed: true, returnedAt: { gte: inicioDoMes } },
+      _sum: { valueCents: true },
+      _count: true,
+    }),
+    prisma.recoveryEntry.aggregate({
+      where: { companyId, attributed: true },
+      _sum: { valueCents: true },
+      _count: true,
+    }),
+    // Conta TUDO, inclusive o que não entra no total: é o que decide se a tela
+    // está vazia. Decidir pelas 200 linhas mostrava "R$ 0,00" em cima de uma
+    // lista cheia de valores.
+    prisma.recoveryEntry.count({ where: { companyId } }),
+    prisma.recoveryEntry.findMany({
+      where: { companyId },
+      orderBy: { returnedAt: "desc" },
+      take: LINHAS_NO_EXTRATO,
+      select: {
+        id: true,
+        returnedAt: true,
+        valueCents: true,
+        daysAway: true,
+        touchNumber: true,
+        attributed: true,
+        customer: { select: { name: true } },
+      },
+    }),
+    prisma.recoveryTouch.count({ where: { companyId, outcome: "AGUARDANDO" } }),
+  ]);
 
-  const comprovadas = entradas.filter((e) => e.attributed);
-  const doMes = comprovadas.filter((e) => e.returnedAt >= inicioDoMes);
-  const soma = (lista: typeof entradas) => lista.reduce((s, e) => s + e.valueCents, 0);
-
-  const aguardando = await prisma.recoveryTouch.count({
-    where: { companyId, outcome: "AGUARDANDO" },
-  });
+  const totalDoMesCents = mes._sum.valueCents ?? 0;
+  const totalGeralCents = acumulado._sum.valueCents ?? 0;
 
   const data = new Intl.DateTimeFormat("pt-BR", {
     timeZone: "America/Sao_Paulo",
@@ -65,38 +80,67 @@ export default async function LivroCaixaPage() {
   return (
     <main className="max-w-3xl space-y-6">
       <div>
-        <h1 className="font-display text-2xl text-panel-ink">Livro-Caixa da Recuperação</h1>
+        <h1 className="font-display text-2xl text-panel-ink">Livro-Caixa</h1>
         <p className="mt-1 text-sm text-panel-sub">
-          Só entra aqui o que voltou e pagou, marcado por você. Nada é estimado.
+          O dinheiro que voltou pro seu caixa. Só entra aqui o que voltou e pagou, marcado
+          por você. Nada é chute.
         </p>
       </div>
 
-      {entradas.length === 0 ? (
+      {totalDeEntradas === 0 ? (
         /* Vazio termina em AÇÃO, não em "nenhum dado". Regra Zero. */
         <div className="rounded-2xl border border-panel-line bg-panel-card p-6">
           <p className="font-display text-lg text-panel-ink">Ainda não voltou ninguém</p>
           <p className="mt-2 text-sm leading-relaxed text-panel-sub">
             {aguardando > 0
-              ? `Você tem ${aguardando} ${aguardando === 1 ? "pessoa" : "pessoas"} que receberam mensagem e ainda não responderam. Quando alguém aparecer e pagar, marque na Onda — é assim que este extrato enche.`
-              : "Este extrato enche quando você manda a Onda da semana e marca quem voltou. Sem isso ele fica vazio, e um número inventado aqui não serviria para nada."}
+              ? `Você chamou ${aguardando} ${aguardando === 1 ? "pessoa" : "pessoas"} e ainda não disse se ${aguardando === 1 ? "ela apareceu" : "elas apareceram"}. Quando alguém voltar e pagar, marque na sua lista de segunda — é assim que este extrato enche.`
+              : "Este extrato enche quando você chama os clientes sumidos na segunda e marca quem voltou. Sem isso ele fica vazio, e um número inventado aqui não serviria para nada."}
           </p>
           <Link
             href="/painel/onda"
             className="mt-4 inline-block rounded-xl bg-amber px-5 py-3 text-sm font-semibold text-night transition hover:brightness-110"
           >
-            Ir para a Onda de segunda
+            Ver meus clientes sumidos
           </Link>
         </div>
       ) : (
         <>
+          {/*
+            O NÚMERO EM DESTAQUE.
+            É o argumento inteiro da mensalidade num bloco só: quanto voltou
+            desde sempre, e por quanto isso saiu. Some no banco — ver o
+            comentário do topo.
+          */}
+          <section className="rounded-2xl border border-panel-line bg-panel-card p-6">
+            <p className="text-xs uppercase tracking-[0.14em] text-panel-sub">
+              Total recuperado pela Nexora
+            </p>
+            <p className="mt-2 font-display text-4xl font-bold text-panel-ink tabular-nums">
+              {emReais(totalGeralCents)}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-panel-sub">
+              Dinheiro que voltou para o seu caixa sem você gastar 1 real a mais em anúncios.
+            </p>
+
+            {acumulado._count === 0 && (
+              /* Tem linha no extrato e o total é zero: sem esta frase, a pior
+                 primeira impressão possível do número que prova o produto. */
+              <p className="mt-3 rounded-xl bg-panel-bg p-3 text-sm text-panel-ink">
+                Os retornos abaixo aconteceram fora da janela em que dá para provar que foi a
+                sua mensagem que trouxe a pessoa. Por isso eles aparecem na lista, mas não
+                somam aqui em cima.
+              </p>
+            )}
+          </section>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-2xl border border-panel-line bg-panel-card p-5">
               <p className="text-xs uppercase tracking-[0.14em] text-panel-sub">Este mês</p>
-              <p className="mt-2 font-display text-3xl font-bold text-panel-ink">
-                {emReais(soma(doMes))}
+              <p className="mt-2 font-display text-3xl font-bold text-panel-ink tabular-nums">
+                {emReais(totalDoMesCents)}
               </p>
               <p className="mt-1 text-sm text-panel-sub">
-                {doMes.length} {doMes.length === 1 ? "cliente voltou" : "clientes voltaram"}
+                {mes._count} {mes._count === 1 ? "cliente voltou" : "clientes voltaram"}
               </p>
             </div>
 
@@ -104,19 +148,19 @@ export default async function LivroCaixaPage() {
               <p className="text-xs uppercase tracking-[0.14em] text-panel-sub">
                 Desde que você começou
               </p>
-              <p className="mt-2 font-display text-3xl font-bold text-panel-ink">
-                {emReais(soma(comprovadas))}
+              <p className="mt-2 font-display text-3xl font-bold text-panel-ink tabular-nums">
+                {emReais(totalGeralCents)}
               </p>
               <p className="mt-1 text-sm text-panel-sub">
-                {comprovadas.length}{" "}
-                {comprovadas.length === 1 ? "cliente recuperado" : "clientes recuperados"}
+                {acumulado._count}{" "}
+                {acumulado._count === 1 ? "cliente voltou" : "clientes voltaram"}
               </p>
             </div>
           </div>
 
           <div className="rounded-2xl border border-panel-line bg-panel-card">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-panel-line px-5 py-4">
-              <h2 className="font-display font-semibold text-panel-ink">Extrato</h2>
+              <h2 className="font-display font-semibold text-panel-ink">Quem voltou</h2>
               <a
                 href="/api/livro-caixa?formato=csv"
                 className="text-sm font-semibold text-amber-deep underline underline-offset-4"
@@ -126,45 +170,54 @@ export default async function LivroCaixaPage() {
             </div>
 
             <ul className="divide-y divide-panel-line">
-              {entradas.map((e) => (
+              {extrato.map((e) => (
                 <li key={e.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-5 py-3.5">
                   <span className="font-mono text-xs text-panel-sub">{data.format(e.returnedAt)}</span>
                   <span className="font-medium text-panel-ink">
-                    {e.customer?.name ?? "cliente excluído"}
+                    {e.customer?.name ?? "cliente que você apagou"}
                   </span>
                   <span className="text-xs text-panel-sub">
-                    sumido há {e.daysAway} dias · toque {e.touchNumber}
+                    sumido há {e.daysAway} dias · voltou na {e.touchNumber}ª mensagem
                   </span>
                   <span className="ml-auto font-display font-semibold text-panel-ink">
                     {emReais(e.valueCents)}
                   </span>
                   {!e.attributed && (
-                    /* Voltou, mas fora da janela de atribuição. Fica no extrato
-                       e NÃO entra no total — inflar o número é a forma mais
-                       rápida de o dono parar de confiar nele. */
+                    /* Voltou fora da janela em que dá para provar a causa. Fica
+                       no extrato e NÃO entra no total — inflar o número é a
+                       forma mais rápida de o dono parar de confiar nele. */
                     <span className="w-full text-xs text-panel-sub">
-                      voltou sem atribuição — não somei no total acima
+                      voltou, mas não dá para provar que foi pela sua mensagem — por isso não
+                      somei no total
                     </span>
                   )}
                 </li>
               ))}
             </ul>
+
+            {totalDeEntradas > extrato.length && (
+              <p className="border-t border-panel-line px-5 py-3 text-xs text-panel-sub">
+                Mostrando os {extrato.length} retornos mais recentes de {totalDeEntradas}. Os
+                totais lá em cima contam todos.
+              </p>
+            )}
           </div>
 
           {aguardando > 0 && (
             <div className="rounded-2xl border border-panel-line bg-panel-bg p-5">
               <p className="text-sm text-panel-ink">
+                Você chamou{" "}
                 <strong className="font-semibold">
                   {aguardando} {aguardando === 1 ? "pessoa" : "pessoas"}
                 </strong>{" "}
-                receberam mensagem e ainda não têm desfecho marcado. Se alguma apareceu, o
-                dinheiro dela ainda não está contado aqui.
+                e ainda não disse se {aguardando === 1 ? "ela apareceu" : "elas apareceram"}. Se
+                alguma voltou, o dinheiro dela ainda não está contado aqui.
               </p>
               <Link
                 href="/painel/onda"
                 className="mt-3 inline-block rounded-xl border border-panel-line px-4 py-2.5 text-sm font-semibold transition hover:border-amber"
               >
-                Marcar quem apareceu
+                Dizer quem apareceu
               </Link>
             </div>
           )}

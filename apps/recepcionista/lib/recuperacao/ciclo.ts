@@ -92,10 +92,12 @@ export function calcularCiclo(visitas: Date[], medianaSegmentoDias: number): Cic
       dias: medianaSegmentoDias,
       confianca: "baixa",
       visitas: total,
+      // Este texto vai inteiro para o cartão da Onda. Quem lê é dono de
+      // barbearia: "média do segmento" e "ciclo" não querem dizer nada para ele.
       motivo:
         total === 0
-          ? "Nenhuma visita registrada. Estamos usando a média do segmento — trate como palpite, não como previsão."
-          : `Só ${total} visita${total === 1 ? "" : "s"} registrada${total === 1 ? "" : "s"}. Não dá para saber o ciclo dele; estamos usando a média do segmento e o valor pode errar bastante.`,
+          ? "Não tenho nenhuma visita anotada dele. Estou usando a média de negócios parecidos com o seu — isso aqui é um palpite."
+          : `Só ${total} visita${total === 1 ? "" : "s"} anotada${total === 1 ? "" : "s"}. Ainda não dá para saber de quanto em quanto tempo ele volta; estou usando a média de negócios parecidos com o seu, e o valor pode errar bastante.`,
     };
   }
 

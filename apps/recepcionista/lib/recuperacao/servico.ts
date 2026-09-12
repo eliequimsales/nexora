@@ -43,13 +43,15 @@ function textoDoPorque(
   ticketCents: number,
 ): string {
   if (ciclo.confianca === "baixa") {
-    return `${ciclo.motivo} Trate como palpite, não como previsão — você conhece essa pessoa melhor que a gente.`;
+    // O motivo do ciclo JÁ termina dizendo que é palpite. O sufixo antigo
+    // repetia a frase inteira e ela aparecia duas vezes seguidas no cartão.
+    return `${ciclo.motivo} Você conhece essa pessoa melhor que a gente.`;
   }
   const ticket = (ticketCents / 100).toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
   });
-  return `O ciclo é de ${ciclo.dias} dias. Está ${diasAlemDoCiclo} dias além do ritmo normal. ${visitas} visitas registradas · ticket médio ${ticket}.`;
+  return `Ele costuma voltar a cada ${ciclo.dias} dias, e já passou ${diasAlemDoCiclo} dias disso. ${visitas} visitas anotadas · gasta em média ${ticket} por visita.`;
 }
 
 export async function montarOndaDaSemana(

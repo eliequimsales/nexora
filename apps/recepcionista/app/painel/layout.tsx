@@ -20,7 +20,9 @@ import { LogoutButton } from "@/components/logout-button";
 const NAV = [
   { href: "/painel/onda", label: "Onda de segunda" },
   { href: "/painel/livro-caixa", label: "Livro-Caixa" },
-  { href: "/painel/clientes/importar", label: "Minha base" },
+  // "Meus clientes", e não "Minha base": base é palavra de CRM. O dono chama de
+  // lista, de caderno, de agenda — nunca de base.
+  { href: "/painel/clientes/importar", label: "Meus clientes" },
   // "WhatsApp", e não "Meu Atendente": o dono procura no menu o nome da coisa
   // que ele conhece, não o nome que a gente deu para o produto.
   { href: "/painel/configuracoes", label: "WhatsApp" },

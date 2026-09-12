@@ -5,15 +5,16 @@ import { useState } from "react";
 import { DECLARACAO_BASE } from "@/lib/legal/identidade";
 
 /**
- * RESGATE DO CADERNO — a tela.
+ * TRAZER OS CLIENTES — a tela.
  *
  * A adoção de todo concorrente morre aqui: pede-se "um CSV com as colunas
  * certas", o dono não sabe exportar, e o produto acaba antes de começar. Então
- * a promessa desta tela é literal — manda do jeito que estiver.
+ * a promessa desta tela é literal — manda do jeito que estiver. E a palavra
+ * "CSV" não aparece: quem precisa dela não precisa desta tela.
  *
  * Duas passadas de propósito. Primeiro a Nexora mostra o que ENTRARIA, com o
- * que ela não conseguiu ler dito em português. Só depois o dono grava. Ver
- * antes é a diferença entre um erro corrigível e uma base contaminada, e é
+ * que ela não conseguiu ler dito em português. Só depois o dono salva. Ver
+ * antes é a diferença entre um erro corrigível e uma lista contaminada, e é
  * também o que prova que a gente não esconde falha.
  */
 
@@ -35,6 +36,9 @@ type Resultado = {
   exemplosIgnorados: { linha: number; conteudo: string; motivo: string }[];
 };
 
+/** A recusa que o servidor manda quando a assinatura não cobre a ação. */
+type Recusa = { motivo: string; acao: { texto: string; href: string } };
+
 const EXEMPLO = `Nome, Telefone, Última visita, Valor
 João Silva, (11) 98888-7777, 12/03/2026, R$ 50,00
 Maria Souza, 11 97777-6666, 28/02/2026, R$ 120,00`;
@@ -45,12 +49,19 @@ export default function PaginaImportar() {
   const [confirmo, setConfirmo] = useState(false);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
+  const [recusa, setRecusa] = useState<Recusa | null>(null);
   const [previa, setPrevia] = useState<Resultado | null>(null);
-  const [gravado, setGravado] = useState<Resultado | null>(null);
+  const [salvo, setSalvo] = useState<Resultado | null>(null);
+
+  // Se o dono salvar o exemplo, João Silva e Maria Souza viram clientes de
+  // verdade, entram na lista de segunda e recebem mensagem. Lista suja não tem
+  // desfazer — por isso a comparação existe e trava o botão de salvar.
+  const aindaEhOExemplo = texto.trim() === EXEMPLO.trim();
 
   const enviar = async (simular: boolean) => {
     setCarregando(true);
     setErro("");
+    setRecusa(null);
     try {
       const res = await fetch("/api/clientes/importar", {
         method: "POST",
@@ -59,13 +70,16 @@ export default function PaginaImportar() {
       });
       const json = await res.json();
       if (!res.ok) {
-        setErro(json.error ?? "Não consegui ler essa lista.");
+        // A recusa por assinatura vem com o caminho para resolver. Ler só o
+        // texto e jogar o botão fora transforma a negativa em beco sem saída.
+        if (json.acao?.href) setRecusa({ motivo: json.error ?? "", acao: json.acao });
+        else setErro(json.error ?? "Não consegui ler essa lista.");
         return;
       }
       if (simular) setPrevia(json);
-      else setGravado(json);
+      else setSalvo(json);
     } catch {
-      setErro("Falha de conexão. Tenta de novo?");
+      setErro("Não consegui falar com a internet agora. Tenta de novo?");
     } finally {
       setCarregando(false);
     }
@@ -78,30 +92,30 @@ export default function PaginaImportar() {
   };
 
   // -------------------------------------------------------------------------
-  // Gravado: a tela termina apontando para a ação que gera dinheiro, não num
+  // Salvo: a tela termina apontando para a ação que gera dinheiro, não num
   // "importação concluída" que deixa o dono sem próximo passo.
   // -------------------------------------------------------------------------
-  if (gravado) {
+  if (salvo) {
     return (
       <main className="max-w-2xl space-y-5">
-        <h1 className="font-display text-2xl text-panel-ink">Base atualizada</h1>
+        <h1 className="font-display text-2xl text-panel-ink">Lista atualizada</h1>
         <div className="rounded-2xl border border-panel-line bg-panel-card p-6">
           <p className="text-panel-ink">
-            Entraram <strong>{gravado.criar}</strong> clientes novos e{" "}
-            <strong>{gravado.visitasNovas}</strong> visitas. Sua base agora tem{" "}
-            <strong>{gravado.baseTotalDepois}</strong> clientes.
+            Entraram <strong>{salvo.criar}</strong> clientes novos e{" "}
+            <strong>{salvo.visitasNovas}</strong> visitas. Sua lista agora tem{" "}
+            <strong>{salvo.baseTotalDepois}</strong> clientes.
           </p>
-          {gravado.visitasDuplicadas > 0 && (
+          {salvo.visitasDuplicadas > 0 && (
             <p className="mt-2 text-sm text-panel-sub">
-              {gravado.visitasDuplicadas} visitas já estavam registradas e foram ignoradas —
-              importar duas vezes não duplica nada.
+              {salvo.visitasDuplicadas} visitas já estavam anotadas e foram ignoradas — mandar a
+              mesma planilha duas vezes não duplica nada.
             </p>
           )}
           <Link
             href="/painel/onda"
             className="mt-5 inline-flex rounded-xl bg-amber px-5 py-3 text-sm font-semibold text-night transition hover:brightness-110"
           >
-            Ver quem sumiu da minha base
+            Ver quem sumiu
           </Link>
         </div>
       </main>
@@ -111,12 +125,21 @@ export default function PaginaImportar() {
   return (
     <main className="max-w-2xl space-y-6">
       <header>
-        <h1 className="font-display text-2xl text-panel-ink">Trazer minha base</h1>
+        <h1 className="font-display text-2xl text-panel-ink">Trazer meus clientes</h1>
         <p className="mt-1 text-sm text-panel-sub">
-          Manda do jeito que estiver. Planilha torta, colagem do Excel, exportação de
-          conversa do WhatsApp — a gente entende, e diz o que não conseguiu ler.
+          Manda do jeito que estiver. Planilha torta, colagem do Excel, conversa do WhatsApp —
+          a gente entende, e diz o que não conseguiu ler.
         </p>
       </header>
+
+      {/* O medo aqui é de formato. Mata-se o medo antes do campo. */}
+      <div className="rounded-2xl border border-amber/40 bg-amber/10 p-5">
+        <p className="text-sm leading-relaxed text-panel-ink">
+          Cole aqui os nomes e telefones dos seus clientes — do caderno, do WhatsApp ou do
+          Excel. A Nexora organiza tudo automaticamente para você, e mostra o resultado antes
+          de salvar qualquer coisa.
+        </p>
+      </div>
 
       <div className="rounded-2xl border border-panel-line bg-panel-card p-5">
         <label className="block text-sm font-medium text-panel-ink">
@@ -134,6 +157,16 @@ export default function PaginaImportar() {
         />
 
         <div className="mt-3 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setTexto(EXEMPLO);
+              setPrevia(null);
+            }}
+            className="rounded-lg border border-panel-line px-3 py-1.5 text-sm text-panel-sub transition hover:border-amber hover:text-amber-deep"
+          >
+            Preencher com exemplo de teste
+          </button>
           <label className="cursor-pointer text-sm text-amber-deep underline">
             ou escolher um arquivo
             <input
@@ -143,8 +176,11 @@ export default function PaginaImportar() {
               onChange={(e) => lerArquivo(e.target.files?.[0])}
             />
           </label>
-          <span className="text-xs text-panel-sub">CSV, TXT ou a exportação do WhatsApp</span>
         </div>
+        <p className="mt-2 text-xs text-panel-sub">
+          Serve planilha, bloco de notas ou o arquivo que o WhatsApp gera quando você manda a
+          conversa por e-mail. Se estiver no Excel, abre lá e cola aqui em cima.
+        </p>
 
         <label className="mt-4 block text-sm font-medium text-panel-ink">
           Seu nome no WhatsApp{" "}
@@ -175,10 +211,22 @@ export default function PaginaImportar() {
         </div>
       )}
 
+      {recusa && (
+        <div className="rounded-2xl border border-amber/40 bg-amber/10 p-5">
+          <p className="text-sm text-panel-ink">{recusa.motivo}</p>
+          <Link
+            href={recusa.acao.href}
+            className="mt-3 inline-flex rounded-xl bg-amber px-5 py-3 text-sm font-semibold text-night transition hover:brightness-110"
+          >
+            {recusa.acao.texto}
+          </Link>
+        </div>
+      )}
+
       {previa && (
         <div className="rounded-2xl border border-panel-line bg-panel-card p-6">
           <h2 className="font-display text-lg text-panel-ink">
-            Nada foi gravado ainda. Confere:
+            Ainda não salvei nada. Olha o que vai entrar:
           </h2>
 
           <ul className="mt-4 space-y-2 text-sm text-panel-ink">
@@ -186,7 +234,7 @@ export default function PaginaImportar() {
               <strong>{previa.criar}</strong> clientes novos
             </li>
             <li>
-              <strong>{previa.atualizar}</strong> já estavam na sua base
+              <strong>{previa.atualizar}</strong> já estavam na sua lista
             </li>
             <li>
               <strong>{previa.visitasNovas}</strong> visitas novas
@@ -203,8 +251,8 @@ export default function PaginaImportar() {
             )}
             {previa.suprimidos > 0 && (
               <li className="text-panel-sub">
-                {previa.suprimidos} pediram para ser apagados e não voltam nem reimportando —
-                é o pedido deles, não um erro da lista
+                {previa.suprimidos} pediram para ser apagados e não voltam nem se você mandar a
+                mesma planilha de novo — é o pedido deles, não um erro da sua lista
               </li>
             )}
           </ul>
@@ -241,28 +289,38 @@ export default function PaginaImportar() {
             </div>
           )}
 
-          <label className="mt-5 flex items-start gap-2 text-sm text-panel-sub">
-            <input
-              type="checkbox"
-              checked={confirmo}
-              onChange={(e) => setConfirmo(e.target.checked)}
-              className="mt-1"
-            />
-            <span>{DECLARACAO_BASE}</span>
-          </label>
-
-          <button
-            onClick={() => enviar(false)}
-            disabled={carregando || !confirmo || previa.criar + previa.visitasNovas === 0}
-            className="mt-4 rounded-xl bg-amber px-5 py-3 text-sm font-semibold text-night transition hover:brightness-110 disabled:opacity-40"
-          >
-            {carregando ? "Gravando…" : "Gravar na minha base"}
-          </button>
-
-          {previa.criar + previa.visitasNovas === 0 && (
-            <p className="mt-2 text-sm text-panel-sub">
-              Não há nada novo nessa lista — tudo já estava na sua base.
+          {aindaEhOExemplo ? (
+            <p className="mt-5 rounded-xl bg-amber/20 p-3 text-sm text-[#7A5A10]">
+              <strong className="font-semibold">Esse ainda é o exemplo.</strong> Apaga e cola a
+              sua lista de verdade — senão João Silva e Maria Souza entram como clientes seus e
+              vão receber mensagem.
             </p>
+          ) : (
+            <>
+              <label className="mt-5 flex items-start gap-2 text-sm text-panel-sub">
+                <input
+                  type="checkbox"
+                  checked={confirmo}
+                  onChange={(e) => setConfirmo(e.target.checked)}
+                  className="mt-1"
+                />
+                <span>{DECLARACAO_BASE}</span>
+              </label>
+
+              <button
+                onClick={() => enviar(false)}
+                disabled={carregando || !confirmo || previa.criar + previa.visitasNovas === 0}
+                className="mt-4 rounded-xl bg-amber px-5 py-3 text-sm font-semibold text-night transition hover:brightness-110 disabled:opacity-40"
+              >
+                {carregando ? "Salvando…" : "Salvar na minha lista"}
+              </button>
+
+              {previa.criar + previa.visitasNovas === 0 && (
+                <p className="mt-2 text-sm text-panel-sub">
+                  Não há nada novo nessa lista — tudo já estava com você.
+                </p>
+              )}
+            </>
           )}
         </div>
       )}
@@ -279,9 +337,6 @@ export default function PaginaImportar() {
  * (art. 18, VI). Enquanto isso dependesse de mandar e-mail e alguém rodar SQL,
  * era intenção. Aqui é ação executável — Regra Zero: a tela termina em fazer,
  * não em saber.
- *
- * Fica junto de "Minha base" e não numa página de configurações escondida
- * porque é aqui que o dono pensa na lista dele.
  */
 function SeusDados() {
   const [telefone, setTelefone] = useState("");
@@ -312,7 +367,7 @@ function SeusDados() {
       setTelefone("");
       setConfirmando(false);
     } catch {
-      setErro("Falha de conexão. Tenta de novo?");
+      setErro("Não consegui falar com a internet agora. Tenta de novo?");
     } finally {
       setApagando(false);
     }
@@ -322,7 +377,7 @@ function SeusDados() {
     <section className="mt-12 rounded-2xl border border-panel-line bg-panel-card p-6">
       <h2 className="font-display text-lg font-semibold">Seus dados</h2>
       <p className="mt-1 text-sm text-panel-sub">
-        A base é sua. Levar embora e apagar são direitos seus e dos seus clientes — não
+        A lista é sua. Levar embora e apagar são direitos seus e dos seus clientes — não
         precisa pedir para ninguém.
       </p>
 
@@ -336,21 +391,25 @@ function SeusDados() {
           href="/api/dados/exportar"
           className="mt-3 inline-block rounded-xl border border-panel-line px-4 py-2.5 text-sm font-semibold transition hover:border-amber"
         >
-          Baixar minha base em planilha
+          Baixar minha lista em planilha
         </a>
       </div>
 
       <div className="mt-6 border-t border-panel-line pt-5">
         <h3 className="text-sm font-semibold">Um cliente pediu para ser apagado</h3>
         <p className="mt-1 text-sm text-panel-sub">
-          Digite o telefone dele. Apagamos o cadastro, as visitas e os agendamentos futuros.
-          O que ele já gastou continua no seu Livro-Caixa, sem o nome — é o seu faturamento,
-          não o dado dele. Se ele já tinha pedido para parar, ele não volta nem se você
-          reimportar a mesma planilha.
+          Digite o telefone dele. Apagamos o cadastro, as visitas e os horários futuros. O que
+          ele já gastou continua no seu Livro-Caixa, sem o nome — é o seu faturamento, não o
+          dado dele. Se ele já tinha pedido para parar, ele não volta nem se você mandar a
+          mesma planilha de novo.
         </p>
 
         <div className="mt-3 flex flex-wrap gap-2">
+          <label className="sr-only" htmlFor="telefone-para-apagar">
+            Telefone do cliente que pediu para ser apagado
+          </label>
           <input
+            id="telefone-para-apagar"
             value={telefone}
             onChange={(e) => {
               setTelefone(e.target.value);
@@ -389,10 +448,10 @@ function SeusDados() {
             <p className="mt-1 text-panel-sub">
               {feito.visitasApagadas} visitas removidas.{" "}
               {feito.entradasAnonimizadas > 0 &&
-                `${feito.entradasAnonimizadas} entradas do Livro-Caixa mantiveram o valor e perderam o nome. `}
+                "O que ele gastou continua somando no seu caixa, só que agora sem o nome dele. "}
               {feito.naoSeraRecontatado
-                ? "Ele não será contatado de novo, mesmo que volte numa importação."
-                : "Se ele voltar numa importação futura, entra como cliente novo."}
+                ? "Ele não será chamado de novo, mesmo que apareça numa lista que você mandar depois."
+                : "Se ele aparecer numa lista que você mandar depois, entra como cliente novo."}
             </p>
           </div>
         )}
