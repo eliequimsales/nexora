@@ -10,12 +10,10 @@ import type { EstadoConta } from "@/lib/billing/acesso";
 export function BotoesAssinatura({
   estado,
   temAssinatura,
-  habilitado,
   precoTexto,
 }: {
   estado: EstadoConta;
   temAssinatura: boolean;
-  habilitado: boolean;
   /** Vem do servidor: o botão nunca anuncia um preço diferente do cobrado. */
   precoTexto: string;
 }) {
@@ -55,9 +53,15 @@ export function BotoesAssinatura({
 
   return (
     <div className="mt-5">
+      {/*
+        Só o clique em andamento desabilita. Travar o botão quando a cobrança não
+        está configurada parecia cuidado e era o contrário: a API sabe exatamente
+        qual variável falta, e um botão morto garante que ninguém nunca leia essa
+        resposta.
+      */}
       <button
         onClick={() => ir(rota)}
-        disabled={carregando || !habilitado}
+        disabled={carregando}
         className="rounded-xl bg-amber px-5 py-3 text-sm font-semibold text-night transition hover:brightness-110 disabled:opacity-40"
       >
         {carregando ? "Abrindo…" : texto}

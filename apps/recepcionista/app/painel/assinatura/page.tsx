@@ -3,9 +3,10 @@ import { getSessionCompanyId } from "@/lib/auth";
 import { estadoDaConta, TOLERANCIA_DIAS, TRIAL_DIAS } from "@/lib/billing/acesso";
 import { convergirDoCheckout } from "@/lib/billing/converger";
 import { emReais, formasDePagamentoTexto, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
-import { stripeConfigurado } from "@/lib/billing/stripe";
+import { variaveisPendentesDaStripe } from "@/lib/billing/stripe";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
+import { variaveisPendentesDoFornecedor } from "@/lib/legal/identidade";
 import { BotoesAssinatura } from "./botoes";
 
 export const dynamic = "force-dynamic";
@@ -76,6 +77,11 @@ export default async function PaginaAssinatura({
       _count: true,
     }),
   ]);
+
+  // As duas listas do que impede a cobrança de abrir, na ordem em que o dono
+  // resolve: primeiro a Stripe, depois a identificação exigida pelo Decreto
+  // 7.962/2013.
+  const pendentes = [...variaveisPendentesDaStripe(), ...variaveisPendentesDoFornecedor()];
 
   const recuperadoCents = comprovado._sum.valueCents ?? 0;
   const clientesDeVolta = comprovado._count;
@@ -151,17 +157,28 @@ export default async function PaginaAssinatura({
           fica com o período que já pagou.
         </p>
 
-        {!stripeConfigurado() && (
+        {/*
+          O que falta, pelo nome. São NOMES de variável, nunca valores, e a tela
+          só existe para quem já está logado na própria conta. Enquanto isso ficava
+          em "fale com a gente", o dono da instalação abria um chamado para si
+          mesmo em vez de resolver em trinta segundos no painel do Railway.
+        */}
+        {pendentes.length > 0 && (
           <p className="mt-4 rounded-xl bg-amber/20 p-3 text-sm text-[#7A5A10]">
             A cobrança ainda não está ligada nesta instalação. Nada será cobrado de você
-            agora.
+            agora. Falta configurar: {pendentes.join(", ")}.
           </p>
         )}
 
+        {/*
+          O botão continua clicável de propósito. Desabilitado, ele nunca chama a
+          API — e a mensagem que diz exatamente o que falta morre sem nunca chegar
+          à tela. Quem clica sem a cobrança ligada recebe o motivo; nada é cobrado
+          porque o checkout recusa antes de criar sessão.
+        */}
         <BotoesAssinatura
           estado={estado}
           temAssinatura={Boolean(empresa.stripeCustomerId)}
-          habilitado={stripeConfigurado()}
           precoTexto={reais(PRECO_MENSAL_CENTS)}
         />
       </section>

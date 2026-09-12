@@ -48,6 +48,29 @@ export function podeCobrar(
   return { pode: true };
 }
 
+/**
+ * A SAÍDA DE EMERGÊNCIA, E O SEU PREÇO.
+ *
+ * Sem Resend configurado, o link de confirmação não sai de dentro do prédio: a
+ * conta fica presa atrás de uma prova que o servidor não tem como pedir, e nem
+ * o dono consegue assinar para testar o próprio produto. Decisão dele, tomada
+ * com o custo na mesa (11/09/2026): liberar a conta sem a prova.
+ *
+ * As duas condições são a diferença entre uma saída de emergência e um buraco:
+ *
+ *   - `emailConfigurado` ligado FECHA este caminho. Havendo como provar, aceitar
+ *     um "confia em mim" seria abrir mão da única garantia de que o comprovante
+ *     da compra exigido pelo Decreto 7.962/2013 chega a algum lugar.
+ *   - Conta já verificada não passa por aqui: não há o que liberar, e reescrever
+ *     `emailVerificadoEm` apagaria a data da prova de verdade.
+ */
+export function podeLiberarSemEmail(estado: {
+  emailConfigurado: boolean;
+  jaVerificado: boolean;
+}): boolean {
+  return !estado.emailConfigurado && !estado.jaVerificado;
+}
+
 function hashDoToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }

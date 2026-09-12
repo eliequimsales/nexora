@@ -21,4 +21,9 @@ USER node
 EXPOSE 3000
 # Aplica o schema no boot (rede interna, idempotente) e sobe o app —
 # elimina a necessidade de rodar migrações de fora do Railway.
-CMD ["sh", "-c", "npx prisma db push --skip-generate --accept-data-loss && pnpm start"]
+#
+# SEM `--accept-data-loss`, e isso não é esquecimento: esse flag autoriza o
+# Prisma a apagar coluna ou tabela sozinho, a cada boot, sobre a base de quem
+# paga. Quando o push reclamar, o push está certo — a resposta é olhar o que
+# mudou no schema, não calar o aviso. tests/boot-do-container.test.ts segura.
+CMD ["sh", "-c", "npx prisma db push --skip-generate && pnpm start"]

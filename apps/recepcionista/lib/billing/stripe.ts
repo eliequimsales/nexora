@@ -18,13 +18,24 @@ export const STRIPE_API_VERSION = "2026-08-26.dahlia" as const;
 
 let cliente: Stripe | null = null;
 
+/** As duas variáveis sem as quais não existe cobrança. Nomes, nunca valores. */
+export const VARIAVEIS_DA_STRIPE = ["STRIPE_SECRET_KEY", "STRIPE_PRICE_PRO"] as const;
+
 /**
- * Só o preço de lista é obrigatório. Sem `STRIPE_PRICE_FUNDADOR` a cohort
- * simplesmente não abre — o produto continua vendável, e é melhor cair no preço
- * cheio do que quebrar o checkout por uma variável de campanha faltando.
+ * Quais das duas ainda faltam.
+ *
+ * Existe para a tela poder dizer o QUE fazer. "A cobrança não está configurada"
+ * manda o dono procurar sozinho entre chave, preço e webhook; o nome da variável
+ * que falta é uma tarefa de trinta segundos no painel do Railway.
  */
+export function variaveisPendentesDaStripe(
+  env: Record<string, string | undefined> = process.env,
+): string[] {
+  return VARIAVEIS_DA_STRIPE.filter((chave) => !(env[chave] ?? "").trim());
+}
+
 export function stripeConfigurado(): boolean {
-  return Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PRICE_PRO);
+  return variaveisPendentesDaStripe().length === 0;
 }
 
 export function stripe(): Stripe {

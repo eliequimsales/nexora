@@ -100,6 +100,20 @@ export function camposPendentes(f: Fornecedor = FORNECEDOR): string[] {
 }
 
 /**
+ * Os mesmos campos, traduzidos para o nome da variável que falta criar.
+ *
+ * `encarregado` fica de fora de propósito: ele cai no nome do fornecedor quando
+ * a variável não existe, então nunca falta sozinho. Pedir para o dono criar
+ * FORNECEDOR_ENCARREGADO seria mandá-lo resolver algo que já está resolvido — a
+ * lista precisa ser exatamente o trabalho que resta.
+ */
+export function variaveisPendentesDoFornecedor(f: Fornecedor = FORNECEDOR): string[] {
+  return camposPendentes(f)
+    .filter((campo) => campo !== "encarregado")
+    .map((campo) => VARIAVEIS_DO_FORNECEDOR[campo as keyof typeof VARIAVEIS_DO_FORNECEDOR]);
+}
+
+/**
  * A DECLARAÇÃO QUE O DONO ASSINA AO SUBIR A BASE.
  *
  * Texto único, gravado por extenso em RegistroImportacao junto da versão. Não

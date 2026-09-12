@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { getSessionCompanyId } from "@/lib/auth";
 import { TRIAL_DIAS } from "@/lib/billing/acesso";
-import { stripe, stripeConfigurado } from "@/lib/billing/stripe";
+import { stripe, stripeConfigurado, variaveisPendentesDaStripe } from "@/lib/billing/stripe";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
-import { camposPendentes, identificacaoCompleta } from "@/lib/legal/identidade";
+import { identificacaoCompleta, variaveisPendentesDoFornecedor } from "@/lib/legal/identidade";
 import { rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 import { podeCobrar } from "@/lib/auth/verificacao";
 
@@ -27,9 +27,19 @@ export async function POST(request: Request) {
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
+  // O erro diz o NOME do que falta, nunca o valor.
+  //
+  // Quem lê esta mensagem está logado na própria conta e, nesta fase, é o
+  // próprio dono da instalação. "Fale com a gente" mandava ele abrir um chamado
+  // para si mesmo; o nome da variável é uma tarefa de trinta segundos no painel
+  // do Railway. Nome de variável não é segredo — valor é, e nenhum sai daqui.
   if (!stripeConfigurado()) {
     return NextResponse.json(
-      { error: "A cobrança ainda não está configurada. Fale com a gente." },
+      {
+        error:
+          "A cobrança ainda não está ligada: falta configurar " +
+          `${variaveisPendentesDaStripe().join(" e ")} no serviço.`,
+      },
       { status: 503 },
     );
   }
@@ -44,13 +54,18 @@ export async function POST(request: Request) {
   // A checagem mora aqui, no único caminho que cria cobrança, para que isso
   // seja impossível em vez de ser algo que alguém precisa lembrar.
   if (!identificacaoCompleta()) {
+    const faltando = variaveisPendentesDoFornecedor();
     await logError(
       "checkout-bloqueado-identificacao",
-      new Error(`Identificação do fornecedor incompleta: ${camposPendentes().join(", ")}`),
+      new Error(`Identificação do fornecedor incompleta: ${faltando.join(", ")}`),
       companyId,
     );
     return NextResponse.json(
-      { error: "A cobrança ainda não está configurada. Fale com a gente." },
+      {
+        error:
+          "Antes de cobrar, a lei exige nome, CPF/CNPJ e endereço de quem presta o " +
+          `serviço. Falta configurar: ${faltando.join(", ")}.`,
+      },
       { status: 503 },
     );
   }

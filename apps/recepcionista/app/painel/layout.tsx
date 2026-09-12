@@ -2,21 +2,28 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionCompanyId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { emailConfigurado } from "@/lib/reengajamento/email";
 import { AvisoVerificarEmail } from "./aviso-verificar";
 import { LogoutButton } from "@/components/logout-button";
 
-// A Onda vem primeiro porque é a única tela que gera dinheiro. Ela existia e
-// não estava no menu — o loop central do produto era inalcançável.
+// O MENU É O FLUXO DE VALOR, NÃO O ÍNDICE DO SISTEMA.
+//
+// A Onda vem primeiro porque é a única tela que gera dinheiro. Logo depois, a
+// prova de que gerou: ela tem que estar no caminho de todo dia, não atrás do
+// botão de cancelar (que era onde morava).
+//
+// Conversas, Treinamento e Relatórios saíram daqui em 12/09/2026 — as rotas e as
+// telas continuam de pé, alcançáveis por link direto. Com oito abas o painel
+// parecia um ERP: quem entra procura o que fazer HOJE e encontrava sete caminhos
+// que não trazem cliente de volta. tests/painel-nav.test.ts segura os dois lados:
+// cinco itens no menu, e as três telas ainda existindo em disco.
 const NAV = [
   { href: "/painel/onda", label: "Onda de segunda" },
-  // Logo depois da Onda: a prova de valor tem que estar no caminho de todo
-  // dia, nao atras do botao de cancelar (que era onde ela morava).
   { href: "/painel/livro-caixa", label: "Livro-Caixa" },
   { href: "/painel/clientes/importar", label: "Minha base" },
-  { href: "/painel/conversas", label: "Conversas" },
-  { href: "/painel/treinamento", label: "Treinamento" },
-  { href: "/painel/configuracoes", label: "Meu Atendente" },
-  { href: "/painel/relatorios", label: "Relatórios" },
+  // "WhatsApp", e não "Meu Atendente": o dono procura no menu o nome da coisa
+  // que ele conhece, não o nome que a gente deu para o produto.
+  { href: "/painel/configuracoes", label: "WhatsApp" },
   { href: "/painel/assinatura", label: "Minha conta" },
 ];
 
@@ -39,7 +46,7 @@ export default async function PainelLayout({ children }: { children: React.React
         momento possível para encontrar fricção. Não bloqueia nada aqui: o
         primeiro minuto do produto é onde o dono decide se fica.
       */}
-      {!company.emailVerificadoEm && <AvisoVerificarEmail />}
+      {!company.emailVerificadoEm && <AvisoVerificarEmail semEnvioDeEmail={!emailConfigurado()} />}
 
       <header className="border-b border-panel-line bg-panel-card">
         <div className="mx-auto flex max-w-page items-center justify-between px-6 py-3">
