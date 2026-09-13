@@ -109,6 +109,13 @@ describe("o botão de exemplo não suja a lista de verdade", () => {
   it("e nesse caso não deixa salvar", () => {
     expect(fonte).toMatch(/Apaga e cola a sua lista de verdade/i);
   });
+
+  it("oferece campos estruturados (Nome, Telefone, Última visita, Valor) para o lojista", () => {
+    expect(fonte).toContain("Preencher por campos");
+    expect(fonte).toContain("Adicionar outro cliente");
+    expect(fonte).toContain("Última visita");
+    expect(fonte).toContain("gerarTextoDeLinhas");
+  });
 });
 
 describe("a Onda entrega o gesto em um clique e avisa o que é definitivo", () => {

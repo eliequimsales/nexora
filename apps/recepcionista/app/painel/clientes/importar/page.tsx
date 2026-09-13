@@ -43,7 +43,20 @@ const EXEMPLO = `Nome, Telefone, Última visita, Valor
 João Silva, (11) 98888-7777, 12/03/2026, R$ 50,00
 Maria Souza, 11 97777-6666, 28/02/2026, R$ 120,00`;
 
+type LinhaCliente = {
+  id: string;
+  nome: string;
+  telefone: string;
+  data: string;
+  valor: string;
+};
+
 export default function PaginaImportar() {
+  const [modo, setModo] = useState<"campos" | "colar">("campos");
+  const [linhas, setLinhas] = useState<LinhaCliente[]>([
+    { id: "1", nome: "", telefone: "", data: "", valor: "" },
+    { id: "2", nome: "", telefone: "", data: "", valor: "" },
+  ]);
   const [texto, setTexto] = useState("");
   const [meuNome, setMeuNome] = useState("");
   const [confirmo, setConfirmo] = useState(false);
@@ -53,20 +66,82 @@ export default function PaginaImportar() {
   const [previa, setPrevia] = useState<Resultado | null>(null);
   const [salvo, setSalvo] = useState<Resultado | null>(null);
 
+  const adicionarLinha = () => {
+    setLinhas((prev) => [
+      ...prev,
+      { id: String(Date.now() + Math.random()), nome: "", telefone: "", data: "", valor: "" },
+    ]);
+    setPrevia(null);
+  };
+
+  const removerLinha = (id: string) => {
+    setLinhas((prev) => {
+      const filtradas = prev.filter((l) => l.id !== id);
+      return filtradas.length > 0
+        ? filtradas
+        : [{ id: String(Date.now()), nome: "", telefone: "", data: "", valor: "" }];
+    });
+    setPrevia(null);
+  };
+
+  const atualizarLinha = (id: string, campo: keyof Omit<LinhaCliente, "id">, valor: string) => {
+    setLinhas((prev) => prev.map((l) => (l.id === id ? { ...l, [campo]: valor } : l)));
+    setPrevia(null);
+  };
+
+  const preencherExemplo = () => {
+    setLinhas([
+      { id: "1", nome: "João Silva", telefone: "(11) 98888-7777", data: "12/03/2026", valor: "R$ 50,00" },
+      { id: "2", nome: "Maria Souza", telefone: "11 97777-6666", data: "28/02/2026", valor: "R$ 120,00" },
+    ]);
+    setTexto(EXEMPLO);
+    setPrevia(null);
+  };
+
+  function gerarTextoDeLinhas(lista: LinhaCliente[]): string {
+    const preenchidas = lista.filter(
+      (l) => l.nome.trim() || l.telefone.trim() || l.data.trim() || l.valor.trim()
+    );
+    if (preenchidas.length === 0) return "";
+    const header = "Nome, Telefone, Última visita, Valor";
+    const rows = preenchidas.map((l) => {
+      const nome = l.nome.trim();
+      const tel = l.telefone.trim();
+      const data = l.data.trim();
+      const val = l.valor.trim();
+      return [nome, tel, data, val].filter(Boolean).join(", ");
+    });
+    return [header, ...rows].join("\n");
+  }
+
   // Se o dono salvar o exemplo, João Silva e Maria Souza viram clientes de
   // verdade, entram na lista de segunda e recebem mensagem. Lista suja não tem
   // desfazer — por isso a comparação existe e trava o botão de salvar.
-  const aindaEhOExemplo = texto.trim() === EXEMPLO.trim();
+  const aindaEhOExemplo =
+    (modo === "colar" && texto.trim() === EXEMPLO.trim()) ||
+    (modo === "campos" &&
+      linhas.length === 2 &&
+      linhas[0]?.nome.trim() === "João Silva" &&
+      linhas[1]?.nome.trim() === "Maria Souza");
 
   const enviar = async (simular: boolean) => {
     setCarregando(true);
     setErro("");
     setRecusa(null);
+
+    const payloadTexto = modo === "campos" ? gerarTextoDeLinhas(linhas) : texto;
+
+    if (payloadTexto.trim().length < 5) {
+      setErro("Preencha pelo menos o nome e o telefone de um cliente para continuar.");
+      setCarregando(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/clientes/importar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ texto, meuNome: meuNome || undefined, simular, confirmo }),
+        body: JSON.stringify({ texto: payloadTexto, meuNome: meuNome || undefined, simular, confirmo }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -122,84 +197,225 @@ export default function PaginaImportar() {
     );
   }
 
+  const temPeloMenosUmCliente =
+    modo === "campos"
+      ? linhas.some((l) => l.nome.trim() && l.telefone.trim())
+      : texto.trim().length >= 10;
+
   return (
-    <main className="max-w-2xl space-y-6">
+    <main className="max-w-3xl space-y-6">
       <header>
         <h1 className="font-display text-2xl text-panel-ink">Trazer meus clientes</h1>
         <p className="mt-1 text-sm text-panel-sub">
-          Manda do jeito que estiver. Planilha torta, colagem do Excel, conversa do WhatsApp —
-          a gente entende, e diz o que não conseguiu ler.
+          Adicione os dados dos seus clientes pelos campos abaixo ou, se preferir, cole sua planilha.
         </p>
       </header>
 
       {/* O medo aqui é de formato. Mata-se o medo antes do campo. */}
       <div className="rounded-2xl border border-amber/40 bg-amber/10 p-5">
         <p className="text-sm leading-relaxed text-panel-ink">
-          Cole aqui os nomes e telefones dos seus clientes — do caderno, do WhatsApp ou do
-          Excel. A Nexora organiza tudo automaticamente para você, e mostra o resultado antes
-          de salvar qualquer coisa.
+          Preencha os campos abaixo com os dados dos seus clientes. A Nexora organiza tudo
+          automaticamente para você, identifica quem está sumido e mostra o resultado antes de salvar qualquer coisa.
         </p>
       </div>
 
-      <div className="rounded-2xl border border-panel-line bg-panel-card p-5">
-        <label className="block text-sm font-medium text-panel-ink">
-          Cole a lista aqui
-        </label>
-        <textarea
-          value={texto}
-          onChange={(e) => {
-            setTexto(e.target.value);
-            setPrevia(null);
-          }}
-          rows={10}
-          placeholder={EXEMPLO}
-          className="mt-2 w-full rounded-xl border border-panel-line bg-panel-bg p-3 font-mono text-sm text-panel-ink outline-none focus:border-amber"
-        />
-
-        <div className="mt-3 flex flex-wrap items-center gap-3">
+      <div className="rounded-2xl border border-panel-line bg-panel-card p-5 space-y-5">
+        {/* Abas de alternância de modo */}
+        <div className="flex items-center gap-2 border-b border-panel-line pb-3">
           <button
             type="button"
-            onClick={() => {
-              setTexto(EXEMPLO);
-              setPrevia(null);
-            }}
-            className="rounded-lg border border-panel-line px-3 py-1.5 text-sm text-panel-sub transition hover:border-amber hover:text-amber-deep"
+            onClick={() => setModo("campos")}
+            className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+              modo === "campos"
+                ? "bg-panel-ink text-white"
+                : "text-panel-sub hover:text-panel-ink hover:bg-panel-bg"
+            }`}
           >
-            Preencher com exemplo de teste
+            Preencher por campos
           </button>
-          <label className="cursor-pointer text-sm text-amber-deep underline">
-            ou escolher um arquivo
-            <input
-              type="file"
-              accept=".csv,.txt,.tsv,text/plain"
-              className="hidden"
-              onChange={(e) => lerArquivo(e.target.files?.[0])}
-            />
-          </label>
+          <button
+            type="button"
+            onClick={() => setModo("colar")}
+            className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+              modo === "colar"
+                ? "bg-panel-ink text-white"
+                : "text-panel-sub hover:text-panel-ink hover:bg-panel-bg"
+            }`}
+          >
+            Colar planilha / texto
+          </button>
         </div>
-        <p className="mt-2 text-xs text-panel-sub">
-          Serve planilha, bloco de notas ou o arquivo que o WhatsApp gera quando você manda a
-          conversa por e-mail. Se estiver no Excel, abre lá e cola aqui em cima.
-        </p>
 
-        <label className="mt-4 block text-sm font-medium text-panel-ink">
-          Seu nome no WhatsApp{" "}
-          <span className="font-normal text-panel-sub">(só se colou uma conversa)</span>
-        </label>
-        <input
-          value={meuNome}
-          onChange={(e) => setMeuNome(e.target.value)}
-          placeholder="Como você aparece na conversa"
-          className="mt-2 w-full rounded-xl border border-panel-line bg-panel-bg p-3 text-sm text-panel-ink outline-none focus:border-amber"
-        />
-        <p className="mt-1 text-xs text-panel-sub">
-          Serve para a gente não cadastrar você mesmo como cliente.
-        </p>
+        {modo === "campos" ? (
+          /* MODO CAMPOS INDIVIDUAIS */
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-panel-ink">
+                Preencha os dados de cada cliente:
+              </span>
+              <button
+                type="button"
+                onClick={preencherExemplo}
+                className="rounded-lg border border-panel-line px-3 py-1.5 text-xs text-panel-sub transition hover:border-amber hover:text-amber-deep"
+              >
+                Preencher com exemplo de teste
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {linhas.map((linha, index) => (
+                <div
+                  key={linha.id}
+                  className="rounded-xl border border-panel-line bg-panel-bg p-4 space-y-3 transition hover:border-panel-sub/30"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-panel-sub uppercase tracking-wider">
+                      Cliente {index + 1}
+                    </span>
+                    {linhas.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removerLinha(linha.id)}
+                        className="text-xs text-panel-sub hover:text-red-600 transition flex items-center gap-1 font-medium"
+                        title="Remover este cliente"
+                      >
+                        Remover
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-panel-ink mb-1">
+                        Nome
+                      </label>
+                      <input
+                        type="text"
+                        value={linha.nome}
+                        onChange={(e) => atualizarLinha(linha.id, "nome", e.target.value)}
+                        placeholder="Ex: João Silva"
+                        className="w-full rounded-xl border border-panel-line bg-white px-3 py-2 text-sm text-panel-ink outline-none focus:border-amber"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-panel-ink mb-1">
+                        Telefone / WhatsApp
+                      </label>
+                      <input
+                        type="tel"
+                        value={linha.telefone}
+                        onChange={(e) => atualizarLinha(linha.id, "telefone", e.target.value)}
+                        placeholder="(11) 98888-7777"
+                        className="w-full rounded-xl border border-panel-line bg-white px-3 py-2 text-sm text-panel-ink outline-none focus:border-amber"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-panel-ink mb-1">
+                        Última visita
+                      </label>
+                      <input
+                        type="text"
+                        value={linha.data}
+                        onChange={(e) => atualizarLinha(linha.id, "data", e.target.value)}
+                        placeholder="Ex: 12/03/2026"
+                        className="w-full rounded-xl border border-panel-line bg-white px-3 py-2 text-sm text-panel-ink outline-none focus:border-amber"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-panel-ink mb-1">
+                        Valor
+                      </label>
+                      <input
+                        type="text"
+                        value={linha.valor}
+                        onChange={(e) => atualizarLinha(linha.id, "valor", e.target.value)}
+                        placeholder="Ex: R$ 50,00"
+                        className="w-full rounded-xl border border-panel-line bg-white px-3 py-2 text-sm text-panel-ink outline-none focus:border-amber"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={adicionarLinha}
+              className="w-full rounded-xl border-2 border-dashed border-panel-line bg-white py-3 text-sm font-semibold text-panel-ink hover:border-amber hover:text-amber-deep transition flex items-center justify-center gap-2"
+            >
+              <span className="text-lg font-bold leading-none">+</span> Adicionar outro cliente
+            </button>
+          </div>
+        ) : (
+          /* MODO COLAR LISTA / PLANILHA */
+          <div>
+            <label className="block text-sm font-medium text-panel-ink">
+              Cole a lista aqui
+            </label>
+            <textarea
+              value={texto}
+              onChange={(e) => {
+                setTexto(e.target.value);
+                setPrevia(null);
+              }}
+              rows={8}
+              placeholder={EXEMPLO}
+              className="mt-2 w-full rounded-xl border border-panel-line bg-panel-bg p-3 font-mono text-sm text-panel-ink outline-none focus:border-amber"
+            />
+
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setTexto(EXEMPLO);
+                  setPrevia(null);
+                }}
+                className="rounded-lg border border-panel-line px-3 py-1.5 text-sm text-panel-sub transition hover:border-amber hover:text-amber-deep"
+              >
+                Preencher com exemplo de teste
+              </button>
+              <label className="cursor-pointer text-sm text-amber-deep underline">
+                ou escolher um arquivo
+                <input
+                  type="file"
+                  accept=".csv,.txt,.tsv,text/plain"
+                  className="hidden"
+                  onChange={(e) => lerArquivo(e.target.files?.[0])}
+                />
+              </label>
+            </div>
+            <p className="mt-2 text-xs text-panel-sub">
+              Serve planilha, bloco de notas ou o arquivo que o WhatsApp gera quando você manda a
+              conversa por e-mail. Se estiver no Excel, abre lá e cola aqui em cima.
+            </p>
+          </div>
+        )}
+
+        {modo === "colar" && (
+          <div className="pt-2 border-t border-panel-line">
+            <label className="block text-sm font-medium text-panel-ink">
+              Seu nome no WhatsApp{" "}
+              <span className="font-normal text-panel-sub">(só se colou uma conversa)</span>
+            </label>
+            <input
+              value={meuNome}
+              onChange={(e) => setMeuNome(e.target.value)}
+              placeholder="Como você aparece na conversa"
+              className="mt-2 w-full rounded-xl border border-panel-line bg-panel-bg p-3 text-sm text-panel-ink outline-none focus:border-amber"
+            />
+            <p className="mt-1 text-xs text-panel-sub">
+              Serve para a gente não cadastrar você mesmo como cliente.
+            </p>
+          </div>
+        )}
 
         <button
           onClick={() => enviar(true)}
-          disabled={carregando || texto.trim().length < 10}
-          className="mt-5 rounded-xl bg-panel-ink px-5 py-3 text-sm font-semibold text-white transition hover:brightness-125 disabled:opacity-40"
+          disabled={carregando || !temPeloMenosUmCliente}
+          className="mt-3 rounded-xl bg-panel-ink px-6 py-3 text-sm font-semibold text-white transition hover:brightness-125 disabled:opacity-40"
         >
           {carregando ? "Lendo…" : "Ver o que vai entrar"}
         </button>
