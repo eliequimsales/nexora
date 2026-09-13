@@ -3,7 +3,8 @@ import { z } from "zod";
 import { calcularSlots, type Horario } from "@/lib/agenda/disponibilidade";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
-import { rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { respostaDeLimite } from "@/lib/limites";
 import { entradaPorLink } from "@/lib/agenda/entrada-publica";
 import { hashTelefone } from "@/lib/dados/excluir";
 import { ehConflitoDeConcorrencia } from "@/lib/agenda/concorrencia";
@@ -81,6 +82,13 @@ export async function GET(
   request: Request,
   { params }: { params: { slug: string } },
 ) {
+  // Rota pública: protege a leitura de horários e consulta ao banco contra scrapers/inundação
+  const ip = clientIp(request);
+  const politicaGet = { limit: 60, windowMs: 60_000 };
+  if (!rateLimit(`agendar-slots:ip:${ip}`, politicaGet)) {
+    return respostaDeLimite(politicaGet);
+  }
+
   try {
     const negocio = await carregarNegocio(params.slug);
     if (!negocio) {
@@ -146,9 +154,18 @@ export async function POST(
   request: Request,
   { params }: { params: { slug: string } },
 ) {
-  // Rota pública: limite por slug protege contra alguém entupir a agenda.
-  if (!rateLimit(`agendar:${params.slug}`, { limit: 20, windowMs: 5 * 60_000 })) {
-    return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
+  // Rota pública: proteção em camadas.
+  // 1. Teto por IP: impede um único atacante de consumir todos os agendamentos
+  const ip = clientIp(request);
+  const politicaIp = { limit: 10, windowMs: 10 * 60_000 };
+  if (!rateLimit(`agendar:ip:${ip}`, politicaIp)) {
+    return respostaDeLimite(politicaIp);
+  }
+
+  // 2. Teto por negócio (slug): proteção geral contra tráfego excessivo
+  const politicaSlug = { limit: 60, windowMs: 5 * 60_000 };
+  if (!rateLimit(`agendar:slug:${params.slug}`, politicaSlug)) {
+    return respostaDeLimite(politicaSlug);
   }
 
   try {
@@ -160,6 +177,12 @@ export async function POST(
       );
     }
     const { nome, telefone, serviceId, dia, hora } = parsed.data;
+
+    // 3. Teto por telefone: impede disparos em massa fingindo ser o mesmo cliente
+    const politicaTel = { limit: 5, windowMs: 15 * 60_000 };
+    if (!rateLimit(`agendar:tel:${telefone}`, politicaTel)) {
+      return respostaDeLimite(politicaTel);
+    }
 
     const negocio = await carregarNegocio(params.slug);
     if (!negocio) {

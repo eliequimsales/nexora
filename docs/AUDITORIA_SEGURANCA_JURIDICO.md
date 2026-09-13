@@ -7,7 +7,7 @@ Método: leitura do código de autenticação, sessão, webhooks, camada de IA,
 acesso a dados e documentos jurídicos; correção das lacunas encontradas; e um
 teste para cada trava — inclusive para as que já estavam corretas.
 
-Resultado: **1012 testes em 55 arquivos, todos verdes**, `tsc --noEmit` limpo.
+Resultado: **1026 testes em 56 arquivos, todos verdes**, `tsc --noEmit` limpo.
 
 > **A parte mais importante deste relatório é a seção 3.** Uma auditoria que só
 > lista vitórias é propaganda. O que fica em aberto está escrito lá, com o
@@ -101,6 +101,38 @@ pelo proxy) e valida o formato.
 Arquivos: `prisma/schema.prisma`, `app/api/auth/signup/route.ts`,
 `app/api/auth/google/callback/route.ts`.
 
+### 1.6 Cabeçalhos de resposta de segurança (next.config.mjs) travados por teste
+
+**Antes:** configurados no `next.config.mjs`, mas sem teste automatizado — qualquer edição inadvertida poderia remover HSTS, afrouxar CSP ou reabrir clickjacking sem que a suíte falhasse.
+
+**Agora:**
+- `Strict-Transport-Security: max-age=63072000; includeSubDomains` (2 anos).
+- `Content-Security-Policy`: `default-src 'self'`, `frame-ancestors 'none'`, `object-src 'none'`, `connect-src 'self'`, `form-action 'self'`, `base-uri 'self'`, `upgrade-insecure-requests`.
+- `X-Frame-Options: DENY` e `X-Content-Type-Options: nosniff`.
+- `Referrer-Policy: strict-origin-when-cross-origin`.
+- `Permissions-Policy: camera=(), microphone=(), geolocation=()`.
+- `X-Permitted-Cross-Domain-Policies: none`.
+- Todos travados pela suíte `tests/cabecalhos-seguranca.test.ts`.
+
+Arquivos: `next.config.mjs`, `tests/cabecalhos-seguranca.test.ts`.
+
+### 1.7 Superfície pública de agendamento (/api/agendar/[slug]) blindada contra DoS e scraping
+
+**Antes:**
+- `GET` não tinha teto por IP: scrapers podiam varrer slots indefinidamente e sobrecarregar o banco.
+- `POST` limitava apenas por `agendar:${params.slug}`: um atacante com 20 requisições esgotava a cota do negócio e bloqueava clientes reais de agendar.
+- O 429 não devolvia `Retry-After`.
+
+**Agora:**
+- `GET`: teto por IP (`agendar-slots:ip:${ip}`) com 60 req/min e `respostaDeLimite` com `Retry-After`.
+- `POST`: proteção em camadas:
+  1. Teto por IP (`agendar:ip:${ip}`): 10 tentativas a cada 10 min — o atacante bate no seu próprio teto e não derruba a loja;
+  2. Teto por slug ampliado (`agendar:slug:${params.slug}`): 60 agendamentos / 5 min;
+  3. Teto por telefone (`agendar:tel:${telefone}`): 5 agendamentos / 15 min;
+  4. Todas as recusas usam `respostaDeLimite` com `Retry-After`.
+
+Arquivos: `app/api/agendar/[slug]/route.ts`, `tests/agendamento-publico.test.ts`.
+
 ---
 
 ## 2. O que já estava correto — e agora está travado por teste
@@ -173,9 +205,7 @@ hospedar a Evolution num servidor fixo.
 
 ### 3.6 Não auditado nesta passagem
 
-Dependências (`npm audit`), cabeçalhos de resposta (CSP, HSTS, `X-Frame-Options`),
-e a superfície de `/api/agendar/[slug]` (página pública de agendamento). Ficam
-para a próxima.
+Dependências de pacotes dos serviços secundários fora de produção (`apps/api` e `apps/app`), que não sobem na aplicação oficial (`apps/recepcionista`).
 
 ---
 

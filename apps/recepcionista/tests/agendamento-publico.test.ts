@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { entradaPorLink } from "@/lib/agenda/entrada-publica";
 
@@ -59,5 +61,25 @@ describe("o nome informado é sanitizado antes de entrar na base", () => {
   it("nome vazio não cria cliente sem nome nenhum", () => {
     const e = entradaPorLink({ existe: false, nomeInformado: "   ", suprimido: false });
     expect(e.criar?.name).toBe("Cliente");
+  });
+});
+
+describe("a rota pública de agendamento (/api/agendar/[slug]) é protegida contra abusos", () => {
+  const fonte = readFileSync(join(__dirname, "../app/api/agendar/[slug]/route.ts"), "utf8");
+
+  it("limita a leitura de slots (GET) por IP (anti-scraping e anti-DDoS no banco)", () => {
+    expect(fonte).toContain("agendar-slots:ip:");
+    expect(fonte).toContain("clientIp(request)");
+  });
+
+  it("o agendamento (POST) limita por IP e por telefone, além do negócio", () => {
+    expect(fonte).toContain("agendar:ip:");
+    expect(fonte).toContain("agendar:tel:");
+    expect(fonte).toContain("agendar:slug:");
+  });
+
+  it("todas as recusas devolvem Retry-After padronizado via respostaDeLimite", () => {
+    expect(fonte).toContain("respostaDeLimite");
+    expect(fonte).not.toMatch(/TOO_MANY_ATTEMPTS[\s\S]*status:\s*429/);
   });
 });
