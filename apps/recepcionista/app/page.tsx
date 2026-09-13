@@ -144,7 +144,7 @@ export default function Home() {
               A conta que ninguém faz
             </p>
             <h2 className="mt-3 text-center text-3xl font-bold leading-tight sm:text-4xl">
-              Quanto dinheiro está parado na sua base?
+              Quanto dinheiro está parado na sua lista de clientes?
             </h2>
             <p className="mx-auto mb-10 mt-4 max-w-xl text-center text-nx-muted">
               Três números seus. A conta aparece na hora, com a fórmula à vista.

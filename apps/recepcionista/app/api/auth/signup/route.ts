@@ -4,15 +4,16 @@ import { createSessionToken, hashPassword, setSessionCookie } from "@/lib/auth";
 import { logError } from "@/lib/errors";
 import { signupSchema } from "@/lib/validation";
 import { VERSAO_DOCUMENTOS } from "@/lib/legal/identidade";
-import { clientIp, rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { respostaDeLimite, type Politica } from "@/lib/limites";
+
+const IP: Politica = { limit: 5, windowMs: 15 * 60_000 };
 import { abrirVerificacao, VALIDADE_HORAS } from "@/lib/auth/verificacao";
 import { enviarEmail } from "@/lib/reengajamento/email";
 
 export async function POST(request: Request) {
   try {
-    if (!rateLimit(`signup:${clientIp(request)}`, { limit: 5, windowMs: 15 * 60_000 })) {
-      return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
-    }
+    if (!rateLimit(`signup:${clientIp(request)}`, IP)) return respostaDeLimite(IP);
 
     const body = await request.json().catch(() => null);
     const parsed = signupSchema.safeParse(body);
@@ -40,6 +41,11 @@ export async function POST(request: Request) {
         // inutil: o texto muda e ninguem sabe mais o que a pessoa leu.
         termosAceitosEm: new Date(),
         termosVersao: VERSAO_DOCUMENTOS,
+        // O IP fecha o registro auditável do consentimento: QUANDO, QUAL texto
+        // e DE ONDE. Sem ele, "a pessoa aceitou" é afirmação sem prova, e é
+        // justamente a prova que a ANPD pede quando alguém contesta o aceite.
+        // `clientIp` já devolve o último salto confiável do X-Forwarded-For.
+        ipAceite: clientIp(request),
         profile: { create: {} },
       },
     });

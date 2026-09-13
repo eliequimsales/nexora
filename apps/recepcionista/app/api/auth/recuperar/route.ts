@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
-import { clientIp, rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { respostaDeLimite, type Politica } from "@/lib/limites";
+
+const IP: Politica = { limit: 5, windowMs: 15 * 60_000 };
+/** Teto por e-mail: impede inundar a caixa de UMA pessoa a partir de vários IPs. */
+const CONTA: Politica = { limit: 3, windowMs: 60 * 60_000 };
 import { enviarEmail } from "@/lib/reengajamento/email";
 import { abrirPedido, VALIDADE_MINUTOS } from "@/lib/senha";
 
@@ -30,9 +35,7 @@ const MESMA_RESPOSTA = {
 export async function POST(request: Request) {
   // Limite por IP: sem ele, esta rota vira gerador de e-mail em massa a partir
   // de uma lista de endereços de terceiros.
-  if (!rateLimit(`recuperar:${clientIp(request)}`, { limit: 5, windowMs: 15 * 60_000 })) {
-    return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
-  }
+  if (!rateLimit(`recuperar:${clientIp(request)}`, IP)) return respostaDeLimite(IP);
 
   try {
     const parsed = schema.safeParse(await request.json().catch(() => null));
@@ -41,6 +44,14 @@ export async function POST(request: Request) {
     }
 
     const email = parsed.data.email.toLowerCase().trim();
+
+    // Teto por e-mail, além do teto por IP: sem ele, quem quiser inundar a
+    // caixa de entrada de uma pessoa específica só precisa trocar de IP. O
+    // balde é consumido exista ou não a conta — recusar só quando existe
+    // transformaria o 429 num detector de contas, que é exatamente o que a
+    // resposta única desta rota existe para evitar.
+    if (!rateLimit(`recuperar-conta:${email}`, CONTA)) return respostaDeLimite(CONTA);
+
     const empresa = await prisma.company.findUnique({
       where: { email },
       select: { id: true, name: true, email: true },

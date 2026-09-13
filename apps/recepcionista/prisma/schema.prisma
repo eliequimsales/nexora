@@ -73,6 +73,10 @@ model Company {
   // -- coluna que nunca existiu neste produto. Agora existe, e e gravada.
   termosAceitosEm DateTime?
   termosVersao    String?
+  // IP de onde veio o aceite. Registro auditavel do consentimento (LGPD art. 37):
+  // sem ele, "a pessoa aceitou" e afirmacao sem prova. Nulo nas contas criadas
+  // antes deste campo existir - nulo e honesto, zero seria mentira.
+  ipAceite        String?
 
   // Confirmacao da contratacao (Decreto 7.962/2013, art. 4o, V). Marca de
   // envio unico: aplicarAssinatura roda a cada evento da Stripe e reentrega e

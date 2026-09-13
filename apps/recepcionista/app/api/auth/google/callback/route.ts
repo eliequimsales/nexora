@@ -80,6 +80,10 @@ export async function GET(request: Request) {
           // nenhum de consentimento -- e ele tende a ser o caminho mais usado.
           termosAceitosEm: new Date(),
           termosVersao: VERSAO_DOCUMENTOS,
+          // Mesmo registro do cadastro por senha. Sem isto, metade das contas
+          // teria a prova completa do aceite e metade não — e o caminho pelo
+          // Google tende a ser o mais usado.
+          ipAceite: clientIp(request),
           profile: { create: {} },
         },
       });

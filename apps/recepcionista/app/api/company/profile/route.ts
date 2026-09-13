@@ -16,9 +16,40 @@ export async function GET() {
     return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
   }
 
+  // `profile: true` trazia a linha INTEIRA, incluindo o identificador da
+  // instância do WhatsApp, o QR Code em base64 e a última mensagem de erro do
+  // gateway. Nada disso é usado por esta tela e nada disso precisa sair do
+  // servidor: QR ativo no corpo de uma resposta é sessão de WhatsApp viajando
+  // em texto. A lista abaixo é exatamente o que a tela de configurações lê.
   const company = await prisma.company.findUnique({
     where: { id: companyId },
-    select: { name: true, email: true, phone: true, plan: true, profile: true },
+    select: {
+      name: true,
+      email: true,
+      phone: true,
+      plan: true,
+      profile: {
+        select: {
+          description: true,
+          address: true,
+          productsServices: true,
+          pricingInfo: true,
+          paymentMethods: true,
+          serviceRules: true,
+          aiTone: true,
+          greetingMessage: true,
+          awayMessage: true,
+          businessHours: true,
+          faqs: true,
+          handoffKeywords: true,
+          segments: true,
+          followUpEnabled: true,
+          followUpDelayHours: true,
+          followUpMessage: true,
+          maxFollowUps: true,
+        },
+      },
+    },
   });
   if (!company) return NextResponse.json({ error: "Empresa não encontrada" }, { status: 404 });
 
@@ -48,12 +79,11 @@ export async function PUT(request: Request) {
     const { name, ...profileData } = parsed.data;
 
     await prisma.company.update({ where: { id: companyId }, data: { name } });
-    const profile = await prisma.companyProfile.update({
-      where: { companyId },
-      data: profileData,
-    });
+    // Devolvia a linha atualizada inteira — mesmo problema do GET, e a tela
+    // nem lê esse corpo: ela só confere `res.ok`.
+    await prisma.companyProfile.update({ where: { companyId }, data: profileData });
 
-    return NextResponse.json({ ok: true, profile });
+    return NextResponse.json({ ok: true });
   } catch (error) {
     await logError("company-profile", error, companyId);
     return NextResponse.json({ error: "Erro ao salvar configurações" }, { status: 500 });

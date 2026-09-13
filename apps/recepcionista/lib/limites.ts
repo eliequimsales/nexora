@@ -1,4 +1,5 @@
-import { rateLimit } from "@/lib/rate-limit";
+import { NextResponse } from "next/server";
+import { rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 
 /**
  * TETOS DAS ROTAS AUTENTICADAS.
@@ -60,4 +61,22 @@ export const LIMITES = {
  */
 export function limitar(escopo: string, chave: string, politica: Politica): boolean {
   return rateLimit(`${escopo}:${chave}`, politica);
+}
+
+/**
+ * A recusa por excesso de tentativas, com `Retry-After`.
+ *
+ * Sem o cabeçalho, o cliente legítimo não tem como saber se espera dez segundos
+ * ou dez minutos, e o padrão humano é repetir na hora — o que só empurra a
+ * janela para frente e transforma um tropeço em bloqueio prolongado. O valor é
+ * o teto da janela: nunca promete liberação antes da hora.
+ *
+ * Em segundos e como string porque é assim que a RFC 9110 define o cabeçalho.
+ */
+export function respostaDeLimite(politica: Politica): NextResponse {
+  const segundos = Math.max(1, Math.ceil(politica.windowMs / 1000));
+  return NextResponse.json(
+    { error: TOO_MANY_ATTEMPTS },
+    { status: 429, headers: { "Retry-After": String(segundos) } },
+  );
 }

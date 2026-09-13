@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { logError } from "@/lib/errors";
-import { clientIp, rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { respostaDeLimite, type Politica } from "@/lib/limites";
 import { redefinir } from "@/lib/senha";
+
+const IP: Politica = { limit: 10, windowMs: 15 * 60_000 };
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,9 +18,7 @@ const schema = z.object({
 export async function POST(request: Request) {
   // Limite apertado: esta rota aceita um token e troca uma senha. É o alvo
   // óbvio de força bruta.
-  if (!rateLimit(`redefinir:${clientIp(request)}`, { limit: 10, windowMs: 15 * 60_000 })) {
-    return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
-  }
+  if (!rateLimit(`redefinir:${clientIp(request)}`, IP)) return respostaDeLimite(IP);
 
   try {
     const parsed = schema.safeParse(await request.json().catch(() => null));
