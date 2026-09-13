@@ -116,6 +116,13 @@ describe("o botão de exemplo não suja a lista de verdade", () => {
     expect(fonte).toContain("Última visita");
     expect(fonte).toContain("gerarTextoDeLinhas");
   });
+
+  it("permite subir clientes em risco ao topo e exibe clientes cadastrados ordenados", () => {
+    expect(fonte).toContain("Subir clientes em risco ao topo");
+    expect(fonte).toContain("ordenarLinhasPorRisco");
+    expect(fonte).toContain("Meus clientes cadastrados");
+    expect(fonte).toContain("RISCO_CRITICO");
+  });
 });
 
 describe("a Onda entrega o gesto em um clique e avisa o que é definitivo", () => {

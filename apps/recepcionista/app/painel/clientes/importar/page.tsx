@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DECLARACAO_BASE } from "@/lib/legal/identidade";
+import { variantesDeTelefone } from "@/lib/recuperacao/telefone";
 
 /**
  * TRAZER OS CLIENTES — a tela.
@@ -51,12 +52,31 @@ type LinhaCliente = {
   valor: string;
 };
 
+type ClienteCadastrado = {
+  id: string;
+  nome: string;
+  telefone: string;
+  optOut: boolean;
+  ultimaVisita: string | null;
+  diasSemVoltar: number;
+  semDataRegistrada: boolean;
+  valorTotalCents: number;
+  ticketMedioCents: number;
+  totalVisitas: number;
+  status: "RISCO_CRITICO" | "ATRASADO" | "PRE_ATRASO" | "EM_DIA";
+  rotuloStatus: string;
+  explicacaoRisco: string;
+  mensagemReativacao: string;
+};
+
 export default function PaginaImportar() {
   const [modo, setModo] = useState<"campos" | "colar">("campos");
   const [linhas, setLinhas] = useState<LinhaCliente[]>([
     { id: "1", nome: "", telefone: "", data: "", valor: "" },
     { id: "2", nome: "", telefone: "", data: "", valor: "" },
   ]);
+  const [cadastrados, setCadastrados] = useState<ClienteCadastrado[]>([]);
+  const [carregandoCadastrados, setCarregandoCadastrados] = useState(true);
   const [texto, setTexto] = useState("");
   const [meuNome, setMeuNome] = useState("");
   const [confirmo, setConfirmo] = useState(false);
@@ -65,6 +85,24 @@ export default function PaginaImportar() {
   const [recusa, setRecusa] = useState<Recusa | null>(null);
   const [previa, setPrevia] = useState<Resultado | null>(null);
   const [salvo, setSalvo] = useState<Resultado | null>(null);
+
+  const carregarCadastrados = async () => {
+    try {
+      const res = await fetch("/api/clientes");
+      if (res.ok) {
+        const data = await res.json();
+        setCadastrados(data.clientes || []);
+      }
+    } catch {
+      // silencioso
+    } finally {
+      setCarregandoCadastrados(false);
+    }
+  };
+
+  useEffect(() => {
+    void carregarCadastrados();
+  }, []);
 
   const adicionarLinha = () => {
     setLinhas((prev) => [
@@ -97,6 +135,41 @@ export default function PaginaImportar() {
     setTexto(EXEMPLO);
     setPrevia(null);
   };
+
+  const ordenarLinhasPorRisco = () => {
+    const parseData = (str: string): number => {
+      if (!str.trim()) return 9999999999999;
+      const partes = str.trim().split(/[/.-]/);
+      if (partes.length === 3) {
+        if (partes[0].length === 4) {
+          return new Date(Number(partes[0]), Number(partes[1]) - 1, Number(partes[2])).getTime();
+        } else {
+          return new Date(Number(partes[2]), Number(partes[1]) - 1, Number(partes[0])).getTime();
+        }
+      }
+      const timestamp = Date.parse(str);
+      return isNaN(timestamp) ? 9999999999999 : timestamp;
+    };
+
+    setLinhas((prev) => {
+      const clonadas = [...prev];
+      return clonadas.sort((a, b) => {
+        const timeA = parseData(a.data);
+        const timeB = parseData(b.data);
+        // Menor timestamp = data mais antiga no passado = mais tempo sem vir = MAIOR RISCO SOBE AO TOPO!
+        return timeA - timeB;
+      });
+    });
+    setPrevia(null);
+  };
+
+  function linkDoWhatsApp(tel: string, msg: string): string | null {
+    const comPais = variantesDeTelefone(tel).find(
+      (v) => v.startsWith("55") && v.length >= 12,
+    );
+    if (!comPais) return null;
+    return `https://wa.me/${comPais}?text=${encodeURIComponent(msg)}`;
+  }
 
   function gerarTextoDeLinhas(lista: LinhaCliente[]): string {
     const preenchidas = lista.filter(
@@ -151,8 +224,12 @@ export default function PaginaImportar() {
         else setErro(json.error ?? "Não consegui ler essa lista.");
         return;
       }
-      if (simular) setPrevia(json);
-      else setSalvo(json);
+      if (simular) {
+        setPrevia(json);
+      } else {
+        setSalvo(json);
+        void carregarCadastrados();
+      }
     } catch {
       setErro("Não consegui falar com a internet agora. Tenta de novo?");
     } finally {
@@ -249,17 +326,27 @@ export default function PaginaImportar() {
         {modo === "campos" ? (
           /* MODO CAMPOS INDIVIDUAIS */
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-sm font-medium text-panel-ink">
                 Preencha os dados de cada cliente:
               </span>
-              <button
-                type="button"
-                onClick={preencherExemplo}
-                className="rounded-lg border border-panel-line px-3 py-1.5 text-xs text-panel-sub transition hover:border-amber hover:text-amber-deep"
-              >
-                Preencher com exemplo de teste
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={ordenarLinhasPorRisco}
+                  className="rounded-lg border border-amber/50 bg-amber/10 px-3 py-1.5 text-xs font-semibold text-[#7A5A10] transition hover:bg-amber/20 flex items-center gap-1.5"
+                  title="Coloca quem está há mais tempo sem vir no topo para você priorizar e reativar primeiro"
+                >
+                  <span>🔥</span> Subir clientes em risco ao topo
+                </button>
+                <button
+                  type="button"
+                  onClick={preencherExemplo}
+                  className="rounded-lg border border-panel-line px-3 py-1.5 text-xs text-panel-sub transition hover:border-amber hover:text-amber-deep"
+                >
+                  Preencher com exemplo de teste
+                </button>
+              </div>
             </div>
 
             <div className="space-y-3">
@@ -539,6 +626,124 @@ export default function PaginaImportar() {
             </>
           )}
         </div>
+      )}
+
+      {/* CLIENTES CADASTRADOS ORDENADOS POR RISCO */}
+      {cadastrados.length > 0 && (
+        <section className="rounded-2xl border border-panel-line bg-panel-card p-6 space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="font-display text-lg font-semibold text-panel-ink">
+                  Meus clientes cadastrados ({cadastrados.length})
+                </h2>
+                {cadastrados.some((c) => c.status === "RISCO_CRITICO" || c.status === "ATRASADO") && (
+                  <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-700">
+                    🔥 Clientes em risco no topo
+                  </span>
+                )}
+              </div>
+              <p className="mt-1 text-sm text-panel-sub">
+                Quem está há mais tempo sem voltar sobe automaticamente para o topo da lista para você recuperar o contato.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void carregarCadastrados()}
+              className="text-xs text-panel-sub hover:text-panel-ink transition"
+            >
+              Atualizar lista
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {cadastrados.map((c) => {
+              const zapLink = linkDoWhatsApp(c.telefone, c.mensagemReativacao);
+              return (
+                <div
+                  key={c.id}
+                  className={`rounded-xl border p-4 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                    c.status === "RISCO_CRITICO"
+                      ? "border-red-300 bg-red-50/40"
+                      : c.status === "ATRASADO"
+                      ? "border-amber-400/50 bg-amber-50/30"
+                      : c.status === "PRE_ATRASO"
+                      ? "border-yellow-300 bg-yellow-50/20"
+                      : "border-panel-line bg-panel-bg"
+                  }`}
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-sm text-panel-ink">{c.nome}</span>
+                      <span className="text-xs text-panel-sub">{c.telefone}</span>
+
+                      {/* Badge de risco */}
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                          c.status === "RISCO_CRITICO"
+                            ? "bg-red-100 text-red-700 border border-red-200"
+                            : c.status === "ATRASADO"
+                            ? "bg-amber-100 text-[#7A5A10] border border-amber-200"
+                            : c.status === "PRE_ATRASO"
+                            ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
+                            : "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                        }`}
+                      >
+                        <span>
+                          {c.status === "RISCO_CRITICO"
+                            ? "🔴"
+                            : c.status === "ATRASADO"
+                            ? "🟠"
+                            : c.status === "PRE_ATRASO"
+                            ? "🟡"
+                            : "🟢"}
+                        </span>
+                        {c.rotuloStatus}
+                      </span>
+
+                      {c.optOut && (
+                        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] text-gray-600 border border-gray-200">
+                          Pediu para não receber mensagem
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-panel-sub">
+                      <span>{c.explicacaoRisco}</span>
+                      {c.totalVisitas > 0 && (
+                        <span>
+                          • {c.totalVisitas} {c.totalVisitas === 1 ? "visita" : "visitas"}
+                        </span>
+                      )}
+                      {c.valorTotalCents > 0 && (
+                        <span>
+                          • Total:{" "}
+                          {(c.valorTotalCents / 100).toLocaleString("pt-BR", {
+                            style: "currency",
+                            currency: "BRL",
+                          })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-start sm:self-center">
+                    {!c.optOut && zapLink && (
+                      <a
+                        href={zapLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-lg bg-[#25D366] hover:bg-[#20ba59] px-3 py-1.5 text-xs font-semibold text-white transition flex items-center gap-1.5 shadow-sm"
+                      >
+                        <span>💬</span> Chamar no WhatsApp
+                      </a>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
       )}
 
       <SeusDados />
