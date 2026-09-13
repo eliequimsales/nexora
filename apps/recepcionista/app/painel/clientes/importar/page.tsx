@@ -399,7 +399,7 @@ function SeusDados() {
         <h3 className="text-sm font-semibold">Um cliente pediu para ser apagado</h3>
         <p className="mt-1 text-sm text-panel-sub">
           Digite o telefone dele. Apagamos o cadastro, as visitas e os horários futuros. O que
-          ele já gastou continua no seu Livro-Caixa, sem o nome — é o seu faturamento, não o
+          ele já gastou continua em Dinheiro recuperado, sem o nome — é o seu faturamento, não o
           dado dele. Se ele já tinha pedido para parar, ele não volta nem se você mandar a
           mesma planilha de novo.
         </p>

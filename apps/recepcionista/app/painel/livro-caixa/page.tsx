@@ -80,7 +80,7 @@ export default async function LivroCaixaPage() {
   return (
     <main className="max-w-3xl space-y-6">
       <div>
-        <h1 className="font-display text-2xl text-panel-ink">Livro-Caixa</h1>
+        <h1 className="font-display text-2xl text-panel-ink">Dinheiro recuperado</h1>
         <p className="mt-1 text-sm text-panel-sub">
           O dinheiro que voltou pro seu caixa. Só entra aqui o que voltou e pagou, marcado
           por você. Nada é chute.

@@ -18,8 +18,8 @@ import { LogoutButton } from "@/components/logout-button";
 // que não trazem cliente de volta. tests/painel-nav.test.ts segura os dois lados:
 // cinco itens no menu, e as três telas ainda existindo em disco.
 const NAV = [
-  { href: "/painel/onda", label: "Onda de segunda" },
-  { href: "/painel/livro-caixa", label: "Livro-Caixa" },
+  { href: "/painel/onda", label: "Reativar clientes" },
+  { href: "/painel/livro-caixa", label: "Dinheiro recuperado" },
   // "Meus clientes", e não "Minha base": base é palavra de CRM. O dono chama de
   // lista, de caderno, de agenda — nunca de base.
   { href: "/painel/clientes/importar", label: "Meus clientes" },

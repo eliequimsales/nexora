@@ -233,7 +233,7 @@ export default function PaginaOnda() {
     const vazio = onda.vazio;
     return (
       <main className="max-w-2xl p-6">
-        <h1 className="mb-2 font-display text-2xl text-panel-ink">Onda de segunda</h1>
+        <h1 className="mb-2 font-display text-2xl text-panel-ink">Reativar clientes</h1>
         <div className="rounded-2xl border border-panel-line bg-panel-card p-6">
           <p className="mb-2 font-medium text-panel-ink">
             {vazio?.titulo ?? "Hoje você não precisa abrir"}
@@ -270,7 +270,7 @@ export default function PaginaOnda() {
 
       <header>
         <h1 className="font-display text-2xl text-panel-ink">
-          Onda de segunda — {total} clientes
+          Reativar clientes — {total} clientes
         </h1>
         {/*
           A frase que explica a tela antes de o dono precisar saber o nome dela.
@@ -314,7 +314,7 @@ export default function PaginaOnda() {
             {onda.perguntar!.length === 1 ? "pessoa" : "pessoas"}. Quem apareceu?
           </h2>
           <p className="mt-1 text-sm text-panel-sub">
-            Só entra no seu Livro-Caixa o que você disser aqui. Pode deixar para depois —
+            Só entra em Dinheiro recuperado o que você disser aqui. Pode deixar para depois —
             volto a perguntar.
           </p>
 

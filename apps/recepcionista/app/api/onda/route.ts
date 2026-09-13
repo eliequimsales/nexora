@@ -253,7 +253,7 @@ export async function POST(request: Request) {
               ? `Anotado. O toque ${toque + 1} entra na frente da próxima onda.`
               : "Sequência encerrada. Ele não recebe mais mensagem automática."
             : entradaCriada
-              ? "Anotado no Livro-Caixa. Esse número só sobe quando o dinheiro entra."
+              ? "Anotado em Dinheiro recuperado. Esse número só sobe quando o dinheiro entra."
               : "Anotado. Ele sai da sequência.",
     });
   } catch (error) {

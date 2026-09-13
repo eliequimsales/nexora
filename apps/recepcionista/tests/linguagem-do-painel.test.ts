@@ -154,26 +154,34 @@ describe("o texto que o servidor manda para a tela também é em português de d
   }
 });
 
-describe("os dois nomes próprios continuam de pé", () => {
-  it("a Onda de segunda não foi rebatizada", () => {
+describe("o menu diz o que a tela faz, sem metáfora", () => {
+  it("a tela que traz cliente de volta se chama pelo que faz", () => {
     const layout = readFileSync(join(RAIZ, "app/painel/layout.tsx"), "utf8");
-    expect(layout).toContain("Onda de segunda");
+    expect(layout).toContain("Reativar clientes");
+    expect(layout).not.toContain("Onda de segunda");
   });
 
-  it("o Livro-Caixa não foi rebatizado", () => {
+  it("a tela do dinheiro se chama pelo que mostra", () => {
     const layout = readFileSync(join(RAIZ, "app/painel/layout.tsx"), "utf8");
-    expect(layout).toContain("Livro-Caixa");
+    expect(layout).toContain("Dinheiro recuperado");
+    expect(layout).not.toContain("Livro-Caixa");
   });
 
-  it("mas cada um se explica na própria tela, sem exigir que o dono já saiba o nome", () => {
+  it("e o título de cada tela bate com o nome no menu", () => {
     const onda = readFileSync(join(RAIZ, "app/painel/onda/page.tsx"), "utf8");
     const livro = readFileSync(join(RAIZ, "app/painel/livro-caixa/page.tsx"), "utf8");
-    // A frase diz o que a tela é antes de dizer como ela se chama.
-    //
-    // "já passou do tempo que ele mesmo costuma demorar", e NÃO "não voltam há
-    // mais de 30 dias": a conta é por pessoa. Quem corta o cabelo a cada 24 dias
-    // entra na lista antes dos 30; quem vai ao salão a cada 45 não entra aos 31.
-    // O número redondo era mais bonito e era mentira.
+    expect(onda).toContain("Reativar clientes");
+    expect(onda).not.toContain("Onda de segunda");
+    expect(livro).toMatch(/>Dinheiro recuperado</);
+  });
+
+  it("cada tela continua se explicando, e não só se nomeando", () => {
+    const onda = readFileSync(join(RAIZ, "app/painel/onda/page.tsx"), "utf8");
+    const livro = readFileSync(join(RAIZ, "app/painel/livro-caixa/page.tsx"), "utf8");
+    // A frase diz o que a tela é. "já passou do tempo que ele mesmo costuma
+    // demorar", e NÃO "não voltam há mais de 30 dias": a conta é por pessoa.
+    // Quem corta o cabelo a cada 24 dias entra na lista antes dos 30; quem vai
+    // ao salão a cada 45 não entra aos 31. O número redondo era mentira.
     expect(onda).toMatch(/já compraram de você/i);
     expect(onda).toMatch(/o tempo que ele mesmo costuma demorar/i);
     expect(livro).toMatch(/sem você gastar/i);
