@@ -111,7 +111,8 @@ describe("o botão de exemplo não suja a lista de verdade", () => {
   });
 
   it("oferece campos estruturados (Nome, Telefone, Última visita, Valor) para o lojista", () => {
-    expect(fonte).toContain("Preencher por campos");
+    expect(fonte).toContain("Cadastrar cliente");
+    expect(fonte).toContain("Adicionar lista de clientes");
     expect(fonte).toContain("Adicionar outro cliente");
     expect(fonte).toContain("Última visita");
     expect(fonte).toContain("gerarTextoDeLinhas");

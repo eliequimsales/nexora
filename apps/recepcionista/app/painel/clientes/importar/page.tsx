@@ -308,7 +308,7 @@ export default function PaginaImportar() {
                 : "text-panel-sub hover:text-panel-ink hover:bg-panel-bg"
             }`}
           >
-            Preencher por campos
+            Cadastrar cliente
           </button>
           <button
             type="button"
@@ -319,7 +319,7 @@ export default function PaginaImportar() {
                 : "text-panel-sub hover:text-panel-ink hover:bg-panel-bg"
             }`}
           >
-            Colar planilha / texto
+            Adicionar lista de clientes
           </button>
         </div>
 
@@ -437,35 +437,17 @@ export default function PaginaImportar() {
             </button>
           </div>
         ) : (
-          /* MODO COLAR LISTA / PLANILHA */
-          <div>
-            <label className="block text-sm font-medium text-panel-ink">
-              Cole a lista aqui
-            </label>
-            <textarea
-              value={texto}
-              onChange={(e) => {
-                setTexto(e.target.value);
-                setPrevia(null);
-              }}
-              rows={8}
-              placeholder={EXEMPLO}
-              className="mt-2 w-full rounded-xl border border-panel-line bg-panel-bg p-3 font-mono text-sm text-panel-ink outline-none focus:border-amber"
-            />
-
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setTexto(EXEMPLO);
-                  setPrevia(null);
-                }}
-                className="rounded-lg border border-panel-line px-3 py-1.5 text-sm text-panel-sub transition hover:border-amber hover:text-amber-deep"
-              >
-                Preencher com exemplo de teste
-              </button>
-              <label className="cursor-pointer text-sm text-amber-deep underline">
-                ou escolher um arquivo
+          /* MODO ADICIONAR LISTA DE CLIENTES */
+          <div className="space-y-4">
+            <div className="rounded-xl border border-dashed border-panel-line bg-white p-6 text-center transition hover:border-amber">
+              <label className="cursor-pointer block">
+                <span className="block text-3xl mb-1">📁</span>
+                <span className="text-sm font-semibold text-panel-ink hover:text-amber-deep">
+                  Escolher arquivo de planilha (.csv, .txt, .tsv)
+                </span>
+                <span className="block text-xs text-panel-sub mt-1">
+                  Se você tiver um arquivo do Excel ou exportado do seu sistema, clique aqui para selecionar.
+                </span>
                 <input
                   type="file"
                   accept=".csv,.txt,.tsv,text/plain"
@@ -474,10 +456,46 @@ export default function PaginaImportar() {
                 />
               </label>
             </div>
-            <p className="mt-2 text-xs text-panel-sub">
-              Serve planilha, bloco de notas ou o arquivo que o WhatsApp gera quando você manda a
-              conversa por e-mail. Se estiver no Excel, abre lá e cola aqui em cima.
-            </p>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-medium text-panel-ink">
+                  Ou cole o texto da sua lista aqui:
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTexto(EXEMPLO);
+                    setPrevia(null);
+                  }}
+                  className="text-xs text-panel-sub hover:text-amber-deep"
+                >
+                  Preencher com exemplo de teste
+                </button>
+              </div>
+              <textarea
+                value={texto}
+                onChange={(e) => {
+                  setTexto(e.target.value);
+                  setPrevia(null);
+                }}
+                rows={5}
+                placeholder={EXEMPLO}
+                className="w-full rounded-xl border border-panel-line bg-panel-bg p-3 font-mono text-xs text-panel-ink outline-none focus:border-amber"
+              />
+              <div className="mt-2 flex items-center justify-between">
+                <p className="text-xs text-panel-sub">
+                  Serve planilha, bloco de notas ou arquivo de contatos.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setModo("campos")}
+                  className="text-xs text-panel-sub hover:text-panel-ink underline"
+                >
+                  ← Voltar para cadastrar cliente
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
