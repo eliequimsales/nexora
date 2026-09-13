@@ -47,7 +47,7 @@ const PASSOS = [
     // O WhatsApp não entra aqui: o importador agrupa a exportação por remetente,
     // e uma conversa rende um cliente só, sem telefone.
     corpo:
-      "Colado do Excel, arquivo CSV ou caderno digitado. A Nexora entende e diz em português o que não conseguiu ler.",
+      "Colado do Excel, planilha, lista de contatos ou caderno digitado. A Nexora entende e diz em português o que não conseguiu ler.",
   },
   {
     titulo: "Ela descobre o ritmo de cada cliente",
@@ -274,7 +274,7 @@ export default function Home() {
               gente.
             </p>
             <Link href="/diagnostico" className={`${BOTAO_DOURADO} mt-8 px-8 py-4 text-lg`}>
-              Ver quem sumiu da minha base <span aria-hidden="true">→</span>
+              Ver quem sumiu da minha lista <span aria-hidden="true">→</span>
             </Link>
           </div>
         </section>
