@@ -251,7 +251,7 @@ export async function POST(request: Request) {
           : resultado === "SEM_RESPOSTA"
             ? toque < 4
               ? `Anotado. O toque ${toque + 1} entra na frente da próxima onda.`
-              : "Sequência encerrada. Ele não recebe mais mensagem automática."
+              : "Tentativas encerradas para este contato."
             : entradaCriada
               ? "Anotado em Dinheiro recuperado. Esse número só sobe quando o dinheiro entra."
               : "Anotado. Ele sai da sequência.",

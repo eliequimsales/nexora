@@ -162,7 +162,7 @@ export default function Home() {
             <div className="mx-auto max-w-xl rounded-2xl border border-nx-border bg-nx-surface p-5 shadow-nx-glow-sm">
               <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-nx-border pb-3">
                 <div className="flex items-center gap-2">
-                  <p className="font-semibold">Onda de segunda</p>
+                  <p className="font-semibold">Reativar clientes</p>
                   <span className="rounded-full border border-nx-border bg-nx-surface-2 px-2 py-0.5 text-[11px] font-medium text-nx-muted">
                     exemplo
                   </span>

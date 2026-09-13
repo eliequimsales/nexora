@@ -165,7 +165,7 @@ describe("a home", () => {
     expect(home).toMatch(
       /import\s*\{\s*TAMANHO_DA_ONDA\s*\}\s*from\s*["']@\/lib\/recuperacao\/onda["']/,
     );
-    expect(home).toMatch(/Onda de segunda[\s\S]{0,600}exemplo/);
+    expect(home).toMatch(/Reativar clientes[\s\S]{0,600}exemplo/);
     expect(home).toContain("{TAMANHO_DA_ONDA} clientes");
   });
 

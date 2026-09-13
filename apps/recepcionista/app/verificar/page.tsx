@@ -38,7 +38,7 @@ export default async function VerificarPage({
               href="/painel/onda"
               className="mt-7 inline-block rounded-xl bg-nx-gold shadow-nx-glow-sm px-5 py-3 font-semibold text-nx-bg transition hover:bg-nx-gold/90 active:scale-[0.98]"
             >
-              Ir para a Onda de segunda
+              Reativar meus clientes
             </Link>
           </>
         ) : (

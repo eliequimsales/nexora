@@ -87,7 +87,7 @@ export function textoDaChamada(dados: {
   const nome = (dados.nome ?? "").trim();
   // Sem nome a saudação some inteira: "Olá, ," é o detalhe que faz o dono
   // desconfiar de tudo o que vem depois.
-  const abertura = nome ? `${nome}, sua onda desta semana está pronta.` : "Sua onda desta semana está pronta.";
+  const abertura = nome ? `${nome}, sua lista de clientes para reativar está pronta.` : "Sua lista de clientes para reativar está pronta.";
 
   const linhas = [abertura];
 
@@ -107,13 +107,13 @@ export function textoDaChamada(dados: {
     linhas.push(
       `${dados.vencidos} ${dados.vencidos === 1 ? "pessoa" : "pessoas"} de semanas anteriores ` +
         `ainda estão sem desfecho. Se alguma delas apareceu, o dinheiro dela ainda não está ` +
-        `no seu Livro-Caixa.`,
+        `em Dinheiro recuperado.`,
     );
   }
 
   return {
-    assunto: `Sua onda de segunda: ${dados.cartoes} clientes`,
+    assunto: `${dados.cartoes} clientes para reativar esta semana`,
     corpo: linhas.join("\n\n"),
-    acao: { texto: "Ver a onda desta semana", href: "/painel/onda" },
+    acao: { texto: "Reativar meus clientes", href: "/painel/onda" },
   };
 }

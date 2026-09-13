@@ -52,7 +52,7 @@ export function montarConfirmacao(d: DadosConfirmacao): Mensagem {
 
   const corpo = [
     saudacao,
-    `O que você contratou: a Nexora completa — Diagnóstico, importação da sua base, Onda de Segunda e Livro-Caixa da Recuperação. Preço único, sem taxa de adesão e sem cobrança por cliente cadastrado.`,
+    `O que você contratou: a Nexora completa — Diagnóstico, importação da sua lista de clientes, reativação dos que sumiram e o extrato do dinheiro recuperado. Preço único, sem taxa de adesão e sem cobrança por cliente cadastrado.`,
     cobranca,
     `Você pode cancelar quando quiser, sozinho, pelo painel — não precisa ligar nem pedir. Cancelando, você continua com acesso até o fim do período que já pagou.`,
     // Art. 49 do CDC. Contratação fora do estabelecimento tem arrependimento
