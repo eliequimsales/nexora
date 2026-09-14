@@ -35,7 +35,7 @@ export async function POST(request: Request) {
       data: {
         name,
         email,
-        phone,
+        phone: phone || "",
         passwordHash: await hashPassword(password),
         // Grava DATA e VERSAO do que foi aceito. Sem a versao o registro e
         // inutil: o texto muda e ninguem sabe mais o que a pessoa leu.

@@ -8,13 +8,12 @@ import { GoogleButton } from "@/components/google-button";
 const FIELDS = [
   { key: "name", label: "Nome da empresa", type: "text", placeholder: "Ex.: Minha Empresa" },
   { key: "email", label: "E-mail", type: "email", placeholder: "voce@suaempresa.com" },
-  { key: "phone", label: "Telefone (com DDD)", type: "tel", placeholder: "11999998888" },
   { key: "password", label: "Senha (mín. 8 caracteres)", type: "password", placeholder: "••••••••" },
 ] as const;
 
 export default function CadastroPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [aceite, setAceite] = useState(false);
