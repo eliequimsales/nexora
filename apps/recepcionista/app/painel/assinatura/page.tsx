@@ -91,7 +91,9 @@ export default async function PaginaAssinatura({
     <main className="max-w-2xl space-y-6">
       <header>
         <h1 className="font-display text-2xl text-panel-ink">Minha conta</h1>
-        <p className="mt-1 text-sm text-panel-sub">{RESUMO[estado](empresa, agora)}</p>
+        <p className="mt-1 text-sm text-panel-sub">
+          {(RESUMO[estado] ?? RESUMO.TRIAL_EXPIRADO)(empresa, agora)}
+        </p>
       </header>
 
       {searchParams.cancelado && (
