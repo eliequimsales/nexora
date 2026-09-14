@@ -33,9 +33,9 @@ describe("o menu do painel", () => {
 
   it("segue a ordem do fluxo de valor", () => {
     expect(NAV.map((i) => i.href)).toEqual([
+      "/painel/clientes/importar",
       "/painel/onda",
       "/painel/livro-caixa",
-      "/painel/clientes/importar",
       "/painel/configuracoes",
       "/painel/assinatura",
     ]);

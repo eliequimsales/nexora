@@ -63,7 +63,7 @@ type ClienteCadastrado = {
   valorTotalCents: number;
   ticketMedioCents: number;
   totalVisitas: number;
-  status: "RISCO_CRITICO" | "ATRASADO" | "PRE_ATRASO" | "EM_DIA";
+  status: "RISCO_CRITICO" | "ATRASADO" | "PRE_ATRASO" | "EM_DIA" | "SEM_HISTORICO";
   rotuloStatus: string;
   explicacaoRisco: string;
   mensagemReativacao: string;
@@ -669,7 +669,9 @@ export default function PaginaImportar() {
                       {/* Badge de risco */}
                       <span
                         className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                          c.status === "RISCO_CRITICO"
+                          c.semDataRegistrada || c.status === "SEM_HISTORICO"
+                            ? "bg-slate-100 text-slate-700 border border-slate-200"
+                            : c.status === "RISCO_CRITICO"
                             ? "bg-red-100 text-red-700 border border-red-200"
                             : c.status === "ATRASADO"
                             ? "bg-amber-100 text-[#7A5A10] border border-amber-200"
@@ -679,7 +681,9 @@ export default function PaginaImportar() {
                         }`}
                       >
                         <span>
-                          {c.status === "RISCO_CRITICO"
+                          {c.semDataRegistrada || c.status === "SEM_HISTORICO"
+                            ? "⚪"
+                            : c.status === "RISCO_CRITICO"
                             ? "🔴"
                             : c.status === "ATRASADO"
                             ? "🟠"

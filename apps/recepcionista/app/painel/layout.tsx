@@ -18,11 +18,11 @@ import { LogoutButton } from "@/components/logout-button";
 // que não trazem cliente de volta. tests/painel-nav.test.ts segura os dois lados:
 // cinco itens no menu, e as três telas ainda existindo em disco.
 const NAV = [
-  { href: "/painel/onda", label: "Reativar clientes" },
-  { href: "/painel/livro-caixa", label: "Dinheiro recuperado" },
   // "Meus clientes", e não "Minha base": base é palavra de CRM. O dono chama de
   // lista, de caderno, de agenda — nunca de base.
   { href: "/painel/clientes/importar", label: "Meus clientes" },
+  { href: "/painel/onda", label: "Reativar clientes" },
+  { href: "/painel/livro-caixa", label: "Dinheiro recuperado" },
   // "WhatsApp", e não "Meu Atendente": o dono procura no menu o nome da coisa
   // que ele conhece, não o nome que a gente deu para o produto.
   { href: "/painel/configuracoes", label: "WhatsApp" },
@@ -53,7 +53,7 @@ export default async function PainelLayout({ children }: { children: React.React
       <header className="border-b border-panel-line bg-panel-card">
         <div className="mx-auto flex max-w-page items-center justify-between px-6 py-3">
           <div className="flex items-center gap-8">
-            <Link href="/painel/onda" className="flex items-center gap-2">
+            <Link href="/painel/clientes/importar" className="flex items-center gap-2">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber font-display text-sm font-bold text-night">
                 N
               </span>
