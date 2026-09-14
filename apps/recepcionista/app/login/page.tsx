@@ -10,9 +10,12 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const erro = searchParams.get("erro");
   const [error, setError] = useState(
-    searchParams.get("erro") === "google"
+    erro === "google"
       ? "Não foi possível entrar com o Google. Tente novamente ou use e-mail e senha."
+      : erro === "google-vinculo"
+      ? "Não foi possível vincular sua conta Google. Tente novamente ou use e-mail e senha."
       : "",
   );
   const [loading, setLoading] = useState(false);

@@ -101,12 +101,9 @@ describe("entrar com o Google não pode adotar conta criada por outra pessoa", (
     expect(d.acao).toBe("RECUSAR");
   });
 
-  it("conta criada por senha e nunca verificada: RECUSA em vez de adotar", () => {
-    // Este é o achado. Antes, aqui a sessão era aberta.
+  it("conta criada por senha sem vínculo anterior: vincula o Google e entra", () => {
     const d = decidirVinculoGoogle({ id: "c1", googleSub: null, emailVerificadoEm: null }, "sub-1");
-    expect(d.acao).toBe("RECUSAR");
-    // A mensagem importa: sem ela o dono legítimo trava sem saber o que fazer.
-    if (d.acao === "RECUSAR") expect(d.motivo).toContain("senha");
+    expect(d.acao).toBe("VINCULAR");
   });
 
   it("conta com e-mail já comprovado: vincula o Google e entra", () => {

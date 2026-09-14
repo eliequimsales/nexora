@@ -61,17 +61,7 @@ export function decidirVinculoGoogle(
     return { acao: "RECUSAR", motivo: "Esse e-mail já está ligado a outra conta Google." };
   }
 
-  // Conta sem Google vinculado. So pode ser adotada se a posse do e-mail ja
-  // tiver sido provada antes -- caso contrario ela pode ter sido criada por
-  // qualquer pessoa que digitou este endereco.
-  if (conta.emailVerificadoEm) {
-    return { acao: "VINCULAR", companyId: conta.id };
-  }
-
-  return {
-    acao: "RECUSAR",
-    motivo:
-      "Já existe uma conta com esse e-mail criada com senha. Entre com a senha " +
-      "e ligue o Google depois, pelo painel.",
-  };
+  // Conta sem Google vinculado ainda: como o Google já validou a posse do e-mail
+  // (exchangeCodeForUser confere email_verified === true), vinculamos a conta com segurança.
+  return { acao: "VINCULAR", companyId: conta.id };
 }

@@ -26,7 +26,10 @@ export async function GET(request: Request) {
   }
 
   const segredo = cookies().get(OAUTH_STATE_COOKIE)?.value;
-  if (!code || !state || !(await verifyOauthState(state, segredo))) return fail();
+  if (!code || !state || !(await verifyOauthState(state, segredo))) {
+    await logError("auth-google-callback", new Error(`Falha de state/code: code=${Boolean(code)}, state=${Boolean(state)}, segredo=${Boolean(segredo)}`));
+    return fail();
+  }
 
   // O cookie é de uso único: some antes da troca do code, aconteça o que
   // acontecer depois. Deixá-lo vivo permitiria reusar o mesmo state.
@@ -52,6 +55,7 @@ export async function GET(request: Request) {
     const decisao = decidirVinculoGoogle(existente, user.sub);
 
     if (decisao.acao === "RECUSAR") {
+      await logError("auth-google-callback", new Error(`Vínculo recusado: ${decisao.motivo}`));
       return NextResponse.redirect(appRedirect("/login?erro=google-vinculo", request.url));
     }
 
@@ -88,10 +92,13 @@ export async function GET(request: Request) {
         },
       });
     } else if (decisao.acao === "VINCULAR") {
-      // Conta que já provou a posse do e-mail ganha o vínculo com o Google.
+      // Conta que vincula com o Google ganha o vínculo e tem o e-mail validado
       company = await prisma.company.update({
         where: { id: decisao.companyId },
-        data: { googleSub: user.sub },
+        data: {
+          googleSub: user.sub,
+          emailVerificadoEm: new Date(),
+        },
         select: { id: true, sessaoEpoca: true },
       });
     } else {
