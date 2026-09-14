@@ -5,6 +5,21 @@ const nextConfig = {
     // Necessário no Next 14 para o instrumentation.ts (worker de follow-up)
     instrumentationHook: true,
   },
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [
+          {
+            type: "host",
+            value: "meunexora.com.br",
+          },
+        ],
+        destination: "https://www.meunexora.com.br/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {
