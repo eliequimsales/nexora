@@ -23,9 +23,6 @@ const NAV = [
   { href: "/painel/clientes/importar", label: "Meus clientes" },
   { href: "/painel/onda", label: "Reativar clientes" },
   { href: "/painel/livro-caixa", label: "Dinheiro recuperado" },
-  // "WhatsApp", e não "Meu Atendente": o dono procura no menu o nome da coisa
-  // que ele conhece, não o nome que a gente deu para o produto.
-  { href: "/painel/configuracoes", label: "WhatsApp" },
   { href: "/painel/assinatura", label: "Minha conta" },
 ];
 

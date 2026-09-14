@@ -27,8 +27,8 @@ const NAV = [...layout.matchAll(/\{\s*href:\s*"([^"]+)",\s*label:\s*"([^"]+)"\s*
 );
 
 describe("o menu do painel", () => {
-  it("tem exatamente cinco itens", () => {
-    expect(NAV).toHaveLength(5);
+  it("tem exatamente quatro itens", () => {
+    expect(NAV).toHaveLength(4);
   });
 
   it("segue a ordem do fluxo de valor", () => {
@@ -36,29 +36,24 @@ describe("o menu do painel", () => {
       "/painel/clientes/importar",
       "/painel/onda",
       "/painel/livro-caixa",
-      "/painel/configuracoes",
       "/painel/assinatura",
     ]);
   });
 
-  it("chama a tela do Atendente pelo nome que o dono usa: WhatsApp", () => {
-    expect(NAV.find((i) => i.href === "/painel/configuracoes")?.label).toBe("WhatsApp");
-    expect(layout).not.toContain("Meu Atendente");
-  });
-
-  it("não leva para Conversas, Treinamento nem Relatórios", () => {
-    for (const fora of ["/painel/conversas", "/painel/treinamento", "/painel/relatorios"]) {
+  it("não leva para telas secundárias fora do fluxo direto de valor", () => {
+    for (const fora of ["/painel/conversas", "/painel/treinamento", "/painel/relatorios", "/painel/configuracoes"]) {
       expect(NAV.map((i) => i.href), fora).not.toContain(fora);
     }
   });
 });
 
 describe("tirar do menu não é apagar a tela", () => {
-  it("as três telas retiradas continuam existindo", () => {
+  it("as telas retiradas continuam existindo", () => {
     for (const pagina of [
       "app/painel/conversas/page.tsx",
       "app/painel/treinamento/page.tsx",
       "app/painel/relatorios/page.tsx",
+      "app/painel/configuracoes/page.tsx",
     ]) {
       expect(existsSync(join(RAIZ, pagina)), pagina).toBe(true);
     }
