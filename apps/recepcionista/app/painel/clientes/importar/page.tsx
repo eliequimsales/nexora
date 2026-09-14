@@ -78,6 +78,7 @@ export default function PaginaImportar() {
   const [cadastrados, setCadastrados] = useState<ClienteCadastrado[]>([]);
   const [carregandoCadastrados, setCarregandoCadastrados] = useState(true);
   const [texto, setTexto] = useState("");
+  const [nomeArquivo, setNomeArquivo] = useState<string | null>(null);
   const [meuNome, setMeuNome] = useState("");
   const [confirmo, setConfirmo] = useState(false);
   const [carregando, setCarregando] = useState(false);
@@ -240,6 +241,7 @@ export default function PaginaImportar() {
   const lerArquivo = async (arquivo: File | undefined) => {
     if (!arquivo) return;
     setPrevia(null);
+    setNomeArquivo(arquivo.name);
     setTexto(await arquivo.text());
   };
 
@@ -439,14 +441,16 @@ export default function PaginaImportar() {
         ) : (
           /* MODO ADICIONAR LISTA DE CLIENTES */
           <div className="space-y-4">
-            <div className="rounded-xl border border-dashed border-panel-line bg-white p-6 text-center transition hover:border-amber">
+            <div className="rounded-xl border border-dashed border-panel-line bg-white p-8 text-center transition hover:border-amber">
               <label className="cursor-pointer block">
-                <span className="block text-3xl mb-1">📁</span>
+                <span className="block text-4xl mb-2">📁</span>
                 <span className="text-sm font-semibold text-panel-ink hover:text-amber-deep">
-                  Escolher arquivo de planilha (.csv, .txt, .tsv)
+                  {nomeArquivo ? `Arquivo selecionado: ${nomeArquivo}` : "Escolher arquivo de planilha (.csv, .xlsx, .txt)"}
                 </span>
                 <span className="block text-xs text-panel-sub mt-1">
-                  Se você tiver um arquivo do Excel ou exportado do seu sistema, clique aqui para selecionar.
+                  {nomeArquivo
+                    ? "Arquivo pronto para leitura. Clique no botão abaixo para ver o que vai entrar."
+                    : "Selecione o arquivo do Excel ou exportado do seu sistema para importar seus clientes de uma vez."}
                 </span>
                 <input
                   type="file"
@@ -457,63 +461,30 @@ export default function PaginaImportar() {
               </label>
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-medium text-panel-ink">
-                  Ou cole o texto da sua lista aqui:
-                </label>
+            <div className="flex items-center justify-between">
+              {nomeArquivo ? (
                 <button
                   type="button"
                   onClick={() => {
-                    setTexto(EXEMPLO);
+                    setNomeArquivo(null);
+                    setTexto("");
                     setPrevia(null);
                   }}
-                  className="text-xs text-panel-sub hover:text-amber-deep"
+                  className="text-xs text-red-600 hover:underline"
                 >
-                  Preencher com exemplo de teste
+                  Remover arquivo selecionado
                 </button>
-              </div>
-              <textarea
-                value={texto}
-                onChange={(e) => {
-                  setTexto(e.target.value);
-                  setPrevia(null);
-                }}
-                rows={5}
-                placeholder={EXEMPLO}
-                className="w-full rounded-xl border border-panel-line bg-panel-bg p-3 font-mono text-xs text-panel-ink outline-none focus:border-amber"
-              />
-              <div className="mt-2 flex items-center justify-between">
-                <p className="text-xs text-panel-sub">
-                  Serve planilha, bloco de notas ou arquivo de contatos.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setModo("campos")}
-                  className="text-xs text-panel-sub hover:text-panel-ink underline"
-                >
-                  ← Voltar para cadastrar cliente
-                </button>
-              </div>
+              ) : (
+                <span />
+              )}
+              <button
+                type="button"
+                onClick={() => setModo("campos")}
+                className="text-xs text-panel-sub hover:text-panel-ink underline"
+              >
+                ← Voltar para cadastrar cliente
+              </button>
             </div>
-          </div>
-        )}
-
-        {modo === "colar" && (
-          <div className="pt-2 border-t border-panel-line">
-            <label className="block text-sm font-medium text-panel-ink">
-              Seu nome no WhatsApp{" "}
-              <span className="font-normal text-panel-sub">(só se colou uma conversa)</span>
-            </label>
-            <input
-              value={meuNome}
-              onChange={(e) => setMeuNome(e.target.value)}
-              placeholder="Como você aparece na conversa"
-              className="mt-2 w-full rounded-xl border border-panel-line bg-panel-bg p-3 text-sm text-panel-ink outline-none focus:border-amber"
-            />
-            <p className="mt-1 text-xs text-panel-sub">
-              Serve para a gente não cadastrar você mesmo como cliente.
-            </p>
           </div>
         )}
 
