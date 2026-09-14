@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionCompanyId } from "@/lib/auth";
+import { podeExecutar } from "@/lib/billing/acesso";
+import { estadoDaEmpresa } from "@/lib/billing/guarda";
 import { prisma } from "@/lib/db";
 import { rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 import { calcularCiclo, medianaDoSegmento } from "@/lib/recuperacao/ciclo";
@@ -17,6 +19,11 @@ export const dynamic = "force-dynamic";
  * REGRA: Os clientes que estão há mais tempo sem voltar e em maior risco de sumir
  * sobem para o TOPO da lista, permitindo que o lojista veja imediatamente quem
  * está prestes a ser perdido para sempre e tome ação.
+ *
+ * A LISTA é dado do dono e sai sempre. A MENSAGEM PRONTA é a ação que a
+ * assinatura cobre (ENVIAR_TOQUE): sem ela, o campo vem nulo e a resposta leva a
+ * recusa com o botão de resolver. Antes esta rota entregava a mensagem para
+ * qualquer conta, e "Meus clientes" virava uma porta lateral para a onda travada.
  */
 export async function GET() {
   const companyId = await getSessionCompanyId();
@@ -27,6 +34,9 @@ export async function GET() {
   if (!rateLimit(`clientes:listar:${companyId}`, { limit: 60, windowMs: 60_000 })) {
     return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
   }
+
+  // Sem 402 aqui: recusar a rota inteira sequestraria a lista. A trava vira campo.
+  const permissao = podeExecutar(await estadoDaEmpresa(companyId), "ENVIAR_TOQUE");
 
   const empresa = await prisma.company.findUnique({
     where: { id: companyId },
@@ -135,7 +145,9 @@ export async function GET() {
       status,
       rotuloStatus,
       explicacaoRisco,
-      mensagemReativacao,
+      // Mensagem só com a ação paga, e nunca para quem pediu para parar (LGPD,
+      // art. 18): a tela já escondia o botão, mas o texto não precisa nem sair.
+      mensagemReativacao: permissao.pode && !c.optOut ? mensagemReativacao : null,
     };
   });
 
@@ -172,5 +184,7 @@ export async function GET() {
     clientes: lista,
     total: lista.length,
     emRisco: lista.filter((c) => c.status === "RISCO_CRITICO" || c.status === "ATRASADO").length,
+    // Regra Zero: sem a mensagem, a tela recebe o motivo e o caminho para resolver.
+    trava: permissao.pode ? null : { motivo: permissao.motivo, acao: permissao.acao },
   });
 }

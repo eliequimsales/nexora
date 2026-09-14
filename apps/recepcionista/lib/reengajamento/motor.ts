@@ -149,7 +149,9 @@ export function decidirToque(s: Sinais, agora: Date): Toque | null {
   // --- 3. O teste grátis está acabando.
   if (
     !jaFoi("TRIAL_ACABANDO") &&
-    s.subscriptionStatus === "trialing" &&
+    // O teste que nasce no cadastro não tem assinatura na Stripe (status nulo).
+    // Sem ele aqui, o prazo local acabaria sem aviso nenhum.
+    (s.subscriptionStatus === "trialing" || s.subscriptionStatus === null) &&
     s.trialEndsAt &&
     dias(agora, s.trialEndsAt) <= 3 &&
     s.trialEndsAt > agora

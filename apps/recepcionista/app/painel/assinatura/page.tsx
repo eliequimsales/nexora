@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSessionCompanyId } from "@/lib/auth";
 import { estadoDaConta, TOLERANCIA_DIAS, TRIAL_DIAS } from "@/lib/billing/acesso";
 import { convergirDoCheckout } from "@/lib/billing/converger";
+import { garantirRelogio } from "@/lib/billing/relogio-da-conta";
 import { emReais, formasDePagamentoTexto, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
 import { variaveisPendentesDaStripe } from "@/lib/billing/stripe";
 import { prisma } from "@/lib/db";
@@ -47,9 +48,10 @@ export default async function PaginaAssinatura({
     }
   }
 
-  const empresa = await prisma.company.findUnique({
+  const lida = await prisma.company.findUnique({
     where: { id: companyId },
     select: {
+      createdAt: true,
       subscriptionStatus: true,
       trialEndsAt: true,
       currentPeriodEnd: true,
@@ -58,9 +60,14 @@ export default async function PaginaAssinatura({
       stripeCustomerId: true,
     },
   });
-  if (!empresa) redirect("/login");
+  if (!lida) redirect("/login");
 
   const agora = new Date();
+  // Conta antiga pode chegar aqui antes de passar por qualquer trava. Sem
+  // garantir o relógio, esta tela diria "seu teste terminou" para quem ainda
+  // tem os dias de aviso.
+  const trialEndsAt = await garantirRelogio({ id: companyId, ...lida }, agora);
+  const empresa = { ...lida, trialEndsAt };
   const estado = estadoDaConta(empresa, agora);
 
   // North Star: Receita Recuperada COMPROVADA. Só o que foi atribuído — o resto

@@ -96,6 +96,16 @@ describe("decidirToque — fim do teste grátis", () => {
     expect(t?.momento).toBe("TRIAL_ACABANDO");
   });
 
+  // O teste que nasce no cadastro não tem assinatura na Stripe. Sem este aviso,
+  // o prazo acabaria em silêncio — e trava que chega sem aviso parece armadilha.
+  it("o teste local, sem assinatura na Stripe, também recebe o aviso de três dias", () => {
+    const t = decidirToque(
+      sinais({ subscriptionStatus: null, trialEndsAt: emDias(2), clientesNaBase: 60 }),
+      HOJE,
+    );
+    expect(t?.momento).toBe("TRIAL_ACABANDO");
+  });
+
   it("acabou e não pagou entra na sequência de três", () => {
     const base = {
       subscriptionStatus: "paused",

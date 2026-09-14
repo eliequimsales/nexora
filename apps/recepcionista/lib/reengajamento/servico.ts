@@ -14,6 +14,7 @@ import { calcularCiclo, medianaDoSegmento } from "@/lib/recuperacao/ciclo";
 import { classificar } from "@/lib/recuperacao/esteiras";
 import { logError } from "@/lib/errors";
 import { safeEqual } from "@/lib/rate-limit";
+import { garantirRelogio } from "@/lib/billing/relogio-da-conta";
 import { enviarEmail } from "./email";
 import { decidirToque, type Momento, type Sinais } from "./motor";
 
@@ -177,7 +178,10 @@ export async function rodarRegua(hoje = new Date()): Promise<ResultadoRegua> {
 
   for (const empresa of empresas) {
     try {
-      const toque = decidirToque(await sinaisDe(empresa, hoje), hoje);
+      // A régua pode ser o primeiro código a ler uma conta antiga, e é ela que
+      // manda o aviso de três dias: o prazo precisa existir antes da decisão.
+      const trialEndsAt = await garantirRelogio(empresa, hoje);
+      const toque = decidirToque(await sinaisDe({ ...empresa, trialEndsAt }, hoje), hoje);
       if (!toque) continue;
 
       const url = `${appUrl}/descadastro?e=${empresa.id}&t=${tokenDescadastro(empresa.id)}`;

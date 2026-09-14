@@ -63,6 +63,10 @@ export const ACOES_SEMPRE_LIVRES: Acao[] = [
   // Marcar que um cliente voltou é COMO a Receita Recuperada entra no sistema.
   // Travar isso apagaria a prova da garantia que a gente mesmo vende.
   "MARCAR_RESULTADO",
+  // A lista entra de graça em qualquer estado. É ela que gera o diagnóstico, e
+  // o diagnóstico é o que mostra ao dono quanto dinheiro está parado — travar
+  // a importação escondia justamente a dor que faz alguém decidir assinar.
+  "IMPORTAR",
 ];
 
 /** Dias de inadimplência com acesso total antes de travar. */
@@ -117,8 +121,17 @@ export function estadoDaConta(a: Assinatura, agora: Date): EstadoConta {
   // retomada com o MESMO histórico quando ele adicionar o cartão.
   if (s === "paused") return "TRIAL_EXPIRADO";
 
-  if (s === "trialing" || s === null || s === undefined) {
-    if (!a.trialEndsAt) return "TRIAL";
+  // Trial da Stripe: ela diz que está em teste, e só a data vencida desmente.
+  if (s === "trialing") {
+    return a.trialEndsAt && agora >= a.trialEndsAt ? "TRIAL_EXPIRADO" : "TRIAL";
+  }
+
+  if (s === null || s === undefined) {
+    // Sem prazo nenhum NÃO é teste infinito. Toda conta ganha relógio no
+    // cadastro, ou na primeira leitura se for antiga (garantirRelogio, em
+    // relogio-da-conta.ts). Chegar aqui sem ele é defeito, e defeito erra para
+    // o lado de travar a ação — o dado continua livre.
+    if (!a.trialEndsAt) return "TRIAL_EXPIRADO";
     return agora < a.trialEndsAt ? "TRIAL" : "TRIAL_EXPIRADO";
   }
 

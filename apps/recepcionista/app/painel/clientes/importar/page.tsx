@@ -66,7 +66,8 @@ type ClienteCadastrado = {
   status: "RISCO_CRITICO" | "ATRASADO" | "PRE_ATRASO" | "EM_DIA" | "SEM_HISTORICO";
   rotuloStatus: string;
   explicacaoRisco: string;
-  mensagemReativacao: string;
+  /** null quando a conta não cobre ENVIAR_TOQUE ou quando o cliente pediu para parar. */
+  mensagemReativacao: string | null;
 };
 
 export default function PaginaImportar() {
@@ -76,6 +77,8 @@ export default function PaginaImportar() {
     { id: "2", nome: "", telefone: "", data: "", valor: "" },
   ]);
   const [cadastrados, setCadastrados] = useState<ClienteCadastrado[]>([]);
+  // A recusa de ENVIAR_TOQUE: a lista vem inteira, a mensagem pronta não.
+  const [travaMensagem, setTravaMensagem] = useState<Recusa | null>(null);
   const [carregandoCadastrados, setCarregandoCadastrados] = useState(true);
   const [texto, setTexto] = useState("");
   const [nomeArquivo, setNomeArquivo] = useState<string | null>(null);
@@ -93,6 +96,7 @@ export default function PaginaImportar() {
       if (res.ok) {
         const data = await res.json();
         setCadastrados(data.clientes || []);
+        setTravaMensagem(data.trava ?? null);
       }
     } catch {
       // silencioso
@@ -645,9 +649,26 @@ export default function PaginaImportar() {
             </button>
           </div>
 
+          {/*
+            A lista é dele e aparece sempre. A mensagem pronta é o que a
+            assinatura cobre: sem ela, o servidor manda o motivo e o caminho para
+            resolver — Regra Zero, igual à recusa da onda.
+          */}
+          {travaMensagem && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber/40 bg-amber/10 p-4">
+              <p className="text-sm text-panel-ink">{travaMensagem.motivo}</p>
+              <Link
+                href={travaMensagem.acao.href}
+                className="rounded-lg bg-amber px-4 py-2 text-xs font-semibold text-night transition hover:brightness-110"
+              >
+                {travaMensagem.acao.texto}
+              </Link>
+            </div>
+          )}
+
           <div className="space-y-3">
             {cadastrados.map((c) => {
-              const zapLink = linkDoWhatsApp(c.telefone, c.mensagemReativacao);
+              const zapLink = c.mensagemReativacao ? linkDoWhatsApp(c.telefone, c.mensagemReativacao) : null;
               return (
                 <div
                   key={c.id}
@@ -721,6 +742,14 @@ export default function PaginaImportar() {
                   </div>
 
                   <div className="flex items-center gap-2 self-start sm:self-center">
+                    {!c.optOut && !c.mensagemReativacao && travaMensagem && (
+                      <Link
+                        href={travaMensagem.acao.href}
+                        className="rounded-lg border border-amber/60 bg-amber/15 px-3 py-1.5 text-xs font-semibold text-panel-ink transition hover:bg-amber/25"
+                      >
+                        Liberar mensagem pronta
+                      </Link>
+                    )}
                     {!c.optOut && zapLink && (
                       <a
                         href={zapLink}

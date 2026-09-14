@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { estadoDaConta, podeExecutar, type Acao, type EstadoConta } from "./acesso";
+import { garantirRelogio } from "./relogio-da-conta";
 
 /**
  * Ponte entre a regra pura e as rotas.
@@ -14,6 +15,8 @@ export async function estadoDaEmpresa(companyId: string): Promise<EstadoConta> {
   const empresa = await prisma.company.findUnique({
     where: { id: companyId },
     select: {
+      id: true,
+      createdAt: true,
       subscriptionStatus: true,
       trialEndsAt: true,
       currentPeriodEnd: true,
@@ -24,7 +27,13 @@ export async function estadoDaEmpresa(companyId: string): Promise<EstadoConta> {
   // Empresa inexistente não é problema de cobrança — quem chamou já validou a
   // sessão. Tratar como trial evita bloquear por um erro de leitura.
   if (!empresa) return "TRIAL";
-  return estadoDaConta(empresa, new Date());
+
+  // Conta antiga chega aqui sem prazo. Sem garantir o relógio antes, a regra
+  // pura (que trava conta sem prazo) diria "teste terminou" para quem ainda
+  // tem os dias de aviso.
+  const agora = new Date();
+  const trialEndsAt = await garantirRelogio(empresa, agora);
+  return estadoDaConta({ ...empresa, trialEndsAt }, agora);
 }
 
 /**

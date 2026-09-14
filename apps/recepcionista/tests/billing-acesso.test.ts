@@ -39,8 +39,13 @@ const TODOS_ESTADOS: EstadoConta[] = [
 // bloqueio não pode depender do relógio de quem roda o teste.
 // ---------------------------------------------------------------------------
 describe("estadoDaConta", () => {
-  it("sem assinatura e sem relógio de trial iniciado, está em TRIAL", () => {
-    expect(estadoDaConta(conta(), em("2026-03-01"))).toBe("TRIAL");
+  // Até 14/09/2026 esta linha dizia TRIAL, e o teste grátis nunca acabava para
+  // quem não abrisse o checkout: só a Stripe gravava prazo. Agora toda conta
+  // ganha relógio no cadastro, ou na primeira leitura se for antiga (ver
+  // lib/billing/relogio.ts). Chegar aqui sem relógio é defeito, e defeito erra
+  // para o lado de travar a AÇÃO — o dado continua livre.
+  it("sem assinatura e sem relógio não é teste infinito: trava as ações de saída", () => {
+    expect(estadoDaConta(conta(), em("2026-03-01"))).toBe("TRIAL_EXPIRADO");
   });
 
   it("trial local ainda dentro do prazo é TRIAL", () => {
@@ -157,11 +162,20 @@ describe("podeExecutar — regras", () => {
   });
 
   it("nos estados sem acesso, as ações de saída travam", () => {
+    const saida: Acao[] = ["GERAR_ONDA", "ENVIAR_TOQUE", "CONECTAR_WHATSAPP"];
     for (const estado of travados) {
-      expect(podeExecutar(estado, "GERAR_ONDA").pode).toBe(false);
-      expect(podeExecutar(estado, "ENVIAR_TOQUE").pode).toBe(false);
-      expect(podeExecutar(estado, "IMPORTAR").pode).toBe(false);
-      expect(podeExecutar(estado, "CONECTAR_WHATSAPP").pode).toBe(false);
+      for (const acao of saida) {
+        expect(podeExecutar(estado, acao).pode, `${acao} em ${estado}`).toBe(false);
+      }
+    }
+  });
+
+  // A lista é a entrada do diagnóstico, e o diagnóstico é o que mostra ao dono
+  // quanto dinheiro está parado. Travar a importação escondia justamente a dor
+  // que faz alguém decidir assinar.
+  it("importar a lista NUNCA trava: é ela que mostra o dinheiro parado", () => {
+    for (const estado of TODOS_ESTADOS) {
+      expect(podeExecutar(estado, "IMPORTAR").pode, estado).toBe(true);
     }
   });
 

@@ -1,6 +1,8 @@
+import type Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { getSessionCompanyId } from "@/lib/auth";
-import { TRIAL_DIAS } from "@/lib/billing/acesso";
+import { fimDoTrialNoCheckout } from "@/lib/billing/relogio";
+import { garantirRelogio } from "@/lib/billing/relogio-da-conta";
 import { stripe, stripeConfigurado, variaveisPendentesDaStripe } from "@/lib/billing/stripe";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
@@ -83,6 +85,9 @@ export async function POST(request: Request) {
         email: true,
         stripeCustomerId: true,
         emailVerificadoEm: true,
+        createdAt: true,
+        subscriptionStatus: true,
+        trialEndsAt: true,
       },
     });
     if (!empresa) return NextResponse.json({ error: "Empresa não encontrada" }, { status: 404 });
@@ -112,28 +117,42 @@ export async function POST(request: Request) {
       });
     }
 
+    // O TRIAL DA STRIPE TERMINA NO DIA DO RELÓGIO DA CONTA.
+    //
+    // Antes a sessão pedia 30 dias contados do CLIQUE: quem usava o mês grátis
+    // e só então abria o checkout ganhava outro mês inteiro. Os Termos prometem
+    // os primeiros 30 dias, não 30 dias a partir de quando a pessoa decidir.
+    // Teste vencido assina cobrando na hora.
+    const agora = new Date();
+    const fimDoTrial = fimDoTrialNoCheckout(await garantirRelogio(empresa, agora), agora);
+
+    const assinatura: Stripe.Checkout.SessionCreateParams.SubscriptionData = {
+      // O tenant precisa viajar no objeto que os webhooks entregam.
+      metadata: { companyId },
+    };
+    if (fimDoTrial) {
+      assinatura.trial_end = fimDoTrial;
+      assinatura.trial_settings = {
+        end_behavior: {
+          // `pause`, nunca `cancel`. Pausada, a assinatura SOBREVIVE: quando
+          // o dono põe o cartão depois, retomamos a MESMA assinatura com o
+          // histórico dele. Com `cancel`, quem voltasse três dias depois
+          // recomeçaria do zero.
+          missing_payment_method: "pause",
+        },
+      };
+    }
+
     const sessao = await stripe().checkout.sessions.create({
       mode: "subscription",
       customer: customerId,
       line_items: [{ price: process.env.STRIPE_PRICE_PRO!, quantity: 1 }],
 
-      // Trial sem cartão: no ICP brasileiro pequeno, exigir cartão para testar
-      // derruba o topo do funil a ponto de não haver o que medir.
+      // Sem cartão enquanto houver teste: no ICP brasileiro pequeno, exigir
+      // cartão para testar derruba o topo do funil a ponto de não haver o que
+      // medir. Sem teste, há valor a cobrar agora e a Stripe pede o cartão.
       payment_method_collection: "if_required",
-      subscription_data: {
-        trial_period_days: TRIAL_DIAS,
-        trial_settings: {
-          end_behavior: {
-            // `pause`, nunca `cancel`. Pausada, a assinatura SOBREVIVE: quando
-            // o dono põe o cartão depois, retomamos a MESMA assinatura com o
-            // histórico dele. Com `cancel`, quem voltasse três dias depois
-            // recomeçaria do zero.
-            missing_payment_method: "pause",
-          },
-        },
-        // O tenant precisa viajar no objeto que os webhooks entregam.
-        metadata: { companyId },
-      },
+      subscription_data: assinatura,
       metadata: { companyId },
 
       // O Brasil não é suportado pelo Stripe Tax. O preço é imposto-incluso e

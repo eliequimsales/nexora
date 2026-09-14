@@ -159,6 +159,8 @@ async function main() {
       passwordHash: await bcrypt.hash(DEMO_PASSWORD, 10),
       phone: "11999990000",
       plan: "trial",
+      // Mesmo relógio do cadastro: conta sem prazo trava as ações de saída.
+      trialEndsAt: new Date(Date.now() + 30 * 86_400_000),
       profile: {
         create: {
           description:
