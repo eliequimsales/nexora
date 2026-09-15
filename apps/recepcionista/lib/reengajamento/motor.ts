@@ -15,7 +15,8 @@
  * e-mail demais não é insistência, é o que faz o dono marcar como spam e nunca
  * mais receber nada — inclusive o aviso de que a cobrança falhou:
  *
- *   1. Um momento é enviado UMA vez na vida da conta.
+ *   1. Um momento é enviado UMA vez na vida da conta. Os do passe pago, uma vez
+ *      por passe: a chave leva o dia em que ele acaba.
  *   2. Nunca dois e-mails em menos de INTERVALO_MINIMO_DIAS.
  *   3. Quem pediu para não receber não recebe nada, em nenhuma hipótese.
  */
@@ -38,6 +39,15 @@ export const MOMENTOS = [
 
 export type Momento = (typeof MOMENTOS)[number];
 
+/**
+ * Os momentos do passe pago levam o dia do fim na chave: `PASSE_ACABANDO:2026-10-15`.
+ *
+ * O passe não renova sozinho, então o mesmo dono precisa do mesmo aviso a cada
+ * período que paga. A unicidade por (empresa, momento) continua valendo — por
+ * passe, e não uma vez na vida.
+ */
+export type MomentoDoPasse = `PASSE_ACABANDO:${string}` | `PASSE_ACABOU:${string}`;
+
 export type Sinais = {
   nome: string;
   criadoEm: Date;
@@ -55,13 +65,16 @@ export type Sinais = {
   trialEndsAt: Date | null;
   subscriptionStatus: string | null;
   dunningIniciadoEm: Date | null;
+  /** Fim do último passe pago (30 dias no Pix ou anual). null em quem nunca pagou um. */
+  acessoPagoAte: Date | null;
   semEmail: boolean;
-  jaEnviados: Momento[];
+  /** Momentos já enviados — inclusive os do passe, com a data na chave. */
+  jaEnviados: string[];
   ultimoEnvioEm: Date | null;
 };
 
 export type Toque = {
-  momento: Momento;
+  momento: Momento | MomentoDoPasse;
   assunto: string;
   corpo: string;
   acao: { texto: string; href: string };
@@ -72,6 +85,12 @@ export const INTERVALO_MINIMO_DIAS = 2;
 /** Tempo até considerar que ele desistiu do pagamento, e não que está pagando. */
 const ESPERA_CHECKOUT_HORAS = 6;
 
+/** Até quantos dias antes do fim do passe o aviso sai. */
+const AVISO_DO_PASSE_DIAS = 3;
+
+/** Passe que acabou há mais tempo que isto não vira e-mail atrasado. */
+const JANELA_DO_PASSE_ACABOU_DIAS = 7;
+
 const DIA_MS = 86_400_000;
 const HORA_MS = 3_600_000;
 
@@ -79,6 +98,20 @@ const dias = (de: Date, ate: Date) => (ate.getTime() - de.getTime()) / DIA_MS;
 
 const reais = (cents: number) =>
   (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+/** O dia no fuso do dono: o passe acaba no dia DELE, não no de Greenwich. */
+const diaDoDono = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: "America/Sao_Paulo",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
+
+/** `2026-10-15` — a parte da chave que separa um passe do outro. */
+function chaveDoDia(data: Date): string {
+  const parte = Object.fromEntries(diaDoDono.formatToParts(data).map((p) => [p.type, p.value]));
+  return `${parte.year}-${parte.month}-${parte.day}`;
+}
 
 /** Status em que a assinatura já foi paga ou está viva e cobrando. */
 const VIVA = ["active", "trialing", "past_due", "unpaid"];
@@ -101,9 +134,15 @@ export function decidirToque(s: Sinais, agora: Date): Toque | null {
 
   if (s.ultimoEnvioEm && dias(s.ultimoEnvioEm, agora) < INTERVALO_MINIMO_DIAS) return null;
 
-  const jaFoi = (m: Momento) => s.jaEnviados.includes(m);
+  const jaFoi = (m: string) => s.jaEnviados.includes(m);
   const numero = frasedoNumero(s);
   const comNumero = (base: string) => (numero ? `${base}\n\n${numero}` : base);
+
+  const viva = VIVA.includes(s.subscriptionStatus ?? "");
+  // Quem pagou um passe já foi cliente pagante. Mesmo depois de o passe vencer,
+  // "seu mês grátis acabou" seria mentira para essa pessoa.
+  const pagouPasse = s.acessoPagoAte !== null;
+  const passeValendo = s.acessoPagoAte !== null && s.acessoPagoAte > agora;
 
   // --- 1. Dinheiro na mesa agora: o pagamento falhou e ele vai perder acesso.
   if (
@@ -124,11 +163,61 @@ export function decidirToque(s: Sinais, agora: Date): Toque | null {
     };
   }
 
-  // --- 2. Chegou na tela de pagamento e desistiu. É a lista mais quente que existe.
+  // --- 2. O passe pago está acabando, ou acabou. Não existe cobrança automática:
+  // sem este aviso, o acesso de quem pagou no Pix acaba calado e ele só descobre
+  // quando a onda não sai. Quem assinou no cartão depois não precisa dele.
+  if (s.acessoPagoAte && !viva) {
+    const chave = chaveDoDia(s.acessoPagoAte);
+    const quando = diaDoDono.format(s.acessoPagoAte);
+
+    const acabando: MomentoDoPasse = `PASSE_ACABANDO:${chave}`;
+    if (
+      passeValendo &&
+      dias(agora, s.acessoPagoAte) <= AVISO_DO_PASSE_DIAS &&
+      !jaFoi(acabando)
+    ) {
+      return {
+        momento: acabando,
+        assunto: `Seus dias pagos da Nexora terminam em ${quando}`,
+        corpo: comNumero(
+          `${s.nome}, o período que você pagou vai até ${quando}. Não há cobrança automática: ` +
+            `nada é cobrado sem você pagar e, por isso, a onda semanal para nesse dia se você ` +
+            `não renovar.\n\n` +
+            `Para continuar, pague mais 30 dias no Pix ou o anual. Os dias novos começam depois ` +
+            `de ${quando}, então renovar antes não faz você perder nada.`,
+        ),
+        acao: { texto: "Renovar meu acesso", href: "/painel/assinatura" },
+      };
+    }
+
+    const acabou: MomentoDoPasse = `PASSE_ACABOU:${chave}`;
+    if (
+      !passeValendo &&
+      dias(s.acessoPagoAte, agora) <= JANELA_DO_PASSE_ACABOU_DIAS &&
+      !jaFoi(acabou)
+    ) {
+      return {
+        momento: acabou,
+        assunto: "Seus dias pagos acabaram — e sua base continua aqui",
+        corpo: comNumero(
+          `${s.nome}, o período que você pagou terminou em ${quando}. Como não há cobrança ` +
+            `automática, nada foi cobrado de novo.\n\n` +
+            `Tudo que você importou continua aí, inteiro. A única coisa que parou foi a onda ` +
+            `semanal, e ela volta assim que o pagamento de um novo período for confirmado.`,
+        ),
+        acao: { texto: "Renovar meu acesso", href: "/painel/assinatura" },
+      };
+    }
+  }
+
+  // --- 3. Chegou na tela de pagamento e desistiu. É a lista mais quente que existe.
   if (
     !jaFoi("COMPRA_NAO_FINALIZADA") &&
     s.checkoutAbertoEm &&
-    !VIVA.includes(s.subscriptionStatus ?? "") &&
+    !viva &&
+    // Com dias pagos valendo, abrir o checkout e não terminar é só olhar o preço
+    // da renovação — não é carrinho abandonado.
+    !passeValendo &&
     (agora.getTime() - s.checkoutAbertoEm.getTime()) / HORA_MS >= ESPERA_CHECKOUT_HORAS
   ) {
     return {
@@ -146,9 +235,11 @@ export function decidirToque(s: Sinais, agora: Date): Toque | null {
     };
   }
 
-  // --- 3. O teste grátis está acabando.
+  // --- 4. O teste grátis está acabando.
   if (
     !jaFoi("TRIAL_ACABANDO") &&
+    // Quem pagou um passe não está mais em teste: os dias dele são pagos.
+    !pagouPasse &&
     // O teste que nasce no cadastro não tem assinatura na Stripe (status nulo).
     // Sem ele aqui, o prazo local acabaria sem aviso nenhum.
     (s.subscriptionStatus === "trialing" || s.subscriptionStatus === null) &&
@@ -171,9 +262,8 @@ export function decidirToque(s: Sinais, agora: Date): Toque | null {
     };
   }
 
-  // --- 4. Acabou o teste e não virou cliente. Três toques, e para.
-  const trialAcabou =
-    s.trialEndsAt && s.trialEndsAt <= agora && !VIVA.includes(s.subscriptionStatus ?? "");
+  // --- 5. Acabou o teste e não virou cliente. Três toques, e para.
+  const trialAcabou = !pagouPasse && s.trialEndsAt && s.trialEndsAt <= agora && !viva;
 
   if (trialAcabou) {
     if (!jaFoi("TRIAL_ACABOU")) {
@@ -216,7 +306,7 @@ export function decidirToque(s: Sinais, agora: Date): Toque | null {
     }
   }
 
-  // --- 5. Cancelou. Perguntar por quê vale mais que tentar segurar.
+  // --- 6. Cancelou. Perguntar por quê vale mais que tentar segurar.
   if (s.canceladoEm) {
     if (!jaFoi("CANCELOU")) {
       return {
@@ -231,7 +321,8 @@ export function decidirToque(s: Sinais, agora: Date): Toque | null {
         acao: { texto: "Exportar minha base", href: "/painel/clientes/importar" },
       };
     }
-    if (!jaFoi("CANCELOU_14D") && dias(s.canceladoEm, agora) >= 14) {
+    // Com dias pagos valendo ele ainda é cliente: "se quiser voltar" não cabe.
+    if (!jaFoi("CANCELOU_14D") && !passeValendo && dias(s.canceladoEm, agora) >= 14) {
       return {
         momento: "CANCELOU_14D",
         assunto: "Sua base ainda está aqui",
@@ -245,7 +336,7 @@ export function decidirToque(s: Sinais, agora: Date): Toque | null {
     }
   }
 
-  // --- 6. Deu certo. Pedir o depoimento no momento de maior felicidade.
+  // --- 7. Deu certo. Pedir o depoimento no momento de maior felicidade.
   if (!jaFoi("PEDIR_DEPOIMENTO") && s.recuperadoCents > 0) {
     return {
       momento: "PEDIR_DEPOIMENTO",
@@ -260,7 +351,7 @@ export function decidirToque(s: Sinais, agora: Date): Toque | null {
     };
   }
 
-  // --- 7. Ativação: cadastrou e a base está vazia. O produto não pode funcionar.
+  // --- 8. Ativação: cadastrou e a base está vazia. O produto não pode funcionar.
   if (!jaFoi("SEM_BASE") && s.clientesNaBase === 0 && dias(s.criadoEm, agora) >= 1) {
     return {
       momento: "SEM_BASE",
@@ -275,7 +366,7 @@ export function decidirToque(s: Sinais, agora: Date): Toque | null {
     };
   }
 
-  // --- 8. Importou e nunca usou. Sem uso não há resultado, e sem resultado ele cancela.
+  // --- 9. Importou e nunca usou. Sem uso não há resultado, e sem resultado ele cancela.
   if (
     !jaFoi("SEM_USO") &&
     s.clientesNaBase > 0 &&

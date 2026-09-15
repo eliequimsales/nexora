@@ -16,7 +16,7 @@ import { logError } from "@/lib/errors";
 import { safeEqual } from "@/lib/rate-limit";
 import { garantirRelogio } from "@/lib/billing/relogio-da-conta";
 import { enviarEmail } from "./email";
-import { decidirToque, type Momento, type Sinais } from "./motor";
+import { decidirToque, type Sinais } from "./motor";
 import { percorrerFila } from "./fila";
 
 /**
@@ -112,6 +112,7 @@ async function sinaisDe(
     trialEndsAt: Date | null;
     subscriptionStatus: string | null;
     dunningIniciadoEm: Date | null;
+    acessoPagoAte: Date | null;
     semEmail: boolean;
   },
   hoje: Date,
@@ -146,8 +147,10 @@ async function sinaisDe(
     trialEndsAt: empresa.trialEndsAt,
     subscriptionStatus: empresa.subscriptionStatus,
     dunningIniciadoEm: empresa.dunningIniciadoEm,
+    acessoPagoAte: empresa.acessoPagoAte,
     semEmail: empresa.semEmail,
-    jaEnviados: enviados.map((e) => e.momento as Momento),
+    // Texto cru: os momentos do passe levam a data na chave (PASSE_ACABANDO:2026-10-15).
+    jaEnviados: enviados.map((e) => e.momento),
     ultimoEnvioEm: enviados[0]?.enviadoEm ?? null,
   };
 }
@@ -196,6 +199,7 @@ export async function rodarRegua(hoje = new Date()): Promise<ResultadoRegua> {
             trialEndsAt: true,
             subscriptionStatus: true,
             dunningIniciadoEm: true,
+            acessoPagoAte: true,
             semEmail: true,
           },
           orderBy: [{ reguaAvaliadaEm: { sort: "asc", nulls: "first" } }, { id: "asc" }],

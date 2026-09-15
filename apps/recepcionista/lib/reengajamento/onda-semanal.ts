@@ -53,6 +53,8 @@ export function momentoDaOnda(data: Date): string {
 
 export type SinaisDaOnda = {
   subscriptionStatus: string | null;
+  /** Passe pago (30 dias no Pix ou anual) valendo: é cliente, mesmo sem assinatura na Stripe. */
+  passeValido: boolean;
   semEmail: boolean;
   clientesNaBase: number;
   cartoesNaOnda: number;
@@ -65,7 +67,9 @@ const ATIVO = ["active", "trialing", "past_due"];
 export function deveChamarParaOnda(s: SinaisDaOnda): boolean {
   if (s.semEmail) return false;
   if (s.jaEnviadoNestaSemana) return false;
-  if (!ATIVO.includes(s.subscriptionStatus ?? "")) return false;
+  // Quem pagou à vista no Pix não tem assinatura — e é justamente quem mais
+  // precisa do lembrete para usar o que já pagou.
+  if (!ATIVO.includes(s.subscriptionStatus ?? "") && !s.passeValido) return false;
 
   // Base vazia e onda vazia são a mesma decisão: não há o que chamar para
   // fazer. Mandar assim mesmo é o jeito mais rápido de ensinar que o e-mail

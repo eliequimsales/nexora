@@ -43,7 +43,13 @@ export async function chamarParaAOnda(hoje: Date): Promise<ResultadoChamada> {
   const empresas = await prisma.company.findMany({
     where: {
       semEmail: false,
-      subscriptionStatus: { in: ["active", "trialing", "past_due"] },
+      // Quem ainda é cliente: assinatura viva, ou dias pagos no Pix ou no anual
+      // valendo. O passe não cria assinatura na Stripe, e filtrar só pelo status
+      // deixava de fora justamente quem pagou à vista.
+      OR: [
+        { subscriptionStatus: { in: ["active", "trialing", "past_due"] } },
+        { acessoPagoAte: { gt: hoje } },
+      ],
       // Quem já recebeu a chamada desta semana SAI da busca. Antes só a ordem era
       // estável, e isso não bastava: as mesmas 300 contas voltavam todo dia, já
       // recebidas, e as do fim da fila nunca entravam na janela.
@@ -52,7 +58,14 @@ export async function chamarParaAOnda(hoje: Date): Promise<ResultadoChamada> {
       // em toda execução e ocuparia a janela de quem tem.
       customers: { some: { optOut: false } },
     },
-    select: { id: true, name: true, email: true, subscriptionStatus: true, semEmail: true },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      subscriptionStatus: true,
+      acessoPagoAte: true,
+      semEmail: true,
+    },
     take: TETO_POR_EXECUCAO,
     orderBy: { id: "asc" },
   });
@@ -75,6 +88,7 @@ export async function chamarParaAOnda(hoje: Date): Promise<ResultadoChamada> {
 
       const chamar = deveChamarParaOnda({
         subscriptionStatus: empresa.subscriptionStatus,
+        passeValido: Boolean(empresa.acessoPagoAte && empresa.acessoPagoAte > hoje),
         semEmail: empresa.semEmail,
         clientesNaBase,
         cartoesNaOnda: onda?.cards.length ?? 0,

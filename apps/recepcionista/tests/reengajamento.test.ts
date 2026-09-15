@@ -26,12 +26,118 @@ function sinais(over: Partial<Sinais> = {}): Sinais {
     trialEndsAt: null,
     subscriptionStatus: null,
     dunningIniciadoEm: null,
+    acessoPagoAte: null,
     semEmail: false,
     jaEnviados: [],
     ultimoEnvioEm: null,
     ...over,
   };
 }
+
+/**
+ * QUEM PAGOU O PASSE — 30 dias no Pix ou o anual.
+ *
+ * Não existe cobrança automática. Sem aviso, o acesso de quem pagou no Pix acaba
+ * calado e ele só descobre quando a onda não sai. E quem pagou não pode ler "seu
+ * mês grátis acabou" nem "faltou pouco para terminar a compra".
+ */
+describe("decidirToque — quem pagou o passe", () => {
+  const cliente = { clientesNaBase: 60, toquesRegistrados: 5 };
+
+  it("até três dias antes do fim, avisa com a data e sem prometer cobrança automática", () => {
+    const t = decidirToque(sinais({ ...cliente, acessoPagoAte: emDias(2) }), HOJE);
+    expect(t?.momento).toBe("PASSE_ACABANDO:2026-09-03");
+    expect(t?.corpo).toContain("03/09/2026");
+    expect(t?.corpo.toLowerCase()).toContain("não há cobrança automática");
+    expect(t?.acao.href).toBe("/painel/assinatura");
+  });
+
+  it("o aviso é de cada passe: pagar de novo arma o aviso do período novo", () => {
+    expect(
+      decidirToque(
+        sinais({ ...cliente, acessoPagoAte: emDias(2), jaEnviados: ["PASSE_ACABANDO:2026-08-04"] }),
+        HOJE,
+      )?.momento,
+    ).toBe("PASSE_ACABANDO:2026-09-03");
+    expect(
+      decidirToque(
+        sinais({ ...cliente, acessoPagoAte: emDias(2), jaEnviados: ["PASSE_ACABANDO:2026-09-03"] }),
+        HOJE,
+      ),
+    ).toBeNull();
+  });
+
+  it("com mais de três dias pela frente, não avisa", () => {
+    expect(decidirToque(sinais({ ...cliente, acessoPagoAte: emDias(10) }), HOJE)).toBeNull();
+  });
+
+  it("acabou há poucos dias: avisa que parou, uma vez por passe", () => {
+    expect(decidirToque(sinais({ ...cliente, acessoPagoAte: diasAtras(1) }), HOJE)?.momento).toBe(
+      "PASSE_ACABOU:2026-08-31",
+    );
+    expect(
+      decidirToque(
+        sinais({ ...cliente, acessoPagoAte: diasAtras(1), jaEnviados: ["PASSE_ACABOU:2026-08-31"] }),
+        HOJE,
+      ),
+    ).toBeNull();
+  });
+
+  it("passe que acabou há mais de uma semana não vira e-mail atrasado", () => {
+    expect(decidirToque(sinais({ ...cliente, acessoPagoAte: diasAtras(9) }), HOJE)).toBeNull();
+  });
+
+  it("quem assinou no cartão não recebe aviso de passe", () => {
+    for (const acessoPagoAte of [emDias(2), diasAtras(1)]) {
+      expect(
+        decidirToque(sinais({ ...cliente, acessoPagoAte, subscriptionStatus: "active" }), HOJE),
+      ).toBeNull();
+    }
+  });
+
+  it("com o passe valendo, nada de 'seu mês grátis termina' nem de carrinho abandonado", () => {
+    expect(
+      decidirToque(sinais({ ...cliente, trialEndsAt: emDias(2), acessoPagoAte: emDias(32) }), HOJE),
+    ).toBeNull();
+    expect(
+      decidirToque(
+        sinais({ ...cliente, checkoutAbertoEm: diasAtras(1), acessoPagoAte: emDias(20) }),
+        HOJE,
+      ),
+    ).toBeNull();
+  });
+
+  it("quem já pagou um passe nunca recebe a sequência de 'seu mês grátis acabou'", () => {
+    expect(
+      decidirToque(
+        sinais({ ...cliente, trialEndsAt: diasAtras(40), acessoPagoAte: diasAtras(10) }),
+        HOJE,
+      ),
+    ).toBeNull();
+  });
+
+  it("cancelou a assinatura mas tem passe valendo: sem 'sua base ainda está aqui'", () => {
+    expect(
+      decidirToque(
+        sinais({
+          ...cliente,
+          subscriptionStatus: "canceled",
+          canceladoEm: diasAtras(20),
+          acessoPagoAte: emDias(15),
+          jaEnviados: ["CANCELOU"],
+          ultimoEnvioEm: diasAtras(19),
+        }),
+        HOJE,
+      ),
+    ).toBeNull();
+  });
+
+  it("quem pediu para não receber e-mail também não recebe o aviso do passe", () => {
+    expect(
+      decidirToque(sinais({ ...cliente, semEmail: true, acessoPagoAte: emDias(2) }), HOJE),
+    ).toBeNull();
+  });
+});
 
 describe("decidirToque — quem não terminou a compra", () => {
   it("abriu o checkout e não voltou vira COMPRA_NAO_FINALIZADA no dia seguinte", () => {

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   chaveDaSemana,
@@ -37,8 +39,40 @@ function sinais(over: Partial<SinaisDaOnda> = {}): SinaisDaOnda {
     clientesNaBase: over.clientesNaBase ?? 120,
     cartoesNaOnda: over.cartoesNaOnda ?? 12,
     jaEnviadoNestaSemana: over.jaEnviadoNestaSemana ?? false,
+    passeValido: over.passeValido ?? false,
   };
 }
+
+/**
+ * QUEM PAGOU O PASSE TAMBÉM É CLIENTE.
+ *
+ * 30 dias no Pix ou o anual não criam assinatura na Stripe: o status fica nulo.
+ * Filtrar a chamada só pelo status deixaria justamente quem pagou à vista sem o
+ * gatilho de segunda — pagando pelo produto e sem o lembrete que faz ele usar.
+ */
+describe("a chamada semanal de quem pagou o passe", () => {
+  it("sem assinatura, com passe valendo: é chamado", () => {
+    expect(deveChamarParaOnda(sinais({ subscriptionStatus: null, passeValido: true }))).toBe(true);
+  });
+
+  it("as regras de quando não mandar valem igual", () => {
+    expect(
+      deveChamarParaOnda(sinais({ subscriptionStatus: null, passeValido: true, cartoesNaOnda: 0 })),
+    ).toBe(false);
+    expect(
+      deveChamarParaOnda(sinais({ subscriptionStatus: null, passeValido: true, semEmail: true })),
+    ).toBe(false);
+  });
+
+  it("a busca da chamada inclui quem tem passe valendo", () => {
+    const fonte = readFileSync(
+      join(__dirname, "..", "lib/reengajamento/chamada-semanal.ts"),
+      "utf8",
+    );
+    expect(fonte).toMatch(/acessoPagoAte:\s*\{\s*gt:\s*hoje\s*\}/);
+    expect(fonte).toMatch(/passeValido:/);
+  });
+});
 
 describe("a chave da semana isola um envio por semana", () => {
   it("tem ano e número da semana", () => {
