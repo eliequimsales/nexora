@@ -67,6 +67,12 @@ model Company {
   // cliente final; este é o dono da conta.
   semEmail Boolean @default(false)
 
+  // Última execução da régua que avaliou esta conta: é a fila justa. Cada
+  // execução começa por quem nunca foi avaliado e depois por quem espera há mais
+  // tempo. Sem isto a régua lia sempre as mesmas 40 contas, e da 41ª em diante
+  // ninguém recebia e-mail. Nulo em conta que a régua ainda não viu.
+  reguaAvaliadaEm DateTime?
+
   // ACEITE DOS DOCUMENTOS. Consentimento sem data e sem VERSAO nao prova nada:
   // se o texto mudar depois, ninguem consegue dizer o que a pessoa aceitou.
   // O termo antigo afirmava que o aceite ficava em `organizations.lgpdAcceptedAt`

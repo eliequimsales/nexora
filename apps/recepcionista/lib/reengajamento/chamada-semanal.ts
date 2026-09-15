@@ -44,12 +44,16 @@ export async function chamarParaAOnda(hoje: Date): Promise<ResultadoChamada> {
     where: {
       semEmail: false,
       subscriptionStatus: { in: ["active", "trialing", "past_due"] },
+      // Quem já recebeu a chamada desta semana SAI da busca. Antes só a ordem era
+      // estável, e isso não bastava: as mesmas 300 contas voltavam todo dia, já
+      // recebidas, e as do fim da fila nunca entravam na janela.
+      reengajamentos: { none: { momento } },
+      // Sem cliente para chamar não existe onda. Quem não tem lista seria pulado
+      // em toda execução e ocuparia a janela de quem tem.
+      customers: { some: { optOut: false } },
     },
     select: { id: true, name: true, email: true, subscriptionStatus: true, semEmail: true },
     take: TETO_POR_EXECUCAO,
-    // Quem ainda não recebeu nesta semana vem primeiro na próxima execução:
-    // sem ordem estável, o teto poderia devolver sempre as mesmas contas e as
-    // do fim da fila nunca receberiam.
     orderBy: { id: "asc" },
   });
 

@@ -17,9 +17,20 @@ import { safeEqual } from "@/lib/rate-limit";
 import { garantirRelogio } from "@/lib/billing/relogio-da-conta";
 import { enviarEmail } from "./email";
 import { decidirToque, type Momento, type Sinais } from "./motor";
+import { percorrerFila } from "./fila";
 
-/** Quantas contas por execução. Régua não precisa ser rápida, precisa ser segura. */
+/**
+ * Contas por consulta. Não é mais um teto por execução: a régua percorre a fila
+ * inteira em lotes deste tamanho, até acabar ou até o orçamento de tempo.
+ */
 const LOTE = 40;
+
+/**
+ * Tempo máximo da régua por execução. O cron declara 60 segundos e roda a
+ * chamada de segunda e a poda do funil DEPOIS da régua: sem orçamento, uma base
+ * grande consumiria a requisição inteira e ninguém receberia a chamada.
+ */
+const ORCAMENTO_DA_REGUA_MS = 30_000;
 
 /**
  * Link de descadastro assinado: sem assinatura, qualquer um descadastraria
@@ -146,68 +157,94 @@ export type ResultadoRegua = {
   enviados: number;
   porMomento: Record<string, number>;
   falhas: number;
+  /** true quando o tempo acabou antes da fila: a próxima execução começa por quem ficou de fora. */
+  esgotouOrcamento: boolean;
 };
 
 export async function rodarRegua(hoje = new Date()): Promise<ResultadoRegua> {
-  const empresas = await prisma.company.findMany({
-    where: { semEmail: false },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      createdAt: true,
-      checkoutAbertoEm: true,
-      canceladoEm: true,
-      trialEndsAt: true,
-      subscriptionStatus: true,
-      dunningIniciadoEm: true,
-      semEmail: true,
-    },
-    orderBy: { createdAt: "asc" },
-    take: LOTE,
-  });
-
   const resultado: ResultadoRegua = {
-    avaliadas: empresas.length,
+    avaliadas: 0,
     enviados: 0,
     porMomento: {},
     falhas: 0,
+    esgotouOrcamento: false,
   };
 
   const appUrl = process.env.APP_URL ?? "";
 
-  for (const empresa of empresas) {
-    try {
-      // A régua pode ser o primeiro código a ler uma conta antiga, e é ela que
-      // manda o aviso de três dias: o prazo precisa existir antes da decisão.
-      const trialEndsAt = await garantirRelogio(empresa, hoje);
-      const toque = decidirToque(await sinaisDe({ ...empresa, trialEndsAt }, hoje), hoje);
-      if (!toque) continue;
+  // FILA JUSTA (ver fila.ts). Antes: `take: 40` ordenado por criação, e a régua
+  // lia sempre as mesmas 40 contas. Agora cada execução avalia primeiro quem
+  // nunca foi avaliado, depois quem espera há mais tempo, marca quem avaliou e
+  // para no orçamento de tempo.
+  const fila = await percorrerFila(
+    {
+      buscarLote: (inicio: Date, tamanho: number) =>
+        prisma.company.findMany({
+          where: {
+            semEmail: false,
+            // Fora quem já foi avaliado NESTA execução: a marca dela é `inicio`.
+            OR: [{ reguaAvaliadaEm: null }, { reguaAvaliadaEm: { lt: inicio } }],
+          },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            createdAt: true,
+            checkoutAbertoEm: true,
+            canceladoEm: true,
+            trialEndsAt: true,
+            subscriptionStatus: true,
+            dunningIniciadoEm: true,
+            semEmail: true,
+          },
+          orderBy: [{ reguaAvaliadaEm: { sort: "asc", nulls: "first" } }, { id: "asc" }],
+          take: tamanho,
+        }),
 
-      const url = `${appUrl}/descadastro?e=${empresa.id}&t=${tokenDescadastro(empresa.id)}`;
-      const envio = await enviarEmail(empresa.email, toque, url);
+      avaliar: async (empresa) => {
+        // A régua pode ser o primeiro código a ler uma conta antiga, e é ela que
+        // manda o aviso de três dias: o prazo precisa existir antes da decisão.
+        const trialEndsAt = await garantirRelogio(empresa, hoje);
+        const toque = decidirToque(await sinaisDe({ ...empresa, trialEndsAt }, hoje), hoje);
+        if (!toque) return;
 
-      // Registra mesmo sem envio: ligar o e-mail depois não pode despejar a
-      // régua inteira de uma vez em quem já esqueceu da Nexora.
-      await prisma.reengajamento.create({
-        data: {
-          companyId: empresa.id,
-          momento: toque.momento,
-          erro: envio.enviado ? null : (envio.motivo ?? "falha desconhecida"),
-        },
-      });
+        const url = `${appUrl}/descadastro?e=${empresa.id}&t=${tokenDescadastro(empresa.id)}`;
+        const envio = await enviarEmail(empresa.email, toque, url);
 
-      if (envio.enviado) {
-        resultado.enviados += 1;
-        resultado.porMomento[toque.momento] = (resultado.porMomento[toque.momento] ?? 0) + 1;
-      } else {
+        // Registra mesmo sem envio: ligar o e-mail depois não pode despejar a
+        // régua inteira de uma vez em quem já esqueceu da Nexora.
+        await prisma.reengajamento.create({
+          data: {
+            companyId: empresa.id,
+            momento: toque.momento,
+            erro: envio.enviado ? null : (envio.motivo ?? "falha desconhecida"),
+          },
+        });
+
+        if (envio.enviado) {
+          resultado.enviados += 1;
+          resultado.porMomento[toque.momento] = (resultado.porMomento[toque.momento] ?? 0) + 1;
+        } else {
+          resultado.falhas += 1;
+        }
+      },
+
+      aoFalhar: async (empresa, erro) => {
         resultado.falhas += 1;
-      }
-    } catch (erro) {
-      resultado.falhas += 1;
-      await logError("regua-reengajamento", erro, empresa.id);
-    }
-  }
+        await logError("regua-reengajamento", erro, empresa.id);
+      },
 
+      marcarAvaliada: async (empresa, inicio) => {
+        await prisma.company.update({
+          where: { id: empresa.id },
+          data: { reguaAvaliadaEm: inicio },
+        });
+      },
+    },
+    { inicio: hoje, tamanhoDoLote: LOTE, orcamentoMs: ORCAMENTO_DA_REGUA_MS },
+  );
+
+  resultado.avaliadas = fila.processadas;
+  resultado.esgotouOrcamento = fila.esgotouOrcamento;
   return resultado;
 }
