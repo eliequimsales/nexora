@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { isEligibleForFollowUp, runFollowUps } from "@/lib/followup";
+import { isEligibleForFollowUp, runFollowUps, servidorFora } from "@/lib/followup";
 
 const NOW = new Date("2026-07-01T18:00:00Z");
 const hoursAgo = (h: number) => new Date(NOW.getTime() - h * 60 * 60 * 1000);
@@ -73,5 +75,62 @@ describe("runFollowUps com o WhatsApp sem servidor", () => {
       if (url !== undefined) process.env.EVOLUTION_API_URL = url;
       if (key !== undefined) process.env.EVOLUTION_API_KEY = key;
     }
+  });
+});
+
+/**
+ * SERVIDOR FORA NÃO É PROBLEMA DE CONVERSA.
+ *
+ * Em 15/09/2026 a Evolution respondia 502 e o worker tentava as mesmas conversas
+ * a cada 5 minutos, para sempre: a falha não era gravada, então a conversa
+ * continuava elegível. Além de soterrar o log, um 502 que chega DEPOIS de a
+ * mensagem sair faria o cliente final receber o mesmo texto de novo a cada
+ * rodada — o disparo repetido que a Nexora promete não fazer.
+ *
+ * Falha do servidor vale para todas as conversas: a rodada para na primeira e o
+ * erro é registrado uma vez por sequência de falhas. Erro de UMA conversa (número
+ * inválido, 4xx) continua sendo tratado conversa a conversa.
+ */
+describe("servidorFora", () => {
+  const daEvolution = (status: number) =>
+    new Error(`Evolution API respondeu ${status} em /message/sendText/nexora-x: {"status":"error"}`);
+
+  it("5xx da Evolution é o servidor, não a conversa", () => {
+    for (const status of [500, 502, 503, 504]) {
+      expect(servidorFora(daEvolution(status)), String(status)).toBe(true);
+    }
+  });
+
+  it("nenhuma resposta (rede, DNS, recusa, tempo esgotado) também é o servidor", () => {
+    expect(servidorFora(new TypeError("fetch failed"))).toBe(true);
+    expect(servidorFora(new Error("connect ECONNREFUSED 10.0.0.1:443"))).toBe(true);
+    expect(servidorFora(new Error("getaddrinfo ENOTFOUND evolution.internal"))).toBe(true);
+    expect(servidorFora(new Error("The operation was aborted due to timeout"))).toBe(true);
+  });
+
+  it("4xx é problema daquela conversa: número inválido não para a rodada", () => {
+    for (const status of [400, 401, 404, 422]) {
+      expect(servidorFora(daEvolution(status)), String(status)).toBe(false);
+    }
+  });
+
+  it("valor que não é Error não é tratado como queda", () => {
+    expect(servidorFora("mensagem solta")).toBe(false);
+    expect(servidorFora(undefined)).toBe(false);
+  });
+});
+
+const RAIZ = join(__dirname, "..");
+
+describe("runFollowUps para a rodada quando o servidor cai", () => {
+  const fonte = readFileSync(join(RAIZ, "lib/followup.ts"), "utf8");
+
+  it("na falha do servidor, sai da rodada em vez de tentar a próxima conversa", () => {
+    expect(fonte).toMatch(/if\s*\(\s*servidorFora\(\s*error\s*\)\s*\)\s*\{[\s\S]{0,700}?return sent;/);
+  });
+
+  it("registra a queda uma vez por sequência e volta a registrar depois de um envio que deu certo", () => {
+    expect(fonte).toContain("__servidorFora");
+    expect(fonte).toMatch(/__servidorFora\s*=\s*false/);
   });
 });

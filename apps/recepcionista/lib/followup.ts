@@ -113,6 +113,8 @@ export async function runFollowUps(): Promise<number> {
           conversation.customerPhone,
           profile.followUpMessage,
         );
+        // O servidor respondeu: a próxima queda volta a merecer registro.
+        quedaDoServidor.__servidorFora = false;
         await prisma.message.create({
           data: { conversationId: conversation.id, role: "AI", content: profile.followUpMessage },
         });
@@ -122,12 +124,40 @@ export async function runFollowUps(): Promise<number> {
         });
         sent += 1;
       } catch (error) {
+        if (servidorFora(error)) {
+          // Falha do servidor vale para todas as conversas. Tentar a próxima só
+          // repete o erro — e, se o 502 chegou depois de a mensagem sair, o
+          // cliente final receberia o mesmo texto de novo a cada rodada.
+          // Registra uma vez por sequência de quedas e encerra a rodada.
+          if (!quedaDoServidor.__servidorFora) {
+            quedaDoServidor.__servidorFora = true;
+            await logError("follow-up", error, profile.companyId);
+          }
+          return sent;
+        }
         await logError("follow-up", error, profile.companyId);
       }
     }
   }
 
   return sent;
+}
+
+const quedaDoServidor = globalThis as unknown as { __servidorFora?: boolean };
+
+/**
+ * A falha é do servidor do WhatsApp, e não de uma conversa?
+ *
+ * 5xx da Evolution, ou nenhuma resposta: rede, DNS, recusa ou tempo esgotado.
+ * 4xx fica de fora de propósito — número inválido é problema daquela conversa
+ * e não pode parar os lembretes das outras.
+ */
+export function servidorFora(erro: unknown): boolean {
+  if (!(erro instanceof Error)) return false;
+  if (/Evolution API respondeu 5\d\d\b/.test(erro.message)) return true;
+  return /fetch failed|ECONNREFUSED|ECONNRESET|ENOTFOUND|ETIMEDOUT|EAI_AGAIN|socket hang up|aborted due to timeout/i.test(
+    erro.message,
+  );
 }
 
 const workerFlag = globalThis as unknown as { __followUpWorkerStarted?: boolean };
