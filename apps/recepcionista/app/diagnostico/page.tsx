@@ -11,6 +11,7 @@ import {
 import { MIN_RECUPERAVEL_CENTS, MIN_SUMIDOS } from "@/lib/recuperacao/estimativa";
 import { PainelDiagnostico } from "./painel";
 import { EventoAoMontar } from "@/components/funil";
+import { RodapeFunil } from "@/components/rodape-funil";
 import { FRASE_SOCORRO, temCanalDeSocorro } from "@/lib/contato";
 import { lerParametros } from "@/lib/diagnostico/parametros";
 
@@ -263,17 +264,7 @@ export default function PaginaDiagnostico({
         </div>
       </section>
 
-      <footer className="border-t border-nx-border">
-        <div className="mx-auto max-w-page px-6 py-10 text-sm text-nx-muted">
-          <p>
-            Nexora — recuperação de clientes inativos para pequenos negócios de serviço.
-          </p>
-          <p className="mt-2">
-            A lista colada nesta página não é gravada: ela é processada na memória do
-            servidor e descartada junto com a resposta.
-          </p>
-        </div>
-      </footer>
+      <RodapeFunil nota="A lista colada nesta página não é gravada: ela é processada na memória do servidor e descartada junto com a resposta." />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Calculadora } from "@/components/calculadora";
+import { RodapeFunil } from "@/components/rodape-funil";
 import { TemaNexora } from "@/components/tema-nexora";
 import { GARANTIA_DIAS, ONDAS_MINIMAS } from "@/lib/billing/garantia";
 import { PLANOS } from "@/lib/billing/planos";
@@ -303,28 +304,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="border-t border-nx-border px-6 pb-24 pt-10 sm:pb-8">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 text-sm text-nx-muted sm:flex-row sm:items-center sm:justify-between">
-          <p className="max-w-sm">
-            Nexora — recuperação de clientes inativos para pequenos negócios de serviço. A
-            identificação completa de quem presta o serviço está nos Termos de Uso.
-          </p>
-          <div className="flex flex-wrap gap-x-5 gap-y-2">
-            <Link href="/termos" className="transition-colors hover:text-nx-primary">
-              Termos de Uso
-            </Link>
-            <Link href="/privacidade" className="transition-colors hover:text-nx-primary">
-              Privacidade
-            </Link>
-            <Link href="/login" className="transition-colors hover:text-nx-primary">
-              Entrar
-            </Link>
-            <Link href="/diagnostico" className="transition-colors hover:text-nx-primary">
-              Diagnóstico grátis
-            </Link>
-          </div>
-        </div>
-      </footer>
+      <RodapeFunil />
 
       {/* No celular o botão nunca sai da tela — veio da Nexora antiga. */}
       <div className="fixed inset-x-0 bottom-0 z-50 border-t border-nx-border bg-nx-bg/95 p-3 backdrop-blur-md sm:hidden">

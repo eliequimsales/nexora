@@ -63,7 +63,7 @@ function aplicaTema(rel: string): void {
   expect(fonte, rel).toMatch(/<TemaNexora>/);
 }
 
-const HOME = ["app/page.tsx", "components/calculadora.tsx"];
+const HOME = ["app/page.tsx", "components/calculadora.tsx", "components/rodape-funil.tsx"];
 const ACESSO = [
   "app/cadastro/page.tsx",
   "app/login/page.tsx",

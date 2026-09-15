@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RodapePapel } from "@/components/rodape-papel";
 import { camposPendentes, identificacaoCompleta } from "@/lib/legal/identidade";
 import type { Secao } from "@/lib/legal/termos";
 
@@ -100,24 +101,7 @@ export function DocumentoLegal({
         </div>
       </main>
 
-      <footer className="border-t border-paper-line">
-        <div className="mx-auto flex max-w-3xl flex-col gap-3 px-6 py-10 text-sm text-paper-sub sm:flex-row sm:justify-between">
-          <Link href="/" className="transition hover:text-paper-ink">
-            ← Voltar para a Nexora
-          </Link>
-          <div className="flex gap-5">
-            <Link href="/termos" className="transition hover:text-paper-ink">
-              Termos de Uso
-            </Link>
-            <Link href="/privacidade" className="transition hover:text-paper-ink">
-              Política de Privacidade
-            </Link>
-            <Link href="/operador" className="transition hover:text-paper-ink">
-              Contrato de Operador
-            </Link>
-          </div>
-        </div>
-      </footer>
+      <RodapePapel />
     </div>
   );
 }
