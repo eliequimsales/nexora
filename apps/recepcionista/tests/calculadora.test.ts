@@ -11,14 +11,15 @@ import {
   linkDoDiagnostico,
 } from "@/lib/recuperacao/calculadora";
 import { MEDIANA_POR_SEGMENTO } from "@/lib/recuperacao/ciclo";
+import { visitasNaJanela } from "@/lib/recuperacao/estimativa";
 import { lerParametros } from "@/lib/diagnostico/parametros";
 
 /**
  * A CALCULADORA DA HOME FAZ A CONTA DO DIAGNÓSTICO.
  *
  * Três números que o visitante digita, a fórmula de lib/recuperacao/estimativa.
- * A única suposição a mais é o ritmo — e ela é a mesma que o diagnóstico usa
- * para quem não informou o ramo.
+ * A única suposição a mais é o ritmo — e ela é a mesma que o diagnóstico usa:
+ * a do ramo, quando a página sabe o ramo, e a padrão quando não sabe.
  */
 
 describe("a conta da calculadora é a conta do diagnóstico", () => {
@@ -26,6 +27,7 @@ describe("a conta da calculadora é a conta do diagnóstico", () => {
     expect(contaDaCalculadora(EXEMPLO)).toEqual({
       parados: 120,
       umaVisitaCents: 1_800_000,
+      ciclo: 30,
       visitas: 3,
       potencialCents: 5_400_000,
       faixa: { min: 810_000, central: 1_080_000, max: 1_350_000 },
@@ -41,6 +43,21 @@ describe("a conta da calculadora é a conta do diagnóstico", () => {
   it("as fatias são 20%, 30% e 40%, e o exemplo usa uma delas", () => {
     expect([...FATIAS]).toEqual([0.2, 0.3, 0.4]);
     expect(FATIAS).toContain(EXEMPLO.fatia);
+  });
+});
+
+// A página de barbearia não pode fazer a conta com o ritmo padrão e depois
+// mandar para um diagnóstico que usa o ritmo de barbearia: seriam dois números
+// para a mesma pessoa.
+describe("o ramo muda o ritmo, como no diagnóstico", () => {
+  it("com o ramo, usa o ritmo daquele ramo", () => {
+    const conta = contaDaCalculadora({ ...EXEMPLO, ramo: "barbearia" });
+    expect(conta.ciclo).toBe(MEDIANA_POR_SEGMENTO.barbearia);
+    expect(conta.visitas).toBe(visitasNaJanela(MEDIANA_POR_SEGMENTO.barbearia));
+  });
+
+  it("ramo desconhecido cai no padrão, sem estourar", () => {
+    expect(contaDaCalculadora({ ...EXEMPLO, ramo: "astronauta" }).ciclo).toBe(CICLO_DA_CALCULADORA);
   });
 });
 
@@ -100,6 +117,18 @@ describe("o botão leva o ticket ao diagnóstico pela URL", () => {
     expect(ler(link).criativo).toBe("bar-a1");
     expect(linkDoDiagnostico({ ticketReais: 150, criativo: "<script>" })).toBe("/diagnostico?ticket=150");
   });
+
+  it("o ramo segue para o diagnóstico, e o diagnóstico lê o mesmo ramo", () => {
+    const link = linkDoDiagnostico({ ticketReais: 150, criativo: null, ramo: "barbearia" });
+    expect(link).toBe("/diagnostico?ramo=barbearia&ticket=150");
+    expect(ler(link).ramo).toBe("barbearia");
+  });
+
+  it("ramo que o diagnóstico não conhece não vai", () => {
+    expect(linkDoDiagnostico({ ticketReais: 150, criativo: null, ramo: "astronauta" })).toBe(
+      "/diagnostico?ticket=150",
+    );
+  });
 });
 
 describe("o componente não inventa número nem guarda o que foi digitado", () => {
@@ -113,6 +142,12 @@ describe("o componente não inventa número nem guarda o que foi digitado", () =
     for (const literal of ["15%", "25%", "0.15", "0.25", "90 dias", "30 dias", "30%"]) {
       expect(fonte, literal).not.toContain(literal);
     }
+  });
+
+  it("o ritmo que a tela mostra é o da conta, e o ramo chega ao link", () => {
+    const fonte = componente();
+    expect(fonte).toContain("conta.ciclo");
+    expect(fonte).toMatch(/linkDoDiagnostico\(\{[^}]*ramo/);
   });
 
   it("só registra os dois eventos da calculadora", () => {

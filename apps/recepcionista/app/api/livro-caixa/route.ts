@@ -5,6 +5,7 @@ import { logError } from "@/lib/errors";
 import { neutralizarFormula } from "@/lib/dados/exportar";
 import { LIMITES, limitar } from "@/lib/limites";
 import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
+import { NOME_DA_ESTEIRA } from "@/lib/recuperacao/esteiras";
 
 export const dynamic = "force-dynamic";
 
@@ -28,11 +29,7 @@ const SEP_CSV = ";";
 const BOM_CSV = "﻿";
 
 /** O nome que a Onda já usa na tela. O enum do banco não vai para a planilha. */
-const SITUACAO: Record<string, string> = {
-  PRE_ATRASO: "Prestes a sumir",
-  ATRASO: "Atrasado",
-  RESGATE: "Sumido há muito",
-};
+const SITUACAO: Record<string, string> = NOME_DA_ESTEIRA;
 
 const dataBR = new Intl.DateTimeFormat("pt-BR", {
   timeZone: "America/Sao_Paulo",

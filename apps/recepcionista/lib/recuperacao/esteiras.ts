@@ -22,6 +22,17 @@ import type { Ciclo } from "./ciclo";
 
 export type Esteira = "PRE_ATRASO" | "ATRASO" | "RESGATE" | "EM_DIA";
 
+/**
+ * O nome que o dono lê, e o mesmo em toda tela: a Onda, a planilha do
+ * Livro-Caixa e a demonstração da landing. Três cópias do mesmo texto era como
+ * uma tela acabaria chamando o mesmo cliente de um jeito e a outra de outro.
+ */
+export const NOME_DA_ESTEIRA: Record<Exclude<Esteira, "EM_DIA">, string> = {
+  PRE_ATRASO: "Prestes a sumir",
+  ATRASO: "Atrasado",
+  RESGATE: "Sumido há muito",
+};
+
 /** A partir de quantos ciclos o cliente é considerado atrasado. */
 const FATOR_ATRASO = 1.5;
 /** A partir de quantos ciclos ele deixa de ser atraso e vira estoque histórico. */

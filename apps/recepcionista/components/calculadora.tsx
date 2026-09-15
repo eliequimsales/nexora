@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { registrar } from "@/components/funil";
 import {
-  CICLO_DA_CALCULADORA,
   EXEMPLO,
   FATIAS,
   MAX_CLIENTES,
@@ -24,6 +23,9 @@ import { FAIXA_EM_TEXTO, JANELA_DIAS } from "@/lib/recuperacao/estimativa";
  * diagnóstico desmente; e o ticket segue para o diagnóstico pela URL, em vez de
  * ficar guardado no navegador.
  *
+ * Numa página de ramo (/barbearia) ela recebe o ramo: a conta usa o ritmo dele e
+ * o link leva o ramo junto, para o diagnóstico repetir a mesma conta.
+ *
  * Medição: dois eventos, só o nome. Nenhum número digitado sai daqui.
  */
 
@@ -42,7 +44,7 @@ const CAMPO =
 
 const plural = (n: number, palavra: string) => `${palavra}${n === 1 ? "" : "s"}`;
 
-export function Calculadora() {
+export function Calculadora({ ramo }: { ramo?: string }) {
   const [clientes, setClientes] = useState(EXEMPLO.clientes);
   const [ticketReais, setTicketReais] = useState(EXEMPLO.ticketReais);
   const [fatia, setFatia] = useState<Fatia>(EXEMPLO.fatia);
@@ -57,8 +59,8 @@ export function Calculadora() {
   }, []);
 
   const conta = useMemo(
-    () => contaDaCalculadora({ clientes, ticketReais, fatia }),
-    [clientes, ticketReais, fatia],
+    () => contaDaCalculadora({ clientes, ticketReais, fatia, ramo }),
+    [clientes, ticketReais, fatia, ramo],
   );
 
   /** Uma vez por sessão da aba; sem armazenamento, uma vez por visita à página. */
@@ -174,7 +176,10 @@ export function Calculadora() {
             <p className="mt-2 text-xs leading-relaxed text-nx-muted">
               {FAIXA_EM_TEXTO} de retorno — a mesma faixa que o diagnóstico usa na sua lista.
               Considera {conta.visitas} {plural(conta.visitas, "visita")} de quem volta a cada{" "}
-              {CICLO_DA_CALCULADORA} dias.
+              {conta.ciclo} dias.
+            </p>
+            <p className="mt-2 text-xs font-medium leading-relaxed text-nx-secondary">
+              Estimativa baseada no histórico informado. Não representa receita garantida.
             </p>
           </div>
 
@@ -186,7 +191,7 @@ export function Calculadora() {
           )}
 
           <Link
-            href={linkDoDiagnostico({ ticketReais, criativo })}
+            href={linkDoDiagnostico({ ticketReais, criativo, ramo })}
             onClick={aoIrParaODiagnostico}
             className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-nx-gold px-5 py-3.5 font-semibold text-nx-bg shadow-nx-glow-sm transition-all hover:bg-nx-gold/90 active:scale-[0.98]"
           >

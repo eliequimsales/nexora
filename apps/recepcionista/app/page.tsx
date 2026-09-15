@@ -6,8 +6,11 @@ import { TemaNexora } from "@/components/tema-nexora";
 import { GARANTIA_DIAS, ONDAS_MINIMAS } from "@/lib/billing/garantia";
 import { PLANOS } from "@/lib/billing/planos";
 import { emReais, PRECO_ANUAL_CENTS, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
+import { O_QUE_A_NEXORA_NAO_E, PERGUNTAS_FREQUENTES } from "@/lib/perguntas";
+import { classificar, NOME_DA_ESTEIRA } from "@/lib/recuperacao/esteiras";
 import { MIN_SUMIDOS } from "@/lib/recuperacao/estimativa";
 import { TAMANHO_DA_ONDA } from "@/lib/recuperacao/onda";
+import { mensagemDoToque, TOTAL_TOQUES } from "@/lib/recuperacao/toques";
 
 export const metadata: Metadata = {
   title: "Nexora — ganhe dinheiro trazendo seus clientes sumidos de volta",
@@ -41,14 +44,38 @@ export const metadata: Metadata = {
 const SELOS = ["Diagnóstico grátis", "Sem cartão", "Sem integração", "Funciona com planilha"];
 
 /**
- * Exemplo, e a tela diz que é exemplo. Os ritmos são plausíveis para uma
- * barbearia; os nomes não são de ninguém.
+ * A ONDA DE EXEMPLO — e a tela diz que é exemplo.
+ *
+ * Os ritmos são plausíveis para uma barbearia e os nomes não são de ninguém. O
+ * que NÃO é inventado: a etiqueta sai da mesma classificação que monta a Onda de
+ * verdade, e a mensagem sai do mesmo motor que escreve a do painel. A data é fixa
+ * para a página não mudar de etiqueta sozinha de um dia para o outro.
  */
+const HOJE_DO_EXEMPLO = new Date("2026-09-14T12:00:00.000Z");
+const DIA_MS = 86_400_000;
+
 const ONDA_EXEMPLO = [
   { nome: "Marcos", ciclo: 28, dias: 64 },
-  { nome: "Dona Cida", ciclo: 35, dias: 90 },
-  { nome: "Júnior", ciclo: 21, dias: 45 },
-];
+  { nome: "Dona Cida", ciclo: 35, dias: 120 },
+  { nome: "Júnior", ciclo: 21, dias: 18 },
+].map((c) => {
+  const { esteira, diasAlemDoCiclo } = classificar({
+    ultimaVisita: new Date(HOJE_DO_EXEMPLO.getTime() - c.dias * DIA_MS),
+    ciclo: { dias: c.ciclo, confianca: "alta", visitas: 6, motivo: "" },
+    temAgendamentoFuturo: false,
+    hoje: HOJE_DO_EXEMPLO,
+  });
+  return {
+    ...c,
+    etiqueta: esteira === "EM_DIA" ? null : NOME_DA_ESTEIRA[esteira],
+    porque:
+      diasAlemDoCiclo > 0
+        ? `Costuma voltar a cada ${c.ciclo} dias e já passou ${diasAlemDoCiclo} dias disso.`
+        : `Costuma voltar a cada ${c.ciclo} dias, e a data dele cai nesta semana.`,
+  };
+});
+
+const MENSAGEM_EXEMPLO = mensagemDoToque(1, { primeiroNome: "Marcos", negocio: "", link: "" });
 
 const PASSOS = [
   {
@@ -115,7 +142,7 @@ export default function Home() {
             <h1 className="text-4xl font-bold leading-[1.06] tracking-tight sm:text-5xl lg:text-[3.75rem]">
               Seus clientes não avisam que estão indo embora.
               <br className="hidden sm:block" />{" "}
-              <span className="text-nx-gold">Eles só param de voltar.</span>
+              <span className="text-nx-gold">Eles simplesmente param de voltar.</span>
             </h1>
             <p className="mx-auto max-w-2xl text-lg leading-relaxed text-nx-secondary sm:text-xl">
               A Nexora mostra quem parou de comprar, quanto dinheiro isso representa e a
@@ -162,12 +189,16 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ONDE ELES APARECEM — no lugar do painel de exemplo da antiga. */}
+        {/* ONDE ELES APARECEM — a Onda de exemplo, com as peças de verdade do produto. */}
         <section className="px-6 pb-20">
           <div className="mx-auto max-w-4xl">
-            <h2 className="mb-10 text-center text-2xl font-bold sm:text-3xl">
+            <h2 className="text-center text-2xl font-bold sm:text-3xl">
               E é aqui que esses clientes aparecem
             </h2>
+            <p className="mx-auto mb-10 mt-3 max-w-xl text-center text-sm text-nx-muted">
+              Uma onda de exemplo, com as mesmas etiquetas e a mesma mensagem que o painel
+              monta de verdade. Os nomes não são de ninguém.
+            </p>
             <div className="mx-auto max-w-xl rounded-2xl border border-nx-border bg-nx-surface p-5 shadow-nx-glow-sm">
               <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-nx-border pb-3">
                 <div className="flex items-center gap-2">
@@ -181,21 +212,32 @@ export default function Home() {
                 </span>
               </div>
               <ul>
-                {ONDA_EXEMPLO.map((c) => (
-                  <li
-                    key={c.nome}
-                    className="flex items-center justify-between gap-4 border-b border-nx-border py-3 last:border-b-0 last:pb-0"
-                  >
-                    <div>
-                      <p className="text-sm font-semibold">{c.nome}</p>
-                      <p className="text-xs text-nx-secondary">
-                        vinha a cada {c.ciclo} dias · sumiu há {c.dias}
-                      </p>
+                {ONDA_EXEMPLO.map((c, i) => (
+                  <li key={c.nome} className="border-b border-nx-border py-4 last:border-b-0 last:pb-0">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-semibold">{c.nome}</p>
+                        <p className="mt-0.5 text-xs leading-relaxed text-nx-secondary">
+                          Última visita há {c.dias} dias. {c.porque}
+                        </p>
+                      </div>
+                      {/* Etiqueta, não botão: numa lista de exemplo, nada finge ser clicável. */}
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        {c.etiqueta && (
+                          <span className="rounded-full border border-nx-gold/25 bg-nx-gold/10 px-2 py-0.5 text-[11px] font-semibold text-nx-gold">
+                            {c.etiqueta}
+                          </span>
+                        )}
+                        <span className="text-[11px] text-nx-muted">
+                          1ª de {TOTAL_TOQUES} mensagens
+                        </span>
+                      </div>
                     </div>
-                    {/* Etiqueta, não botão: numa lista de exemplo, nada finge ser clicável. */}
-                    <span className="shrink-0 rounded-md border border-nx-gold/25 bg-nx-gold/10 px-3 py-1 text-xs font-semibold text-nx-gold">
-                      Mandar
-                    </span>
+                    {i === 0 && (
+                      <p className="mt-3 whitespace-pre-line rounded-lg border border-nx-border bg-nx-surface-2 p-3 text-sm leading-relaxed text-nx-secondary">
+                        {MENSAGEM_EXEMPLO}
+                      </p>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -220,12 +262,10 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="px-6 py-20">
-          <div className="mx-auto max-w-3xl">
-            <h2 className="text-center text-3xl font-bold sm:text-4xl">
-              Isso não é disparo em massa
-            </h2>
-            <div className="mt-8 grid gap-5 text-lg leading-relaxed text-nx-secondary">
+        <section id="nao-e" className="scroll-mt-20 px-6 py-20">
+          <div className="mx-auto max-w-5xl">
+            <h2 className="text-center text-3xl font-bold sm:text-4xl">O que a Nexora não é</h2>
+            <div className="mx-auto mt-8 grid max-w-3xl gap-5 text-lg leading-relaxed text-nx-secondary">
               <p>
                 Ferramenta de disparo manda a mesma mensagem para a lista inteira. Duas coisas
                 acontecem: o WhatsApp bane o número — e o número da sua empresa é a sua agenda
@@ -238,6 +278,19 @@ export default function Home() {
                 lista. Quem já respondeu sai na hora. E você lê cada mensagem antes de mandar.
                 É mais devagar de propósito.
               </p>
+            </div>
+            <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {O_QUE_A_NEXORA_NAO_E.map((item) => (
+                <div key={item.titulo} className="rounded-xl border border-nx-border bg-nx-surface p-6">
+                  <h3 className="font-semibold">
+                    <span aria-hidden="true" className="mr-2 text-nx-error">
+                      ✕
+                    </span>
+                    {item.titulo}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-nx-secondary">{item.explicacao}</p>
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -287,7 +340,23 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="px-6 pb-24 pt-20">
+        <section id="perguntas" className="scroll-mt-20 px-6 py-20">
+          <div className="mx-auto max-w-5xl">
+            <h2 className="text-center text-3xl font-bold sm:text-4xl">
+              Perguntas de quem está chegando
+            </h2>
+            <div className="mt-12 grid gap-4 md:grid-cols-2">
+              {PERGUNTAS_FREQUENTES.map((p) => (
+                <div key={p.pergunta} className="rounded-xl border border-nx-border bg-nx-surface p-6">
+                  <h3 className="font-semibold">{p.pergunta}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-nx-secondary">{p.resposta}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="px-6 pb-24 pt-10">
           <div className="mx-auto max-w-3xl rounded-2xl border border-nx-gold/30 bg-nx-surface p-8 text-center sm:p-12">
             <h2 className="text-3xl font-bold leading-tight sm:text-4xl">
               Antes de decidir, veja o tamanho do buraco.

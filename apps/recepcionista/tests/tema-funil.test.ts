@@ -86,7 +86,18 @@ const DIAGNOSTICO = [
   "components/funil.tsx",
   "app/diagnostico/layout.tsx",
 ];
-const FUNIL = ["components/tema-nexora.tsx", ...HOME, ...ACESSO, ...DIAGNOSTICO];
+/** Páginas de nicho, como /barbearia: a cara da home, com a conversa do ramo. */
+const NICHO = ["app/barbearia/page.tsx"];
+const FUNIL = ["components/tema-nexora.tsx", ...HOME, ...ACESSO, ...DIAGNOSTICO, ...NICHO];
+
+describe("as páginas de nicho", () => {
+  for (const arquivo of NICHO) {
+    it(`${arquivo} usa só o tema do funil e recebe o TemaNexora`, () => {
+      expect(achadosDoTemaAntigo(arquivo)).toEqual([]);
+      aplicaTema(arquivo);
+    });
+  }
+});
 
 describe("a fundação do tema", () => {
   it("a família nx tem os valores da Nexora antiga, e só os que o funil usa", () => {

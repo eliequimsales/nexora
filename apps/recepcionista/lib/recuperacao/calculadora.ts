@@ -1,14 +1,15 @@
 import { limparCriativo } from "@/lib/funil";
-import { MEDIANA_POR_SEGMENTO } from "@/lib/recuperacao/ciclo";
+import { MEDIANA_POR_SEGMENTO, medianaDoSegmento, SEGMENTOS } from "@/lib/recuperacao/ciclo";
 import { abaixoDoCorte, faixaRecuperavel, visitasNaJanela } from "@/lib/recuperacao/estimativa";
 
 /**
  * A CONTA DA CALCULADORA DA HOME.
  *
  * Três números que o visitante digita e a mesma fórmula do diagnóstico
- * (lib/recuperacao/estimativa.ts). A única suposição a mais é o ritmo: sem
- * saber o ramo, a calculadora usa o padrão do próprio diagnóstico — e a tela
- * diz isso.
+ * (lib/recuperacao/estimativa.ts). A única suposição a mais é o ritmo: sem saber
+ * o ramo, a calculadora usa o padrão do próprio diagnóstico; numa página de ramo,
+ * como /barbearia, usa o ritmo daquele ramo — o mesmo que o diagnóstico vai usar
+ * quando a pessoa clicar. E a tela diz qual ritmo entrou na conta.
  *
  * Funções puras: o componente só desenha. Assim a conta é testada sem React.
  */
@@ -43,6 +44,8 @@ export function lerInteiro(bruto: string, maximo: number): number {
 export type ContaDaCalculadora = {
   parados: number;
   umaVisitaCents: number;
+  /** O ritmo, em dias, que entrou na conta: o do ramo ou o padrão do diagnóstico. */
+  ciclo: number;
   visitas: number;
   potencialCents: number;
   faixa: { min: number; central: number; max: number };
@@ -53,17 +56,20 @@ export function contaDaCalculadora(entrada: {
   clientes: number;
   ticketReais: number;
   fatia: number;
+  ramo?: string | null;
 }): ContaDaCalculadora {
   const clientes = Math.max(0, Math.floor(entrada.clientes));
   const ticketCents = Math.max(0, Math.round(entrada.ticketReais * 100));
   const parados = Math.round(clientes * entrada.fatia);
   const umaVisitaCents = parados * ticketCents;
-  const visitas = visitasNaJanela(CICLO_DA_CALCULADORA);
+  const ciclo = entrada.ramo ? medianaDoSegmento(entrada.ramo) : CICLO_DA_CALCULADORA;
+  const visitas = visitasNaJanela(ciclo);
   const potencialCents = umaVisitaCents * visitas;
   const faixa = faixaRecuperavel(potencialCents);
   return {
     parados,
     umaVisitaCents,
+    ciclo,
     visitas,
     potencialCents,
     faixa,
@@ -74,12 +80,19 @@ export function contaDaCalculadora(entrada: {
 }
 
 /**
- * O botão leva ao diagnóstico só o que ele sabe usar: o ticket e o criativo do
- * anúncio. Número de clientes e percentual ficam na tela — URL vai para o
- * histórico do navegador, e o diagnóstico não precisa deles.
+ * O botão leva ao diagnóstico só o que ele sabe usar: o ramo, o ticket e o
+ * criativo do anúncio. Número de clientes e percentual ficam na tela — URL vai
+ * para o histórico do navegador, e o diagnóstico não precisa deles.
  */
-export function linkDoDiagnostico(entrada: { ticketReais: number; criativo: string | null }): string {
+export function linkDoDiagnostico(entrada: {
+  ticketReais: number;
+  criativo: string | null;
+  ramo?: string | null;
+}): string {
   const params = new URLSearchParams();
+  // Só ramo que o diagnóstico conhece: um ramo inventado na URL cairia no padrão
+  // lá, e a página de ramo mostraria uma conta que o diagnóstico não repete.
+  if (entrada.ramo && SEGMENTOS.includes(entrada.ramo)) params.set("ramo", entrada.ramo);
   const ticket = Math.round(entrada.ticketReais);
   if (Number.isFinite(ticket) && ticket >= TICKET_MIN_NO_LINK && ticket <= TICKET_MAX_NO_LINK) {
     params.set("ticket", String(ticket));

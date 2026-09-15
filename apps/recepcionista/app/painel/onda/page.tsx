@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { deveSilenciar, MOTIVOS_PULO, rotuloDoMotivo } from "@/lib/recuperacao/pulo";
 import { variantesDeTelefone } from "@/lib/recuperacao/telefone";
+import { NOME_DA_ESTEIRA } from "@/lib/recuperacao/esteiras";
 import { CartaoDaOferta } from "@/components/cobranca/cartao-da-oferta";
 
 /**
@@ -71,9 +72,9 @@ const reais = (cents: number) =>
   (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const ROTULO_ESTEIRA: Record<string, { texto: string; classe: string }> = {
-  PRE_ATRASO: { texto: "Prestes a sumir", classe: "bg-amber/20 text-[#7A5A10]" },
-  ATRASO: { texto: "Atrasado", classe: "bg-amber/15 text-amber-deep" },
-  RESGATE: { texto: "Sumido há muito", classe: "bg-panel-line text-panel-sub" },
+  PRE_ATRASO: { texto: NOME_DA_ESTEIRA.PRE_ATRASO, classe: "bg-amber/20 text-[#7A5A10]" },
+  ATRASO: { texto: NOME_DA_ESTEIRA.ATRASO, classe: "bg-amber/15 text-amber-deep" },
+  RESGATE: { texto: NOME_DA_ESTEIRA.RESGATE, classe: "bg-panel-line text-panel-sub" },
 };
 
 /**
