@@ -52,6 +52,7 @@ export default async function PaginaAssinatura({
     where: { id: companyId },
     select: {
       createdAt: true,
+      termosVersao: true,
       subscriptionStatus: true,
       trialEndsAt: true,
       currentPeriodEnd: true,

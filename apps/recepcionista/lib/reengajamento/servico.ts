@@ -190,6 +190,7 @@ export async function rodarRegua(hoje = new Date()): Promise<ResultadoRegua> {
             name: true,
             email: true,
             createdAt: true,
+            termosVersao: true,
             checkoutAbertoEm: true,
             canceladoEm: true,
             trialEndsAt: true,

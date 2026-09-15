@@ -20,6 +20,7 @@
 import { emReais, PRECO_MENSAL_CENTS } from "./preco";
 
 export type EstadoConta =
+  | "GRATIS"
   | "TRIAL"
   | "TRIAL_EXPIRADO"
   | "ATIVO"
@@ -127,11 +128,11 @@ export function estadoDaConta(a: Assinatura, agora: Date): EstadoConta {
   }
 
   if (s === null || s === undefined) {
-    // Sem prazo nenhum NÃO é teste infinito. Toda conta ganha relógio no
-    // cadastro, ou na primeira leitura se for antiga (garantirRelogio, em
-    // relogio-da-conta.ts). Chegar aqui sem ele é defeito, e defeito erra para
-    // o lado de travar a ação — o dado continua livre.
-    if (!a.trialEndsAt) return "TRIAL_EXPIRADO";
+    // Sem prazo nenhum é a conta que nunca teve teste grátis: aceitou os Termos
+    // em que a Nexora é grátis para descobrir e paga para recuperar. Conta antiga,
+    // que aceitou o mês grátis, ganha relógio antes de chegar aqui
+    // (garantirRelogio). Em nenhum dos dois casos o teste é infinito.
+    if (!a.trialEndsAt) return "GRATIS";
     return agora < a.trialEndsAt ? "TRIAL" : "TRIAL_EXPIRADO";
   }
 
@@ -149,6 +150,14 @@ export type Permissao =
 const COM_ACESSO: EstadoConta[] = ["TRIAL", "ATIVO", "TOLERANCIA", "CANCELADO_COM_ACESSO"];
 
 const RECUSA: Record<string, { motivo: string; texto: string }> = {
+  // Quem nunca teve teste não pode ler "seu teste terminou". A recusa dele é a
+  // oferta: o trabalho está pronto, falta escolher o plano.
+  GRATIS: {
+    motivo:
+      "As mensagens prontas dos seus clientes estão esperando. Para liberar e mandar do " +
+      "seu WhatsApp, escolha um plano. Sua lista continua sua, com ou sem plano.",
+    texto: `Liberar as mensagens — ${emReais(PRECO_MENSAL_CENTS)}/mês`,
+  },
   TRIAL_EXPIRADO: {
     motivo:
       "Seu período de teste terminou. Sua base e seu histórico continuam aqui, inteiros — " +

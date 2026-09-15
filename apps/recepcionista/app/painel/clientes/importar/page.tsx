@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { DECLARACAO_BASE } from "@/lib/legal/identidade";
 import { variantesDeTelefone } from "@/lib/recuperacao/telefone";
+import { CartaoDaOferta } from "@/components/cobranca/cartao-da-oferta";
 
 /**
  * TRAZER OS CLIENTES — a tela.
@@ -38,7 +39,12 @@ type Resultado = {
 };
 
 /** A recusa que o servidor manda quando a assinatura não cobre a ação. */
-type Recusa = { motivo: string; acao: { texto: string; href: string } };
+type Recusa = {
+  motivo: string;
+  acao: { texto: string; href: string };
+  /** A conta da lista do dono, quando ele ainda pode escolher um plano. */
+  oferta?: import("@/lib/billing/oferta").Oferta | null;
+};
 
 const EXEMPLO = `Nome, Telefone, Última visita, Valor
 João Silva, (11) 98888-7777, 12/03/2026, R$ 50,00
@@ -655,15 +661,11 @@ export default function PaginaImportar() {
             resolver — Regra Zero, igual à recusa da onda.
           */}
           {travaMensagem && (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber/40 bg-amber/10 p-4">
-              <p className="text-sm text-panel-ink">{travaMensagem.motivo}</p>
-              <Link
-                href={travaMensagem.acao.href}
-                className="rounded-lg bg-amber px-4 py-2 text-xs font-semibold text-night transition hover:brightness-110"
-              >
-                {travaMensagem.acao.texto}
-              </Link>
-            </div>
+            <CartaoDaOferta
+              motivo={travaMensagem.motivo}
+              acao={travaMensagem.acao}
+              oferta={travaMensagem.oferta ?? null}
+            />
           )}
 
           <div className="space-y-3">

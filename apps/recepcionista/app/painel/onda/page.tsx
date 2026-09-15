@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { deveSilenciar, MOTIVOS_PULO, rotuloDoMotivo } from "@/lib/recuperacao/pulo";
 import { variantesDeTelefone } from "@/lib/recuperacao/telefone";
+import { CartaoDaOferta } from "@/components/cobranca/cartao-da-oferta";
 
 /**
  * A ONDA DE SEGUNDA
@@ -59,7 +60,12 @@ type Onda = {
 };
 
 /** A recusa que o servidor manda quando a assinatura não cobre a ação. */
-type Recusa = { motivo: string; acao: { texto: string; href: string } };
+type Recusa = {
+  motivo: string;
+  acao: { texto: string; href: string };
+  /** A conta da lista do dono, quando ele ainda pode escolher um plano. */
+  oferta?: import("@/lib/billing/oferta").Oferta | null;
+};
 
 const reais = (cents: number) =>
   (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -115,7 +121,9 @@ export default function PaginaOnda() {
       if (!res.ok) {
         // O servidor manda o motivo e o caminho para resolver. Achatar tudo em
         // "não consegui agora" deixava o dono bloqueado sem forma de pagar.
-        if (json.acao?.href) setRecusa({ motivo: json.error ?? "", acao: json.acao });
+        if (json.acao?.href) {
+          setRecusa({ motivo: json.error ?? "", acao: json.acao, oferta: json.oferta ?? null });
+        }
         else setErro(json.error ?? "Não consegui montar sua lista agora. Tenta de novo?");
         return;
       }
@@ -195,15 +203,7 @@ export default function PaginaOnda() {
   if (recusa) {
     return (
       <main className="max-w-2xl p-6">
-        <div className="rounded-2xl border border-amber/40 bg-amber/10 p-6">
-          <p className="text-panel-ink">{recusa.motivo}</p>
-          <a
-            href={recusa.acao.href}
-            className="mt-4 inline-flex rounded-xl bg-amber px-5 py-3 text-sm font-semibold text-night transition hover:brightness-110"
-          >
-            {recusa.acao.texto}
-          </a>
-        </div>
+        <CartaoDaOferta motivo={recusa.motivo} acao={recusa.acao} oferta={recusa.oferta ?? null} />
       </main>
     );
   }

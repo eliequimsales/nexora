@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { estadoDaConta, podeExecutar, type Acao, type EstadoConta } from "./acesso";
+import { ofertaDaEmpresa } from "./oferta-da-conta";
 import { garantirRelogio } from "./relogio-da-conta";
 
 /**
@@ -17,6 +18,7 @@ export async function estadoDaEmpresa(companyId: string): Promise<EstadoConta> {
     select: {
       id: true,
       createdAt: true,
+      termosVersao: true,
       subscriptionStatus: true,
       trialEndsAt: true,
       currentPeriodEnd: true,
@@ -29,12 +31,15 @@ export async function estadoDaEmpresa(companyId: string): Promise<EstadoConta> {
   if (!empresa) return "TRIAL";
 
   // Conta antiga chega aqui sem prazo. Sem garantir o relógio antes, a regra
-  // pura (que trava conta sem prazo) diria "teste terminou" para quem ainda
-  // tem os dias de aviso.
+  // pura diria GRATIS para quem ainda tem direito ao mês que os Termos dela
+  // prometeram.
   const agora = new Date();
   const trialEndsAt = await garantirRelogio(empresa, agora);
   return estadoDaConta({ ...empresa, trialEndsAt }, agora);
 }
+
+/** Estados em que a recusa leva a oferta: quem ainda pode escolher um plano. */
+const RECUSA_COM_OFERTA: EstadoConta[] = ["GRATIS", "TRIAL_EXPIRADO"];
 
 /**
  * Devolve `null` quando pode seguir, ou a resposta 402 pronta.
@@ -47,11 +52,18 @@ export async function exigirAcesso(
   companyId: string,
   acao: Acao,
 ): Promise<NextResponse | null> {
-  const permissao = podeExecutar(await estadoDaEmpresa(companyId), acao);
+  const estado = await estadoDaEmpresa(companyId);
+  const permissao = podeExecutar(estado, acao);
   if (permissao.pode) return null;
 
+  // "Bloqueado" sem o número dele é parede; com o número é decisão. Mas a oferta
+  // nunca derruba a recusa: se o cálculo falhar, a recusa sai sem ela.
+  const oferta = RECUSA_COM_OFERTA.includes(estado)
+    ? await ofertaDaEmpresa(companyId).catch(() => null)
+    : null;
+
   return NextResponse.json(
-    { error: permissao.motivo, acao: permissao.acao },
+    { error: permissao.motivo, acao: permissao.acao, oferta },
     { status: permissao.http },
   );
 }

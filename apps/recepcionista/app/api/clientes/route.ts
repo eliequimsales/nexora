@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionCompanyId } from "@/lib/auth";
 import { podeExecutar } from "@/lib/billing/acesso";
 import { estadoDaEmpresa } from "@/lib/billing/guarda";
+import { ofertaDaEmpresa } from "@/lib/billing/oferta-da-conta";
 import { prisma } from "@/lib/db";
 import { rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 import { calcularCiclo, medianaDoSegmento } from "@/lib/recuperacao/ciclo";
@@ -185,6 +186,13 @@ export async function GET() {
     total: lista.length,
     emRisco: lista.filter((c) => c.status === "RISCO_CRITICO" || c.status === "ATRASADO").length,
     // Regra Zero: sem a mensagem, a tela recebe o motivo e o caminho para resolver.
-    trava: permissao.pode ? null : { motivo: permissao.motivo, acao: permissao.acao },
+    trava: permissao.pode
+      ? null
+      : {
+          motivo: permissao.motivo,
+          acao: permissao.acao,
+          // Mesma oferta da recusa da onda. Falha no cálculo não derruba a lista.
+          oferta: await ofertaDaEmpresa(companyId).catch(() => null),
+        },
   });
 }

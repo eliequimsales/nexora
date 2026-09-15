@@ -86,6 +86,7 @@ export async function POST(request: Request) {
         stripeCustomerId: true,
         emailVerificadoEm: true,
         createdAt: true,
+        termosVersao: true,
         subscriptionStatus: true,
         trialEndsAt: true,
       },

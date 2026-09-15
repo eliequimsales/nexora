@@ -5,7 +5,8 @@ import { relogioParaGravar } from "./relogio";
  * Garante que a conta tem prazo antes de alguém decidir o estado dela.
  *
  * Conta criada antes do relógio nunca passou pelo cadastro que grava prazo. A
- * primeira leitura grava — com os dias de aviso — e as seguintes só leem.
+ * primeira leitura grava — com os dias de aviso — e as seguintes só leem. Conta
+ * que aceitou Termos sem teste grátis não ganha prazo nenhum: fica em GRATIS.
  *
  * O filtro com `subscriptionStatus: null` e `trialEndsAt: null` torna a escrita
  * idempotente e segura contra corrida: duas requisições ao mesmo tempo gravam
@@ -20,6 +21,7 @@ export async function garantirRelogio(
     subscriptionStatus: string | null;
     trialEndsAt: Date | null;
     createdAt: Date;
+    termosVersao: string | null;
   },
   agora: Date,
 ): Promise<Date | null> {

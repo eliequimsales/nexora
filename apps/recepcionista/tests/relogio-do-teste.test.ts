@@ -6,7 +6,10 @@ import {
   AVISO_DO_RELOGIO_DIAS,
   fimDoTesteSemRelogio,
   fimDoTrialNoCheckout,
+  prometeuTesteGratis,
+  relogioDoCadastro,
   relogioParaGravar,
+  TERMOS_SEM_TESTE_A_PARTIR_DE,
 } from "@/lib/billing/relogio";
 
 /**
@@ -19,8 +22,10 @@ import {
  * E quem abria o checkout depois de usar o mês ganhava OUTRO mês: a sessão
  * pedia `trial_period_days: 30` contados do clique, não do cadastro.
  *
- * Os Termos prometem "os primeiros 30 dias". Este arquivo trava as duas pontas
- * dessa promessa: nem infinito, nem duas vezes.
+ * A partir da Entrega 2 o teste grátis deixa de existir para contas novas. O
+ * que decide se a conta tem direito a ele é o que ela ACEITOU: a versão dos
+ * Termos gravada no cadastro. Promessa feita é cumprida; promessa que não foi
+ * feita não vira presente.
  */
 
 const DIA = 86_400_000;
@@ -30,6 +35,21 @@ const diasAtras = (n: number) => new Date(AGORA.getTime() - n * DIA);
 const emDias = (n: number) => new Date(AGORA.getTime() + n * DIA);
 const emHoras = (n: number) => new Date(AGORA.getTime() + n * HORA);
 const segundos = (d: Date) => Math.floor(d.getTime() / 1000);
+
+describe("prometeuTesteGratis — o que a conta aceitou", () => {
+  it("conta sem versão registrada é anterior ao registro do aceite: aceitou o mês grátis", () => {
+    expect(prometeuTesteGratis(null)).toBe(true);
+  });
+
+  it("Termos anteriores à mudança prometiam o mês grátis", () => {
+    expect(prometeuTesteGratis("2026-09-10")).toBe(true);
+  });
+
+  it("a partir da versão sem teste, não há mês grátis prometido", () => {
+    expect(prometeuTesteGratis(TERMOS_SEM_TESTE_A_PARTIR_DE)).toBe(false);
+    expect(prometeuTesteGratis("2027-01-01")).toBe(false);
+  });
+});
 
 describe("fimDoTesteSemRelogio", () => {
   it(`conta criada agora ganha os ${TRIAL_DIAS} dias inteiros`, () => {
@@ -53,11 +73,21 @@ describe("fimDoTesteSemRelogio", () => {
   });
 });
 
+describe("relogioDoCadastro", () => {
+  it("com Termos que prometem o mês grátis, o prazo nasce com a conta", () => {
+    expect(relogioDoCadastro("2026-09-10", AGORA)).toEqual(emDias(TRIAL_DIAS));
+  });
+
+  it("com Termos sem teste grátis, a conta nasce sem prazo", () => {
+    expect(relogioDoCadastro(TERMOS_SEM_TESTE_A_PARTIR_DE, AGORA)).toBeNull();
+  });
+});
+
 describe("relogioParaGravar", () => {
-  it("conta sem assinatura e sem prazo recebe o relógio", () => {
+  it("conta antiga sem assinatura e sem prazo recebe o relógio", () => {
     expect(
       relogioParaGravar(
-        { subscriptionStatus: null, trialEndsAt: null, createdAt: diasAtras(60) },
+        { subscriptionStatus: null, trialEndsAt: null, createdAt: diasAtras(60), termosVersao: null },
         AGORA,
       ),
     ).toEqual(emDias(AVISO_DO_RELOGIO_DIAS));
@@ -66,7 +96,7 @@ describe("relogioParaGravar", () => {
   it("conta que já tem prazo não é tocada", () => {
     expect(
       relogioParaGravar(
-        { subscriptionStatus: null, trialEndsAt: emDias(3), createdAt: diasAtras(27) },
+        { subscriptionStatus: null, trialEndsAt: emDias(3), createdAt: diasAtras(27), termosVersao: null },
         AGORA,
       ),
     ).toBeNull();
@@ -77,7 +107,21 @@ describe("relogioParaGravar", () => {
   it("conta com assinatura na Stripe não ganha relógio local", () => {
     expect(
       relogioParaGravar(
-        { subscriptionStatus: "active", trialEndsAt: null, createdAt: diasAtras(90) },
+        { subscriptionStatus: "active", trialEndsAt: null, createdAt: diasAtras(90), termosVersao: null },
+        AGORA,
+      ),
+    ).toBeNull();
+  });
+
+  it("conta que aceitou Termos sem teste grátis não ganha relógio: fica em GRATIS", () => {
+    expect(
+      relogioParaGravar(
+        {
+          subscriptionStatus: null,
+          trialEndsAt: null,
+          createdAt: diasAtras(1),
+          termosVersao: TERMOS_SEM_TESTE_A_PARTIR_DE,
+        },
         AGORA,
       ),
     ).toBeNull();
@@ -111,13 +155,13 @@ const semComentarios = (s: string) =>
 const leia = (rel: string) => semComentarios(readFileSync(join(RAIZ, rel), "utf8"));
 
 describe("o relógio nasce e é garantido nos lugares certos", () => {
-  it("o cadastro por senha grava o prazo junto com a conta", () => {
-    expect(leia("app/api/auth/signup/route.ts")).toMatch(/trialEndsAt:\s*fimDoTesteSemRelogio\(/);
+  it("o cadastro por senha decide o prazo pela versão dos Termos aceita", () => {
+    expect(leia("app/api/auth/signup/route.ts")).toMatch(/trialEndsAt:\s*relogioDoCadastro\(/);
   });
 
-  it("o cadastro pelo Google grava o prazo junto com a conta", () => {
+  it("o cadastro pelo Google decide o prazo pela versão dos Termos aceita", () => {
     expect(leia("app/api/auth/google/callback/route.ts")).toMatch(
-      /trialEndsAt:\s*fimDoTesteSemRelogio\(/,
+      /trialEndsAt:\s*relogioDoCadastro\(/,
     );
   });
 
@@ -128,6 +172,7 @@ describe("o relógio nasce e é garantido nos lugares certos", () => {
     const guarda = leia("lib/billing/guarda.ts");
     expect(guarda).toContain("garantirRelogio(");
     expect(guarda).toMatch(/createdAt:\s*true/);
+    expect(guarda).toMatch(/termosVersao:\s*true/);
     expect(leia("app/painel/assinatura/page.tsx")).toContain("garantirRelogio(");
     expect(leia("lib/reengajamento/servico.ts")).toContain("garantirRelogio(");
   });

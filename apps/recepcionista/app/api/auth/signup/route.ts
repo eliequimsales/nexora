@@ -4,7 +4,7 @@ import { createSessionToken, hashPassword, setSessionCookie } from "@/lib/auth";
 import { logError } from "@/lib/errors";
 import { signupSchema } from "@/lib/validation";
 import { VERSAO_DOCUMENTOS } from "@/lib/legal/identidade";
-import { fimDoTesteSemRelogio } from "@/lib/billing/relogio";
+import { relogioDoCadastro } from "@/lib/billing/relogio";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { respostaDeLimite, type Politica } from "@/lib/limites";
 
@@ -47,9 +47,9 @@ export async function POST(request: Request) {
         // justamente a prova que a ANPD pede quando alguém contesta o aceite.
         // `clientIp` já devolve o último salto confiável do X-Forwarded-For.
         ipAceite: clientIp(request),
-        // O relógio do teste nasce com a conta. Antes só a Stripe gravava prazo,
-        // e quem nunca abria o checkout ficava em teste para sempre.
-        trialEndsAt: fimDoTesteSemRelogio(new Date(), new Date()),
+        // O prazo do teste nasce com a conta e segue a versão dos Termos que ela
+        // aceitou: Termos com mês grátis dão 30 dias; os sem teste, nenhum.
+        trialEndsAt: relogioDoCadastro(VERSAO_DOCUMENTOS, new Date()),
         profile: { create: {} },
       },
     });

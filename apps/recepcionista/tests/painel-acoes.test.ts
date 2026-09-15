@@ -48,6 +48,25 @@ describe("a recusa de assinatura vira botão, não beco", () => {
       // guarda — dava verde com o caminho do 402 quebrado. Provado plantando a
       // quebra em 12/09/2026.
       expect(fonte, "precisa guardar a recusa 402 que o servidor mandou").toContain("setRecusa");
+
+      // Desde 15/09/2026 a Onda entrega a recusa ao cartão da oferta, que desenha
+      // o botão. Continua preso ao `recusa`: é `acao={recusa.acao}` que precisa
+      // chegar ao cartão, e o cartão que precisa usar o href e o texto recebidos.
+      const peloCartao = /<CartaoDaOferta[^>]*acao=\{recusa\.acao\}/.test(fonte);
+      if (peloCartao) {
+        const cartao = leia("components/cobranca/cartao-da-oferta.tsx");
+        expect(fonte, "o motivo da recusa precisa chegar ao cartão").toContain(
+          "motivo={recusa.motivo}",
+        );
+        expect(cartao, "o cartão precisa levar o dono para onde ele resolve").toContain(
+          "href={acao.href}",
+        );
+        expect(cartao, "o cartão precisa mostrar o texto do botão que veio do servidor").toContain(
+          "{acao.texto}",
+        );
+        return;
+      }
+
       expect(fonte, "precisa levar o dono para onde ele resolve").toContain("recusa.acao.href");
       expect(fonte, "precisa mostrar o texto do botão que veio do servidor").toContain(
         "recusa.acao.texto",

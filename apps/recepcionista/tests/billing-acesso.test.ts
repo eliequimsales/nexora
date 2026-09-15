@@ -9,6 +9,7 @@ import {
   type EstadoConta,
   type Assinatura,
 } from "@/lib/billing/acesso";
+import { emReais, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
 
 const em = (iso: string) => new Date(`${iso}T12:00:00.000Z`);
 
@@ -24,6 +25,7 @@ function conta(over: Partial<Assinatura> = {}): Assinatura {
 }
 
 const TODOS_ESTADOS: EstadoConta[] = [
+  "GRATIS",
   "TRIAL",
   "TRIAL_EXPIRADO",
   "ATIVO",
@@ -39,13 +41,12 @@ const TODOS_ESTADOS: EstadoConta[] = [
 // bloqueio não pode depender do relógio de quem roda o teste.
 // ---------------------------------------------------------------------------
 describe("estadoDaConta", () => {
-  // Até 14/09/2026 esta linha dizia TRIAL, e o teste grátis nunca acabava para
-  // quem não abrisse o checkout: só a Stripe gravava prazo. Agora toda conta
-  // ganha relógio no cadastro, ou na primeira leitura se for antiga (ver
-  // lib/billing/relogio.ts). Chegar aqui sem relógio é defeito, e defeito erra
-  // para o lado de travar a AÇÃO — o dado continua livre.
-  it("sem assinatura e sem relógio não é teste infinito: trava as ações de saída", () => {
-    expect(estadoDaConta(conta(), em("2026-03-01"))).toBe("TRIAL_EXPIRADO");
+  // Sem assinatura e sem prazo nenhum é a conta que nunca teve teste grátis: a
+  // que aceitou os Termos em que a Nexora é grátis para descobrir e paga para
+  // recuperar. Conta antiga, que aceitou o mês grátis, ganha relógio antes de
+  // chegar aqui (garantirRelogio) e nunca cai neste caso.
+  it("sem assinatura e sem relógio é GRATIS: descobre de graça, não age", () => {
+    expect(estadoDaConta(conta(), em("2026-03-01"))).toBe("GRATIS");
   });
 
   it("trial local ainda dentro do prazo é TRIAL", () => {
@@ -151,7 +152,7 @@ describe("podeExecutar — invariantes", () => {
 
 describe("podeExecutar — regras", () => {
   const livres: EstadoConta[] = ["TRIAL", "ATIVO", "TOLERANCIA", "CANCELADO_COM_ACESSO"];
-  const travados: EstadoConta[] = ["TRIAL_EXPIRADO", "BLOQUEADO", "CANCELADO"];
+  const travados: EstadoConta[] = ["GRATIS", "TRIAL_EXPIRADO", "BLOQUEADO", "CANCELADO"];
 
   it("nos estados com acesso, tudo funciona", () => {
     for (const estado of livres) {
@@ -168,6 +169,17 @@ describe("podeExecutar — regras", () => {
         expect(podeExecutar(estado, acao).pode, `${acao} em ${estado}`).toBe(false);
       }
     }
+  });
+
+  // Quem nunca teve teste grátis não pode ler "seu teste terminou": seria mentir
+  // sobre um período que não existiu. A recusa dele é a oferta.
+  it("a recusa de GRATIS oferece o plano, e não fala de teste que acabou", () => {
+    const p = podeExecutar("GRATIS", "GERAR_ONDA");
+    expect(p.pode).toBe(false);
+    if (p.pode) return;
+    expect(p.motivo.toLowerCase()).not.toContain("teste");
+    expect(p.acao.texto).toContain(emReais(PRECO_MENSAL_CENTS));
+    expect(p.acao.href).toBe("/painel/assinatura");
   });
 
   // A lista é a entrada do diagnóstico, e o diagnóstico é o que mostra ao dono

@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { createSessionToken, hashPassword, setSessionCookie } from "@/lib/auth";
 import { logError } from "@/lib/errors";
 import { VERSAO_DOCUMENTOS } from "@/lib/legal/identidade";
-import { fimDoTesteSemRelogio } from "@/lib/billing/relogio";
+import { relogioDoCadastro } from "@/lib/billing/relogio";
 import { appRedirect, exchangeCodeForUser, OAUTH_STATE_COOKIE, verifyOauthState } from "@/lib/google";
 import { decidirVinculoGoogle } from "@/lib/auth/vinculo-google";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
@@ -89,8 +89,8 @@ export async function GET(request: Request) {
           // teria a prova completa do aceite e metade não — e o caminho pelo
           // Google tende a ser o mais usado.
           ipAceite: clientIp(request),
-          // Mesmo relógio do cadastro por senha: o teste começa quando a conta nasce.
-          trialEndsAt: fimDoTesteSemRelogio(new Date(), new Date()),
+          // Mesma regra do cadastro por senha: o prazo segue a versão dos Termos aceita.
+          trialEndsAt: relogioDoCadastro(VERSAO_DOCUMENTOS, new Date()),
           profile: { create: {} },
         },
       });
