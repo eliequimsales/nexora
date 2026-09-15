@@ -686,8 +686,10 @@ function Resultado({
         Criar minha conta e trazer esses {d.sumidos} de volta
       </button>
       <p className="mt-3 text-sm leading-relaxed text-nx-secondary">
-        {emReais(PRECO_MENSAL_CENTS)} por mês, e o primeiro mês é grátis. Não pedimos cartão
-        agora. Cancele quando quiser — você fica com o período que já pagou.
+        Criar a conta e ver sua lista é grátis, sem cartão. Para liberar as mensagens,{" "}
+        {emReais(PRECO_MENSAL_CENTS)} por mês, com a Garantia Dinheiro Recuperado: mandando as
+        ondas, se o dinheiro que voltar não chegar a esse valor, devolvemos o que você pagou.
+        Cancele quando quiser — você fica com o período que já pagou.
       </p>
 
       <button

@@ -29,7 +29,7 @@ const mono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "Nexora — recuperação de clientes inativos",
   description:
-    "A Nexora descobre quais clientes pararam de voltar e te entrega a mensagem pronta para trazer cada um. Primeiro mês grátis, sem cartão.",
+    "A Nexora descobre quais clientes pararam de voltar e te entrega a mensagem pronta para trazer cada um. Diagnóstico grátis, sem cartão.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

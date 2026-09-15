@@ -1,9 +1,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { GARANTIA_DIAS, ONDAS_MINIMAS } from "@/lib/billing/garantia";
+import { FORMAS_DE_PAGAMENTO, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
+import { prometeuTesteGratis } from "@/lib/billing/relogio";
+import { VERSAO_DOCUMENTOS } from "@/lib/legal/identidade";
 import { TAMANHO_DA_ONDA } from "@/lib/recuperacao/onda";
-import { TRIAL_DIAS } from "@/lib/billing/acesso";
-import { PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
 
 /**
  * A LANDING PROMETE; O CÓDIGO CUMPRE. ESTE TESTE AMARRA OS DOIS.
@@ -25,7 +27,8 @@ const RAIZ = join(__dirname, "..");
 // feita com o espaço em branco normalizado — senão o teste falha por prettier
 // e não por promessa quebrada, que é o tipo de guarda que ninguém mantém.
 const semQuebras = (s: string) => s.replace(/\s+/g, " ");
-const landing = semQuebras(readFileSync(join(RAIZ, "app/page.tsx"), "utf8"));
+const fonte = (rel: string) => semQuebras(readFileSync(join(RAIZ, rel), "utf8"));
+const landing = fonte("app/page.tsx");
 
 describe("os números da página são os números do produto", () => {
   it("a Onda anunciada é a Onda que o motor monta", () => {
@@ -38,10 +41,40 @@ describe("os números da página são os números do produto", () => {
     expect(landing).toContain("R$ 97");
   });
 
-  it("o mês grátis anunciado é o trial configurado", () => {
-    expect(TRIAL_DIAS).toBe(30);
-    expect(landing).toContain("primeiro mês é grátis");
+  // Desde os Termos de 2026-09-15 a conta nova é grátis para descobrir e paga para
+  // recuperar. A garantia ocupa o lugar do mês grátis — anunciar os dois seria
+  // prometer a quem chega um teste que o cadastro não dá.
+  it("conta nova não ganha mês grátis, e a página não promete um", () => {
+    expect(prometeuTesteGratis(VERSAO_DOCUMENTOS)).toBe(false);
+    expect(landing.toLowerCase()).not.toContain("mês grátis");
+    expect(landing.toLowerCase()).not.toContain("primeiro mês é grátis");
   });
+
+  it("a garantia anunciada sai das constantes da garantia", () => {
+    expect(GARANTIA_DIAS).toBe(30);
+    expect(ONDAS_MINIMAS).toBe(3);
+    expect(landing).toContain("Garantia Dinheiro Recuperado");
+    expect(landing).toContain("GARANTIA_DIAS");
+  });
+});
+
+describe("nenhuma tela de entrada promete o mês grátis que a conta nova não tem", () => {
+  const TELAS = [
+    "app/layout.tsx",
+    "app/cadastro/page.tsx",
+    "app/diagnostico/page.tsx",
+    "app/diagnostico/painel.tsx",
+    "components/diagnostico/custo-vs-retorno.tsx",
+  ];
+
+  for (const tela of TELAS) {
+    it(`${tela} não promete mês grátis`, () => {
+      const texto = fonte(tela).toLowerCase();
+      expect(texto).not.toContain("mês grátis");
+      expect(texto).not.toContain("primeiro mês é grátis");
+      expect(texto).not.toContain("meses são grátis");
+    });
+  }
 });
 
 describe("as regras que a página promete existem no motor", () => {
@@ -70,11 +103,26 @@ describe("as regras que a página promete existem no motor", () => {
   });
 });
 
+describe("quem presta o serviço sai dos Termos, não de frase solta", () => {
+  // "Pessoa física" era verdade até a Nexora virar empresa. O tipo de quem
+  // presta o serviço vem do documento nas variáveis do servidor; frase escrita à
+  // mão numa página envelhece no dia em que o documento muda.
+  it("a landing e o diagnóstico não afirmam o tipo de pessoa do fornecedor", () => {
+    for (const tela of ["app/page.tsx", "app/diagnostico/page.tsx"]) {
+      expect(fonte(tela).toLowerCase(), tela).not.toContain("pessoa física");
+    }
+  });
+});
+
 describe("as promessas que já foram falsas uma vez não voltam", () => {
+  const pixLigado = FORMAS_DE_PAGAMENTO.map((f) => f.toLowerCase()).includes("pix");
+
   const PROIBIDAS: [string, string][] = [
-    ["CNPJ", "não existe CNPJ; o rodapé nunca mostrou um"],
-    ["boleto", "só cartão está ligado na Stripe"],
-    ["Pix", "a Stripe no Brasil não faz Pix recorrente"],
+    ["CNPJ", "o documento de quem presta o serviço vem dos Termos, nunca escrito na página"],
+    ["boleto", "o boleto está desligado na Stripe"],
+    // Pix só pode aparecer quando estiver ligado — e ligado ele está só nos
+    // pagamentos avulsos, nunca na assinatura mensal.
+    ...(pixLigado ? [] : ([["Pix", "o Pix não está ligado na Stripe"]] as [string, string][])),
   ];
 
   for (const [termo, motivo] of PROIBIDAS) {

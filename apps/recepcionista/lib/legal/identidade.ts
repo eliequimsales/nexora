@@ -14,27 +14,36 @@
  *    aceite grava esta constante junto com a data.
  *
  * O Decreto 7.962/2013 art. 2º exige nome, CNPJ **ou CPF** e endereço eletrônico
- * em destaque — pessoa física pode prestar serviço, mas não pode se esconder.
- * Enquanto os campos abaixo estiverem como PENDENTE, o produto NÃO pode cobrar:
- * `identificacaoCompleta()` existe para essa checagem ser código, não memória.
+ * em destaque — quem presta o serviço pode ser empresa ou pessoa física, mas não
+ * pode se esconder. Enquanto os campos abaixo estiverem como PENDENTE, o produto
+ * NÃO pode cobrar: `identificacaoCompleta()` existe para essa checagem ser código,
+ * não memória.
  */
-
-/** Muda sempre que o texto de Termos ou Privacidade mudar. Formato: AAAA-MM-DD. */
-export const VERSAO_DOCUMENTOS = "2026-09-10";
 
 /**
- * Preencher antes da primeira cobrança. O titular legal é o irmão adulto do
- * fundador — o fundador é menor de idade e não pode figurar como parte.
+ * Muda sempre que o texto de Termos ou Privacidade mudar. Formato: AAAA-MM-DD.
+ *
+ * 2026-09-15: conta nova sem mês grátis, três planos (mensal no cartão, 30 dias e
+ * anual), Garantia Dinheiro Recuperado e fornecedor identificado por CPF ou CNPJ.
+ * É a mesma data de TERMOS_SEM_TESTE_A_PARTIR_DE (lib/billing/relogio.ts): quem
+ * aceita esta versão nasce sem prazo de teste.
+ */
+export const VERSAO_DOCUMENTOS = "2026-09-15";
+
+/**
+ * Preencher antes da primeira cobrança. Desde 15/09/2026 quem presta o serviço é a
+ * empresa: razão social e CNPJ entram nestas variáveis.
  *
  * ONDE FICAM OS DADOS: nas variáveis do serviço no Railway, nunca aqui. O
- * repositório no GitHub é público; CPF e endereço escritos neste arquivo ficariam
- * visíveis para qualquer um e para sempre no histórico. tests/identidade.test.ts
- * reprova o build se um CPF válido aparecer em app/, components/ ou lib/.
+ * repositório no GitHub é público; documento e endereço escritos neste arquivo
+ * ficariam visíveis para qualquer um e para sempre no histórico.
+ * tests/identidade.test.ts reprova o build se um CPF válido aparecer em app/,
+ * components/ ou lib/.
  */
 type Fornecedor = {
-  /** Nome civil completo de quem presta o serviço. */
+  /** Razão social da empresa, ou nome civil completo de pessoa física. */
   nome: string;
-  /** CPF do prestador (ou CNPJ, se um dia houver empresa), já formatado. */
+  /** CNPJ ou CPF de quem presta o serviço, já formatado. */
   documento: string;
   /** Endereço completo, com bairro, cidade/UF e CEP — Decreto 7.962/2013. */
   endereco: string;
@@ -63,6 +72,18 @@ export function formatarDocumento(bruto: string): string {
     return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
   }
   return bruto.trim();
+}
+
+/**
+ * "CPF" ou "CNPJ", pelo número de dígitos; null enquanto o documento não está
+ * preenchido. O rótulo sai do documento porque frase escrita à mão ("inscrito no
+ * CPF") passa a mentir no dia em que o serviço vira empresa.
+ */
+export function tipoDoDocumento(documento: string): "CPF" | "CNPJ" | null {
+  const d = documento.replace(/\D/g, "");
+  if (d.length === 11) return "CPF";
+  if (d.length === 14) return "CNPJ";
+  return null;
 }
 
 export function lerFornecedor(env: Record<string, string | undefined>): Fornecedor {

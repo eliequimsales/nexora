@@ -2,12 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Calculadora } from "@/components/calculadora";
 import { TemaNexora } from "@/components/tema-nexora";
+import { GARANTIA_DIAS, ONDAS_MINIMAS } from "@/lib/billing/garantia";
+import { PLANOS } from "@/lib/billing/planos";
+import { emReais, PRECO_ANUAL_CENTS, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
+import { MIN_SUMIDOS } from "@/lib/recuperacao/estimativa";
 import { TAMANHO_DA_ONDA } from "@/lib/recuperacao/onda";
 
 export const metadata: Metadata = {
   title: "Nexora — ganhe dinheiro trazendo seus clientes sumidos de volta",
   description:
-    "A Nexora descobre quais clientes pararam de voltar e te entrega a mensagem pronta para trazer cada um. Primeiro mês grátis, sem cartão.",
+    "A Nexora descobre quais clientes pararam de voltar e te entrega a mensagem pronta para trazer cada um. Diagnóstico grátis, sem cartão.",
 };
 
 /**
@@ -26,10 +30,14 @@ export const metadata: Metadata = {
  * desta base, porque é o que o código cumpre (tests/promessas-da-landing.test.ts).
  * As seções da antiga que prometiam o que não existe mais ficaram de fora.
  *
+ * OFERTA (15/09/2026). Conta nova não tem mais o teste de 30 dias: é grátis para
+ * descobrir e paga para recuperar, com a Garantia Dinheiro Recuperado no lugar do teste.
+ * Todo número da garantia e dos planos sai das constantes do código.
+ *
  * Desenho: docs/superpowers/specs/2026-09-10-visual-antigo-no-funil-design.md
  */
 
-const SELOS = ["Grátis pra começar", "Sem cartão", "Sem integração", "Funciona com planilha"];
+const SELOS = ["Diagnóstico grátis", "Sem cartão", "Sem integração", "Funciona com planilha"];
 
 /**
  * Exemplo, e a tela diz que é exemplo. Os ritmos são plausíveis para uma
@@ -62,7 +70,7 @@ const PASSOS = [
 ];
 
 const INCLUI = [
-  "Primeiro mês grátis, sem pedir cartão",
+  `Garantia Dinheiro Recuperado de ${GARANTIA_DIAS} dias`,
   "Sua lista importada do jeito que ela estiver",
   "Doze mensagens prontas por semana, escritas para cada cliente",
   "Página de agendamento com seu link, para o cliente marcar sozinho",
@@ -242,8 +250,23 @@ export default function Home() {
                 <span className="text-nx-secondary">/mês, impostos inclusos</span>
               </p>
               <p className="mt-6 max-w-md leading-relaxed text-nx-secondary">
-                O primeiro mês é grátis e não pedimos cartão para começar. Você decide se
-                assina depois de ver, na tela, quem voltou e quanto pagou.
+                O diagnóstico é grátis e não pedimos cartão para começar. Sem cartão de
+                crédito? {emReais(PLANOS.pix_30_dias.valorCents)} por {PLANOS.pix_30_dias.dias}{" "}
+                dias no Pix, sem renovação automática, ou {emReais(PRECO_ANUAL_CENTS)} por 12
+                meses à vista.
+              </p>
+              <p className="mt-4 max-w-md rounded-lg border border-nx-gold/30 bg-nx-gold/5 p-4 text-sm leading-relaxed text-nx-secondary">
+                <strong className="font-semibold text-nx-primary">
+                  Garantia Dinheiro Recuperado.
+                </strong>{" "}
+                Se em {GARANTIA_DIAS} dias você mandar as mensagens de {ONDAS_MINIMAS} ondas e o
+                dinheiro que voltou não chegar a {emReais(PRECO_MENSAL_CENTS)}, devolvemos tudo o
+                que você pagou. Vale uma vez por negócio, para lista com pelo menos{" "}
+                {MIN_SUMIDOS} clientes sumidos; as regras completas estão nos{" "}
+                <Link href="/termos" className="underline underline-offset-4">
+                  Termos de Uso
+                </Link>
+                .
               </p>
               <Link href="/diagnostico" className={`${BOTAO_DOURADO} mt-9 px-7 py-4`}>
                 Começar pelo diagnóstico grátis <span aria-hidden="true">→</span>
@@ -283,9 +306,8 @@ export default function Home() {
       <footer className="border-t border-nx-border px-6 pb-24 pt-10 sm:pb-8">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 text-sm text-nx-muted sm:flex-row sm:items-center sm:justify-between">
           <p className="max-w-sm">
-            Nexora — recuperação de clientes inativos para pequenos negócios de serviço.
-            Serviço prestado por pessoa física; a identificação completa está nos Termos de
-            Uso.
+            Nexora — recuperação de clientes inativos para pequenos negócios de serviço. A
+            identificação completa de quem presta o serviço está nos Termos de Uso.
           </p>
           <div className="flex flex-wrap gap-x-5 gap-y-2">
             <Link href="/termos" className="transition-colors hover:text-nx-primary">

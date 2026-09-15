@@ -1,6 +1,14 @@
-import { FORNECEDOR, VERSAO_DOCUMENTOS } from "./identidade";
-import { emReais, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
+import { FORNECEDOR, tipoDoDocumento, VERSAO_DOCUMENTOS } from "./identidade";
+import { emReais, PRECO_ANUAL_CENTS, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
 import { TOLERANCIA_DIAS, TRIAL_DIAS } from "@/lib/billing/acesso";
+import {
+  ENVIOS_POR_ONDA,
+  GARANTIA_DIAS,
+  ONDAS_MINIMAS,
+  PRAZO_PEDIDO_DIAS,
+} from "@/lib/billing/garantia";
+import { PLANOS } from "@/lib/billing/planos";
+import { MIN_RECUPERAVEL_CENTS, MIN_SUMIDOS } from "@/lib/recuperacao/estimativa";
 
 /**
  * TERMOS DE USO.
@@ -14,13 +22,22 @@ import { TOLERANCIA_DIAS, TRIAL_DIAS } from "@/lib/billing/acesso";
  * existia. Documento que promete a mais não protege ninguém: ele vira prova
  * contra quem escreveu.
  *
- * Números vêm das constantes do produto (preço, trial, tolerância). Se o preço
- * mudar e o texto não, o contrato passa a mentir sozinho.
+ * Números vêm das constantes do produto (preço, planos, garantia, tolerância). Se
+ * o preço ou a regra da garantia mudar e o texto não, o contrato passa a mentir
+ * sozinho — e a garantia negada com uma regra diferente da escrita é a reclamação
+ * que chega ao Procon.
  */
 
 export type Secao = { titulo: string; paragrafos: string[]; itens?: string[] };
 
 const PRECO = emReais(PRECO_MENSAL_CENTS);
+const DIAS_DO_PASSE = PLANOS.pix_30_dias.dias;
+
+/** "CNPJ 00.000.000/0000-00" ou "CPF 000.000.000-00", pelo documento preenchido. */
+function documentoDoFornecedor(): string {
+  const tipo = tipoDoDocumento(FORNECEDOR.documento);
+  return tipo ? `${tipo} ${FORNECEDOR.documento}` : `documento ${FORNECEDOR.documento}`;
+}
 
 export const TERMOS: { atualizadoEm: string; secoes: Secao[] } = {
   atualizadoEm: VERSAO_DOCUMENTOS,
@@ -28,8 +45,8 @@ export const TERMOS: { atualizadoEm: string; secoes: Secao[] } = {
     {
       titulo: "1. Quem presta o serviço",
       paragrafos: [
-        `A Nexora é um serviço prestado por ${FORNECEDOR.nome}, inscrito no CPF ${FORNECEDOR.documento}, com endereço em ${FORNECEDOR.endereco}. O contato para qualquer assunto, inclusive reclamação e cancelamento, é ${FORNECEDOR.email}.`,
-        "Nexora é o nome do serviço. Quem responde juridicamente por ele é a pessoa identificada acima.",
+        `A Nexora é um serviço prestado por ${FORNECEDOR.nome}, ${documentoDoFornecedor()}, com endereço em ${FORNECEDOR.endereco}. O contato para qualquer assunto, inclusive reclamação e cancelamento, é ${FORNECEDOR.email}.`,
+        "Nexora é o nome do serviço. Quem responde juridicamente por ele é quem está identificado acima.",
       ],
     },
     {
@@ -46,19 +63,23 @@ export const TERMOS: { atualizadoEm: string; secoes: Secao[] } = {
       ],
     },
     {
-      titulo: "3. Preço, teste grátis e cobrança",
+      titulo: "3. Preço, planos, garantia e cobrança",
       paragrafos: [
-        `O serviço custa ${PRECO} por mês, com impostos inclusos. Esse é o valor total: não há taxa de adesão, taxa de instalação nem cobrança por cliente cadastrado.`,
-        `Os primeiros ${TRIAL_DIAS} dias são gratuitos e não pedimos cartão para começar. Terminado o período gratuito, se você não tiver cadastrado forma de pagamento, a conta simplesmente pausa — nada é cobrado e nada é apagado.`,
-        "Para assinar é preciso confirmar o e-mail antes. Mandamos um link no cadastro e você pode pedir outro pelo painel. A exigência não é burocracia: a lei nos obriga a mandar o comprovante da contratação para o seu e-mail, e não dá para cumprir isso sem ter certeza de que o endereço é seu. Quem entra com o Google já vem confirmado.",
-        `A cobrança é mensal e recorrente, processada pela Stripe. Se um pagamento falhar, você continua com acesso normal por ${TOLERANCIA_DIAS} dias enquanto resolve; depois desse prazo o envio de novas ondas para de funcionar, mas seus dados continuam acessíveis para leitura e exportação.`,
+        "Sem plano, a Nexora é grátis e sem prazo: você importa a sua lista, vê o diagnóstico de quem sumiu e pode exportar tudo quando quiser, sem cartão. As mensagens prontas e a onda semanal exigem um plano.",
+        `São três planos, todos com a Nexora completa e impostos inclusos, sem taxa de adesão, taxa de instalação ou cobrança por cliente cadastrado: ${PRECO} por mês no cartão, com renovação automática; ${emReais(PLANOS.pix_30_dias.valorCents)} por ${DIAS_DO_PASSE} dias, pagos uma vez no Pix ou no cartão; e ${emReais(PRECO_ANUAL_CENTS)} por 12 meses, pagos uma vez no Pix ou no cartão.`,
+        `Nos planos de ${DIAS_DO_PASSE} dias e anual não há cobrança automática: quando o período termina, o envio de novas ondas para até você pagar de novo, e nada é apagado. Pagando antes do fim, os dias novos começam depois dos que você já tinha.`,
+        `Contas criadas com versões anteriores destes Termos, que previam os primeiros ${TRIAL_DIAS} dias gratuitos, mantêm o período gratuito que aceitaram. Terminado esse período sem forma de pagamento, a conta pausa — nada é cobrado e nada é apagado.`,
+        "Para contratar é preciso confirmar o e-mail antes. Mandamos um link no cadastro e você pode pedir outro pelo painel. A exigência não é burocracia: a lei nos obriga a mandar o comprovante da contratação para o seu e-mail, e não dá para cumprir isso sem ter certeza de que o endereço é seu. Quem entra com o Google já vem confirmado.",
+        `No plano mensal, a cobrança é recorrente e processada pela Stripe. Se um pagamento falhar, você continua com acesso normal por ${TOLERANCIA_DIAS} dias enquanto resolve; depois desse prazo o envio de novas ondas para de funcionar, mas seus dados continuam acessíveis para leitura e exportação.`,
         "Aumentos de preço só valem para você depois de avisados por e-mail com pelo menos 30 dias de antecedência. Se não concordar, é só cancelar antes de a nova cobrança acontecer.",
+        `Garantia Dinheiro Recuperado. Se, nos primeiros ${GARANTIA_DIAS} dias do primeiro período pago, você mandar as mensagens de pelo menos ${ONDAS_MINIMAS} ondas — uma onda conta quando pelo menos ${ENVIOS_POR_ONDA} mensagens dela saem na mesma semana —, marcar em cada contato se a pessoa voltou, e o Dinheiro recuperado atribuído à Nexora (o valor que aparece em Minha conta) não chegar a ${PRECO}, devolvemos tudo o que você pagou desde essa contratação: as mensalidades, os ${DIAS_DO_PASSE} dias ou o anual.`,
+        `O pedido é feito pelo botão em Minha conta, do ${GARANTIA_DIAS}º ao ${GARANTIA_DIAS + PRAZO_PEDIDO_DIAS}º dia, e o painel confere as condições com os dados da sua conta. A garantia vale uma vez por negócio e só quando, na contratação, a sua lista tinha pelo menos ${MIN_SUMIDOS} clientes sumidos e ${emReais(MIN_RECUPERAVEL_CENTS)} para recuperar; quando não é o caso, a tela de planos avisa antes do pagamento. Com a devolução, o plano é encerrado na hora. A garantia não substitui o direito de arrependimento da seção 4 (art. 49 do Código de Defesa do Consumidor), que vale independentemente dela.`,
       ],
     },
     {
       titulo: "4. Cancelamento e arrependimento",
       paragrafos: [
-        "Você cancela quando quiser, pelo próprio painel, sem falar com ninguém e sem multa. Ao cancelar, você continua com acesso até o fim do período que já pagou.",
+        `Você cancela quando quiser, pelo próprio painel, sem falar com ninguém e sem multa. Ao cancelar, você continua com acesso até o fim do período que já pagou. Nos planos de ${DIAS_DO_PASSE} dias e anual não há o que cancelar: eles não renovam sozinhos.`,
         "Arrependimento (art. 49 do Código de Defesa do Consumidor): como a contratação é feita pela internet, você tem 7 dias corridos, contados da contratação, para desistir e receber de volta o que tiver pago no período. Basta pedir por e-mail para o endereço da seção 1.",
         "Cancelar não apaga seus dados automaticamente. Se quiser que sejam apagados, peça — a Política de Privacidade explica como e em quanto tempo isso acontece.",
       ],
@@ -96,7 +117,7 @@ export const TERMOS: { atualizadoEm: string; secoes: Secao[] } = {
     {
       titulo: "8. Até onde vai a nossa responsabilidade",
       paragrafos: [
-        "Respondemos por falhas do serviço, na forma da lei. O que não assumimos é o resultado comercial: se você mandar as mensagens e nenhum cliente voltar, isso não gera devolução além das hipóteses já descritas neste documento.",
+        "Respondemos por falhas do serviço, na forma da lei. O que não assumimos é o resultado comercial: se você mandar as mensagens e nenhum cliente voltar, isso não gera devolução além das hipóteses já descritas neste documento, como a Garantia Dinheiro Recuperado da seção 3.",
         "Também não respondemos por: conteúdo que você escreveu ou alterou antes de enviar, consequências de uso da sua conta por terceiros a quem você deu a senha, e ações de plataformas de terceiros como Meta/WhatsApp.",
         "Nada aqui afasta direitos que o Código de Defesa do Consumidor garante a você quando ele for aplicável.",
       ],

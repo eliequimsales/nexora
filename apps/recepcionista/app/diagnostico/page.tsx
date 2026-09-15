@@ -1,6 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { formasDePagamentoTexto } from "@/lib/billing/preco";
+import { GARANTIA_DIAS, ONDAS_MINIMAS } from "@/lib/billing/garantia";
+import { PLANOS } from "@/lib/billing/planos";
+import {
+  emReais,
+  formasDePagamentoTexto,
+  PRECO_ANUAL_CENTS,
+  PRECO_MENSAL_CENTS,
+} from "@/lib/billing/preco";
+import { MIN_RECUPERAVEL_CENTS, MIN_SUMIDOS } from "@/lib/recuperacao/estimativa";
 import { PainelDiagnostico } from "./painel";
 import { EventoAoMontar } from "@/components/funil";
 import { FRASE_SOCORRO, temCanalDeSocorro } from "@/lib/contato";
@@ -67,7 +75,15 @@ const OBJECOES = [
   },
   {
     p: "E se não voltar ninguém?",
-    r: "Aí você não paga. O primeiro mês é grátis e não pedimos cartão para começar. Você decide se assina depois de ver o resultado na tela, com nome de quem voltou e quanto pagou.",
+    // A garantia no lugar do teste de 30 dias, com as condições dela. Prometer só
+    // a devolução, sem dizer quando ela vale, é a frase que o Procon lê de volta.
+    r:
+      `Aí o dinheiro volta para você. Com a Garantia Dinheiro Recuperado, se em ${GARANTIA_DIAS} dias ` +
+      `você mandar as mensagens de ${ONDAS_MINIMAS} ondas, marcar quem voltou e o dinheiro que ` +
+      `voltou não chegar a ${emReais(PRECO_MENSAL_CENTS)}, devolvemos tudo o que você pagou. Vale ` +
+      `uma vez por negócio, para lista com pelo menos ${MIN_SUMIDOS} clientes sumidos e ` +
+      `${emReais(MIN_RECUPERAVEL_CENTS)} para recuperar — e este diagnóstico mostra isso antes de ` +
+      "você pagar qualquer coisa.",
   },
   {
     p: "Quanto tempo isso toma por semana?",
@@ -196,7 +212,9 @@ export default function PaginaDiagnostico({
           </p>
           <ul className="mt-8 grid max-w-2xl gap-3 text-nx-secondary">
             {[
-              "O primeiro mês é grátis e não pedimos cartão para começar.",
+              "O diagnóstico é grátis e não pedimos cartão para começar.",
+              `Sem cartão de crédito? ${emReais(PLANOS.pix_30_dias.valorCents)} por ${PLANOS.pix_30_dias.dias} dias no Pix, sem renovação automática, ou ${emReais(PRECO_ANUAL_CENTS)} por 12 meses à vista.`,
+              `Garantia Dinheiro Recuperado: com ${ONDAS_MINIMAS} ondas enviadas em ${GARANTIA_DIAS} dias, se o dinheiro que voltou não chegar a ${emReais(PRECO_MENSAL_CENTS)}, devolvemos tudo o que você pagou.`,
               "Cancele quando quiser — você fica com o período que já pagou.",
               "Sua base é sua: dá para exportar e apagar a qualquer momento, inclusive depois de cancelar.",
               `Pagamento por ${formasDePagamentoTexto()}.`,
@@ -208,18 +226,16 @@ export default function PaginaDiagnostico({
             ))}
           </ul>
           {/*
-            Este parágrafo afirmava que a Nexora "é operada por pessoa jurídica
-            registrada" e que "o CNPJ fica visível no rodapé e no e-mail de
-            confirmação". Nenhuma das três coisas era verdade: não há CNPJ, o
-            rodapé nunca mostrou nada, e não existe e-mail de confirmação de
-            assinatura no produto. Mentir no parágrafo cuja função é tranquilizar
-            juridicamente é o pior lugar possível para errar — e é o tipo de frase
-            que um cliente lesado leva impressa para o Procon.
+            Este parágrafo já afirmou que a Nexora "é operada por pessoa jurídica
+            registrada", com o documento "visível no rodapé e no e-mail de
+            confirmação", quando nada disso existia. Depois afirmou o tipo de pessoa
+            de quem presta o serviço, que mudou quando o serviço virou empresa. Por isso ele
+            não repete tipo nem número: quem presta o serviço está nos Termos, lido
+            das variáveis do servidor, e muda fora do código sem a página mentir.
           */}
           <p className="mt-8 max-w-2xl text-sm leading-relaxed text-nx-secondary">
-            O serviço é prestado por pessoa física, e o contrato é com ela. A
-            identificação de quem presta o serviço, o preço total e as condições de
-            cancelamento estão nos{" "}
+            Quem presta o serviço, com nome, documento e endereço, o preço total, as
+            regras da garantia e as condições de cancelamento estão nos{" "}
             <Link href="/termos" className="text-nx-secondary underline underline-offset-4">
               Termos de Uso
             </Link>

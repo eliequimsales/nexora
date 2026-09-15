@@ -56,7 +56,7 @@ export default function CadastroPage() {
         <div className="rounded-2xl border border-nx-border bg-nx-surface p-8 shadow-nx-panel">
           <h1 className="text-xl font-bold">Criar conta da empresa</h1>
           <p className="mb-6 mt-1 text-sm text-nx-secondary">
-            Primeiro mês grátis, sem cartão. Você importa sua lista logo depois.
+            Sem cartão. Você importa sua lista e vê quem sumiu logo depois.
           </p>
           <form onSubmit={handleSubmit} className="space-y-4">
             {FIELDS.map((field) => (

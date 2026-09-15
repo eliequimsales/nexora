@@ -20,12 +20,6 @@ export function CustoVsRetorno({
 }) {
   const c = custoVsRetorno({ min, max });
   const vezes = c.vezesNoMinimo.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
-  const gratis =
-    c.mesesGratis === 0
-      ? ""
-      : c.mesesGratis === 1
-        ? " — o primeiro mês é grátis"
-        : ` — os ${c.mesesGratis} primeiros meses são grátis`;
 
   return (
     <div className="mt-6 rounded-xl border border-nx-gold/30 bg-nx-gold/5 p-5">
@@ -40,7 +34,6 @@ export function CustoVsRetorno({
           <p className="mt-1 text-xs leading-relaxed text-nx-muted">
             {c.mesesPagos} {c.mesesPagos === 1 ? "mensalidade" : "mensalidades"} de{" "}
             {emReais(PRECO_MENSAL_CENTS)}
-            {gratis}
           </p>
         </div>
         <div>

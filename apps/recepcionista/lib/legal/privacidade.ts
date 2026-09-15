@@ -105,8 +105,8 @@ export const PRIVACIDADE: { atualizadoEm: string; secoes: Secao[] } = {
         "Dois tipos, e eles funcionam de forma diferente.",
       ],
       itens: [
-        "TRANSACIONAL: confirmação da contratação, aviso de cobrança que não passou, link de redefinir senha, confirmação de e-mail. Não têm link de descadastro porque ninguém pode optar por não receber o comprovante daquilo que contratou nem o aviso de que a assinatura vai parar.",
-        "RELACIONAMENTO: a chamada semanal da sua Onda de segunda, avisos de que o período gratuito está acabando, e lembretes se você parar de usar. Esses todos trazem link de descadastro, e clicar nele desliga de uma vez todos os e-mails desse tipo.",
+        "TRANSACIONAL: confirmação da contratação, comprovante da devolução pela garantia, aviso de cobrança que não passou, link de redefinir senha, confirmação de e-mail. Não têm link de descadastro porque ninguém pode optar por não receber o comprovante daquilo que contratou nem o aviso de que a assinatura vai parar.",
+        "RELACIONAMENTO: a chamada semanal da sua Onda de segunda, avisos de que o período gratuito ou os dias pagos estão acabando, e lembretes se você parar de usar. Esses todos trazem link de descadastro, e clicar nele desliga de uma vez todos os e-mails desse tipo.",
         "Nunca mandamos e-mail para os SEUS clientes. A Nexora escreve a mensagem e quem manda é você, do seu WhatsApp.",
       ],
     },
