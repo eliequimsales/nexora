@@ -46,6 +46,10 @@ model Company {
   currentPeriodEnd     DateTime?
   cancelAtPeriodEnd    Boolean   @default(false)
   trialEndsAt          DateTime?
+  // Fim do último passe avulso (30 dias no Pix ou anual). Sem cobrança
+  // automática: vencido, a conta volta ao estado de quem não pagou.
+  // Escritor único: aplicarPasse, em lib/billing/converger.ts.
+  acessoPagoAte        DateTime?
   // card | boleto — a Stripe no Brasil não faz Pix recorrente.
   paymentMethodType    String?
   // CPF/CNPJ do cliente, para a NFS-e que é emitida FORA da Stripe.
@@ -110,6 +114,40 @@ model Company {
   importacoes    RegistroImportacao[]
   supressoes     Supressao[]
   verificacoes   VerificacaoEmail[]
+  passes         PassePago[]
+}
+
+// PASSE PAGO: um pagamento avulso que compensou — 30 dias no Pix ou 12 meses à
+// vista. Não é assinatura: não renova e não cobra de novo.
+//
+// Uma linha por Checkout Session, e a sessão é ÚNICA. O webhook e a página de
+// retorno convergem a mesma compra ao mesmo tempo, e a Stripe reentrega evento
+// por rotina: sem a unicidade, a mesma compra somaria os dias duas vezes. O
+// `create` é a reivindicação — só ele estoura P2002 sob corrida.
+//
+// Guarda o PaymentIntent e o valor cobrado porque uma devolução (arrependimento
+// ou garantia) precisa estornar exatamente aquele pagamento.
+model PassePago {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  stripeSessionId       String  @unique
+  stripePaymentIntentId String?
+  // pix_30_dias | anual (lib/billing/planos.ts)
+  plano      String
+  dias       Int
+  valorCents Int
+
+  inicio DateTime
+  fim    DateTime
+
+  // Confirmação da contratação (Decreto 7.962/2013, art. 4º, V): uma por passe.
+  confirmacaoEnviadaEm DateTime?
+
+  criadoEm DateTime @default(now())
+
+  @@index([companyId])
 }
 
 // Cada e-mail de reengajamento já enviado. A unicidade por (empresa, momento) é

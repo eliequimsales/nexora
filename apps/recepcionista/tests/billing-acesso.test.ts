@@ -20,12 +20,14 @@ function conta(over: Partial<Assinatura> = {}): Assinatura {
     currentPeriodEnd: null,
     cancelAtPeriodEnd: false,
     dunningIniciadoEm: null,
+    acessoPagoAte: null,
     ...over,
   };
 }
 
 const TODOS_ESTADOS: EstadoConta[] = [
   "GRATIS",
+  "PASSE",
   "TRIAL",
   "TRIAL_EXPIRADO",
   "ATIVO",

@@ -1,30 +1,49 @@
 "use client";
 
 import { useState } from "react";
-import type { EstadoConta } from "@/lib/billing/acesso";
+import type { PlanoId } from "@/lib/billing/planos";
 
 /**
- * A ação da tela de conta. Regra Zero: sempre existe uma, e ela EXECUTA —
+ * As ações da tela de conta. Regra Zero: sempre existe uma, e ela EXECUTA —
  * nunca é um link para "fale com o suporte".
+ *
+ * Quais planos aparecem, e se existe portal, quem decide é `acoesDaConta` no
+ * servidor — a mesma regra que a rota do checkout aplica. Botão que a rota
+ * recusaria não chega a ser desenhado.
  */
+
+export type OpcaoDePlano = {
+  plano: PlanoId;
+  titulo: string;
+  /** Vem do servidor, das constantes de preço: o botão nunca anuncia um valor diferente do cobrado. */
+  preco: string;
+  detalhe: string;
+  acao: string;
+};
+
 export function BotoesAssinatura({
-  estado,
-  temAssinatura,
-  precoTexto,
+  opcoes,
+  portal,
 }: {
-  estado: EstadoConta;
-  temAssinatura: boolean;
-  /** Vem do servidor: o botão nunca anuncia um preço diferente do cobrado. */
-  precoTexto: string;
+  opcoes: OpcaoDePlano[];
+  /** Texto do botão do portal da Stripe; null quando não há assinatura no cartão para gerenciar. */
+  portal: string | null;
 }) {
-  const [carregando, setCarregando] = useState(false);
+  const [abrindo, setAbrindo] = useState<PlanoId | "portal" | null>(null);
   const [erro, setErro] = useState("");
 
-  const ir = async (rota: "checkout" | "portal") => {
-    setCarregando(true);
+  const abrir = async (destino: PlanoId | "portal") => {
+    setAbrindo(destino);
     setErro("");
     try {
-      const res = await fetch(`/api/billing/${rota}`, { method: "POST" });
+      const res =
+        destino === "portal"
+          ? await fetch("/api/billing/portal", { method: "POST" })
+          : await fetch("/api/billing/checkout", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ plano: destino }),
+            });
       const json = await res.json();
       if (!res.ok || !json.url) {
         setErro(json.error ?? "Não consegui abrir agora. Tenta de novo?");
@@ -34,38 +53,54 @@ export function BotoesAssinatura({
     } catch {
       setErro("Falha de conexão. Tenta de novo?");
     } finally {
-      setCarregando(false);
+      setAbrindo(null);
     }
   };
-
-  // Quem já tem assinatura resolve tudo no portal: trocar cartão, ver faturas,
-  // cancelar e reativar. Quem nunca assinou vai para o checkout.
-  const noPortal = temAssinatura && estado !== "TRIAL";
-  const rota = noPortal ? "portal" : "checkout";
-
-  const texto = noPortal
-    ? estado === "BLOQUEADO" || estado === "TOLERANCIA"
-      ? "Atualizar forma de pagamento"
-      : estado === "CANCELADO" || estado === "CANCELADO_COM_ACESSO"
-        ? "Reativar minha assinatura"
-        : "Gerenciar assinatura"
-    : `Assinar por ${precoTexto}/mês`;
 
   return (
     <div className="mt-5">
       {/*
-        Só o clique em andamento desabilita. Travar o botão quando a cobrança não
+        Só o clique em andamento desabilita. Travar os botões quando a cobrança não
         está configurada parecia cuidado e era o contrário: a API sabe exatamente
         qual variável falta, e um botão morto garante que ninguém nunca leia essa
         resposta.
       */}
-      <button
-        onClick={() => ir(rota)}
-        disabled={carregando}
-        className="rounded-xl bg-amber px-5 py-3 text-sm font-semibold text-night transition hover:brightness-110 disabled:opacity-40"
-      >
-        {carregando ? "Abrindo…" : texto}
-      </button>
+      {opcoes.length > 0 && (
+        <ul className="grid gap-3 sm:grid-cols-3">
+          {opcoes.map((o) => (
+            <li
+              key={o.plano}
+              className="flex flex-col rounded-xl border border-panel-line bg-panel-bg p-4"
+            >
+              <p className="text-sm font-medium text-panel-ink">{o.titulo}</p>
+              <p className="mt-1 font-display text-2xl text-panel-ink tabular-nums">{o.preco}</p>
+              <p className="mt-2 flex-1 text-xs leading-relaxed text-panel-sub">{o.detalhe}</p>
+              <button
+                onClick={() => abrir(o.plano)}
+                disabled={abrindo !== null}
+                className="mt-4 rounded-xl bg-amber px-4 py-2.5 text-sm font-semibold text-night transition hover:brightness-110 disabled:opacity-40"
+              >
+                {abrindo === o.plano ? "Abrindo…" : o.acao}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {portal && (
+        <button
+          onClick={() => abrir("portal")}
+          disabled={abrindo !== null}
+          className={`rounded-xl px-5 py-3 text-sm font-semibold transition hover:brightness-110 disabled:opacity-40 ${
+            opcoes.length > 0
+              ? "mt-4 border border-panel-line bg-panel-card text-panel-ink"
+              : "bg-amber text-night"
+          }`}
+        >
+          {abrindo === "portal" ? "Abrindo…" : portal}
+        </button>
+      )}
+
       {erro && <p className="mt-3 text-sm text-red-700">{erro}</p>}
     </div>
   );

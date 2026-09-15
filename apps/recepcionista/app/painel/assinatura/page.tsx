@@ -1,14 +1,22 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionCompanyId } from "@/lib/auth";
-import { estadoDaConta, TOLERANCIA_DIAS, TRIAL_DIAS } from "@/lib/billing/acesso";
+import {
+  estadoDaConta,
+  podeExecutar,
+  TOLERANCIA_DIAS,
+  TRIAL_DIAS,
+  type EstadoConta,
+} from "@/lib/billing/acesso";
 import { convergirDoCheckout } from "@/lib/billing/converger";
+import { acoesDaConta, PLANOS, precoPendenteDoPlano, type PlanoId } from "@/lib/billing/planos";
+import { emReais, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
 import { garantirRelogio } from "@/lib/billing/relogio-da-conta";
-import { emReais, formasDePagamentoTexto, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
 import { variaveisPendentesDaStripe } from "@/lib/billing/stripe";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
 import { variaveisPendentesDoFornecedor } from "@/lib/legal/identidade";
-import { BotoesAssinatura } from "./botoes";
+import { BotoesAssinatura, type OpcaoDePlano } from "./botoes";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +35,12 @@ export const dynamic = "force-dynamic";
 const reais = emReais;
 
 const dataBr = (d: Date) =>
-  d.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+  d.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    timeZone: "America/Sao_Paulo",
+  });
 
 export default async function PaginaAssinatura({
   searchParams,
@@ -58,7 +71,7 @@ export default async function PaginaAssinatura({
       currentPeriodEnd: true,
       cancelAtPeriodEnd: true,
       dunningIniciadoEm: true,
-      stripeCustomerId: true,
+      acessoPagoAte: true,
     },
   });
   if (!lida) redirect("/login");
@@ -70,6 +83,12 @@ export default async function PaginaAssinatura({
   const trialEndsAt = await garantirRelogio({ id: companyId, ...lida }, agora);
   const empresa = { ...lida, trialEndsAt };
   const estado = estadoDaConta(empresa, agora);
+
+  // A mesma regra que a rota do checkout aplica: a tela nunca oferece um plano
+  // que cobraria duas vezes quem já paga.
+  const acoes = acoesDaConta({ estado, subscriptionStatus: empresa.subscriptionStatus });
+  const planos = descricaoDosPlanos(estado);
+  const aviso = avisoDoPrazo(estado, empresa);
 
   // North Star: Receita Recuperada COMPROVADA. Só o que foi atribuído — o resto
   // vai numa linha separada, nunca somado, para o número não inflar.
@@ -86,27 +105,52 @@ export default async function PaginaAssinatura({
     }),
   ]);
 
-  // As duas listas do que impede a cobrança de abrir, na ordem em que o dono
-  // resolve: primeiro a Stripe, depois a identificação exigida pelo Decreto
-  // 7.962/2013.
-  const pendentes = [...variaveisPendentesDaStripe(), ...variaveisPendentesDoFornecedor()];
+  // Tudo que impede a cobrança de abrir, na ordem em que o dono resolve:
+  // primeiro a Stripe e os preços de cada plano, depois a identificação exigida
+  // pelo Decreto 7.962/2013. Nomes de variável, nunca valores.
+  const precosPendentes = (Object.keys(PLANOS) as PlanoId[])
+    .map((p) => precoPendenteDoPlano(p, process.env))
+    .filter((nome): nome is string => nome !== null);
+  const pendentes = Array.from(
+    new Set([
+      ...variaveisPendentesDaStripe(),
+      ...precosPendentes,
+      ...variaveisPendentesDoFornecedor(),
+    ]),
+  );
 
   const recuperadoCents = comprovado._sum.valueCents ?? 0;
   const clientesDeVolta = comprovado._count;
   const vezes = recuperadoCents / PRECO_MENSAL_CENTS;
 
+  // Voltou do checkout e o acesso ainda não liberou: quase sempre é o Pix que o
+  // banco ainda não confirmou. Dizer isso — e dar o botão de conferir de novo —
+  // evita o dono achar que pagou e não levou.
+  const aguardandoPagamento = Boolean(searchParams.ok) && !podeExecutar(estado, "GERAR_ONDA").pode;
+  const conferirDeNovo = searchParams.session_id
+    ? `/painel/assinatura?ok=1&session_id=${encodeURIComponent(searchParams.session_id)}`
+    : "/painel/assinatura?ok=1";
+
   return (
     <main className="max-w-2xl space-y-6">
       <header>
         <h1 className="font-display text-2xl text-panel-ink">Minha conta</h1>
-        <p className="mt-1 text-sm text-panel-sub">
-          {(RESUMO[estado] ?? RESUMO.TRIAL_EXPIRADO)(empresa, agora)}
-        </p>
+        <p className="mt-1 text-sm text-panel-sub">{RESUMO[estado](empresa, agora)}</p>
       </header>
 
       {searchParams.cancelado && (
         <p className="rounded-xl border border-panel-line bg-panel-card p-4 text-sm text-panel-sub">
           Pagamento não concluído. Nada foi cobrado, e sua conta continua como estava.
+        </p>
+      )}
+
+      {aguardandoPagamento && (
+        <p className="rounded-xl border border-panel-line bg-panel-card p-4 text-sm text-panel-sub">
+          Recebemos seu pedido. Se você pagou no Pix, o banco confirma em instantes e o
+          acesso libera sozinho.{" "}
+          <Link href={conferirDeNovo} className="font-semibold text-panel-ink underline">
+            Conferir agora
+          </Link>
         </p>
       )}
 
@@ -155,17 +199,21 @@ export default async function PaginaAssinatura({
 
       <section className="rounded-2xl border border-panel-line bg-panel-card p-6">
         <h2 className="text-sm font-medium uppercase tracking-wide text-panel-sub">
-          Plano
+          {acoes.planos.length > 0 ? "Planos" : "Sua assinatura"}
         </h2>
-        <p className="mt-2 text-panel-ink">
-          <span className="font-display text-2xl">{reais(PRECO_MENSAL_CENTS)}</span>
-          <span className="text-sm text-panel-sub"> /mês, impostos inclusos</span>
-        </p>
-        <p className="mt-2 text-sm text-panel-sub">
-          Primeiro mês grátis, sem cartão — você só decide se paga depois de ver o
-          resultado. Depois, {formasDePagamentoTexto()}, e cancele quando quiser: você
-          fica com o período que já pagou.
-        </p>
+
+        {acoes.planos.length > 0 ? (
+          <p className="mt-2 text-sm text-panel-sub">
+            Todos com a Nexora completa e impostos inclusos. A diferença é só como você paga.
+          </p>
+        ) : (
+          <p className="mt-2 text-panel-ink">
+            <span className="font-display text-2xl">{reais(PLANOS.mensal_cartao.valorCents)}</span>
+            <span className="text-sm text-panel-sub"> /mês no cartão, impostos inclusos</span>
+          </p>
+        )}
+
+        {aviso && <p className="mt-3 text-sm text-panel-ink">{aviso}</p>}
 
         {/*
           O que falta, pelo nome. São NOMES de variável, nunca valores, e a tela
@@ -181,16 +229,12 @@ export default async function PaginaAssinatura({
         )}
 
         {/*
-          O botão continua clicável de propósito. Desabilitado, ele nunca chama a
-          API — e a mensagem que diz exatamente o que falta morre sem nunca chegar
-          à tela. Quem clica sem a cobrança ligada recebe o motivo; nada é cobrado
-          porque o checkout recusa antes de criar sessão.
+          Os botões continuam clicáveis de propósito. Desabilitados, eles nunca
+          chamam a API — e a mensagem que diz exatamente o que falta morre sem
+          nunca chegar à tela. Quem clica sem a cobrança ligada recebe o motivo;
+          nada é cobrado porque o checkout recusa antes de criar sessão.
         */}
-        <BotoesAssinatura
-          estado={estado}
-          temAssinatura={Boolean(empresa.stripeCustomerId)}
-          precoTexto={reais(PRECO_MENSAL_CENTS)}
-        />
+        <BotoesAssinatura opcoes={acoes.planos.map((p) => planos[p])} portal={acoes.portal} />
       </section>
     </main>
   );
@@ -200,9 +244,75 @@ type Empresa = {
   trialEndsAt: Date | null;
   currentPeriodEnd: Date | null;
   cancelAtPeriodEnd: boolean;
+  acessoPagoAte: Date | null;
 };
 
-const RESUMO: Record<string, (e: Empresa, agora: Date) => string> = {
+/**
+ * Os três planos em palavras. Todo valor sai de PLANOS, que sai das constantes
+ * de preço: um card anunciando um número diferente do cobrado é o dono
+ * descobrindo a diferença na hora de pagar.
+ */
+function descricaoDosPlanos(estado: EstadoConta): Record<PlanoId, OpcaoDePlano> {
+  const mensalidadesNoAnual = Math.round(PLANOS.anual.valorCents / PLANOS.mensal_cartao.valorCents);
+  return {
+    mensal_cartao: {
+      plano: "mensal_cartao",
+      titulo: "Mensal no cartão",
+      preco: `${reais(PLANOS.mensal_cartao.valorCents)}/mês`,
+      detalhe:
+        "Renova sozinho todo mês. Cancele pelo painel, sem falar com ninguém, e fique até o fim do período pago.",
+      acao: "Assinar no cartão",
+    },
+    pix_30_dias: {
+      plano: "pix_30_dias",
+      titulo: estado === "PASSE" ? "Mais 30 dias no Pix" : "30 dias no Pix",
+      preco: reais(PLANOS.pix_30_dias.valorCents),
+      detalhe:
+        "Pagamento único, no Pix ou no cartão. Não renova sozinho: quando os 30 dias acabarem, você decide se paga de novo.",
+      acao: "Pagar 30 dias",
+    },
+    anual: {
+      plano: "anual",
+      titulo: "Anual à vista",
+      preco: reais(PLANOS.anual.valorCents),
+      detalhe: `12 meses pelo preço de ${mensalidadesNoAnual} mensalidades, num pagamento só, no Pix ou no cartão.`,
+      acao: "Pagar o ano",
+    },
+  };
+}
+
+/**
+ * Quando a conta já tem dias pela frente, contratar agora precisa dizer o que
+ * acontece com eles. "Não esconder limitações" vale para a letra miúda também.
+ */
+function avisoDoPrazo(estado: EstadoConta, e: Empresa): string | null {
+  if (estado === "TRIAL" && e.trialEndsAt) {
+    return (
+      `Seu teste grátis vai até ${dataBr(e.trialEndsAt)}, e contratar agora não encurta esses dias: ` +
+      "no cartão, a primeira cobrança só acontece quando o teste acabar; no Pix e no anual, você " +
+      "paga hoje e os dias pagos começam depois do teste."
+    );
+  }
+  if (estado === "PASSE" && e.acessoPagoAte) {
+    return (
+      `Seus dias pagos vão até ${dataBr(e.acessoPagoAte)}. Pagando mais agora, os dias novos ` +
+      "começam depois dessa data. A assinatura no cartão fica disponível quando esses dias acabarem."
+    );
+  }
+  if (estado === "CANCELADO_COM_ACESSO" && e.currentPeriodEnd) {
+    return (
+      `Você tem acesso até ${dataBr(e.currentPeriodEnd)}. No Pix e no anual, os dias pagos começam ` +
+      "depois dessa data; a assinatura no cartão começa a cobrar no dia em que você assinar."
+    );
+  }
+  return null;
+}
+
+const RESUMO: Record<EstadoConta, (e: Empresa, agora: Date) => string> = {
+  // Quem nunca teve teste não pode ler "seu teste terminou".
+  GRATIS: () =>
+    "Plano gratuito: o diagnóstico, a importação e a exportação da sua lista são livres. " +
+    "Para liberar as mensagens prontas, escolha um plano.",
   TRIAL: (e) =>
     e.trialEndsAt
       ? `Você está no período de teste, até ${dataBr(e.trialEndsAt)}. Nada foi cobrado.`
@@ -215,6 +325,11 @@ const RESUMO: Record<string, (e: Empresa, agora: Date) => string> = {
       : e.currentPeriodEnd
         ? `Assinatura ativa. Próxima cobrança em ${dataBr(e.currentPeriodEnd)}.`
         : "Assinatura ativa.",
+  // Passe não é assinatura: sem "próxima cobrança", porque não existe uma.
+  PASSE: (e) =>
+    e.acessoPagoAte
+      ? `Acesso pago até ${dataBr(e.acessoPagoAte)}. Não há cobrança automática.`
+      : "Acesso pago, sem cobrança automática.",
   TOLERANCIA: () =>
     `O último pagamento não passou. Você tem ${TOLERANCIA_DIAS} dias de acesso normal para resolver.`,
   BLOQUEADO: () =>

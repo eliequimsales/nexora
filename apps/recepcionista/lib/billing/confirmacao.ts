@@ -96,3 +96,41 @@ export function deveConfirmar(
   if (confirmacaoEnviadaEm) return false;
   return CONTRATADO.includes(status ?? "");
 }
+
+/**
+ * A CONFIRMAÇÃO DO PASSE — mesma obrigação, outro contrato.
+ *
+ * 30 dias no Pix ou 12 meses à vista não são assinatura: não há cartão
+ * cadastrado nem cobrança todo mês. Reusar o e-mail da assinatura faria o
+ * comprovante mentir sobre o que foi comprado.
+ */
+export type DadosConfirmacaoDoPasse = {
+  nome: string;
+  dias: number;
+  valorCents: number;
+  /** Último dia de acesso pago. */
+  fim: Date;
+};
+
+export function montarConfirmacaoDoPasse(d: DadosConfirmacaoDoPasse): Mensagem {
+  const nome = (d.nome ?? "").trim();
+  const periodo = d.dias === 365 ? "12 meses" : `${d.dias} dias`;
+  const saudacao = nome
+    ? `${nome}, seu pagamento da Nexora está confirmado.`
+    : "Seu pagamento da Nexora está confirmado.";
+
+  const corpo = [
+    saudacao,
+    `O que você contratou: ${periodo} da Nexora completa — Diagnóstico, importação da sua lista de clientes, reativação dos que sumiram e o extrato do dinheiro recuperado — por ${emReais(d.valorCents)}, pagos uma única vez.`,
+    `Seu acesso vale até ${dataBR.format(d.fim)}. Não há cobrança automática: nada será cobrado de novo sem você pagar. Para continuar depois dessa data, é só pagar outro período pelo painel.`,
+    `Direito de arrependimento (CDC, art. 49): dentro de 7 dias contados de hoje, você pode desistir da contratação e receber de volta tudo o que pagou, sem precisar justificar. Basta responder este e-mail.`,
+    `Quem está prestando o serviço:\n${FORNECEDOR.nome}\n${FORNECEDOR.documento}\n${FORNECEDOR.endereco}\n${FORNECEDOR.email}`,
+    `Esta contratação seguiu os Termos de Uso, a Política de Privacidade e o Contrato de Operador na versão ${VERSAO_DOCUMENTOS}. Guarde este e-mail: ele é o seu comprovante do que foi contratado.`,
+  ].join("\n\n");
+
+  return {
+    assunto: "Seu pagamento da Nexora está confirmado",
+    corpo,
+    acao: { texto: "Ver minha conta", href: "/painel/assinatura" },
+  };
+}

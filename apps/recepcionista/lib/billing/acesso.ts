@@ -24,6 +24,7 @@ export type EstadoConta =
   | "TRIAL"
   | "TRIAL_EXPIRADO"
   | "ATIVO"
+  | "PASSE"
   | "TOLERANCIA"
   | "CANCELADO_COM_ACESSO"
   | "BLOQUEADO"
@@ -86,6 +87,9 @@ export const TOLERANCIA_DIAS = 7;
  * essa fatia no ponto mais caro do funil. O custo dessa escolha é real e está
  * pago em outro lugar: no fim do trial a assinatura PAUSA em vez de cobrar, e
  * é o motor de reengajamento que traz o dono de volta.
+ *
+ * Vale só para quem aceitou Termos que prometiam o mês grátis — ver
+ * lib/billing/relogio.ts.
  */
 export const TRIAL_DIAS = 30;
 
@@ -97,10 +101,19 @@ export type Assinatura = {
   currentPeriodEnd: Date | null;
   cancelAtPeriodEnd: boolean;
   dunningIniciadoEm: Date | null;
+  /** Fim do último passe avulso pago (30 dias no Pix ou anual). Sem cobrança automática. */
+  acessoPagoAte: Date | null;
 };
 
 export function estadoDaConta(a: Assinatura, agora: Date): EstadoConta {
   const s = a.subscriptionStatus;
+
+  if (s === "active") return "ATIVO";
+
+  // Passe pago vale até o último dia, qualquer que seja a situação de uma
+  // assinatura antiga: quem acabou de pagar o Pix não pode ser travado por um
+  // cartão recusado ou por um cancelamento de meses atrás.
+  if (a.acessoPagoAte && agora < a.acessoPagoAte) return "PASSE";
 
   if (s === "canceled" || s === "incomplete_expired") {
     return a.currentPeriodEnd && agora < a.currentPeriodEnd
@@ -114,8 +127,6 @@ export function estadoDaConta(a: Assinatura, agora: Date): EstadoConta {
       : null;
     return limite && agora < limite ? "TOLERANCIA" : "BLOQUEADO";
   }
-
-  if (s === "active") return "ATIVO";
 
   // `paused` é o que a Stripe faz quando o trial termina sem meio de pagamento.
   // Não é calote — é trial expirado, e a assinatura continua viva para ser
@@ -147,7 +158,7 @@ export type Permissao =
   | { pode: true }
   | { pode: false; motivo: string; acao: { texto: string; href: string }; http: 402 };
 
-const COM_ACESSO: EstadoConta[] = ["TRIAL", "ATIVO", "TOLERANCIA", "CANCELADO_COM_ACESSO"];
+const COM_ACESSO: EstadoConta[] = ["TRIAL", "ATIVO", "PASSE", "TOLERANCIA", "CANCELADO_COM_ACESSO"];
 
 const RECUSA: Record<string, { motivo: string; texto: string }> = {
   // Quem nunca teve teste não pode ler "seu teste terminou". A recusa dele é a

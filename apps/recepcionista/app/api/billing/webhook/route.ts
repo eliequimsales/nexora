@@ -96,9 +96,20 @@ export async function POST(request: Request) {
 
 async function processar(evento: Stripe.Event): Promise<string | null> {
   switch (evento.type) {
-    case "checkout.session.completed": {
+    case "checkout.session.completed":
+    // O Pix termina a sessão com o QR na tela e paga depois: este evento chega
+    // quando o dinheiro compensa. convergirDoCheckout re-busca a sessão, e
+    // deveProvisionar só libera com o pagamento confirmado.
+    case "checkout.session.async_payment_succeeded": {
       const sessao = evento.data.object as Stripe.Checkout.Session;
       return convergirDoCheckout(sessao.id);
+    }
+
+    // QR vencido ou pagamento recusado: nada é liberado. Devolver o tenant marca
+    // o evento como processado; a régua de carrinho abandonado assume dali.
+    case "checkout.session.async_payment_failed": {
+      const sessao = evento.data.object as Stripe.Checkout.Session;
+      return companyIdDe(sessao);
     }
 
     case "customer.subscription.created":

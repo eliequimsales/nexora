@@ -23,6 +23,9 @@ export const EVENTOS_ASSINADOS = [
   "customer.subscription.resumed",
   "invoice.paid",
   "invoice.payment_failed",
+  // Pix: a sessão termina com o QR na tela e o pagamento compensa depois.
+  "checkout.session.async_payment_succeeded",
+  "checkout.session.async_payment_failed",
 ] as const;
 
 export type EventoAssinado = (typeof EVENTOS_ASSINADOS)[number];

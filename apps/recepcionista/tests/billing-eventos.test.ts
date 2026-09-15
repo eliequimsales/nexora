@@ -81,6 +81,9 @@ describe("EVENTOS_ASSINADOS", () => {
       "invoice.paid",
       "invoice.payment_failed",
       "customer.subscription.trial_will_end",
+      // O Pix paga depois da sessão: sem estes dois, quem paga o QR nunca recebe acesso.
+      "checkout.session.async_payment_succeeded",
+      "checkout.session.async_payment_failed",
     ]) {
       expect(EVENTOS_ASSINADOS).toContain(e);
     }

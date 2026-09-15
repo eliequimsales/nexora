@@ -1,6 +1,13 @@
-import type Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { getSessionCompanyId } from "@/lib/auth";
+import { estadoDaConta } from "@/lib/billing/acesso";
+import {
+  lerPlano,
+  parametrosDoCheckout,
+  planoDisponivel,
+  PLANOS,
+  precoPendenteDoPlano,
+} from "@/lib/billing/planos";
 import { fimDoTrialNoCheckout } from "@/lib/billing/relogio";
 import { garantirRelogio } from "@/lib/billing/relogio-da-conta";
 import { stripe, stripeConfigurado, variaveisPendentesDaStripe } from "@/lib/billing/stripe";
@@ -14,20 +21,29 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Abre o Checkout hospedado da Stripe.
+ * Abre o Checkout hospedado da Stripe para um dos três planos.
  *
  * Hospedado, e não Payment Element, porque o Checkout já entrega em pt-BR:
- * cartão com 3DS, atualização de cartão quando
- * a renovação falha, e mantém a operação em PCI SAQ-A. Cada uma dessas telas
- * feita à mão é uma semana que não vira Receita Recuperada.
+ * cartão com 3DS, QR do Pix com prazo, atualização de cartão quando a renovação
+ * falha, e mantém a operação em PCI SAQ-A. Cada uma dessas telas feita à mão é
+ * uma semana que não vira Receita Recuperada.
  *
- * Pix NÃO entra: a Stripe no Brasil não faz Pix recorrente (o Pix Automático
- * não está disponível para contas BR). Anunciar Pix e não ter o botão no
- * checkout queimaria o lead exatamente na hora de pagar.
+ * O Pix só existe nos planos avulsos (30 dias e anual): a Stripe no Brasil não
+ * faz Pix recorrente — o Pix Automático não está disponível para contas BR.
  */
 export async function POST(request: Request) {
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+  // O plano vem do botão. Corpo vazio é o mensal, que é o que o botão antigo
+  // manda; plano que não existe é recusado, nunca trocado por outro em silêncio.
+  const plano = lerPlano(await request.json().catch(() => null));
+  if (!plano) {
+    return NextResponse.json(
+      { error: "Esse plano não existe. Escolha um dos planos da tela Minha conta." },
+      { status: 400 },
+    );
+  }
 
   // O erro diz o NOME do que falta, nunca o valor.
   //
@@ -42,6 +58,16 @@ export async function POST(request: Request) {
           "A cobrança ainda não está ligada: falta configurar " +
           `${variaveisPendentesDaStripe().join(" e ")} no serviço.`,
       },
+      { status: 503 },
+    );
+  }
+
+  // Cada plano tem o próprio preço na Stripe. Faltando o do plano escolhido, a
+  // resposta diz qual — e os outros planos continuam funcionando.
+  const precoPendente = precoPendenteDoPlano(plano, process.env);
+  if (precoPendente) {
+    return NextResponse.json(
+      { error: `Este plano ainda não está ligado: falta configurar ${precoPendente} no serviço.` },
       { status: 503 },
     );
   }
@@ -89,6 +115,10 @@ export async function POST(request: Request) {
         termosVersao: true,
         subscriptionStatus: true,
         trialEndsAt: true,
+        currentPeriodEnd: true,
+        cancelAtPeriodEnd: true,
+        dunningIniciadoEm: true,
+        acessoPagoAte: true,
       },
     });
     if (!empresa) return NextResponse.json({ error: "Empresa não encontrada" }, { status: 404 });
@@ -100,6 +130,22 @@ export async function POST(request: Request) {
     const cobranca = podeCobrar(empresa);
     if (!cobranca.pode) {
       return NextResponse.json({ error: cobranca.motivo }, { status: 403 });
+    }
+
+    const agora = new Date();
+    const trialEndsAt = await garantirRelogio(empresa, agora);
+
+    // Três planos convivendo abrem um jeito novo de cobrar duas vezes: vender o
+    // Pix para quem já paga no cartão, ou uma segunda assinatura para quem já tem
+    // uma. A regra é a mesma que desenha os botões da tela, e a recusa vem antes
+    // de qualquer escrita na Stripe.
+    const disponivel = planoDisponivel({
+      plano,
+      estado: estadoDaConta({ ...empresa, trialEndsAt }, agora),
+      subscriptionStatus: empresa.subscriptionStatus,
+    });
+    if (!disponivel.pode) {
+      return NextResponse.json({ error: disponivel.motivo }, { status: 409 });
     }
 
     const appUrl = process.env.APP_URL ?? new URL(request.url).origin;
@@ -124,52 +170,19 @@ export async function POST(request: Request) {
     // e só então abria o checkout ganhava outro mês inteiro. Os Termos prometem
     // os primeiros 30 dias, não 30 dias a partir de quando a pessoa decidir.
     // Teste vencido assina cobrando na hora.
-    const agora = new Date();
-    const fimDoTrial = fimDoTrialNoCheckout(await garantirRelogio(empresa, agora), agora);
+    //
+    // Teste só existe na assinatura. O passe é pago na hora e começa a contar
+    // quando o acesso atual acabar (lib/billing/passe.ts).
+    const fimDoTrial =
+      PLANOS[plano].modo === "subscription" ? fimDoTrialNoCheckout(trialEndsAt, agora) : null;
 
-    const assinatura: Stripe.Checkout.SessionCreateParams.SubscriptionData = {
-      // O tenant precisa viajar no objeto que os webhooks entregam.
-      metadata: { companyId },
-    };
-    if (fimDoTrial) {
-      assinatura.trial_end = fimDoTrial;
-      assinatura.trial_settings = {
-        end_behavior: {
-          // `pause`, nunca `cancel`. Pausada, a assinatura SOBREVIVE: quando
-          // o dono põe o cartão depois, retomamos a MESMA assinatura com o
-          // histórico dele. Com `cancel`, quem voltasse três dias depois
-          // recomeçaria do zero.
-          missing_payment_method: "pause",
-        },
-      };
-    }
-
-    const sessao = await stripe().checkout.sessions.create({
-      mode: "subscription",
-      customer: customerId,
-      line_items: [{ price: process.env.STRIPE_PRICE_PRO!, quantity: 1 }],
-
-      // Sem cartão enquanto houver teste: no ICP brasileiro pequeno, exigir
-      // cartão para testar derruba o topo do funil a ponto de não haver o que
-      // medir. Sem teste, há valor a cobrar agora e a Stripe pede o cartão.
-      payment_method_collection: "if_required",
-      subscription_data: assinatura,
-      metadata: { companyId },
-
-      // O Brasil não é suportado pelo Stripe Tax. O preço é imposto-incluso e
-      // a NFS-e sai fora da Stripe, no CNPJ do titular.
-      automatic_tax: { enabled: false },
-
-      // `{CHECKOUT_SESSION_ID}` é obrigatório: é ele que deixa a página de
-      // retorno convergir sozinha se o webhook ainda não chegou. Sem isso o
-      // dono paga, volta ao painel e lê "período de teste".
-      success_url: `${appUrl}/painel/assinatura?ok=1&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/painel/assinatura?cancelado=1`,
-    });
+    const sessao = await stripe().checkout.sessions.create(
+      parametrosDoCheckout({ plano, customerId, companyId, appUrl, fimDoTrial, env: process.env }),
+    );
 
     // Carrinho abandonado: marca a intenção AGORA. Quem chegou até aqui e não
     // voltou é a lista mais quente que existe, e sem esta marca não há como
-    // saber quem foi. É apagada quando a assinatura nasce.
+    // saber quem foi. É apagada quando a assinatura nasce ou o passe é pago.
     await prisma.company.update({
       where: { id: companyId },
       data: { checkoutAbertoEm: new Date() },

@@ -1,5 +1,5 @@
 /**
- * CONVERGÊNCIA DO ESTADO DA ASSINATURA.
+ * CONVERGÊNCIA DO ESTADO DA ASSINATURA E DO PASSE.
  *
  * Nenhum handler escreve a partir do payload do evento. Todos re-buscam o
  * objeto vivo na Stripe e gravam o que ela responde AGORA.
@@ -13,20 +13,27 @@
  * vezes grava o mesmo estado.
  *
  * ESCRITOR ÚNICO: só `aplicarAssinatura` toca em subscriptionStatus, plan,
- * currentPeriodEnd e trialEndsAt. Falha de pagamento NÃO escreve status — dois
- * escritores no mesmo campo é como o estado da conta começa a mentir.
+ * currentPeriodEnd e trialEndsAt, e só `aplicarPasse` toca em acessoPagoAte.
+ * Falha de pagamento NÃO escreve status — dois escritores no mesmo campo é como
+ * o estado da conta começa a mentir.
  */
 
 import type Stripe from "stripe";
 import { prisma } from "@/lib/db";
 import { companyIdDe, deveProvisionar, periodoFimDe } from "./eventos";
 import { stripe } from "./stripe";
-import { deveConfirmar, montarConfirmacao } from "./confirmacao";
+import { deveConfirmar, montarConfirmacao, montarConfirmacaoDoPasse } from "./confirmacao";
+import { diasDoPasse, fimDoAcessoAtual, periodoDoPasse } from "./passe";
 import { enviarEmail } from "@/lib/reengajamento/email";
 import { logError } from "@/lib/errors";
 
 function paraData(seg: number | null | undefined): Date | null {
   return typeof seg === "number" && Number.isFinite(seg) ? new Date(seg * 1000) : null;
+}
+
+function idDe(alvo: string | { id: string } | null | undefined): string | null {
+  if (!alvo) return null;
+  return typeof alvo === "string" ? alvo : alvo.id;
 }
 
 /** Rótulo grosso para exibição. O acesso real é decidido por subscriptionStatus. */
@@ -137,6 +144,177 @@ async function confirmarContratacao(
   }
 }
 
+const SELECAO_DO_PASSE = {
+  id: true,
+  dias: true,
+  valorCents: true,
+  fim: true,
+  confirmacaoEnviadaEm: true,
+} as const;
+
+type PasseGravado = {
+  id: string;
+  dias: number;
+  valorCents: number;
+  fim: Date;
+  confirmacaoEnviadaEm: Date | null;
+};
+
+/**
+ * O PASSE PAGO: pagamento avulso — 30 dias no Pix ou anual — que compensou.
+ *
+ * Só chega aqui depois de `deveProvisionar`: o Pix gerado e ainda não pago volta
+ * `unpaid` e não libera nada.
+ *
+ * UMA VEZ POR SESSÃO. O `create` do PassePago é a reivindicação: o webhook e a
+ * página de retorno convergem a mesma compra ao mesmo tempo, e a segunda
+ * execução estoura na sessão única em vez de somar mais dias. O prazo da conta
+ * é gravado na MESMA transação — passe registrado sem prazo, ou prazo sem
+ * registro, seria cobrança sem entrega ou entrega sem prova.
+ *
+ * O período novo começa quando o acesso que a conta já tem acaba: pagar cedo
+ * não custa os dias do teste, de uma assinatura cancelada ou de um passe que
+ * ainda vale.
+ */
+export async function aplicarPasse(
+  companyId: string,
+  sessao: Stripe.Checkout.Session,
+): Promise<string> {
+  const dias = diasDoPasse(sessao.metadata);
+  if (!dias) {
+    // Pagou e não dá para saber quantos dias comprou. Inventar prazo é pior do
+    // que não liberar: o erro vai para o ErrorLog, com a sessão, para alguém
+    // resolver olhando o pagamento na Stripe.
+    await logError(
+      "passe-sem-prazo",
+      new Error(`Sessão ${sessao.id} paga sem passeDias válido no metadata`),
+      companyId,
+    );
+    return companyId;
+  }
+
+  const agora = new Date();
+
+  let passe: PasseGravado;
+  try {
+    passe = await prisma.$transaction(async (tx) => {
+      const empresa = await tx.company.findUnique({
+        where: { id: companyId },
+        select: {
+          subscriptionStatus: true,
+          trialEndsAt: true,
+          currentPeriodEnd: true,
+          cancelAtPeriodEnd: true,
+          dunningIniciadoEm: true,
+          acessoPagoAte: true,
+        },
+      });
+      if (!empresa) throw new Error(`Passe ${sessao.id} pago para uma empresa que não existe`);
+
+      const { inicio, fim } = periodoDoPasse({
+        acessoAte: fimDoAcessoAtual(empresa, agora),
+        agora,
+        dias,
+      });
+
+      const criado = await tx.passePago.create({
+        data: {
+          companyId,
+          stripeSessionId: sessao.id,
+          stripePaymentIntentId: idDe(sessao.payment_intent),
+          plano: sessao.metadata?.plano ?? "",
+          dias,
+          valorCents: sessao.amount_total ?? 0,
+          inicio,
+          fim,
+        },
+        select: SELECAO_DO_PASSE,
+      });
+
+      // Trava otimista. Se outra compra da MESMA conta mudou o prazo entre a
+      // leitura e aqui, nada é gravado e a reentrega recalcula a partir do fim
+      // novo. Sem isto, duas compras simultâneas começariam do mesmo dia e os
+      // dias de uma delas sumiriam.
+      const gravou = await tx.company.updateMany({
+        where: { id: companyId, acessoPagoAte: empresa.acessoPagoAte },
+        data: {
+          acessoPagoAte: fim,
+          // Pagou: não abandonou carrinho nenhum e não é mais quem cancelou.
+          checkoutAbertoEm: null,
+          canceladoEm: null,
+        },
+      });
+      if (gravou.count === 0) {
+        throw new Error(`O prazo pago mudou durante a gravação do passe ${sessao.id}; a reentrega recalcula`);
+      }
+
+      return criado;
+    });
+  } catch (erro) {
+    if ((erro as { code?: string })?.code !== "P2002") throw erro;
+
+    // Esta compra já virou passe em outra execução. Não soma nada: só confere
+    // se a confirmação ficou para trás.
+    const existente = await prisma.passePago.findUnique({
+      where: { stripeSessionId: sessao.id },
+      select: SELECAO_DO_PASSE,
+    });
+    if (!existente) throw erro;
+    passe = existente;
+  }
+
+  await confirmarPasse(companyId, passe);
+  return companyId;
+}
+
+/**
+ * Confirmação do passe — mesma obrigação da assinatura, e as mesmas duas regras:
+ * nunca derruba a gravação do acesso, e sai uma vez só.
+ *
+ * Aqui a vez de mandar é reivindicada ANTES do envio. No passe pago no cartão, o
+ * webhook e a página de retorno chegam no mesmo segundo; marcando só depois, os
+ * dois leriam "não enviada" e o dono receberia o comprovante em dobro. Se o envio
+ * falhar, a vez é devolvida e a próxima convergência desta compra tenta de novo.
+ */
+async function confirmarPasse(companyId: string, passe: PasseGravado): Promise<void> {
+  if (passe.confirmacaoEnviadaEm) return;
+
+  let reivindicou = false;
+  try {
+    const vez = await prisma.passePago.updateMany({
+      where: { id: passe.id, confirmacaoEnviadaEm: null },
+      data: { confirmacaoEnviadaEm: new Date() },
+    });
+    if (vez.count === 0) return;
+    reivindicou = true;
+
+    const empresa = await prisma.company.findUnique({
+      where: { id: companyId },
+      select: { name: true, email: true },
+    });
+    if (empresa) {
+      const envio = await enviarEmail(
+        empresa.email,
+        montarConfirmacaoDoPasse({
+          nome: empresa.name,
+          dias: passe.dias,
+          valorCents: passe.valorCents,
+          fim: passe.fim,
+        }),
+      );
+      if (envio.enviado) return;
+    }
+  } catch (erro) {
+    await logError("confirmacao-passe", erro, companyId);
+  }
+
+  if (reivindicou) {
+    await prisma.passePago
+      .update({ where: { id: passe.id }, data: { confirmacaoEnviadaEm: null } })
+      .catch((erro) => logError("confirmacao-passe-devolver-vez", erro, companyId));
+  }
+}
+
 /** Re-busca a assinatura na Stripe e converge. */
 export async function convergirAssinatura(subscriptionId: string): Promise<string | null> {
   const sub = await stripe().subscriptions.retrieve(subscriptionId);
@@ -146,10 +324,10 @@ export async function convergirAssinatura(subscriptionId: string): Promise<strin
 /**
  * Converge a partir de uma Checkout Session.
  *
- * Chamada dos DOIS lados: do webhook `checkout.session.completed` e da própria
- * página de retorno, quando ela recebe `session_id`. Ter os dois gatilhos é o
- * que impede o dono de pagar, cair no painel e ler "período de teste" porque o
- * webhook ainda não chegou — tela que informa o errado e não resolve.
+ * Chamada dos DOIS lados: dos webhooks do checkout e da própria página de
+ * retorno, quando ela recebe `session_id`. Ter os dois gatilhos é o que impede o
+ * dono de pagar, cair no painel e ler "período de teste" porque o webhook ainda
+ * não chegou — tela que informa o errado e não resolve.
  */
 export async function convergirDoCheckout(sessionId: string): Promise<string | null> {
   const sessao = await stripe().checkout.sessions.retrieve(sessionId, {
@@ -159,11 +337,14 @@ export async function convergirDoCheckout(sessionId: string): Promise<string | n
   const companyId = companyIdDe(sessao);
   if (!companyId) return null;
 
-  // Pagamento assíncrono ainda não compensado chega aqui como `unpaid`, e
-  // liberar nesse ponto daria o mês de graça a quem só gerou a cobrança. Hoje
-  // só cartão está ligado e este caminho é raro; a guarda existe para o dia em
-  // que o boleto entrar, quando ele passa a ser o caso COMUM.
+  // Pagamento assíncrono ainda não compensado chega aqui como `unpaid`: é o Pix
+  // com o QR gerado e ainda não pago. Liberar nesse ponto daria os dias de graça
+  // a quem só gerou a cobrança. Quando o banco confirma, chega
+  // `checkout.session.async_payment_succeeded` e esta função roda de novo.
   if (!deveProvisionar(sessao)) return companyId;
+
+  // Pagamento avulso não tem assinatura: é o passe de 30 dias ou o anual.
+  if (sessao.mode === "payment") return aplicarPasse(companyId, sessao);
 
   const sub = sessao.subscription;
   if (!sub || typeof sub === "string") {

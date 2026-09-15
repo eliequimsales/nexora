@@ -24,6 +24,7 @@ export async function estadoDaEmpresa(companyId: string): Promise<EstadoConta> {
       currentPeriodEnd: true,
       cancelAtPeriodEnd: true,
       dunningIniciadoEm: true,
+      acessoPagoAte: true,
     },
   });
   // Empresa inexistente não é problema de cobrança — quem chamou já validou a
