@@ -48,6 +48,23 @@ export function periodoFimDe(sub: ComItens): Date | null {
     return typeof seg === "number" && Number.isFinite(seg) ? new Date(seg * 1000) : null;
 }
 
+type Encerravel = ComItens & { status?: string | null; ended_at?: number | null };
+
+/**
+ * Até quando a assinatura dá acesso.
+ *
+ * Encerrada, ela acabou quando acabou. Cancelada na hora — a garantia devolve o
+ * dinheiro e encerra; a Stripe cancela depois de esgotar as tentativas de
+ * cobrança — o item ainda aponta para o fim de um mês que ninguém pagou, e ler
+ * dali daria acesso até lá, de graça.
+ */
+export function fimDoPeriodoPago(sub: Encerravel): Date | null {
+  const encerrada = sub?.status === "canceled" || sub?.status === "incomplete_expired";
+  const fim = sub?.ended_at;
+  if (encerrada && typeof fim === "number" && Number.isFinite(fim)) return new Date(fim * 1000);
+  return periodoFimDe(sub);
+}
+
 /**
  * A Checkout Session liberou acesso?
  *

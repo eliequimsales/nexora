@@ -3,6 +3,7 @@ import {
   companyIdDe,
   deveProvisionar,
   EVENTOS_ASSINADOS,
+  fimDoPeriodoPago,
   periodoFimDe,
 } from "@/lib/billing/eventos";
 
@@ -30,6 +31,44 @@ describe("periodoFimDe", () => {
   it("sem item, devolve null em vez de Invalid Date", () => {
     expect(periodoFimDe({ items: { data: [] } })).toBeNull();
     expect(periodoFimDe({})).toBeNull();
+  });
+});
+
+/**
+ * ATÉ QUANDO A ASSINATURA DÁ ACESSO.
+ *
+ * Assinatura encerrada acabou quando acabou. Cancelada na hora — a garantia
+ * devolve o dinheiro e encerra; a Stripe cancela depois de esgotar as tentativas
+ * de cobrança — o item ainda aponta para o fim de um mês que ninguém pagou. Ler
+ * dali daria acesso até lá, de graça.
+ */
+describe("fimDoPeriodoPago", () => {
+  const item = { items: { data: [{ current_period_end: 1_800_000_000 }] } };
+
+  it("assinatura cancelada termina no ended_at, não no fim do período do item", () => {
+    expect(
+      fimDoPeriodoPago({ ...item, status: "canceled", ended_at: 1_700_000_000 })?.getTime(),
+    ).toBe(1_700_000_000_000);
+  });
+
+  it("incomplete_expired também: o primeiro pagamento nunca passou", () => {
+    expect(
+      fimDoPeriodoPago({ ...item, status: "incomplete_expired", ended_at: 1_700_000_000 })?.getTime(),
+    ).toBe(1_700_000_000_000);
+  });
+
+  it("assinatura viva segue o fim do período do item", () => {
+    for (const status of ["active", "trialing", "past_due", "unpaid", "paused"]) {
+      expect(fimDoPeriodoPago({ ...item, status, ended_at: null })?.getTime(), status).toBe(
+        1_800_000_000_000,
+      );
+    }
+  });
+
+  it("encerrada sem ended_at cai no fim do item, e não em Invalid Date", () => {
+    expect(fimDoPeriodoPago({ ...item, status: "canceled", ended_at: null })?.getTime()).toBe(
+      1_800_000_000_000,
+    );
   });
 });
 

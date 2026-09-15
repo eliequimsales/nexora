@@ -134,3 +134,32 @@ export function montarConfirmacaoDoPasse(d: DadosConfirmacaoDoPasse): Mensagem {
     acao: { texto: "Ver minha conta", href: "/painel/assinatura" },
   };
 }
+
+/**
+ * O COMPROVANTE DA DEVOLUÇÃO PELA GARANTIA.
+ *
+ * Transacional como a confirmação da contratação: sai mesmo para quem recusou
+ * marketing e não leva link de descadastro. Sem ele, o dono fica olhando a fatura
+ * sem saber se o pedido deu certo.
+ *
+ * O prazo do estorno é do banco, não da Nexora. Prometer um número de dias e o
+ * banco levar mais transformaria o comprovante numa promessa quebrada.
+ */
+export function montarConfirmacaoDaGarantia(d: { nome: string; valorCents: number }): Mensagem {
+  const nome = (d.nome ?? "").trim();
+  const saudacao = nome ? `${nome}, sua garantia foi devolvida.` : "Sua garantia foi devolvida.";
+
+  const corpo = [
+    saudacao,
+    `Devolvemos ${emReais(d.valorCents)}: tudo o que você pagou à Nexora no período da garantia. Seu plano foi encerrado e nada mais será cobrado.`,
+    "O estorno volta pelo mesmo meio do pagamento, e o tempo para ele aparecer na sua conta ou na fatura depende do banco.",
+    "Sua lista continua sua: você pode entrar para ler e exportar os clientes quando quiser.",
+    "Se puder, responda este e-mail contando o que faltou. É isso que decide o que a Nexora constrói em seguida.",
+  ].join("\n\n");
+
+  return {
+    assunto: "Sua garantia foi devolvida",
+    corpo,
+    acao: { texto: "Exportar minha lista", href: "/painel/clientes/importar" },
+  };
+}

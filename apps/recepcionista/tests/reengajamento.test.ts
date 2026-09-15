@@ -27,12 +27,37 @@ function sinais(over: Partial<Sinais> = {}): Sinais {
     subscriptionStatus: null,
     dunningIniciadoEm: null,
     acessoPagoAte: null,
+    garantiaUsadaEm: null,
     semEmail: false,
     jaEnviados: [],
     ultimoEnvioEm: null,
     ...over,
   };
 }
+
+/**
+ * QUEM PEDIU A GARANTIA.
+ *
+ * Recebeu o dinheiro de volta e encerrou a relação por escolha dele. A partir daí
+ * a régua não tem o que dizer: "renove", "o que deu errado no cancelamento?" e
+ * "sua base ainda está aqui" soariam como cobrança para quem acabou de receber.
+ */
+describe("decidirToque — quem pediu a garantia", () => {
+  it("não recebe mais nada da régua", () => {
+    expect(
+      decidirToque(
+        sinais({
+          garantiaUsadaEm: diasAtras(1),
+          subscriptionStatus: "canceled",
+          canceladoEm: diasAtras(1),
+          acessoPagoAte: diasAtras(1),
+          clientesNaBase: 60,
+        }),
+        HOJE,
+      ),
+    ).toBeNull();
+  });
+});
 
 /**
  * QUEM PAGOU O PASSE — 30 dias no Pix ou o anual.

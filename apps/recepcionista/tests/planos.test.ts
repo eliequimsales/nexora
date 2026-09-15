@@ -35,6 +35,7 @@ const BASE = {
   companyId: "cmp_1",
   appUrl: "https://www.meunexora.com.br",
   fimDoTrial: null,
+  garantia: true,
   env: ENV,
 };
 
@@ -130,6 +131,18 @@ describe("parametrosDoCheckout", () => {
       const p = parametrosDoCheckout({ ...BASE, plano, fimDoTrial: 1_900_000_000 });
       expect(p.subscription_data, plano).toBeUndefined();
     }
+  });
+
+  // A garantia vale para a lista que o dono tinha NA COMPRA. O dado viaja com o
+  // pagamento para que ninguém precise reconstruir depois o que a tela mostrou.
+  it("leva no metadata se a compra tem garantia, em todo objeto que a Stripe devolve", () => {
+    const mensal = parametrosDoCheckout({ ...BASE, plano: "mensal_cartao", garantia: false });
+    expect(mensal.metadata?.garantia).toBe("nao");
+    expect(mensal.subscription_data?.metadata?.garantia).toBe("nao");
+
+    const pix = parametrosDoCheckout({ ...BASE, plano: "pix_30_dias" });
+    expect(pix.metadata?.garantia).toBe("sim");
+    expect(pix.payment_intent_data?.metadata?.garantia).toBe("sim");
   });
 });
 

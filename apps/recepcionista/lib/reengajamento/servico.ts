@@ -113,6 +113,7 @@ async function sinaisDe(
     subscriptionStatus: string | null;
     dunningIniciadoEm: Date | null;
     acessoPagoAte: Date | null;
+    garantia: { devolvidaEm: Date | null } | null;
     semEmail: boolean;
   },
   hoje: Date,
@@ -148,6 +149,7 @@ async function sinaisDe(
     subscriptionStatus: empresa.subscriptionStatus,
     dunningIniciadoEm: empresa.dunningIniciadoEm,
     acessoPagoAte: empresa.acessoPagoAte,
+    garantiaUsadaEm: empresa.garantia?.devolvidaEm ?? null,
     semEmail: empresa.semEmail,
     // Texto cru: os momentos do passe levam a data na chave (PASSE_ACABANDO:2026-10-15).
     jaEnviados: enviados.map((e) => e.momento),
@@ -200,6 +202,7 @@ export async function rodarRegua(hoje = new Date()): Promise<ResultadoRegua> {
             subscriptionStatus: true,
             dunningIniciadoEm: true,
             acessoPagoAte: true,
+            garantia: { select: { devolvidaEm: true } },
             semEmail: true,
           },
           orderBy: [{ reguaAvaliadaEm: { sort: "asc", nulls: "first" } }, { id: "asc" }],

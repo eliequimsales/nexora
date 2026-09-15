@@ -8,6 +8,7 @@ import {
   PLANOS,
   precoPendenteDoPlano,
 } from "@/lib/billing/planos";
+import { ofertaDaEmpresa } from "@/lib/billing/oferta-da-conta";
 import { fimDoTrialNoCheckout } from "@/lib/billing/relogio";
 import { garantirRelogio } from "@/lib/billing/relogio-da-conta";
 import { stripe, stripeConfigurado, variaveisPendentesDaStripe } from "@/lib/billing/stripe";
@@ -176,8 +177,27 @@ export async function POST(request: Request) {
     const fimDoTrial =
       PLANOS[plano].modo === "subscription" ? fimDoTrialNoCheckout(trialEndsAt, agora) : null;
 
+    // GARANTIA DINHEIRO RECUPERADO: vale para lista acima do Corte Honesto, e o
+    // que conta é a lista NA COMPRA. Se a conta não fechar por erro nosso, a
+    // garantia vai junto: a tela de planos a anunciou, e uma falha daqui não pode
+    // tirá-la de quem pagou.
+    const garantia = await ofertaDaEmpresa(companyId)
+      .then((oferta) => !oferta.corteHonesto)
+      .catch(async (erro) => {
+        await logError("checkout-oferta-garantia", erro, companyId);
+        return true;
+      });
+
     const sessao = await stripe().checkout.sessions.create(
-      parametrosDoCheckout({ plano, customerId, companyId, appUrl, fimDoTrial, env: process.env }),
+      parametrosDoCheckout({
+        plano,
+        customerId,
+        companyId,
+        appUrl,
+        fimDoTrial,
+        garantia,
+        env: process.env,
+      }),
     );
 
     // Carrinho abandonado: marca a intenção AGORA. Quem chegou até aqui e não

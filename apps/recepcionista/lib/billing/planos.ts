@@ -85,9 +85,16 @@ export function parametrosDoCheckout(p: {
   appUrl: string;
   /** `trial_end` em segundos Unix, só para conta antiga com teste em andamento. */
   fimDoTrial: number | null;
+  /**
+   * A compra tem a Garantia Dinheiro Recuperado: a lista estava acima do Corte
+   * Honesto quando o checkout abriu. Viaja com o pagamento para que ninguém
+   * precise reconstruir no dia 30 o que a tela mostrou na compra.
+   */
+  garantia: boolean;
   env: Record<string, string | undefined>;
 }): Stripe.Checkout.SessionCreateParams {
   const plano = PLANOS[p.plano];
+  const garantia = p.garantia ? "sim" : "nao";
 
   const comum = {
     customer: p.customerId,
@@ -96,6 +103,7 @@ export function parametrosDoCheckout(p: {
     metadata: {
       companyId: p.companyId,
       plano: p.plano,
+      garantia,
       ...(plano.dias ? { passeDias: String(plano.dias) } : {}),
     },
     // O Brasil não é suportado pelo Stripe Tax: o preço já é imposto-incluso e a
@@ -109,7 +117,9 @@ export function parametrosDoCheckout(p: {
 
   if (plano.modo === "subscription") {
     const assinatura: Stripe.Checkout.SessionCreateParams.SubscriptionData = {
-      metadata: { companyId: p.companyId },
+      // A garantia viaja na assinatura porque é ela que a convergência re-busca a
+      // cada evento — o metadata da sessão não volta nos eventos da assinatura.
+      metadata: { companyId: p.companyId, garantia },
     };
     if (p.fimDoTrial) {
       assinatura.trial_end = p.fimDoTrial;
@@ -132,7 +142,7 @@ export function parametrosDoCheckout(p: {
     mode: "payment",
     payment_method_options: { pix: { expires_after_seconds: PIX_EXPIRA_EM_SEGUNDOS } },
     payment_intent_data: {
-      metadata: { companyId: p.companyId, passeDias: String(plano.dias) },
+      metadata: { companyId: p.companyId, passeDias: String(plano.dias), garantia },
     },
   };
 }

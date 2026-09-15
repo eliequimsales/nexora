@@ -9,6 +9,9 @@ import {
   type EstadoConta,
 } from "@/lib/billing/acesso";
 import { convergirDoCheckout } from "@/lib/billing/converger";
+import { GARANTIA_DIAS, ONDAS_MINIMAS, type SituacaoDaGarantia } from "@/lib/billing/garantia";
+import { garantiaDaEmpresa } from "@/lib/billing/garantia-da-conta";
+import { ofertaDaEmpresa } from "@/lib/billing/oferta-da-conta";
 import { acoesDaConta, PLANOS, precoPendenteDoPlano, type PlanoId } from "@/lib/billing/planos";
 import { emReais, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
 import { garantirRelogio } from "@/lib/billing/relogio-da-conta";
@@ -16,7 +19,9 @@ import { variaveisPendentesDaStripe } from "@/lib/billing/stripe";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
 import { variaveisPendentesDoFornecedor } from "@/lib/legal/identidade";
+import { MIN_RECUPERAVEL_CENTS, MIN_SUMIDOS } from "@/lib/recuperacao/estimativa";
 import { BotoesAssinatura, type OpcaoDePlano } from "./botoes";
+import { BotaoDaGarantia } from "./garantia";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +46,15 @@ const dataBr = (d: Date) =>
     year: "numeric",
     timeZone: "America/Sao_Paulo",
   });
+
+/** Situações em que o dono ainda pode mudar o resultado — ou já pode pedir. */
+const MOSTRA_PROGRESSO: SituacaoDaGarantia[] = [
+  "EM_ANDAMENTO",
+  "POUCAS_ONDAS",
+  "SEM_RESPOSTA",
+  "SE_PAGOU",
+  "DISPONIVEL",
+];
 
 export default async function PaginaAssinatura({
   searchParams,
@@ -92,7 +106,7 @@ export default async function PaginaAssinatura({
 
   // North Star: Receita Recuperada COMPROVADA. Só o que foi atribuído — o resto
   // vai numa linha separada, nunca somado, para o número não inflar.
-  const [comprovado, semAtribuicao] = await Promise.all([
+  const [comprovado, semAtribuicao, garantia] = await Promise.all([
     prisma.recoveryEntry.aggregate({
       where: { companyId, attributed: true },
       _sum: { valueCents: true },
@@ -103,7 +117,18 @@ export default async function PaginaAssinatura({
       _sum: { valueCents: true },
       _count: true,
     }),
+    garantiaDaEmpresa(companyId, agora),
   ]);
+
+  // A garantia que uma compra NOVA levaria. Só existe enquanto a conta não tem a
+  // dela (é uma por negócio), e usa a mesma conta do checkout: a tela não pode
+  // prometer a garantia que a compra não vai carregar.
+  const semGarantiaAinda = garantia.decisao.situacao === "SEM_GARANTIA";
+  const ofertaDeHoje =
+    semGarantiaAinda && acoes.planos.length > 0
+      ? await ofertaDaEmpresa(companyId, agora).catch(() => null)
+      : null;
+  const compraSemGarantia = Boolean(ofertaDeHoje?.corteHonesto);
 
   // Tudo que impede a cobrança de abrir, na ordem em que o dono resolve:
   // primeiro a Stripe e os preços de cada plano, depois a identificação exigida
@@ -215,6 +240,19 @@ export default async function PaginaAssinatura({
 
         {aviso && <p className="mt-3 text-sm text-panel-ink">{aviso}</p>}
 
+        {/* O que a próxima compra leva — dito antes do pagamento, nunca depois. */}
+        {semGarantiaAinda && acoes.planos.length > 0 && (
+          <p className="mt-3 rounded-xl bg-panel-bg p-3 text-sm text-panel-ink">
+            {compraSemGarantia
+              ? `Pela sua lista de hoje — menos de ${MIN_SUMIDOS} clientes sumidos ou de ` +
+                `${reais(MIN_RECUPERAVEL_CENTS)} para recuperar —, esta contratação não inclui a ` +
+                "Garantia Dinheiro Recuperado."
+              : `Garantia Dinheiro Recuperado: se em ${GARANTIA_DIAS} dias você mandar as mensagens de ` +
+                `${ONDAS_MINIMAS} ondas, marcar quem voltou e o Dinheiro recuperado não chegar a ` +
+                `${reais(PRECO_MENSAL_CENTS)}, devolvemos tudo o que você pagou. Vale uma vez por negócio.`}
+          </p>
+        )}
+
         {/*
           O que falta, pelo nome. São NOMES de variável, nunca valores, e a tela
           só existe para quem já está logado na própria conta. Enquanto isso ficava
@@ -236,6 +274,38 @@ export default async function PaginaAssinatura({
         */}
         <BotoesAssinatura opcoes={acoes.planos.map((p) => planos[p])} portal={acoes.portal} />
       </section>
+
+      {!semGarantiaAinda && (
+        <section id="garantia" className="rounded-2xl border border-panel-line bg-panel-card p-6">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-panel-sub">
+            Garantia Dinheiro Recuperado
+          </h2>
+          <p className="mt-3 text-panel-ink">{garantia.decisao.motivo}</p>
+
+          {MOSTRA_PROGRESSO.includes(garantia.decisao.situacao) && (
+            <ul className="mt-3 grid gap-1 text-sm text-panel-sub tabular-nums">
+              <li>
+                Ondas enviadas: {Math.min(garantia.sinais.ondas, ONDAS_MINIMAS)} de {ONDAS_MINIMAS}
+              </li>
+              <li>Dinheiro recuperado no período: {reais(garantia.sinais.recuperadoCents)}</li>
+              {garantia.sinais.pendentesSemResposta > 0 && (
+                <li>Contatos sem resposta marcada: {garantia.sinais.pendentesSemResposta}</li>
+              )}
+            </ul>
+          )}
+
+          {garantia.decisao.devolve ? (
+            <BotaoDaGarantia />
+          ) : (
+            <Link
+              href={garantia.decisao.acao.href}
+              className="mt-4 inline-block rounded-xl border border-panel-line px-4 py-2.5 text-sm font-semibold text-panel-ink"
+            >
+              {garantia.decisao.acao.texto}
+            </Link>
+          )}
+        </section>
+      )}
     </main>
   );
 }

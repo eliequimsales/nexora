@@ -115,6 +115,7 @@ model Company {
   supressoes     Supressao[]
   verificacoes   VerificacaoEmail[]
   passes         PassePago[]
+  garantia       Garantia?
 }
 
 // PASSE PAGO: um pagamento avulso que compensou — 30 dias no Pix ou 12 meses à
@@ -145,9 +146,37 @@ model PassePago {
   // Confirmação da contratação (Decreto 7.962/2013, art. 4º, V): uma por passe.
   confirmacaoEnviadaEm DateTime?
 
+  // Estornado pela garantia: o dinheiro voltou e o passe não conta mais.
+  reembolsadoEm DateTime?
+
   criadoEm DateTime @default(now())
 
   @@index([companyId])
+}
+
+// GARANTIA DINHEIRO RECUPERADO — uma por negócio (lib/billing/garantia.ts).
+//
+// Nasce no primeiro pagamento feito com a garantia, e não no pedido: é aqui que
+// fica registrado, na hora da compra, se a lista estava acima do Corte Honesto.
+// Reconstruir isso no dia 30 seria julgar a compra com uma lista que já mudou.
+//
+// Quem pagou antes de a garantia existir não ganha a linha: os Termos que essa
+// pessoa aceitou não prometiam devolução.
+model Garantia {
+  id        String  @id @default(cuid())
+  companyId String  @unique
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // Início do primeiro período pago com a garantia. A conta fecha 30 dias depois.
+  inicio       DateTime
+  acimaDoCorte Boolean
+
+  // Reivindicação do pedido: duas abas ou dois cliques viram uma devolução só.
+  pedidaEm            DateTime?
+  devolvidaEm         DateTime?
+  valorDevolvidoCents Int       @default(0)
+
+  criadoEm DateTime @default(now())
 }
 
 // Cada e-mail de reengajamento já enviado. A unicidade por (empresa, momento) é

@@ -67,6 +67,8 @@ export type Sinais = {
   dunningIniciadoEm: Date | null;
   /** Fim do último passe pago (30 dias no Pix ou anual). null em quem nunca pagou um. */
   acessoPagoAte: Date | null;
+  /** Quando a garantia devolveu o dinheiro. Depois disso a régua fica em silêncio. */
+  garantiaUsadaEm: Date | null;
   semEmail: boolean;
   /** Momentos já enviados — inclusive os do passe, com a data na chave. */
   jaEnviados: string[];
@@ -131,6 +133,11 @@ function frasedoNumero(s: Sinais): string {
 
 export function decidirToque(s: Sinais, agora: Date): Toque | null {
   if (s.semEmail) return null;
+
+  // Pediu a garantia e recebeu o dinheiro de volta: encerrou a relação por
+  // escolha dele. "Renove", "o que deu errado?" e "sua base ainda está aqui"
+  // soariam como cobrança para quem acabou de receber a devolução.
+  if (s.garantiaUsadaEm) return null;
 
   if (s.ultimoEnvioEm && dias(s.ultimoEnvioEm, agora) < INTERVALO_MINIMO_DIAS) return null;
 

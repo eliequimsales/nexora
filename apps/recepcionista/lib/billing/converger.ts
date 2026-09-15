@@ -13,14 +13,14 @@
  * vezes grava o mesmo estado.
  *
  * ESCRITOR ÚNICO: só `aplicarAssinatura` toca em subscriptionStatus, plan,
- * currentPeriodEnd e trialEndsAt, e só `aplicarPasse` toca em acessoPagoAte.
- * Falha de pagamento NÃO escreve status — dois escritores no mesmo campo é como
- * o estado da conta começa a mentir.
+ * currentPeriodEnd e trialEndsAt; só `aplicarPasse` e `encerrarAcessoPago` tocam
+ * em acessoPagoAte. Falha de pagamento NÃO escreve status — dois escritores no
+ * mesmo campo é como o estado da conta começa a mentir.
  */
 
 import type Stripe from "stripe";
 import { prisma } from "@/lib/db";
-import { companyIdDe, deveProvisionar, periodoFimDe } from "./eventos";
+import { companyIdDe, deveProvisionar, fimDoPeriodoPago, periodoFimDe } from "./eventos";
 import { stripe } from "./stripe";
 import { deveConfirmar, montarConfirmacao, montarConfirmacaoDoPasse } from "./confirmacao";
 import { diasDoPasse, fimDoAcessoAtual, periodoDoPasse } from "./passe";
@@ -34,6 +34,14 @@ function paraData(seg: number | null | undefined): Date | null {
 function idDe(alvo: string | { id: string } | null | undefined): string | null {
   if (!alvo) return null;
   return typeof alvo === "string" ? alvo : alvo.id;
+}
+
+/** "sim" ou "nao" quando a compra passou pelo checkout com garantia; null antes dela existir. */
+function marcaDaGarantia(metadata: Stripe.Metadata | null | undefined): boolean | null {
+  const marca = metadata?.garantia;
+  if (marca === "sim") return true;
+  if (marca === "nao") return false;
+  return null;
 }
 
 /** Rótulo grosso para exibição. O acesso real é decidido por subscriptionStatus. */
@@ -65,7 +73,8 @@ export async function aplicarAssinatura(sub: Stripe.Subscription): Promise<strin
       stripeCustomerId: typeof sub.customer === "string" ? sub.customer : sub.customer.id,
       subscriptionStatus: sub.status,
       plan: planoDoStatus(sub.status),
-      currentPeriodEnd: periodoFimDe(sub),
+      // Encerrada, termina quando acabou — não no fim de um mês que ninguém pagou.
+      currentPeriodEnd: fimDoPeriodoPago(sub),
       cancelAtPeriodEnd: sub.cancel_at_period_end,
       trialEndsAt: paraData(sub.trial_end),
 
@@ -92,9 +101,35 @@ export async function aplicarAssinatura(sub: Stripe.Subscription): Promise<strin
     },
   });
 
+  await registrarGarantiaDaAssinatura(companyId, sub);
   await confirmarContratacao(companyId, sub, atual);
 
   return companyId;
+}
+
+/**
+ * A GARANTIA NASCE NO PRIMEIRO PAGAMENTO.
+ *
+ * Só para assinatura aberta pelo checkout com garantia, que carrega a marca no
+ * metadata: quem assinou antes aceitou Termos sem devolução. O período começa
+ * quando a assinatura fica ativa — no teste, isso é o fim do teste, que é quando
+ * o primeiro dinheiro sai.
+ *
+ * `createMany` com `skipDuplicates` porque este handler roda a cada evento da
+ * Stripe e a garantia é uma por negócio: a primeira compra vale, as seguintes não
+ * mexem nela.
+ */
+async function registrarGarantiaDaAssinatura(
+  companyId: string,
+  sub: Stripe.Subscription,
+): Promise<void> {
+  const acimaDoCorte = marcaDaGarantia(sub.metadata);
+  if (sub.status !== "active" || acimaDoCorte === null) return;
+
+  await prisma.garantia.createMany({
+    data: [{ companyId, inicio: new Date(), acimaDoCorte }],
+    skipDuplicates: true,
+  });
 }
 
 /**
@@ -194,6 +229,7 @@ export async function aplicarPasse(
   }
 
   const agora = new Date();
+  const acimaDoCorte = marcaDaGarantia(sessao.metadata);
 
   let passe: PasseGravado;
   try {
@@ -248,6 +284,16 @@ export async function aplicarPasse(
         throw new Error(`O prazo pago mudou durante a gravação do passe ${sessao.id}; a reentrega recalcula`);
       }
 
+      // A garantia nasce no primeiro pagamento com ela, junto com o prazo: se a
+      // transação desfaz, nada disto fica. O período dela é o período pago —
+      // quem pagou durante o teste começa a contar quando o teste acaba.
+      if (acimaDoCorte !== null) {
+        await tx.garantia.createMany({
+          data: [{ companyId, inicio, acimaDoCorte }],
+          skipDuplicates: true,
+        });
+      }
+
       return criado;
     });
   } catch (erro) {
@@ -265,6 +311,18 @@ export async function aplicarPasse(
 
   await confirmarPasse(companyId, passe);
   return companyId;
+}
+
+/**
+ * A garantia devolveu o dinheiro: o acesso pago acaba agora. Mora aqui porque
+ * `acessoPagoAte` tem escritor único, e porque o próximo passe comprado precisa
+ * começar do zero, sem os dias que foram devolvidos.
+ */
+export async function encerrarAcessoPago(companyId: string, agora: Date): Promise<void> {
+  await prisma.company.updateMany({
+    where: { id: companyId, acessoPagoAte: { gt: agora } },
+    data: { acessoPagoAte: agora },
+  });
 }
 
 /**
