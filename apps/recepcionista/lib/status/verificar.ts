@@ -92,7 +92,9 @@ function verificarEmails(): ComponenteDoStatus {
 }
 
 async function verificarWhatsApp(): Promise<ComponenteDoStatus> {
-  const base = { chave: "whatsapp", nome: "Atendente de WhatsApp" } as const;
+  // Opcional: está fora dos planos e ainda em testes, então o estado dele aparece
+  // na lista mas não entra no resumo (lib/status/resumo.ts).
+  const base = { chave: "whatsapp", nome: "Atendente de WhatsApp", opcional: true } as const;
   const url = (process.env.EVOLUTION_API_URL ?? "").trim();
   if (!url) {
     return {

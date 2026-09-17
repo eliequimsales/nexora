@@ -20,12 +20,17 @@ export const dynamic = "force-dynamic";
  * Mostra o que foi conferido agora, e diz que é só isso. Sem histórico guardado
  * não existe percentual de disponibilidade para mostrar — e inventar um seria a
  * página de confiança mentindo justamente sobre confiança.
+ *
+ * O resumo do topo fala do produto que a Nexora vende: a recuperação de clientes.
+ * Módulo opcional e em testes aparece na lista com o estado real dele, mas fora
+ * da conta do resumo — senão um gateway que nem entra nos planos faria a página
+ * anunciar que o produto pago está quebrado.
  */
 
-const TOM: Record<ResumoDoStatus["tom"], string> = {
-  ok: "border-leaf-dark/30 bg-leaf/15 text-leaf-dark",
-  parcial: "border-amber-deep/30 bg-amber/15 text-amber-deep",
-  fora: "border-red-700/30 bg-red-600/10 text-red-700",
+const TOM: Record<ResumoDoStatus["tom"], { caixa: string; ponto: string }> = {
+  ok: { caixa: "border-leaf-dark/30 bg-leaf/15 text-leaf-dark", ponto: "bg-leaf" },
+  parcial: { caixa: "border-amber-deep/30 bg-amber/15 text-amber-deep", ponto: "bg-amber" },
+  fora: { caixa: "border-red-700/30 bg-red-600/10 text-red-700", ponto: "bg-red-600" },
 };
 
 const ROTULO: Record<EstadoDoComponente, { texto: string; ponto: string }> = {
@@ -43,6 +48,8 @@ export default async function PaginaDeStatus() {
     minute: "2-digit",
     second: "2-digit",
   });
+  const tom = TOM[status.resumo.tom];
+  const temOpcional = status.componentes.some((c) => c.opcional);
 
   return (
     <div className="min-h-screen bg-paper text-paper-ink">
@@ -69,8 +76,9 @@ export default async function PaginaDeStatus() {
         <h1 className="font-display text-4xl font-bold tracking-[-0.03em]">Status da Nexora</h1>
 
         <p
-          className={`mt-8 rounded-xl border p-5 font-display text-xl font-semibold ${TOM[status.resumo.tom]}`}
+          className={`mt-8 flex items-center gap-3 rounded-xl border p-5 font-display text-xl font-semibold ${tom.caixa}`}
         >
+          <span aria-hidden="true" className={`h-3 w-3 shrink-0 rounded-full ${tom.ponto}`} />
           {status.resumo.titulo}
         </p>
         <p className="mt-3 text-sm leading-relaxed text-paper-sub">
@@ -87,7 +95,14 @@ export default async function PaginaDeStatus() {
                 className="flex flex-col gap-2 rounded-xl border border-paper-line p-5 sm:flex-row sm:items-start sm:justify-between"
               >
                 <div>
-                  <p className="font-semibold">{componente.nome}</p>
+                  <p className="font-semibold">
+                    {componente.nome}
+                    {componente.opcional && (
+                      <span className="ml-2 rounded-full border border-paper-line px-2 py-0.5 align-middle text-[11px] font-medium text-paper-sub">
+                        Módulo opcional · em testes
+                      </span>
+                    )}
+                  </p>
                   <p className="mt-1 text-sm text-paper-sub">{componente.detalhe}</p>
                 </div>
                 <span className="inline-flex shrink-0 items-center gap-2 text-sm font-medium">
@@ -98,6 +113,14 @@ export default async function PaginaDeStatus() {
             );
           })}
         </ul>
+
+        {temOpcional && (
+          <p className="mt-6 text-sm leading-relaxed text-paper-sub">
+            O atendente de WhatsApp é um módulo opcional, ainda em testes e fora dos planos. O
+            estado dele aparece acima como está, mas não entra no resumo do topo, que fala do
+            serviço que a Nexora vende: a recuperação de clientes.
+          </p>
+        )}
 
         <p className="mt-10 text-sm leading-relaxed text-paper-sub">
           Algo parou de funcionar e não aparece aqui?{" "}

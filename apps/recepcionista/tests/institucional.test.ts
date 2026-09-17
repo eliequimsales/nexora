@@ -134,17 +134,34 @@ describe("/status", () => {
   const comp = (
     chave: ComponenteDoStatus["chave"],
     estado: ComponenteDoStatus["estado"],
-  ): ComponenteDoStatus => ({ chave, nome: chave, estado, detalhe: "" });
+    opcional = false,
+  ): ComponenteDoStatus => ({ chave, nome: chave, estado, detalhe: "", opcional });
 
-  it("tudo respondendo é tudo operando; o WhatsApp desligado não conta como problema", () => {
-    expect(
-      resumoDoStatus([
-        comp("painel", "operando"),
-        comp("pagamentos", "operando"),
-        comp("emails", "operando"),
-        comp("whatsapp", "desligado"),
-      ]).tom,
-    ).toBe("ok");
+  it("tudo respondendo é tudo operando", () => {
+    const r = resumoDoStatus([
+      comp("painel", "operando"),
+      comp("pagamentos", "operando"),
+      comp("emails", "operando"),
+    ]);
+    expect(r.tom).toBe("ok");
+    expect(r.titulo).toBe("Todos os sistemas operacionais");
+  });
+
+  // O que a Nexora vende hoje é a recuperação de clientes. O atendente de
+  // WhatsApp é módulo opcional, em testes e fora dos planos: o estado dele
+  // continua visível no item, mas não derruba o resumo do que está sendo vendido.
+  it("módulo opcional não entra no resumo, nem desligado nem com problema", () => {
+    for (const estado of ["desligado", "fora", "nao_configurado"] as const) {
+      expect(
+        resumoDoStatus([
+          comp("painel", "operando"),
+          comp("pagamentos", "operando"),
+          comp("emails", "operando"),
+          comp("whatsapp", estado, true),
+        ]).tom,
+        estado,
+      ).toBe("ok");
+    }
   });
 
   it("uma parte fora ou sem configuração é problema parcial", () => {
@@ -169,6 +186,13 @@ describe("/status", () => {
     for (const estado of ["operando", "fora", "nao_configurado", "desligado"] as const) {
       expect(resumoDoStatus([comp("painel", estado)]).titulo.length).toBeGreaterThan(0);
     }
+  });
+
+  it("o atendente de WhatsApp é o módulo opcional, e a página diz isso", () => {
+    expect(leia("lib/status/verificar.ts")).toMatch(/opcional:\s*true/);
+    const pagina = leia("app/status/page.tsx");
+    expect(pagina).toContain("Módulo opcional");
+    expect(pagina.toLowerCase()).toContain("não entra no resumo");
   });
 
   it("confere na hora, sem histórico inventado", () => {
