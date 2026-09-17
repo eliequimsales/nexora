@@ -128,8 +128,8 @@ export default function Home() {
             >
               Entrar
             </Link>
-            <Link href="/diagnostico" className={`${BOTAO_DOURADO} px-4 py-2 text-sm`}>
-              Ver meus clientes <span aria-hidden="true">→</span>
+            <Link href="/cadastro" className={`${BOTAO_DOURADO} px-4 py-2 text-sm`}>
+              Começar grátis <span aria-hidden="true">→</span>
             </Link>
           </div>
         </div>
@@ -149,8 +149,8 @@ export default function Home() {
               mensagem exata pra trazer cada um de volta.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3 pt-3">
-              <Link href="/diagnostico" className={`${BOTAO_DOURADO} px-7 py-4 text-base`}>
-                Descobrir meus clientes <span aria-hidden="true">→</span>
+              <Link href="/cadastro" className={`${BOTAO_DOURADO} px-7 py-4 text-base`}>
+                Começar agora sem cartão <span aria-hidden="true">→</span>
               </Link>
               <a
                 href="#calculadora"
@@ -322,8 +322,8 @@ export default function Home() {
                 </Link>
                 .
               </p>
-              <Link href="/diagnostico" className={`${BOTAO_DOURADO} mt-9 px-7 py-4`}>
-                Começar pelo diagnóstico grátis <span aria-hidden="true">→</span>
+              <Link href="/cadastro" className={`${BOTAO_DOURADO} mt-9 px-7 py-4`}>
+                Começar agora sem cartão <span aria-hidden="true">→</span>
               </Link>
             </div>
             <ul className="rounded-xl border border-nx-border bg-nx-surface px-6">
@@ -359,15 +359,14 @@ export default function Home() {
         <section className="px-6 pb-24 pt-10">
           <div className="mx-auto max-w-3xl rounded-2xl border border-nx-gold/30 bg-nx-surface p-8 text-center sm:p-12">
             <h2 className="text-3xl font-bold leading-tight sm:text-4xl">
-              Antes de decidir, veja o tamanho do buraco.
+              Descubra quanto dinheiro está parado na sua lista.
             </h2>
             <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-nx-secondary">
-              Cola a lista que você já tem e a Nexora te mostra, com nome e sobrenome, quem
-              parou de voltar. Não precisa criar conta para ver, e a lista não fica com a
-              gente.
+              Crie sua conta em 15 segundos, sem cartão de crédito, e veja exatamente
+              quais clientes pararam de voltar e quanto faturamento você pode recuperar.
             </p>
-            <Link href="/diagnostico" className={`${BOTAO_DOURADO} mt-8 px-8 py-4 text-lg`}>
-              Ver quem sumiu da minha lista <span aria-hidden="true">→</span>
+            <Link href="/cadastro" className={`${BOTAO_DOURADO} mt-8 px-8 py-4 text-lg`}>
+              Criar minha conta grátis <span aria-hidden="true">→</span>
             </Link>
           </div>
         </section>
@@ -377,8 +376,8 @@ export default function Home() {
 
       {/* No celular o botão nunca sai da tela — veio da Nexora antiga. */}
       <div className="fixed inset-x-0 bottom-0 z-50 border-t border-nx-border bg-nx-bg/95 p-3 backdrop-blur-md sm:hidden">
-        <Link href="/diagnostico" className={`${BOTAO_DOURADO} w-full px-5 py-3.5`}>
-          Descobrir meus clientes <span aria-hidden="true">→</span>
+        <Link href="/cadastro" className={`${BOTAO_DOURADO} w-full px-5 py-3.5`}>
+          Começar agora sem cartão <span aria-hidden="true">→</span>
         </Link>
       </div>
     </TemaNexora>

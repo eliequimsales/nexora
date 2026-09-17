@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { GARANTIA_DIAS, ONDAS_MINIMAS } from "@/lib/billing/garantia";
 import { PLANOS } from "@/lib/billing/planos";
 import {
@@ -118,6 +119,8 @@ export default function PaginaDiagnostico({
 }) {
   const { ramo, ticketReais } = lerParametros(searchParams);
   const vocativo = ramo ? VOCATIVO[ramo] : null;
+
+  redirect("/cadastro");
 
   return (
     <div className="min-h-screen bg-nx-bg text-nx-primary">
