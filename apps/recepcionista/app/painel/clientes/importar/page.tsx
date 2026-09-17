@@ -84,7 +84,6 @@ export default function PaginaImportar() {
   const [modo, setModo] = useState<"campos" | "colar">("campos");
   const [linhas, setLinhas] = useState<LinhaCliente[]>([
     { id: "1", nome: "", telefone: "", data: "", valor: "" },
-    { id: "2", nome: "", telefone: "", data: "", valor: "" },
   ]);
   const [cadastrados, setCadastrados] = useState<ClienteCadastrado[]>([]);
   // A recusa de ENVIAR_TOQUE: a lista vem inteira, a mensagem pronta não.
@@ -378,7 +377,9 @@ export default function PaginaImportar() {
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-sm font-medium text-panel-ink">
-                Preencha os dados de cada cliente:
+                {linhas.length > 1
+                  ? "Preencha os dados de cada cliente:"
+                  : "Preencha os dados do cliente:"}
               </span>
               <div className="flex flex-wrap items-center gap-2">
                 <button
@@ -405,11 +406,11 @@ export default function PaginaImportar() {
                   key={linha.id}
                   className="rounded-xl border border-panel-line bg-panel-bg p-4 space-y-3 transition hover:border-panel-sub/30"
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-panel-sub uppercase tracking-wider">
-                      Cliente {index + 1}
-                    </span>
-                    {linhas.length > 1 && (
+                  {linhas.length > 1 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-panel-sub uppercase tracking-wider">
+                        Cliente {index + 1}
+                      </span>
                       <button
                         type="button"
                         onClick={() => removerLinha(linha.id)}
@@ -418,8 +419,8 @@ export default function PaginaImportar() {
                       >
                         Remover
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     <div>
