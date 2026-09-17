@@ -42,7 +42,12 @@ function LoginForm() {
       // troca "recusa o que eu lembrei de proibir" por "só aceita o que eu
       // reconheço", que é a única forma que não envelhece mal.
       const next = searchParams.get("next");
-      const target = next && /^\/[A-Za-z0-9\-._~/]*$/.test(next) ? next : "/painel";
+      const target =
+        next &&
+        !next.startsWith("/painel/configuracoes") &&
+        /^\/[A-Za-z0-9\-._~/]*$/.test(next)
+          ? next
+          : "/painel/clientes/importar";
       router.push(target);
       router.refresh();
     } catch {

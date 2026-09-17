@@ -45,7 +45,7 @@ export default function CadastroPage() {
         return;
       }
       trackCompleteRegistration("email");
-      router.push("/painel/configuracoes");
+      router.push("/painel/clientes/importar");
       router.refresh();
     } catch {
       setError("Falha de conexão. Tente novamente.");

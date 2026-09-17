@@ -114,7 +114,7 @@ export async function GET(request: Request) {
 
     setSessionCookie(await createSessionToken(company.id, company.sessaoEpoca));
     return NextResponse.redirect(
-      appRedirect(isNew ? "/painel/configuracoes" : "/painel", request.url),
+      appRedirect("/painel/clientes/importar", request.url),
     );
   } catch (error) {
     await logError("auth-google-callback", error);

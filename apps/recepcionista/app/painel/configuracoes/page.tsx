@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 /**
  * MEU ATENDENTE NO WHATSAPP — a tela de ativação do produto.
@@ -180,6 +181,13 @@ const inputClass =
   "w-full rounded-lg border border-panel-line bg-white px-3 py-2.5 text-sm text-panel-ink outline-none focus:border-amber";
 
 export default function ConfiguracoesPage() {
+  const router = useRouter();
+  const [redirecionando] = useState(true);
+
+  useEffect(() => {
+    router.replace("/painel/clientes/importar");
+  }, [router]);
+
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -356,6 +364,15 @@ export default function ConfiguracoesPage() {
 
   const status = wa?.status ?? "DISCONNECTED";
   const selo = WA_STATUS_INFO[status];
+
+  if (redirecionando) {
+    return (
+      <div className="flex min-h-[400px] flex-col items-center justify-center gap-3 p-8 text-center">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-amber border-t-transparent" />
+        <p className="text-sm text-panel-sub">Redirecionando para Meus clientes…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 pb-24">
