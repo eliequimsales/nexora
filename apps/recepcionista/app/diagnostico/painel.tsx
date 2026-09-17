@@ -1,11 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useReducer, useState } from "react";
 import { conviteDeVolta, primeiroNome } from "@/lib/recuperacao/convite";
 import { DECLARACAO_BASE } from "@/lib/legal/identidade";
 import { AcaoConvite } from "@/components/acao-convite";
-import { TresNomes } from "@/components/diagnostico/tres-nomes";
 import { CustoVsRetorno } from "@/components/diagnostico/custo-vs-retorno";
 import { emReais, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
 import { EventoAoMontar, registrar } from "@/components/funil";
@@ -166,9 +166,6 @@ export function PainelDiagnostico({
     ticketReais: ticketInicial ?? INICIAL.ticketReais,
   });
   const [abrirConta, setAbrirConta] = useState(false);
-  // "memoria" e o padrao: e a unica porta que abre no celular, que e de onde
-  // vem o trafego de anuncio.
-  const [porta, setPorta] = useState<"memoria" | "lista">("memoria");
 
   const analisar = async (ticketCents?: number) => {
     dispatch({ tipo: "processando" });
@@ -255,32 +252,8 @@ export function PainelDiagnostico({
   }
 
   // -------------------------------------------------------------------------
-  // DUAS PORTAS, e a de memória vem primeiro.
-  //
-  // A porta da lista exige um computador: colar do Excel e escolher arquivo são
-  // gestos de mesa, e o tráfego de anúncio chega pelo celular. Quem já tem a
-  // lista na mão continua tendo o caminho — mas ele deixa de ser o único, e
-  // deixa de ser o primeiro.
-  if (porta === "memoria") {
-    return (
-      <TresNomes
-        segmento={e.segmento}
-        negocio={e.meuNome}
-        ticketCents={ticketEmCents(e.ticketReais)}
-        aoQuererLista={() => setPorta("lista")}
-      />
-    );
-  }
-
   return (
     <div className="rounded-2xl border border-nx-border bg-nx-surface/60 p-6 sm:p-7">
-      <button
-        onClick={() => setPorta("memoria")}
-        className="mb-5 text-sm text-nx-muted underline underline-offset-4 hover:text-nx-primary"
-      >
-        ← Não tenho a lista aqui agora
-      </button>
-
       <label htmlFor="lista" className="text-lg font-semibold">
         Cola sua lista de clientes aqui
       </label>
@@ -384,6 +357,12 @@ export function PainelDiagnostico({
       </button>
       <p className="mt-3 text-center font-mono text-xs text-nx-muted">
         De graça. Não precisa criar conta pra ver o resultado.
+      </p>
+      <p className="mt-4 text-center text-xs text-nx-secondary">
+        Já quer ir direto para o painel?{" "}
+        <Link href="/cadastro" className="font-semibold text-nx-gold hover:underline">
+          Criar conta sem lista →
+        </Link>
       </p>
     </div>
   );

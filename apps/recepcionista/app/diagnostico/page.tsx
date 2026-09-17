@@ -65,9 +65,8 @@ const OBJECOES = [
     // A frase de socorro só entra quando o canal existe. Ver lib/contato.ts:
     // prometer atendimento sem porta quebra justamente com quem mais precisa.
     r:
-      "Serve. Nem precisa do caderno agora: escreve três nomes que você lembra que " +
-      "sumiram e eu escrevo a mensagem para cada um. Se tiver a lista à mão, também " +
-      "aceito colagem do Excel, CSV e arquivo de texto." +
+      "Serve. Digita como der na caixa de texto, um cliente por linha, com nome e telefone. " +
+      "Se tiver a lista à mão, também aceito colagem do Excel, CSV e arquivo de texto." +
       (temCanalDeSocorro() ? ` ${FRASE_SOCORRO}` : ""),
   },
   {
@@ -143,16 +142,15 @@ export default function PaginaDiagnostico({
         <div className="grid gap-12 lg:grid-cols-[1fr_1.05fr] lg:gap-16">
           <div>
             <p className="font-mono text-xs uppercase tracking-[0.16em] text-nx-gold">
-              Sem cadastro · Sem cartão · Não sai do seu celular
+              Sem cadastro · Sem cartão · Diagnóstico grátis
             </p>
             <h1 className="mt-5 text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl">
               {vocativo ? `${vocativo}: você tem clientes que sumiram e não sabe quem são.` : "Você tem clientes que sumiram e não sabe quem são."}
             </h1>
             <p className="mt-6 text-lg leading-relaxed text-nx-secondary">
-              Escreve três clientes que você lembra que sumiram — não precisa de lista, nem
-              de planilha, nem sair do celular. Eu escrevo a mensagem para cada um e você
-              manda hoje. Se tiver a lista aí, eu leio ela inteira e digo, com nome e
-              sobrenome, quem mais parou de voltar.
+              Cole a lista de clientes que você já tem — do Excel, do sistema de agendamento ou do caderno.
+              A Nexora descobre o ritmo de cada um e mostra, com nome e sobrenome, quem parou de voltar
+              e quanto dinheiro está parado na mesa.
             </p>
 
             <p className="mt-8 border-l-2 border-nx-gold pl-4 text-sm leading-relaxed text-nx-secondary">
