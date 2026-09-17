@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { emailConfigurado } from "@/lib/reengajamento/email";
 import { AvisoVerificarEmail } from "./aviso-verificar";
 import { LogoutButton } from "@/components/logout-button";
+import { PainelNavDesktop, PainelNavMobile } from "@/components/painel/navegacao";
 
 // O MENU É O FLUXO DE VALOR, NÃO O ÍNDICE DO SISTEMA.
 //
@@ -58,17 +59,7 @@ export default async function PainelLayout({ children }: { children: React.React
                 Nexora
               </span>
             </Link>
-            <nav className="hidden items-center gap-1 sm:flex">
-              {NAV.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="rounded-lg px-3 py-1.5 text-sm text-panel-sub transition hover:bg-panel-bg hover:text-panel-ink"
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
+            <PainelNavDesktop items={NAV} />
           </div>
           <div className="flex items-center gap-4">
             <span className="hidden text-sm text-panel-sub md:inline">{company.name}</span>
@@ -76,17 +67,7 @@ export default async function PainelLayout({ children }: { children: React.React
           </div>
         </div>
       </header>
-      <nav className="flex items-center gap-1 border-b border-panel-line bg-panel-card px-4 py-2 sm:hidden">
-        {NAV.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="rounded-lg px-3 py-1.5 text-sm text-panel-sub"
-          >
-            {item.label}
-          </Link>
-        ))}
-      </nav>
+      <PainelNavMobile items={NAV} />
       <main className="mx-auto max-w-page px-6 py-8">{children}</main>
     </div>
   );
