@@ -54,12 +54,14 @@ export function iniciaisDe(nome: string): string {
 export function montarOferta(d: Diagnostico, ticketMedioCents: number | null): Oferta {
   const semValor = d.faltando.valor;
   const ticket = ticketMedioCents && ticketMedioCents > 0 ? ticketMedioCents : null;
+  // A assinatura se paga assim que a receita mínima recuperável cobre a mensalidade (R$ 97/mês)
+  const cobreMensalidade = !semValor && d.sumidos > 0 && d.recuperavelCents.min >= PRECO_MENSAL_CENTS;
 
   return {
     sumidos: d.sumidos,
     faixaMinCents: d.recuperavelCents.min,
     faixaMaxCents: d.recuperavelCents.max,
-    corteHonesto: d.corteHonesto,
+    corteHonesto: cobreMensalidade ? false : d.corteHonesto,
     semValor,
     semData: d.faltando.data,
     ticketMedioCents: ticket,
@@ -87,7 +89,9 @@ export function textosDaOferta(o: Oferta): TextosDaOferta {
     };
   }
 
-  if (o.corteHonesto) {
+  const cobreMensalidade = !o.semValor && o.sumidos > 0 && o.faixaMinCents >= PRECO_MENSAL_CENTS;
+
+  if (o.corteHonesto && !cobreMensalidade) {
     return {
       titulo: "Pela sua lista, hoje a assinatura não se paga.",
       prova:

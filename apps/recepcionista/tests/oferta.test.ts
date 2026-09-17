@@ -131,12 +131,12 @@ describe("textosDaOferta — o que o cartão diz", () => {
     expect(t.titulo).toMatch(/^1 cliente seu está fora do ritmo/);
   });
 
-  it("abaixo do Corte Honesto, recomenda não assinar e não empurra âncora", () => {
+  it("abaixo do Corte Honesto e da mensalidade, recomenda não assinar e não empurra âncora", () => {
     const t = textosDaOferta(
       montarOferta(
         diagnostico({
-          sumidos: 14,
-          recuperavelCents: { min: 30_000, central: 40_000, max: 50_000 },
+          sumidos: 2,
+          recuperavelCents: { min: 5_000, central: 6_000, max: 7_000 },
           corteHonesto: true,
         }),
         4_800,
@@ -145,6 +145,23 @@ describe("textosDaOferta — o que o cartão diz", () => {
     expect(t.recomendaNaoAssinar).toBe(true);
     expect(t.titulo.toLowerCase()).toContain("não se paga");
     expect(t.ancora).toBeNull();
+  });
+
+  it("quando a receita recuperável atinge a mensalidade, o texto muda e informa que já se paga", () => {
+    const t = textosDaOferta(
+      montarOferta(
+        diagnostico({
+          sumidos: 6,
+          recuperavelCents: { min: 22_950, central: 30_600, max: 38_250 },
+          corteHonesto: true,
+        }),
+        5_100,
+      ),
+    );
+    expect(t.recomendaNaoAssinar).toBe(false);
+    expect(t.titulo).toContain("6 clientes");
+    expect(t.prova).toContain(emReais(22_950));
+    expect(t.ancora).toContain(emReais(PRECO_MENSAL_CENTS));
   });
 
   it("lista sem valor fala de quem saiu do ritmo, nunca de reais", () => {
