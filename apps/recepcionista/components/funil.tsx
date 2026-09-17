@@ -1,7 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect } from "react";
 import type { NomeDeEvento } from "@/lib/funil";
+import {
+  trackCustom,
+  trackViewContent,
+  trackCompleteRegistration,
+} from "@/lib/analytics/pixel";
 
 /**
  * O gancho de instrumentação, do lado do navegador.
@@ -49,6 +55,19 @@ export function registrar(nome: NomeDeEvento): void {
   } catch {
     // Métrica nunca derruba produto.
   }
+
+  // Ponte com Meta Pixel
+  try {
+    if (nome === "usou_calculadora") trackCustom("UsedCalculator");
+    else if (nome === "clicou_calculadora") trackCustom("ClickCalculatorCTA");
+    else if (nome === "chegou") trackViewContent("Diagnóstico Início");
+    else if (nome === "comecou_entrada") trackCustom("StartedDiagnosisInput");
+    else if (nome === "viu_numero") trackCustom("ViewDiagnosisResult");
+    else if (nome === "clicou_mensagem") trackCustom("ClickDiagnosisMessage");
+    else if (nome === "criou_conta") trackCompleteRegistration("funil_diagnostico");
+  } catch {
+    // Métrica nunca derruba produto.
+  }
 }
 
 /** Dispara um evento uma vez, quando a tela monta. */
@@ -57,4 +76,44 @@ export function EventoAoMontar({ nome }: { nome: NomeDeEvento }) {
     registrar(nome);
   }, [nome]);
   return null;
+}
+
+/** Dispara evento ViewContent do Meta Pixel quando o componente monta. */
+export function TrackViewContent({
+  name,
+  extra,
+}: {
+  name: string;
+  extra?: Record<string, unknown>;
+}) {
+  useEffect(() => {
+    trackViewContent(name, extra);
+  }, [name, extra]);
+
+  return null;
+}
+
+/** Link com medição de clique nos CTAs principais do funil. */
+export function CtaLink({
+  href,
+  className,
+  children,
+  ctaName,
+}: {
+  href: string;
+  className?: string;
+  children: React.ReactNode;
+  ctaName: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={className}
+      onClick={() => {
+        trackCustom("ClickSignupCTA", { cta_location: ctaName });
+      }}
+    >
+      {children}
+    </Link>
+  );
 }

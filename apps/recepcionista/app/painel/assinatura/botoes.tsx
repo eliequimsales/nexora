@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { PlanoId } from "@/lib/billing/planos";
+import { trackInitiateCheckout, trackPurchase } from "@/lib/analytics/pixel";
 
 /**
  * As ações da tela de conta. Regra Zero: sempre existe uma, e ela EXECUTA —
@@ -24,18 +25,42 @@ export type OpcaoDePlano = {
 export function BotoesAssinatura({
   opcoes,
   portal,
+  comprouComSucesso,
 }: {
   opcoes: OpcaoDePlano[];
   /** Texto do botão do portal da Stripe; null quando não há assinatura no cartão para gerenciar. */
   portal: string | null;
+  comprouComSucesso?: boolean;
 }) {
   const [abrindo, setAbrindo] = useState<PlanoId | "portal" | null>(null);
   const [erro, setErro] = useState("");
+
+  useEffect(() => {
+    if (!comprouComSucesso) return;
+    try {
+      const sessionId =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("session_id") || "ok"
+          : "ok";
+      const chave = `nx_purchased_${sessionId}`;
+      if (!sessionStorage.getItem(chave)) {
+        sessionStorage.setItem(chave, "1");
+        trackPurchase(97.0, "assinatura_stripe");
+      }
+    } catch {
+      trackPurchase(97.0, "assinatura_stripe");
+    }
+  }, [comprouComSucesso]);
 
   const abrir = async (destino: PlanoId | "portal") => {
     setAbrindo(destino);
     setErro("");
     try {
+      if (destino !== "portal") {
+        const opcao = opcoes.find((o) => o.plano === destino);
+        trackInitiateCheckout(destino, opcao?.preco);
+      }
+
       const res =
         destino === "portal"
           ? await fetch("/api/billing/portal", { method: "POST" })

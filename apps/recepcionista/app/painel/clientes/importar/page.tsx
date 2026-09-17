@@ -9,6 +9,7 @@ import { CartaoRetorno } from "@/components/painel/cartao-retorno";
 import { ChecklistAtivacao } from "@/components/painel/checklist-ativacao";
 import { progressoDaAtivacao, type SinaisDaAtivacao } from "@/lib/painel/ativacao";
 import { retornoDaAssinatura } from "@/lib/painel/retorno";
+import { trackFirstClientAdded, trackFirstRecoverySent } from "@/lib/analytics/pixel";
 
 /**
  * TRAZER OS CLIENTES — a tela.
@@ -329,6 +330,7 @@ export default function PaginaImportar() {
         setPrevia(json);
       } else {
         setSalvo(json);
+        trackFirstClientAdded("lista");
         void carregarCadastrados();
       }
     } catch {
@@ -370,6 +372,8 @@ export default function PaginaImportar() {
         else setErro(json.error ?? "Não consegui salvar esse cliente.");
         return;
       }
+
+      trackFirstClientAdded("manual");
 
       setUltimoCadastrado({
         nome: linha.nome.trim(),
@@ -518,6 +522,7 @@ export default function PaginaImportar() {
                     href={linkDoWhatsApp(ultimoCadastrado.telefone, ultimoCadastrado.mensagem)!}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => trackFirstRecoverySent()}
                     className="rounded-xl bg-[#25D366] hover:bg-[#20ba59] px-4 py-2.5 text-xs font-bold text-white transition flex items-center gap-2 shadow-sm"
                   >
                     <span>💬</span> Chamar no WhatsApp agora
@@ -1103,6 +1108,7 @@ export default function PaginaImportar() {
                         href={zapLink}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={() => trackFirstRecoverySent()}
                         className="rounded-lg bg-[#25D366] hover:bg-[#20ba59] px-3 py-1.5 text-xs font-semibold text-white transition flex items-center gap-1.5 shadow-sm"
                       >
                         <span>💬</span> Chamar no WhatsApp

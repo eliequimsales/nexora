@@ -38,13 +38,12 @@ const nextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline'",
+              "script-src 'self' 'unsafe-inline' https://connect.facebook.net",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
-              // A página só fala com a própria origem. Sem isto, um XSS
-              // exfiltraria a base de clientes para qualquer servidor.
-              "connect-src 'self'",
+              // A página fala com a própria origem e com o endpoint de eventos da Meta.
+              "connect-src 'self' https://connect.facebook.net https://www.facebook.com",
               "form-action 'self'",
               "base-uri 'self'",
               "frame-ancestors 'none'",

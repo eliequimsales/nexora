@@ -68,6 +68,7 @@ export const PRIVACIDADE: { atualizadoEm: string; secoes: Secao[] } = {
         "Stripe (Estados Unidos e Irlanda) — processa a assinatura. Recebe seu nome, e-mail e os dados de pagamento que você digitar lá.",
         "Resend (Estados Unidos) — envia os e-mails que a Nexora manda para você. Recebe seu e-mail e o conteúdo da mensagem. Não recebe dados dos seus clientes.",
         "Google (Estados Unidos) — apenas se você optar por entrar com a conta Google. Nesse caso o Google confirma sua identidade para nós.",
+        "Meta Platforms (Estados Unidos) — mensuração de desempenho de anúncios e conversão de campanhas (Meta Pixel) para visitantes das páginas públicas e do funil. Não recebe listas de clientes.",
       ],
     },
     {
@@ -148,7 +149,7 @@ export const PRIVACIDADE: { atualizadoEm: string; secoes: Secao[] } = {
       paragrafos: [
         "Dois cookies, os dois estritamente necessários e nenhum deles de publicidade. O rd_session mantém você conectado depois do login. O rd_oauth vive dez minutos e existe só enquanto você entra com o Google: ele é o que impede alguém de te levar para dentro de uma conta que não é sua.",
         "Guardamos também, na memória da aba (sessionStorage), um número sorteado e uma marca de que a calculadora da página inicial já foi usada — os dois somem quando você fecha a aba. Servem para uma coisa só: saber em que ponto as pessoas desistem — se usam a calculadora e seguem para o diagnóstico, se travam ao colar a lista, se desistem antes de ver o número. Não identificam você, não guardam os números que você digita, não atravessam visitas e não saem daqui.",
-        "Não usamos cookie de publicidade, não temos pixel de rede social e não fazemos rastreamento de comportamento entre sites. Como a medição é só nossa, é do que acontece nesta página e não identifica ninguém, ela não depende de consentimento — mas preferimos dizer que ela existe a deixar você descobrir sozinho.",
+        "Nas páginas públicas e etapas do funil de entrada, utilizamos o Meta Pixel para mensurar a eficácia de nossos anúncios publicitários e saber onde ocorrem desistências no fluxo de adesão. O pixel opera exclusivamente para atribuição de campanhas e conversões do assinante. Os dados da sua lista de clientes e dados bancários nunca são enviados à Meta.",
         "Antes esta seção dizia que havia um cookie só e que não existia nada a recusar. Deixou de ser verdade quando acrescentamos a proteção do login com Google e a medição do funil, e corrigimos assim que percebemos.",
       ],
     },

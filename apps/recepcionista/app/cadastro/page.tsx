@@ -2,8 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { GoogleButton } from "@/components/google-button";
+import {
+  trackStartRegistration,
+  trackCompleteRegistration,
+} from "@/lib/analytics/pixel";
 
 const FIELDS = [
   { key: "name", label: "Nome da empresa", type: "text", placeholder: "Ex.: Minha Empresa" },
@@ -17,6 +21,13 @@ export default function CadastroPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [aceite, setAceite] = useState(false);
+  const jaIniciou = useRef(false);
+
+  function aoFocarCampo() {
+    if (jaIniciou.current) return;
+    jaIniciou.current = true;
+    trackStartRegistration();
+  }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -33,6 +44,7 @@ export default function CadastroPage() {
         setError(data.error ?? "Erro ao criar conta");
         return;
       }
+      trackCompleteRegistration("email");
       router.push("/painel/configuracoes");
       router.refresh();
     } catch {
@@ -70,6 +82,7 @@ export default function CadastroPage() {
                   required
                   placeholder={field.placeholder}
                   value={form[field.key]}
+                  onFocus={aoFocarCampo}
                   onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
                   className="w-full rounded-lg border border-nx-border bg-nx-surface-2 px-3 py-2.5 placeholder:text-nx-muted text-sm text-nx-primary outline-none focus:border-nx-gold/60 focus:ring-2 focus:ring-nx-gold/15"
                 />

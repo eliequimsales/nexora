@@ -272,7 +272,11 @@ export default async function PaginaAssinatura({
           nunca chegar à tela. Quem clica sem a cobrança ligada recebe o motivo;
           nada é cobrado porque o checkout recusa antes de criar sessão.
         */}
-        <BotoesAssinatura opcoes={acoes.planos.map((p) => planos[p])} portal={acoes.portal} />
+        <BotoesAssinatura
+          opcoes={acoes.planos.map((p) => planos[p])}
+          portal={acoes.portal}
+          comprouComSucesso={Boolean(searchParams.ok)}
+        />
       </section>
 
       {!semGarantiaAinda && (

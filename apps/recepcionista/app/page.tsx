@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Calculadora } from "@/components/calculadora";
+import { CtaLink, TrackViewContent } from "@/components/funil";
 import { RodapeFunil } from "@/components/rodape-funil";
 import { TemaNexora } from "@/components/tema-nexora";
 import { GARANTIA_DIAS, ONDAS_MINIMAS } from "@/lib/billing/garantia";
@@ -113,6 +114,7 @@ const BOTAO_DOURADO =
 export default function Home() {
   return (
     <TemaNexora>
+      <TrackViewContent name="Landing Page" />
       <header className="sticky top-0 z-40 border-b border-nx-border bg-nx-bg/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
           <Link href="/" className="flex items-center gap-2.5">
@@ -128,9 +130,9 @@ export default function Home() {
             >
               Entrar
             </Link>
-            <Link href="/cadastro" className={`${BOTAO_DOURADO} px-4 py-2 text-sm`}>
+            <CtaLink href="/cadastro" ctaName="header" className={`${BOTAO_DOURADO} px-4 py-2 text-sm`}>
               Começar grátis <span aria-hidden="true">→</span>
-            </Link>
+            </CtaLink>
           </div>
         </div>
       </header>
@@ -149,9 +151,9 @@ export default function Home() {
               mensagem exata pra trazer cada um de volta.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3 pt-3">
-              <Link href="/cadastro" className={`${BOTAO_DOURADO} px-7 py-4 text-base`}>
+              <CtaLink href="/cadastro" ctaName="hero" className={`${BOTAO_DOURADO} px-7 py-4 text-base`}>
                 Começar agora sem cartão <span aria-hidden="true">→</span>
-              </Link>
+              </CtaLink>
               <a
                 href="#calculadora"
                 className="rounded-lg border border-nx-border px-6 py-4 text-base font-medium transition-colors hover:bg-nx-surface"
@@ -322,9 +324,9 @@ export default function Home() {
                 </Link>
                 .
               </p>
-              <Link href="/cadastro" className={`${BOTAO_DOURADO} mt-9 px-7 py-4`}>
+              <CtaLink href="/cadastro" ctaName="preco" className={`${BOTAO_DOURADO} mt-9 px-7 py-4`}>
                 Começar agora sem cartão <span aria-hidden="true">→</span>
-              </Link>
+              </CtaLink>
             </div>
             <ul className="rounded-xl border border-nx-border bg-nx-surface px-6">
               {INCLUI.map((item) => (
@@ -365,9 +367,9 @@ export default function Home() {
               Crie sua conta em 15 segundos, sem cartão de crédito, e veja exatamente
               quais clientes pararam de voltar e quanto faturamento você pode recuperar.
             </p>
-            <Link href="/cadastro" className={`${BOTAO_DOURADO} mt-8 px-8 py-4 text-lg`}>
+            <CtaLink href="/cadastro" ctaName="final" className={`${BOTAO_DOURADO} mt-8 px-8 py-4 text-lg`}>
               Criar minha conta grátis <span aria-hidden="true">→</span>
-            </Link>
+            </CtaLink>
           </div>
         </section>
       </main>
@@ -376,9 +378,9 @@ export default function Home() {
 
       {/* No celular o botão nunca sai da tela — veio da Nexora antiga. */}
       <div className="fixed inset-x-0 bottom-0 z-50 border-t border-nx-border bg-nx-bg/95 p-3 backdrop-blur-md sm:hidden">
-        <Link href="/cadastro" className={`${BOTAO_DOURADO} w-full px-5 py-3.5`}>
+        <CtaLink href="/cadastro" ctaName="mobile_sticky" className={`${BOTAO_DOURADO} w-full px-5 py-3.5`}>
           Começar agora sem cartão <span aria-hidden="true">→</span>
-        </Link>
+        </CtaLink>
       </div>
     </TemaNexora>
   );
