@@ -80,11 +80,84 @@ type ClienteCadastrado = {
   mensagemReativacao: string | null;
 };
 
+type UltimoCadastrado = {
+  nome: string;
+  telefone: string;
+  sumido: boolean;
+  tempoFormatado: string;
+  valorPerdidoReais: number;
+  mensagem: string;
+};
+
+function parseDataTimestamp(str: string): number | null {
+  if (!str.trim()) return null;
+  const partes = str.trim().split(/[/.-]/);
+  if (partes.length === 3) {
+    if (partes[0].length === 4) {
+      return new Date(Number(partes[0]), Number(partes[1]) - 1, Number(partes[2])).getTime();
+    } else {
+      return new Date(Number(partes[2]), Number(partes[1]) - 1, Number(partes[0])).getTime();
+    }
+  }
+  const timestamp = Date.parse(str);
+  return isNaN(timestamp) ? null : timestamp;
+}
+
+function dataFormatadaDiasAtras(diasAtras: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - diasAtras);
+  const dia = String(d.getDate()).padStart(2, "0");
+  const mes = String(d.getMonth() + 1).padStart(2, "0");
+  const ano = d.getFullYear();
+  return `${dia}/${mes}/${ano}`;
+}
+
+function analisarAusencia(dataStr: string, valorStr: string): {
+  dias: number | null;
+  meses: number | null;
+  sumido: boolean;
+  tempoFormatado: string;
+  valorPerdidoReais: number;
+} {
+  const timestamp = parseDataTimestamp(dataStr);
+  if (!timestamp) {
+    return { dias: null, meses: null, sumido: false, tempoFormatado: "", valorPerdidoReais: 0 };
+  }
+
+  const diffMs = Date.now() - timestamp;
+  if (diffMs < 0) {
+    return { dias: 0, meses: 0, sumido: false, tempoFormatado: "hoje", valorPerdidoReais: 0 };
+  }
+
+  const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const meses = Math.floor(dias / 30);
+  const sumido = dias >= 30;
+
+  const tempoFormatado =
+    meses >= 1 ? `${meses} ${meses === 1 ? "mês" : "meses"}` : `${dias} ${dias === 1 ? "dia" : "dias"}`;
+
+  const limpoValor = valorStr.replace(/[^\d,.]/g, "").replace(",", ".");
+  const valorUnitario = parseFloat(limpoValor) || 50;
+  const visitasPerdidas = Math.max(1, Math.round(dias / 30));
+  const valorPerdidoReais = Math.round(visitasPerdidas * valorUnitario);
+
+  return { dias, meses, sumido, tempoFormatado, valorPerdidoReais };
+}
+
+function gerarMensagemDeResgate(nome: string, meuNome: string, tempoFormatado: string): string {
+  const primeiroNome = nome.trim().split(/\s+/)[0] || "amigo(a)";
+  const remetente = meuNome.trim() ? `Aqui é ${meuNome}` : "Aqui é da nossa equipe";
+
+  return `Oi ${primeiroNome}, tudo bem? ${remetente}! Estava organizando os horários aqui e lembrei de você. Faz cerca de ${tempoFormatado} que você não passa por aqui! Queria ver como você está e se quer aproveitar um horário especial esta semana. Como tá sua rotina?`;
+}
+
 export default function PaginaImportar() {
   const [modo, setModo] = useState<"campos" | "colar">("campos");
   const [linhas, setLinhas] = useState<LinhaCliente[]>([
     { id: "1", nome: "", telefone: "", data: "", valor: "" },
   ]);
+  const [ultimoCadastrado, setUltimoCadastrado] = useState<UltimoCadastrado | null>(null);
+  const [copiado, setCopiado] = useState(false);
   const [cadastrados, setCadastrados] = useState<ClienteCadastrado[]>([]);
   // A recusa de ENVIAR_TOQUE: a lista vem inteira, a mensagem pronta não.
   const [travaMensagem, setTravaMensagem] = useState<Recusa | null>(null);
@@ -265,6 +338,57 @@ export default function PaginaImportar() {
     }
   };
 
+  const salvarIndividual = async () => {
+    const linha = linhas[0];
+    if (!linha || !linha.nome.trim() || !linha.telefone.trim()) {
+      setErro("Preencha pelo menos o nome e o telefone do cliente.");
+      return;
+    }
+
+    setCarregando(true);
+    setErro("");
+    setRecusa(null);
+
+    const payloadTexto = gerarTextoDeLinhas(linhas);
+    const analise = analisarAusencia(linha.data, linha.valor);
+    const msg = gerarMensagemDeResgate(linha.nome, meuNome, analise.tempoFormatado || "algum tempo");
+
+    try {
+      const res = await fetch("/api/clientes/importar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          texto: payloadTexto,
+          meuNome: meuNome || undefined,
+          simular: false,
+          confirmo: true,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        if (json.acao?.href) setRecusa({ motivo: json.error ?? "", acao: json.acao });
+        else setErro(json.error ?? "Não consegui salvar esse cliente.");
+        return;
+      }
+
+      setUltimoCadastrado({
+        nome: linha.nome.trim(),
+        telefone: linha.telefone.trim(),
+        sumido: analise.sumido,
+        tempoFormatado: analise.tempoFormatado,
+        valorPerdidoReais: analise.valorPerdidoReais,
+        mensagem: msg,
+      });
+
+      setLinhas([{ id: String(Date.now()), nome: "", telefone: "", data: "", valor: "" }]);
+      void carregarCadastrados();
+    } catch {
+      setErro("Não consegui falar com a internet agora. Tenta de novo?");
+    } finally {
+      setCarregando(false);
+    }
+  };
+
   const lerArquivo = async (arquivo: File | undefined) => {
     if (!arquivo) return;
     setPrevia(null);
@@ -344,6 +468,78 @@ export default function PaginaImportar() {
           automaticamente para você, identifica quem está sumido e mostra o resultado antes de salvar qualquer coisa.
         </p>
       </div>
+
+      {/* Feedback de sucesso e reversão imediata para cliente cadastrado */}
+      {ultimoCadastrado && (
+        <div
+          className={`rounded-2xl border p-5 sm:p-6 space-y-4 ${
+            ultimoCadastrado.sumido
+              ? "border-amber-400 bg-amber/10"
+              : "border-emerald-300 bg-emerald-50/40"
+          }`}
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xl">{ultimoCadastrado.sumido ? "🔥" : "🟢"}</span>
+                <h3 className="font-display text-base sm:text-lg font-bold text-panel-ink">
+                  {ultimoCadastrado.sumido
+                    ? `Plano de resgate para ${ultimoCadastrado.nome}`
+                    : `${ultimoCadastrado.nome} salvo com sucesso!`}
+                </h3>
+              </div>
+              <p className="mt-1 text-xs sm:text-sm text-panel-sub">
+                {ultimoCadastrado.sumido
+                  ? `Afastado há ${ultimoCadastrado.tempoFormatado} · Cerca de R$ ${ultimoCadastrado.valorPerdidoReais},00 que deixaram de entrar`
+                  : "A Nexora está monitorando este cliente. Se ele passar do prazo de retorno, avisamos na Onda Semanal."}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setUltimoCadastrado(null)}
+              className="text-xs text-panel-sub hover:text-panel-ink underline"
+            >
+              Fechar aviso
+            </button>
+          </div>
+
+          {ultimoCadastrado.sumido && (
+            <div className="space-y-3 pt-1">
+              <div className="rounded-xl border border-panel-line bg-white p-3.5 text-xs sm:text-sm text-panel-ink leading-relaxed">
+                <p className="font-medium text-[11px] text-panel-sub uppercase tracking-wider mb-1.5">
+                  Mensagem pronta para enviar:
+                </p>
+                <p className="italic text-panel-ink select-all">"{ultimoCadastrado.mensagem}"</p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5">
+                {linkDoWhatsApp(ultimoCadastrado.telefone, ultimoCadastrado.mensagem) && (
+                  <a
+                    href={linkDoWhatsApp(ultimoCadastrado.telefone, ultimoCadastrado.mensagem)!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-xl bg-[#25D366] hover:bg-[#20ba59] px-4 py-2.5 text-xs font-bold text-white transition flex items-center gap-2 shadow-sm"
+                  >
+                    <span>💬</span> Chamar no WhatsApp agora
+                  </a>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(ultimoCadastrado.mensagem);
+                    setCopiado(true);
+                    setTimeout(() => setCopiado(false), 2500);
+                  }}
+                  className="rounded-xl border border-panel-line bg-white px-4 py-2.5 text-xs font-semibold text-panel-ink hover:border-amber transition"
+                >
+                  {copiado ? "✓ Mensagem copiada!" : "Copiar mensagem"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="rounded-2xl border border-panel-line bg-panel-card p-5 space-y-5">
         {/* Abas de alternância de modo */}
@@ -475,17 +671,128 @@ export default function PaginaImportar() {
                       />
                     </div>
                   </div>
+
+                  {/* Atalhos rápidos para preenchimento de data */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <span className="text-[11px] font-medium text-panel-sub">Quando foi a última vez?</span>
+                    <button
+                      type="button"
+                      onClick={() => atualizarLinha(linha.id, "data", dataFormatadaDiasAtras(0))}
+                      className="rounded-md border border-panel-line bg-white px-2 py-0.5 text-[11px] font-medium text-panel-ink hover:border-amber transition"
+                    >
+                      Hoje
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => atualizarLinha(linha.id, "data", dataFormatadaDiasAtras(30))}
+                      className="rounded-md border border-panel-line bg-white px-2 py-0.5 text-[11px] font-medium text-panel-ink hover:border-amber transition"
+                    >
+                      Há 30 dias
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => atualizarLinha(linha.id, "data", dataFormatadaDiasAtras(90))}
+                      className="rounded-md border border-panel-line bg-white px-2 py-0.5 text-[11px] font-medium text-panel-ink hover:border-amber transition"
+                    >
+                      Há 3 meses
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => atualizarLinha(linha.id, "data", dataFormatadaDiasAtras(150))}
+                      className="rounded-md border border-amber/40 bg-amber/10 px-2 py-0.5 text-[11px] font-semibold text-[#7A5A10] hover:bg-amber/20 transition"
+                    >
+                      🔥 Há 5 meses (sumido)
+                    </button>
+                  </div>
+
+                  {/* Feedback ativo: se o cliente já sumiu, calcula o dinheiro parado e orienta o resgate */}
+                  {(() => {
+                    const analise = analisarAusencia(linha.data, linha.valor);
+                    if (analise.sumido) {
+                      return (
+                        <div className="rounded-xl border border-amber/40 bg-amber/10 p-3.5 space-y-1.5 mt-2">
+                          <div className="flex items-center gap-2 text-xs font-bold text-[#7A5A10]">
+                            <span>🔥</span>
+                            <span>
+                              Cliente afastado há {analise.tempoFormatado}
+                              {analise.valorPerdidoReais > 0 && ` · Cerca de R$ ${analise.valorPerdidoReais},00 parados`}
+                            </span>
+                          </div>
+                          <p className="text-xs text-panel-sub leading-relaxed">
+                            Você já sabe que este cliente sumiu — a Nexora não vai ficar te avisando o óbvio.
+                            O nosso papel é <strong>reverter essa perda</strong>: ao salvar, você recebe a mensagem pronta
+                            para chamar ele no WhatsApp e tentar trazer ele de volta hoje.
+                          </p>
+                        </div>
+                      );
+                    }
+                    if (analise.dias !== null && !analise.sumido) {
+                      return (
+                        <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-3 space-y-1 mt-2">
+                          <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800">
+                            <span>🟢</span>
+                            <span>Cliente recente / em dia</span>
+                          </div>
+                          <p className="text-xs text-emerald-700">
+                            A Nexora vai monitorar o ritmo deste cliente e te avisar na Onda Semanal se ele passar do prazo de voltar.
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
               ))}
             </div>
 
-            <button
-              type="button"
-              onClick={adicionarLinha}
-              className="w-full rounded-xl border-2 border-dashed border-panel-line bg-white py-3 text-sm font-semibold text-panel-ink hover:border-amber hover:text-amber-deep transition flex items-center justify-center gap-2"
-            >
-              <span className="text-lg font-bold leading-none">+</span> Adicionar outro cliente
-            </button>
+            {linhas.length === 1 ? (
+              <div className="space-y-3 pt-2">
+                <button
+                  type="button"
+                  onClick={salvarIndividual}
+                  disabled={carregando || !linhas[0]?.nome.trim() || !linhas[0]?.telefone.trim()}
+                  className="w-full sm:w-auto rounded-xl bg-panel-ink px-6 py-3 text-sm font-semibold text-white transition hover:brightness-125 disabled:opacity-40 flex items-center justify-center gap-2 shadow-sm"
+                >
+                  {carregando
+                    ? "Salvando…"
+                    : (() => {
+                        const a = analisarAusencia(linhas[0]?.data || "", linhas[0]?.valor || "");
+                        return a.sumido
+                          ? "Salvar e gerar mensagem de resgate →"
+                          : "Salvar cliente e ativar monitoramento →";
+                      })()}
+                </button>
+                <p className="text-[11px] text-panel-sub">
+                  Ao salvar, você confirma que este cliente é seu e autorizou o contato pelo WhatsApp.
+                </p>
+                <button
+                  type="button"
+                  onClick={adicionarLinha}
+                  className="w-full rounded-xl border-2 border-dashed border-panel-line bg-white py-3 text-sm font-semibold text-panel-ink hover:border-amber hover:text-amber-deep transition flex items-center justify-center gap-2"
+                >
+                  <span className="text-lg font-bold leading-none">+</span> Adicionar outro cliente
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3 pt-2">
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    onClick={() => enviar(true)}
+                    disabled={carregando || !temPeloMenosUmCliente}
+                    className="rounded-xl bg-panel-ink px-6 py-3 text-sm font-semibold text-white transition hover:brightness-125 disabled:opacity-40"
+                  >
+                    {carregando ? "Lendo…" : "Ver o que vai entrar"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={adicionarLinha}
+                    className="rounded-xl border border-panel-line bg-white px-4 py-3 text-sm font-semibold text-panel-ink hover:border-amber transition"
+                  >
+                    + Adicionar outro cliente
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           /* MODO ADICIONAR LISTA DE CLIENTES */
@@ -534,16 +841,16 @@ export default function PaginaImportar() {
                 ← Voltar para cadastrar cliente
               </button>
             </div>
+
+            <button
+              onClick={() => enviar(true)}
+              disabled={carregando || !temPeloMenosUmCliente}
+              className="mt-3 rounded-xl bg-panel-ink px-6 py-3 text-sm font-semibold text-white transition hover:brightness-125 disabled:opacity-40"
+            >
+              {carregando ? "Lendo…" : "Ver o que vai entrar"}
+            </button>
           </div>
         )}
-
-        <button
-          onClick={() => enviar(true)}
-          disabled={carregando || !temPeloMenosUmCliente}
-          className="mt-3 rounded-xl bg-panel-ink px-6 py-3 text-sm font-semibold text-white transition hover:brightness-125 disabled:opacity-40"
-        >
-          {carregando ? "Lendo…" : "Ver o que vai entrar"}
-        </button>
       </div>
 
       {erro && (
