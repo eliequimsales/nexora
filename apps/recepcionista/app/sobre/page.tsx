@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { RodapePapel } from "@/components/rodape-papel";
+import { linkDeSuporte } from "@/lib/institucional";
 import { FORNECEDOR, identificacaoCompleta, tipoDoDocumento } from "@/lib/legal/identidade";
 import { TAMANHO_DA_ONDA } from "@/lib/recuperacao/onda";
 
@@ -81,6 +82,64 @@ export default function PaginaSobre() {
               foco é outro: o cliente que já veio e parou de voltar, que é dinheiro que o negócio já
               conquistou uma vez.
             </p>
+          </section>
+
+          {/*
+            QUEM FUNDOU.
+            Uma pessoa por trás do produto é o que separa "empresa de verdade"
+            de "site que apareceu no meu feed" para quem chega de anúncio. O que
+            NÃO entra: nome, cargo, formação ou currículo escritos à mão — o
+            repositório é público, e a identificação de quem responde pelo
+            serviço sai das variáveis do servidor, logo abaixo.
+          */}
+          <section id="fundacao">
+            <h2 className="font-display text-xl font-semibold tracking-[-0.01em] text-paper-ink">
+              Quem fundou a Nexora
+            </h2>
+
+            <div className="mt-5 flex flex-col gap-5 sm:flex-row sm:items-start">
+              {/*
+                O lugar da foto. Enquanto ela não existe, fica a marca — e não
+                um retrato genérico de banco de imagens, que é exatamente o que
+                faz a página parecer de mentira.
+                Para colocar a foto: troque o <span> por <Image src="/fundador.jpg" />.
+              */}
+              <figure className="shrink-0">
+                <span
+                  aria-hidden="true"
+                  className="flex h-20 w-20 items-center justify-center rounded-full border border-paper-line bg-amber/15 font-display text-3xl font-bold text-amber-deep"
+                >
+                  N
+                </span>
+                <figcaption className="mt-2 text-xs text-paper-sub">
+                  Quem fundou a Nexora
+                </figcaption>
+              </figure>
+
+              <div>
+                <p>
+                  A Nexora foi fundada por quem vive o dia a dia do empreendedorismo e viu
+                  negócios perderem milhares de reais por mês simplesmente porque clientes
+                  regulares param de voltar sem avisar.
+                </p>
+                <p className="mt-4">
+                  Não acreditamos em robôs frios de spam em massa, e sim em relacionamentos
+                  reais reativados na hora certa. É por isso que a Nexora manda poucas
+                  mensagens por semana, uma escrita para cada pessoa, e quem aperta enviar é
+                  sempre o dono do negócio — nunca uma máquina sozinha de madrugada.
+                </p>
+                <p className="mt-4">
+                  Quer falar com quem cuida da Nexora?{" "}
+                  <a
+                    href={linkDeSuporte(FORNECEDOR)}
+                    className="font-semibold underline underline-offset-4"
+                  >
+                    Fale com a gente
+                  </a>
+                  . Quem responde é gente, não formulário.
+                </p>
+              </div>
+            </div>
           </section>
 
           <section>

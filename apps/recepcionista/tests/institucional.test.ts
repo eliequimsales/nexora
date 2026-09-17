@@ -128,6 +128,26 @@ describe("/sobre", () => {
   it("não afirma o que não foi confirmado", () => {
     expect(sobre().toLowerCase()).not.toContain("equipe distribuída");
   });
+
+  it("apresenta quem fundou a Nexora, com lugar para a foto e canal de contato", () => {
+    const fonte = sobre();
+    expect(fonte).toContain('id="fundacao"');
+    expect(fonte).toContain("Quem fundou a Nexora");
+    // Placeholder semântico: a foto entra no lugar, sem retrato de banco de imagens.
+    expect(fonte).toMatch(/<figure[\s>]/);
+    expect(fonte).toMatch(/<figcaption[\s>]/);
+    expect(fonte).toContain("linkDeSuporte(");
+  });
+
+  // Uma pessoa por trás do produto é o que tira o cheiro de "empresa anônima".
+  // Um currículo inventado devolve esse cheiro multiplicado — e este repositório
+  // é público, então nome e cargo NÃO moram aqui: saem das variáveis do servidor.
+  it("a seção do fundador não inventa currículo nem cargo", () => {
+    const fonte = sobre();
+    const bloco = fonte.slice(fonte.indexOf('id="fundacao"'), fonte.indexOf('id="empresa"'));
+    expect(bloco.length).toBeGreaterThan(0);
+    expect(bloco).not.toMatch(/\bCEO\b|\bCTO\b|formad[oa]|graduad[oa]|\bMBA\b|anos de (mercado|experiência)/i);
+  });
 });
 
 describe("/status", () => {

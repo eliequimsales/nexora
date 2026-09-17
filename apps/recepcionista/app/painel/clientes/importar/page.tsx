@@ -5,6 +5,10 @@ import { useEffect, useState } from "react";
 import { DECLARACAO_BASE } from "@/lib/legal/identidade";
 import { variantesDeTelefone } from "@/lib/recuperacao/telefone";
 import { CartaoDaOferta } from "@/components/cobranca/cartao-da-oferta";
+import { CartaoRetorno } from "@/components/painel/cartao-retorno";
+import { ChecklistAtivacao } from "@/components/painel/checklist-ativacao";
+import { progressoDaAtivacao, type SinaisDaAtivacao } from "@/lib/painel/ativacao";
+import { retornoDaAssinatura } from "@/lib/painel/retorno";
 
 /**
  * TRAZER OS CLIENTES — a tela.
@@ -85,6 +89,15 @@ export default function PaginaImportar() {
   const [cadastrados, setCadastrados] = useState<ClienteCadastrado[]>([]);
   // A recusa de ENVIAR_TOQUE: a lista vem inteira, a mensagem pronta não.
   const [travaMensagem, setTravaMensagem] = useState<Recusa | null>(null);
+  // Os sinais do topo da tela: os três passos e o que já voltou no mês.
+  const [painel, setPainel] = useState<{
+    ativacao: SinaisDaAtivacao;
+    retorno: {
+      recuperadoMesCents: number;
+      recuperadoTotalCents: number;
+      ticketMedioCents: number | null;
+    };
+  } | null>(null);
   const [carregandoCadastrados, setCarregandoCadastrados] = useState(true);
   const [texto, setTexto] = useState("");
   const [nomeArquivo, setNomeArquivo] = useState<string | null>(null);
@@ -103,6 +116,11 @@ export default function PaginaImportar() {
         const data = await res.json();
         setCadastrados(data.clientes || []);
         setTravaMensagem(data.trava ?? null);
+        setPainel(
+          data.ativacao && data.retorno
+            ? { ativacao: data.ativacao, retorno: data.retorno }
+            : null,
+        );
       }
     } catch {
       // silencioso
@@ -293,6 +311,26 @@ export default function PaginaImportar() {
 
   return (
     <main className="max-w-3xl space-y-6">
+      {/*
+        O TOPO DA TELA EM QUE O PAINEL ABRE.
+        Primeiro o que fazer agora, depois o que já voltou. O cartão de retorno
+        só aparece quando os três passos fecham ou quando já existe dinheiro
+        para mostrar — antes disso ele repetiria, com outras palavras, o passo
+        que está logo acima dele.
+      */}
+      {painel && <ChecklistAtivacao sinais={painel.ativacao} />}
+      {painel &&
+        (progressoDaAtivacao(painel.ativacao).concluida ||
+          painel.retorno.recuperadoMesCents > 0) && (
+          <CartaoRetorno
+            retorno={retornoDaAssinatura({
+              recuperadoCents: painel.retorno.recuperadoMesCents,
+              ticketMedioCents: painel.retorno.ticketMedioCents,
+            })}
+            totalCents={painel.retorno.recuperadoTotalCents}
+          />
+        )}
+
       <header>
         <h1 className="font-display text-2xl text-panel-ink">Trazer meus clientes</h1>
         <p className="mt-1 text-sm text-panel-sub">

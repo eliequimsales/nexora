@@ -31,6 +31,10 @@ const TELAS = [
   "app/painel/clientes/importar/page.tsx",
   "app/painel/onda/page.tsx",
   "app/painel/livro-caixa/page.tsx",
+  // Texto de painel também, e dos mais lidos: o checklist é a primeira coisa
+  // que o dono vê ao entrar, e o cartão de retorno é o número que o faz renovar.
+  "components/painel/checklist-ativacao.tsx",
+  "components/painel/cartao-retorno.tsx",
 ];
 
 // O `[^:]` antes do `//` existe para não engolir `https://…` como se fosse
@@ -136,6 +140,10 @@ const FRASES_DO_SERVIDOR = [
   "lib/recuperacao/ciclo.ts",
   "lib/recuperacao/onda.ts",
   "lib/recuperacao/servico.ts",
+  // O texto dos três passos e o do estado de R$ 0 nascem aqui, prontos, e
+  // chegam à tela sem passar por nenhuma das telas varridas acima.
+  "lib/painel/ativacao.ts",
+  "lib/painel/retorno.ts",
 ];
 
 describe("o texto que o servidor manda para a tela também é em português de dono", () => {

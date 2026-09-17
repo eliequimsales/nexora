@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { getSessionCompanyId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { emReais } from "@/lib/billing/preco";
+import { CartaoRetorno } from "@/components/painel/cartao-retorno";
+import { inicioDoMes, retornoDaAssinatura } from "@/lib/painel/retorno";
 
 export const dynamic = "force-dynamic";
 
@@ -26,19 +28,14 @@ export default async function LivroCaixaPage() {
   const companyId = await getSessionCompanyId();
   if (!companyId) redirect("/login");
 
-  // O Brasil não tem mais horário de verão, então o fuso é fixo em UTC-3. Sem
-  // isto, num servidor em UTC (Railway) os retornos da virada do mês caem no
-  // mês errado do cartão "Este mês".
-  const agoraEmSaoPaulo = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }),
-  );
-  const inicioDoMes = new Date(
-    Date.UTC(agoraEmSaoPaulo.getFullYear(), agoraEmSaoPaulo.getMonth(), 1, 3, 0, 0),
-  );
+  // O recorte do mês mora em lib/painel/retorno.ts (fuso fixo em UTC-3, porque
+  // o Brasil não tem mais horário de verão). Uma segunda cópia da conta faria
+  // "este mês" significar coisas diferentes em duas telas do mesmo produto.
+  const comecoDoMes = inicioDoMes();
 
   const [mes, acumulado, totalDeEntradas, extrato, aguardando] = await Promise.all([
     prisma.recoveryEntry.aggregate({
-      where: { companyId, attributed: true, returnedAt: { gte: inicioDoMes } },
+      where: { companyId, attributed: true, returnedAt: { gte: comecoDoMes } },
       _sum: { valueCents: true },
       _count: true,
     }),
@@ -133,30 +130,17 @@ export default async function LivroCaixaPage() {
             )}
           </section>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-panel-line bg-panel-card p-5">
-              <p className="text-xs uppercase tracking-[0.14em] text-panel-sub">Este mês</p>
-              <p className="mt-2 font-display text-3xl font-bold text-panel-ink tabular-nums">
-                {emReais(totalDoMesCents)}
-              </p>
-              <p className="mt-1 text-sm text-panel-sub">
-                {mes._count} {mes._count === 1 ? "cliente voltou" : "clientes voltaram"}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-panel-line bg-panel-card p-5">
-              <p className="text-xs uppercase tracking-[0.14em] text-panel-sub">
-                Desde que você começou
-              </p>
-              <p className="mt-2 font-display text-3xl font-bold text-panel-ink tabular-nums">
-                {emReais(totalGeralCents)}
-              </p>
-              <p className="mt-1 text-sm text-panel-sub">
-                {acumulado._count}{" "}
-                {acumulado._count === 1 ? "cliente voltou" : "clientes voltaram"}
-              </p>
-            </div>
-          </div>
+          {/*
+            O MÊS CONTRA O QUE A NEXORA CUSTA NO MÊS.
+            Substituiu os dois cartões que só repetiam números já mostrados
+            acima e no extrato abaixo. O período é o mesmo dos dois lados de
+            propósito — dividir o acumulado de sempre pela mensalidade de um mês
+            faria o multiplicador crescer sozinho (lib/painel/retorno.ts).
+          */}
+          <CartaoRetorno
+            retorno={retornoDaAssinatura({ recuperadoCents: totalDoMesCents })}
+            totalCents={totalGeralCents}
+          />
 
           <div className="rounded-2xl border border-panel-line bg-panel-card">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-panel-line px-5 py-4">

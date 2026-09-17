@@ -4,6 +4,7 @@ import { podeExecutar } from "@/lib/billing/acesso";
 import { estadoDaEmpresa } from "@/lib/billing/guarda";
 import { ofertaDaEmpresa } from "@/lib/billing/oferta-da-conta";
 import { prisma } from "@/lib/db";
+import { inicioDoMes } from "@/lib/painel/retorno";
 import { rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 import { calcularCiclo, medianaDoSegmento } from "@/lib/recuperacao/ciclo";
 import { classificar } from "@/lib/recuperacao/esteiras";
@@ -181,10 +182,57 @@ export async function GET() {
     return b.valorTotalCents - a.valorTotalCents;
   });
 
+  /**
+   * OS SINAIS DO PAINEL — na mesma resposta que a tela já busca.
+   *
+   * Um endereço separado só para três contagens seria mais uma rota para
+   * proteger e uma volta a mais antes de o checklist aparecer, justamente na
+   * tela que decide se quem veio do anúncio fica.
+   *
+   * Nada aqui atravessa a parede: contar a própria lista sempre foi livre
+   * (VER_DADOS em lib/billing/acesso.ts). A mensagem pronta continua saindo só
+   * com ENVIAR_TOQUE, lá em cima.
+   */
+  const atrasados = lista.filter(
+    (c) => c.status === "RISCO_CRITICO" || c.status === "ATRASADO",
+  ).length;
+  const comValor = lista.filter((c) => c.ticketMedioCents > 0);
+
+  const [mensagensEnviadas, noMes, desdeSempre] = await Promise.all([
+    prisma.recoveryTouch.count({ where: { companyId } }),
+    // Só o comprovado entra na conta do retorno, como em Minha conta e no
+    // Livro-Caixa: o retorno que não dá para ligar à mensagem fica de fora.
+    prisma.recoveryEntry.aggregate({
+      where: { companyId, attributed: true, returnedAt: { gte: inicioDoMes(hoje) } },
+      _sum: { valueCents: true },
+    }),
+    prisma.recoveryEntry.aggregate({
+      where: { companyId, attributed: true },
+      _sum: { valueCents: true },
+    }),
+  ]);
+
   return NextResponse.json({
     clientes: lista,
     total: lista.length,
-    emRisco: lista.filter((c) => c.status === "RISCO_CRITICO" || c.status === "ATRASADO").length,
+    emRisco: atrasados,
+    ativacao: {
+      clientes: lista.length,
+      atrasados,
+      mensagensEnviadas,
+    },
+    retorno: {
+      recuperadoMesCents: noMes._sum.valueCents ?? 0,
+      recuperadoTotalCents: desdeSempre._sum.valueCents ?? 0,
+      // O que cada cliente costuma gastar, pela lista dele. Sem valor anotado,
+      // null: a tela não inventa quantos retornos pagam a mensalidade.
+      ticketMedioCents:
+        comValor.length > 0
+          ? Math.round(
+              comValor.reduce((soma, c) => soma + c.ticketMedioCents, 0) / comValor.length,
+            )
+          : null,
+    },
     // Regra Zero: sem a mensagem, a tela recebe o motivo e o caminho para resolver.
     trava: permissao.pode
       ? null
