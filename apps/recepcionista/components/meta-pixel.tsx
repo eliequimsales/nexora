@@ -1,26 +1,30 @@
 "use client";
 
-import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { capturarUtmsDaUrl } from "@/lib/analytics/utm";
 import { trackPageView } from "@/lib/analytics/pixel";
 
 function MetaPixelTracker() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const inicial = useRef(true);
 
   // Captura UTMs da URL e rastreia PageView na montagem e em cada transição de rota
   useEffect(() => {
     capturarUtmsDaUrl();
+    if (inicial.current) {
+      inicial.current = false;
+      return;
+    }
     trackPageView();
   }, [pathname, searchParams]);
 
   return null;
 }
 
-export function MetaPixel() {
-  const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
+export function MetaPixel({ id }: { id?: string }) {
+  const pixelId = id || process.env.NEXT_PUBLIC_META_PIXEL_ID || "1101648275753987";
 
   return (
     <>
@@ -29,9 +33,8 @@ export function MetaPixel() {
       </Suspense>
       {pixelId && (
         <>
-          <Script
+          <script
             id="meta-pixel-script"
-            strategy="afterInteractive"
             dangerouslySetInnerHTML={{
               __html: `
                 !function(f,b,e,v,n,t,s)

@@ -34,10 +34,12 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID || "1101648275753987";
+
   return (
     <html lang="pt-BR" className={`${display.variable} ${body.variable} ${mono.variable}`}>
       <body className="font-sans antialiased">
-        <MetaPixel />
+        <MetaPixel id={pixelId} />
         {children}
       </body>
     </html>
