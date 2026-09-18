@@ -406,14 +406,20 @@ export async function listarAgendamentos(
     const horaInicio = formatarHoraLocal(ag.startsAt);
     const horaFim = formatarHoraLocal(ag.endsAt);
 
-    let profissional = "Breno Silva";
+    let profissional = "Atendimento Principal";
     let observacoes = ag.notes;
+    let lembreteEnviado = false;
+    let lembreteEnviadoEm: string | null = null;
+    let lembreteStatus = "PENDENTE";
 
     if (ag.notes && ag.notes.startsWith("{")) {
       try {
         const parsed = JSON.parse(ag.notes);
         if (parsed.profissional) profissional = parsed.profissional;
         if (parsed.observacoes !== undefined) observacoes = parsed.observacoes;
+        if (parsed.lembreteEnviado !== undefined) lembreteEnviado = Boolean(parsed.lembreteEnviado);
+        if (parsed.lembreteEnviadoEm) lembreteEnviadoEm = parsed.lembreteEnviadoEm;
+        if (parsed.lembreteStatus) lembreteStatus = parsed.lembreteStatus;
       } catch {
         // mantém texto bruto
       }
@@ -436,6 +442,9 @@ export async function listarAgendamentos(
       status: ag.status,
       source: ag.source,
       observacoes,
+      lembreteEnviado,
+      lembreteEnviadoEm,
+      lembreteStatus,
       historicoVisitas: visitas.length,
       cicloDias: ciclo.dias,
       cicloConfianca: ciclo.confianca,
@@ -577,3 +586,130 @@ export async function criarServico(
     },
   });
 }
+
+/**
+ * Formata data ISO (YYYY-MM-DD) para texto amigável em português (ex: "segunda-feira, 15 de junho").
+ */
+export function formatarDataPorExtensoBr(dataIso: string): string {
+  const [ano, mes, dia] = dataIso.split("-").map(Number);
+  const data = new Date(Date.UTC(ano, mes - 1, dia, 12, 0, 0));
+  const diasSemana = [
+    "domingo",
+    "segunda-feira",
+    "terça-feira",
+    "quarta-feira",
+    "quinta-feira",
+    "sexta-feira",
+    "sábado",
+  ];
+  const meses = [
+    "janeiro",
+    "fevereiro",
+    "março",
+    "abril",
+    "maio",
+    "junho",
+    "julho",
+    "agosto",
+    "setembro",
+    "outubro",
+    "novembro",
+    "dezembro",
+  ];
+  const nomeDia = diasSemana[data.getUTCDay()] ?? "";
+  const nomeMes = meses[data.getUTCMonth()] ?? "";
+  return `${nomeDia}, ${dia} de ${nomeMes}`;
+}
+
+export type DadosTextoLembrete = {
+  clienteNome: string;
+  empresaNome: string;
+  servicoNome: string;
+  profissionalNome: string;
+  dataIso: string;
+  hora: string;
+  endereco?: string;
+};
+
+/**
+ * Gera mensagem humanizada e universal para lembrete de agendamento via WhatsApp.
+ * Funciona para qualquer nicho: barbearias, clínicas, salões, consultórios, estética.
+ */
+export function gerarTextoLembrete(dados: DadosTextoLembrete): string {
+  const primeiroNome = dados.clienteNome.trim().split(" ")[0] || "Cliente";
+  const dataExtenso = formatarDataPorExtensoBr(dados.dataIso);
+  const enderecoLinha = dados.endereco?.trim() ? `\n📍 *Endereço:* ${dados.endereco.trim()}` : "";
+
+  return `Olá, ${primeiroNome}! Tudo bem? 😊\n\nPassando para lembrar do seu horário na *${dados.empresaNome}*:\n\n📅 *Data:* ${dataExtenso}\n⏰ *Horário:* ${dados.hora}\n✨ *Atendimento:* ${dados.servicoNome}\n👤 *Profissional:* ${dados.profissionalNome}${enderecoLinha}\n\nCaso precise remarcar ou tirar alguma dúvida, basta nos responder por aqui. Te esperamos!`;
+}
+
+/**
+ * Marca o lembrete como enviado no agendamento.
+ */
+export async function marcarLembreteEnviado(companyId: string, appointmentId: string) {
+  const ag = await prisma.appointment.findFirst({
+    where: { id: appointmentId, companyId },
+    select: { id: true, notes: true },
+  });
+  if (!ag) return null;
+
+  let payloadNotes: Record<string, any> = {};
+  if (ag.notes && ag.notes.startsWith("{")) {
+    try {
+      payloadNotes = JSON.parse(ag.notes);
+    } catch {
+      payloadNotes = { observacoes: ag.notes };
+    }
+  } else if (ag.notes) {
+    payloadNotes = { observacoes: ag.notes };
+  }
+
+  payloadNotes.lembreteEnviado = true;
+  payloadNotes.lembreteEnviadoEm = new Date().toISOString();
+  payloadNotes.lembreteStatus = "ENVIADO";
+
+  return prisma.appointment.update({
+    where: { id: appointmentId },
+    data: { notes: JSON.stringify(payloadNotes) },
+  });
+}
+
+/**
+ * Obtém agendamentos pendentes ou confirmados com textos de lembrete prontos e links de WhatsApp.
+ */
+export async function obterLembretes(companyId: string, dataIso?: string) {
+  const dataAlvo = dataIso || formatarDataLocal(new Date());
+  const agendamentos = await listarAgendamentos(companyId, { data: dataAlvo });
+  const empresa = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: { name: true, profile: { select: { address: true } } },
+  });
+
+  return agendamentos
+    .filter((ag) => ag.status === "MARCADO" || ag.status === "CONFIRMADO")
+    .map((ag) => {
+      const mensagem = gerarTextoLembrete({
+        clienteNome: ag.nome,
+        empresaNome: empresa?.name || "Nosso Estabelecimento",
+        servicoNome: ag.servicoNome,
+        profissionalNome: ag.profissional,
+        dataIso: ag.data,
+        hora: ag.horaInicio,
+        endereco: empresa?.profile?.address || "",
+      });
+
+      const telNumeros = ag.telefone.replace(/\D/g, "");
+      const telComDdd =
+        telNumeros.length <= 11 && !telNumeros.startsWith("55")
+          ? `55${telNumeros}`
+          : telNumeros;
+      const whatsappUrl = `https://wa.me/${telComDdd}?text=${encodeURIComponent(mensagem)}`;
+
+      return {
+        ...ag,
+        mensagemPronta: mensagem,
+        whatsappUrl,
+      };
+    });
+}
+

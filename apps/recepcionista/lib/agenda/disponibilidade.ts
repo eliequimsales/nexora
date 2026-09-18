@@ -121,3 +121,92 @@ export function calcularSlots(entrada: EntradaSlots): string[] {
 export function proximoRetornoProvavel(ultimaVisita: Date, cicloDias: number): Date {
   return new Date(ultimaVisita.getTime() + cicloDias * 24 * 60 * MIN_MS);
 }
+
+export type SlotsPorTurno = {
+  manha: string[];
+  tarde: string[];
+  noite: string[];
+};
+
+/**
+ * Agrupa os horários disponíveis em três turnos clássicos (Manhã, Tarde e Noite)
+ * para facilitar a visualização e decisão rápida do cliente sem poluição visual.
+ */
+export function separarSlotsPorTurno(slots: string[]): SlotsPorTurno {
+  const turnos: SlotsPorTurno = { manha: [], tarde: [], noite: [] };
+  for (const s of slots) {
+    const [h] = s.split(":").map(Number);
+    if (h < 12) {
+      turnos.manha.push(s);
+    } else if (h < 18) {
+      turnos.tarde.push(s);
+    } else {
+      turnos.noite.push(s);
+    }
+  }
+  return turnos;
+}
+
+/** Formata data para o padrão de UTC do Google Calendar (YYYYMMDDTHHMMSSZ). */
+function formatarDataGoogleCalendar(d: Date): string {
+  return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+}
+
+export type DadosCalendario = {
+  titulo: string;
+  descricao?: string;
+  localizacao?: string;
+  startsAt: Date;
+  endsAt: Date;
+};
+
+/**
+ * Gera o link direto para adicionar o agendamento ao Google Agenda com 1 clique.
+ */
+export function gerarGoogleCalendarLink(dados: DadosCalendario): string {
+  const inicio = formatarDataGoogleCalendar(dados.startsAt);
+  const fim = formatarDataGoogleCalendar(dados.endsAt);
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: dados.titulo,
+    dates: `${inicio}/${fim}`,
+    details: dados.descricao || "",
+    location: dados.localizacao || "",
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+/**
+ * Gera o conteúdo no formato iCalendar (.ics) para Apple Calendar, Outlook e outros.
+ */
+export function gerarIcsConteudo(dados: DadosCalendario): string {
+  const inicio = formatarDataGoogleCalendar(dados.startsAt);
+  const fim = formatarDataGoogleCalendar(dados.endsAt);
+  const agora = formatarDataGoogleCalendar(new Date());
+  const uid = `nexora-${dados.startsAt.getTime()}-${Math.random().toString(36).slice(2, 9)}@meunexora.com.br`;
+
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Nexora//Agenda Inteligente//PT",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:${uid}`,
+    `DTSTAMP:${agora}`,
+    `DTSTART:${inicio}`,
+    `DTEND:${fim}`,
+    `SUMMARY:${dados.titulo.replace(/\n/g, " ")}`,
+    `DESCRIPTION:${(dados.descricao || "").replace(/\n/g, "\\n")}`,
+    `LOCATION:${(dados.localizacao || "").replace(/\n/g, " ")}`,
+    "STATUS:CONFIRMED",
+    "BEGIN:VALARM",
+    "TRIGGER:-PT2H",
+    "ACTION:DISPLAY",
+    "DESCRIPTION:Lembrete de Atendimento",
+    "END:VALARM",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+}
+

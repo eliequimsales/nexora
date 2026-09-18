@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { gerarIcsConteudo } from "@/lib/agenda/disponibilidade";
 
 type Servico = { id: string; name: string; durationMin: number; priceCents: number };
 type Profissional = { id: string; nome: string; cargo: string };
-type DiaComHoras = { dia: string; horas: string[] };
+type DiaComHoras = { dia: string; horas: string[]; turnos?: { manha: string[]; tarde: string[]; noite: string[] } };
 
 type Dados = {
   negocio: { nome: string; endereco: string };
@@ -69,14 +70,22 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
     profissional: string;
     dia: string;
     hora: string;
+    googleCalendarUrl?: string;
+    mensagemWhatsApp?: string;
   } | null>(null);
 
   const carregar = useCallback(
-    async (idServico?: string) => {
+    async (idServico?: string, nomeProf?: string) => {
       setCarregando(true);
       setErro("");
       try {
-        const qs = idServico ? `?serviceId=${encodeURIComponent(idServico)}` : "";
+        const queryParams = new URLSearchParams();
+        if (idServico) queryParams.set("serviceId", idServico);
+        if (nomeProf && nomeProf !== "Primeiro disponível") {
+          queryParams.set("profissional", nomeProf);
+        }
+
+        const qs = queryParams.toString() ? `?${queryParams.toString()}` : "";
         const res = await fetch(`/api/agendar/${params.slug}${qs}`);
         if (!res.ok) throw new Error("nao-encontrado");
         const json: Dados = await res.json();
@@ -104,7 +113,13 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
   const trocarServico = (id: string) => {
     setServicoId(id);
     setHora("");
-    void carregar(id);
+    void carregar(id, profissionalNome);
+  };
+
+  const trocarProfissional = (nomeProf: string) => {
+    setProfissionalNome(nomeProf);
+    setHora("");
+    void carregar(servicoId, nomeProf);
   };
 
   const marcar = async () => {
@@ -134,7 +149,7 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
         setErro(json.error ?? "Não consegui marcar o horário agora.");
         if (res.status === 409) {
           setHora("");
-          void carregar(servicoId);
+          void carregar(servicoId, profissionalNome);
         }
         return;
       }
@@ -146,6 +161,8 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
         profissional: json.confirmacao?.profissional || profissionalNome,
         dia: json.confirmacao?.dia || dia,
         hora: json.confirmacao?.hora || hora,
+        googleCalendarUrl: json.confirmacao?.googleCalendarUrl,
+        mensagemWhatsApp: json.confirmacao?.mensagemWhatsApp,
       });
     } catch {
       setErro("Erro de conexão ao marcar horário. Tente novamente.");
@@ -178,7 +195,7 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
     );
   }
 
-  // TELA DE SUCESSO / CONFIRMAÇÃO
+  // TELA DE SUCESSO / CONFIRMAÇÃO COM LEMBRETES INTEGRADOS
   if (confirmado) {
     const dataObj = new Date(`${confirmado.dia}T${confirmado.hora}:00`);
     const dataFim = new Date(dataObj.getTime() + 45 * 60000);
@@ -186,11 +203,38 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
     const formatGoogleDate = (d: Date) =>
       d.toISOString().replace(/-|:|\.\d\d\d/g, "");
 
-    const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
-      `${confirmado.servico} - ${confirmado.nomeNegocio}`,
-    )}&dates=${formatGoogleDate(dataObj)}/${formatGoogleDate(dataFim)}&details=${encodeURIComponent(
-      `Agendamento confirmado com ${confirmado.profissional} no ${confirmado.nomeNegocio}.`,
-    )}&location=${encodeURIComponent(confirmado.endereco)}`;
+    const googleCalendarUrl =
+      confirmado.googleCalendarUrl ||
+      `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
+        `${confirmado.servico} - ${confirmado.nomeNegocio}`,
+      )}&dates=${formatGoogleDate(dataObj)}/${formatGoogleDate(dataFim)}&details=${encodeURIComponent(
+        `Agendamento confirmado com ${confirmado.profissional} no ${confirmado.nomeNegocio}.`,
+      )}&location=${encodeURIComponent(confirmado.endereco)}`;
+
+    const baixarArquivoIcs = () => {
+      const conteudo = gerarIcsConteudo({
+        titulo: `${confirmado.servico} - ${confirmado.nomeNegocio}`,
+        descricao: `Agendamento confirmado com ${confirmado.profissional}.\nLocal: ${confirmado.nomeNegocio}`,
+        localizacao: confirmado.endereco,
+        startsAt: dataObj,
+        endsAt: dataFim,
+      });
+      const blob = new Blob([conteudo], { type: "text/calendar;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `agendamento-${confirmado.dia}.ics`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+
+    const zapUrl =
+      confirmado.mensagemWhatsApp
+        ? `https://wa.me/?text=${encodeURIComponent(confirmado.mensagemWhatsApp)}`
+        : `https://wa.me/?text=${encodeURIComponent(
+            `Meu agendamento está confirmado na ${confirmado.nomeNegocio} para ${confirmado.dia} às ${confirmado.hora}!`,
+          )}`;
 
     return (
       <main className="min-h-screen bg-[#0B0F17] flex items-center justify-center p-4 text-white">
@@ -209,7 +253,7 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
           <div className="rounded-2xl border border-neutral-800 bg-[#0E131D] p-5 text-left space-y-3 mb-6">
             <div className="flex justify-between items-start border-b border-neutral-800/80 pb-3">
               <div>
-                <span className="text-xs text-neutral-400 uppercase tracking-wider">Serviço</span>
+                <span className="text-xs text-neutral-400 uppercase tracking-wider">Atendimento</span>
                 <p className="text-base font-bold text-white">{confirmado.servico}</p>
               </div>
               <div className="text-right">
@@ -234,16 +278,49 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
             </div>
           </div>
 
+          {/* Destaque de Lembretes Anti-Esquecimento */}
+          <div className="rounded-2xl border border-amber-400/20 bg-amber-400/5 p-4 text-left mb-6 space-y-2">
+            <span className="flex items-center gap-1.5 text-xs font-bold text-amber-400 uppercase tracking-wider">
+              <span>🔔</span>
+              <span>Lembrete no seu Calendário</span>
+            </span>
+            <p className="text-xs text-neutral-300 leading-relaxed">
+              Adicione à sua agenda para receber notificação no celular antes do horário e não esquecer seu atendimento:
+            </p>
+          </div>
+
           <div className="flex flex-col gap-3">
             <a
               href={googleCalendarUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-400 px-5 py-3 text-sm font-bold text-neutral-950 transition hover:bg-amber-300"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-400 px-5 py-3 text-sm font-bold text-neutral-950 transition hover:bg-amber-300 shadow-md"
             >
               <span>📅</span>
               <span>Adicionar ao Google Agenda</span>
             </a>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={baixarArquivoIcs}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-neutral-700 bg-neutral-800/80 px-4 py-2.5 text-xs font-semibold text-white hover:bg-neutral-700 transition"
+                title="Compatível com iPhone (Apple Calendar), Mac e Outlook"
+              >
+                <span>🍏</span>
+                <span>Apple / Outlook</span>
+              </button>
+
+              <a
+                href={zapUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-2.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/20 transition"
+              >
+                <span>💬</span>
+                <span>Salvar no WhatsApp</span>
+              </a>
+            </div>
 
             <button
               onClick={() => {
@@ -252,7 +329,7 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
                 setTelefone("");
                 setHora("");
               }}
-              className="rounded-xl border border-neutral-700 px-4 py-2.5 text-xs font-semibold text-neutral-300 hover:bg-neutral-800 transition"
+              className="rounded-xl border border-neutral-800 px-4 py-2 text-xs font-semibold text-neutral-400 hover:bg-neutral-800 hover:text-white transition mt-1"
             >
               Fazer outro agendamento
             </button>
@@ -262,16 +339,14 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
     );
   }
 
-  const servicoAtual = dados.servicos.find((s) => s.id === servicoId) ?? dados.servicos[0];
   const diaSelecionado = dados.dias.find((d) => d.dia === dia) ?? dados.dias[0];
   const periodos = diaSelecionado ? agruparPorPeriodo(diaSelecionado.horas) : { manha: [], tarde: [], noite: [] };
 
   const profissionaisDisponiveis = [
     { id: "qualquer", nome: "Primeiro disponível", cargo: "Qualquer profissional" },
-    ...(dados.profissionais || [
-      { id: "prof_1", nome: "Breno Silva", cargo: "Barbeiro" },
-      { id: "prof_2", nome: "Thiago Barber", cargo: "Barbeiro" },
-    ]),
+    ...(dados.profissionais && dados.profissionais.length > 0
+      ? dados.profissionais
+      : [{ id: "prof_1", nome: "Atendimento Principal", cargo: "Especialista" }]),
   ];
 
   const podeConfirmar =
@@ -281,14 +356,16 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
     dia &&
     hora;
 
+  const inicialNegocio = dados.negocio.nome ? dados.negocio.nome.charAt(0).toUpperCase() : "N";
+
   return (
     <main className="min-h-screen bg-[#0B0F17] text-white py-8 px-4 sm:px-6">
       <div className="mx-auto max-w-xl space-y-6">
-        {/* Header do Estabelecimento */}
+        {/* Header Universal do Estabelecimento */}
         <header className="rounded-3xl border border-neutral-800 bg-[#161C26] p-6 shadow-xl text-center sm:text-left">
           <div className="flex flex-col sm:flex-row items-center gap-4">
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-amber-400/10 border border-amber-400/30 text-2xl font-bold text-amber-400">
-              ✂️
+              {inicialNegocio}
             </div>
             <div className="flex-1">
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
@@ -343,6 +420,11 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
                       </span>
                     ) : null}
                   </div>
+                  {s.priceCents > 0 && (
+                    <span className="text-xs font-mono font-semibold text-amber-400/90 mt-1.5">
+                      {reais(s.priceCents)}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -365,7 +447,7 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
                 <button
                   key={prof.id}
                   type="button"
-                  onClick={() => setProfissionalNome(prof.nome)}
+                  onClick={() => trocarProfissional(prof.nome)}
                   className={`flex items-center gap-2.5 rounded-2xl border px-3.5 py-2.5 text-left text-xs transition ${
                     isAtivo
                       ? "border-amber-400 bg-amber-400/15 font-semibold text-white shadow"
@@ -431,7 +513,7 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
           )}
         </section>
 
-        {/* Passo 4: Escolha o Horário Disponível */}
+        {/* Passo 4: Escolha o Horário Disponível com Divisão por Turnos */}
         {diaSelecionado && (
           <section className="rounded-3xl border border-neutral-800 bg-[#161C26] p-5 sm:p-6 shadow-lg animate-fade-in">
             <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-300 flex items-center gap-2 mb-4">

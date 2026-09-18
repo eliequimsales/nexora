@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { calcularSlots, type Horario } from "@/lib/agenda/disponibilidade";
+import {
+  calcularSlots,
+  gerarGoogleCalendarLink,
+  separarSlotsPorTurno,
+  type Horario,
+} from "@/lib/agenda/disponibilidade";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
@@ -8,7 +13,7 @@ import { respostaDeLimite } from "@/lib/limites";
 import { entradaPorLink } from "@/lib/agenda/entrada-publica";
 import { hashTelefone } from "@/lib/dados/excluir";
 import { ehConflitoDeConcorrencia } from "@/lib/agenda/concorrencia";
-import { listarProfissionais } from "@/lib/agenda/painel";
+import { gerarTextoLembrete, listarProfissionais } from "@/lib/agenda/painel";
 
 /** Sinaliza, de dentro da transação, que o horário foi ocupado no caminho. */
 class ConflitoDeHorario extends Error {}
@@ -110,6 +115,7 @@ export async function GET(
 
     const url = new URL(request.url);
     const serviceId = url.searchParams.get("serviceId");
+    const profissionalFiltro = url.searchParams.get("profissional")?.trim();
     const servico = serviceId
       ? negocio.services.find((s) => s.id === serviceId)
       : negocio.services[0];
@@ -125,29 +131,49 @@ export async function GET(
     const agora = new Date();
     const dias = proximosDias(agora, DIAS_VISIVEIS);
 
-    const ocupados = await prisma.appointment.findMany({
+    const todosAgendamentos = await prisma.appointment.findMany({
       where: {
         companyId: negocio.id,
         status: { in: ["MARCADO", "CONFIRMADO"] },
         startsAt: { gte: agora, lte: new Date(dias.at(-1)!.getTime() + 24 * 60 * 60 * 1000) },
       },
-      select: { startsAt: true, endsAt: true },
+      select: { startsAt: true, endsAt: true, notes: true },
     });
+
+    const ocupados = profissionalFiltro
+      ? todosAgendamentos
+          .filter((a) => {
+            try {
+              if (a.notes && a.notes.startsWith("{")) {
+                const parsed = JSON.parse(a.notes);
+                return parsed.profissional === profissionalFiltro;
+              }
+            } catch {
+              // fallback
+            }
+            return true;
+          })
+          .map((a) => ({ startsAt: a.startsAt, endsAt: a.endsAt }))
+      : todosAgendamentos.map((a) => ({ startsAt: a.startsAt, endsAt: a.endsAt }));
 
     const horarios = horariosDoPerfil(negocio.profile?.businessHours);
 
     const agenda = dias
-      .map((dia) => ({
-        dia: dia.toISOString().slice(0, 10),
-        horas: calcularSlots({
+      .map((dia) => {
+        const horas = calcularSlots({
           dia,
           horarios,
           duracaoMin: servico.durationMin,
           ocupados,
           agora,
           antecedenciaMinutos: ANTECEDENCIA_MIN,
-        }),
-      }))
+        });
+        return {
+          dia: dia.toISOString().slice(0, 10),
+          horas,
+          turnos: separarSlotsPorTurno(horas),
+        };
+      })
       .filter((d) => d.horas.length > 0);
 
     const profissionais = await listarProfissionais(negocio.id);
@@ -300,6 +326,10 @@ export async function POST(
               select: { id: true },
             }));
 
+          const listaProfs = await listarProfissionais(negocio.id);
+          const profissionalEscolhido =
+            parsed.data.profissional || listaProfs[0]?.nome || "Atendimento Principal";
+
           await tx.appointment.create({
             data: {
               companyId: negocio.id,
@@ -309,7 +339,7 @@ export async function POST(
               endsAt,
               source: "LINK",
               notes: JSON.stringify({
-                profissional: parsed.data.profissional || "Breno Silva",
+                profissional: profissionalEscolhido,
               }),
             },
           });
@@ -328,15 +358,43 @@ export async function POST(
       throw erro;
     }
 
+    const listaProfs = await listarProfissionais(negocio.id);
+    const profissionalFinal =
+      parsed.data.profissional || listaProfs[0]?.nome || "Atendimento Principal";
+
+    const [h, m] = hora.split(":").map(Number);
+    const startsAt = new Date(diaData.getTime() + (h * 60 + m + 180) * 60 * 1000);
+    const endsAt = new Date(startsAt.getTime() + servico.durationMin * 60 * 1000);
+
+    const googleCalendarUrl = gerarGoogleCalendarLink({
+      titulo: `${servico.name} - ${negocio.name}`,
+      descricao: `Agendamento com ${profissionalFinal}.\nEstabelecimento: ${negocio.name}`,
+      localizacao: negocio.profile?.address ?? "",
+      startsAt,
+      endsAt,
+    });
+
+    const mensagemWhatsApp = gerarTextoLembrete({
+      clienteNome: nome,
+      empresaNome: negocio.name,
+      servicoNome: servico.name,
+      profissionalNome: profissionalFinal,
+      dataIso: dia,
+      hora,
+      endereco: negocio.profile?.address ?? "",
+    });
+
     return NextResponse.json(
       {
         ok: true,
         confirmacao: {
           negocio: negocio.name,
           servico: servico.name,
-          profissional: parsed.data.profissional || "Breno Silva",
+          profissional: profissionalFinal,
           dia,
           hora,
+          googleCalendarUrl,
+          mensagemWhatsApp,
         },
       },
       { status: 201 },

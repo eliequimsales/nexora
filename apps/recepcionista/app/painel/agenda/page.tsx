@@ -37,6 +37,11 @@ type AgendamentoItem = {
   cicloDias: number;
   cicloConfianca: string;
   proximoRetornoEsperado: string | null;
+  lembreteEnviado?: boolean;
+  lembreteEnviadoEm?: string | null;
+  lembreteStatus?: string;
+  mensagemPronta?: string;
+  whatsappUrl?: string;
 };
 
 type GradeDoDia = {
@@ -132,7 +137,9 @@ export default function PaginaAgenda() {
   const [carregando, setCarregando] = useState<boolean>(true);
   const [erro, setErro] = useState<string>("");
   const [feedbackAcao, setFeedbackAcao] = useState<string>("");
-  const [modoVisualizacao, setModoVisualizacao] = useState<"grade" | "lista">("grade");
+  const [modoVisualizacao, setModoVisualizacao] = useState<"grade" | "lista" | "lembretes">("grade");
+  const [enviandoLembreteId, setEnviandoLembreteId] = useState<string | null>(null);
+  const [disparandoLote, setDisparandoLote] = useState<boolean>(false);
 
   // Modal Novo Agendamento
   const [modalAberto, setModalAberto] = useState<boolean>(false);
@@ -156,7 +163,7 @@ export default function PaginaAgenda() {
   const [modalProfissionaisAberto, setModalProfissionaisAberto] = useState<boolean>(false);
   const [listaEditavelProf, setListaEditavelProf] = useState<Profissional[]>([]);
   const [novoProfNome, setNovoProfNome] = useState<string>("");
-  const [novoProfCargo, setNovoProfCargo] = useState<string>("Barbeiro");
+  const [novoProfCargo, setNovoProfCargo] = useState<string>("Especialista");
   const [salvandoProf, setSalvandoProf] = useState<boolean>(false);
 
   const carregarAgenda = async (dataAlvo: string) => {
@@ -209,8 +216,8 @@ export default function PaginaAgenda() {
 
     if (list.length === 0) {
       return [
-        { nome: "Breno Silva", cargo: "Barbeiro" },
-        { nome: "Thiago Barber", cargo: "Barbeiro" },
+        { nome: "Atendimento Principal", cargo: "Especialista" },
+        { nome: "Equipe de Atendimento", cargo: "Profissional" },
       ];
     }
 
@@ -275,6 +282,46 @@ export default function PaginaAgenda() {
       }
     } catch {
       alert("Erro ao excluir agendamento.");
+    }
+  };
+
+  const handleEnviarLembrete = async (agendamentoId?: string, emLote = false) => {
+    if (emLote) {
+      setDisparandoLote(true);
+    } else if (agendamentoId) {
+      setEnviandoLembreteId(agendamentoId);
+    }
+
+    try {
+      const res = await fetch("/api/agenda/lembrete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agendamentoId,
+          emLote,
+          data: dataSelecionada,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Não consegui enviar o lembrete agora.");
+        return;
+      }
+
+      setFeedbackAcao(data.mensagem || "Lembrete processado com sucesso!");
+      setTimeout(() => setFeedbackAcao(""), 4500);
+
+      if (data.whatsappUrl) {
+        window.open(data.whatsappUrl, "_blank");
+      }
+
+      carregarAgenda(dataSelecionada);
+    } catch {
+      alert("Erro de conexão ao enviar lembrete.");
+    } finally {
+      setEnviandoLembreteId(null);
+      setDisparandoLote(false);
     }
   };
 
@@ -348,8 +395,8 @@ export default function PaginaAgenda() {
       profissionais.length > 0
         ? [...profissionais]
         : [
-            { id: "prof_1", nome: "Breno Silva", cargo: "Barbeiro" },
-            { id: "prof_2", nome: "Thiago Barber", cargo: "Barbeiro" },
+            { id: "prof_1", nome: "Atendimento Principal", cargo: "Especialista" },
+            { id: "prof_2", nome: "Equipe de Atendimento", cargo: "Profissional" },
           ],
     );
     setModalProfissionaisAberto(true);
@@ -604,7 +651,18 @@ export default function PaginaAgenda() {
             }`}
           >
             <span>📋</span>
-            <span>Lista de horários ({agendamentos.length})</span>
+            <span>Lista ({agendamentos.length})</span>
+          </button>
+          <button
+            onClick={() => setModoVisualizacao("lembretes")}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition ${
+              modoVisualizacao === "lembretes"
+                ? "bg-amber text-night font-bold shadow-sm"
+                : "text-panel-sub hover:text-panel-ink"
+            }`}
+          >
+            <span>🔔</span>
+            <span>Lembretes anti-faltas</span>
           </button>
         </div>
 
@@ -744,7 +802,7 @@ export default function PaginaAgenda() {
             </table>
           </div>
         </div>
-      ) : (
+      ) : modoVisualizacao === "lista" ? (
         /* ========================================================================= */
         /* MODO LISTA CRONOLÓGICA DE ATENDIMENTOS DO DIA                             */
         /* ========================================================================= */
@@ -943,6 +1001,134 @@ export default function PaginaAgenda() {
             })
           )}
         </div>
+      ) : (
+        /* ========================================================================= */
+        /* CENTRAL DE LEMBRETES ANTI-FALTAS                                          */
+        /* ========================================================================= */
+        <div className="mt-4 space-y-4">
+          <div className="rounded-2xl border border-amber/30 bg-amber/5 p-5 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <span className="inline-flex items-center gap-1.5 rounded-md bg-amber/20 px-2.5 py-0.5 text-xs font-bold text-amber">
+                  <span>🔔</span>
+                  <span>Proteção contra Faltas</span>
+                </span>
+                <h3 className="mt-2 font-display text-base font-bold text-panel-ink">
+                  Lembretes de horários para clientes com atendimento marcado
+                </h3>
+                <p className="mt-0.5 text-xs text-panel-sub max-w-xl leading-relaxed">
+                  Lembretes reduzem o esquecimento em até 70%. Envie a mensagem personalizada com os detalhes do atendimento para o WhatsApp do cliente com 1 clique.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleEnviarLembrete(undefined, true)}
+                  disabled={
+                    disparandoLote ||
+                    agendamentos.filter(
+                      (a) => (a.status === "MARCADO" || a.status === "CONFIRMADO") && !a.lembreteEnviado,
+                    ).length === 0
+                  }
+                  className="inline-flex items-center gap-2 rounded-xl bg-amber px-4 py-2.5 text-xs font-bold text-night shadow hover:bg-amber-hover transition disabled:opacity-40"
+                >
+                  <span>⚡</span>
+                  <span>{disparandoLote ? "Enviando lembretes..." : "Lembrar todos do dia"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {agendamentos.filter((a) => a.status === "MARCADO" || a.status === "CONFIRMADO").length === 0 ? (
+              <div className="rounded-2xl border border-panel-line bg-panel-card p-12 text-center text-xs text-panel-sub">
+                Nenhum horário marcado ou confirmado para esta data.
+              </div>
+            ) : (
+              agendamentos
+                .filter((a) => a.status === "MARCADO" || a.status === "CONFIRMADO")
+                .map((ag) => {
+                  const isEnviando = enviandoLembreteId === ag.id;
+                  const isJaEnviado = ag.lembreteEnviado;
+
+                  return (
+                    <div
+                      key={ag.id}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-panel-line bg-panel-card p-4 shadow-sm"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-xl border border-panel-line bg-panel-bg px-2.5 py-1.5 text-center shrink-0">
+                          <span className="font-mono text-xs font-bold text-panel-ink block">
+                            {ag.horaInicio}
+                          </span>
+                          <span className="font-mono text-[10px] text-panel-sub">
+                            até {ag.horaFim}
+                          </span>
+                        </div>
+
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-display font-semibold text-panel-ink">
+                              {ag.nome}
+                            </span>
+                            <span className="rounded-md border border-panel-line bg-panel-bg px-2 py-0.5 text-[11px] text-panel-sub">
+                              {ag.profissional}
+                            </span>
+                            {isJaEnviado ? (
+                              <span className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-400">
+                                ✓ Lembrete enviado
+                              </span>
+                            ) : (
+                              <span className="rounded-md border border-amber/30 bg-amber/10 px-2 py-0.5 text-[11px] font-semibold text-amber">
+                                Pendente
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-panel-sub">
+                            <span>{ag.servicoNome}</span>
+                            <span>•</span>
+                            <span className="font-mono">{formatarTelefone(ag.telefone)}</span>
+                            {ag.valorCents > 0 && (
+                              <>
+                                <span>•</span>
+                                <span className="font-semibold text-amber">
+                                  {formatarEmReais(ag.valorCents)}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleEnviarLembrete(ag.id)}
+                          disabled={isEnviando}
+                          className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition ${
+                            isJaEnviado
+                              ? "border border-panel-line bg-panel-bg text-panel-sub hover:text-panel-ink"
+                              : "bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30"
+                          }`}
+                        >
+                          <span>💬</span>
+                          <span>
+                            {isEnviando
+                              ? "Enviando..."
+                              : isJaEnviado
+                              ? "Reenviar lembrete"
+                              : "Lembrar no WhatsApp"}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+            )}
+          </div>
+        </div>
       )}
 
       {/* Banner de Auto-Agendamento Online */}
@@ -1078,6 +1264,22 @@ export default function PaginaAgenda() {
                     Confirmar horário
                   </button>
                 )}
+
+                <button
+                  type="button"
+                  onClick={() => handleEnviarLembrete(agendamentoSelecionado.id)}
+                  disabled={enviandoLembreteId === agendamentoSelecionado.id}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-amber/40 bg-amber/10 px-4 py-2 text-xs font-semibold text-amber hover:bg-amber/20 transition"
+                >
+                  <span>🔔</span>
+                  <span>
+                    {enviandoLembreteId === agendamentoSelecionado.id
+                      ? "Enviando lembrete..."
+                      : agendamentoSelecionado.lembreteEnviado
+                      ? "Reenviar lembrete no WhatsApp"
+                      : "Enviar lembrete no WhatsApp"}
+                  </span>
+                </button>
 
                 <a
                   href={`https://wa.me/55${agendamentoSelecionado.telefone}?text=${encodeURIComponent(
@@ -1362,14 +1564,14 @@ export default function PaginaAgenda() {
                 <div className="grid grid-cols-2 gap-2">
                   <input
                     type="text"
-                    placeholder="Nome (ex: Thiago)"
+                    placeholder="Nome do profissional"
                     value={novoProfNome}
                     onChange={(e) => setNovoProfNome(e.target.value)}
                     className="rounded-lg border border-panel-line bg-panel-card px-3 py-1.5 text-xs text-panel-ink placeholder:text-panel-sub/50 focus:border-amber focus:outline-none"
                   />
                   <input
                     type="text"
-                    placeholder="Cargo (ex: Barbeiro)"
+                    placeholder="Especialidade ou cargo"
                     value={novoProfCargo}
                     onChange={(e) => setNovoProfCargo(e.target.value)}
                     className="rounded-lg border border-panel-line bg-panel-card px-3 py-1.5 text-xs text-panel-ink placeholder:text-panel-sub/50 focus:border-amber focus:outline-none"
