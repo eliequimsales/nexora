@@ -120,8 +120,6 @@ export default function PaginaDiagnostico({
   const { ramo, ticketReais } = lerParametros(searchParams);
   const vocativo = ramo ? VOCATIVO[ramo] : null;
 
-  redirect("/cadastro");
-
   return (
     <div className="min-h-screen bg-nx-bg text-nx-primary">
       {/* Sem isto, "quanto custou trazer alguem" e chute. Ver lib/funil.ts. */}
