@@ -33,6 +33,7 @@ export const AVISO_DO_RELOGIO_DIAS = 7;
  * compara como texto.
  */
 export const TERMOS_SEM_TESTE_A_PARTIR_DE = "2026-09-15";
+export const TERMOS_TESTE_7_DIAS_A_PARTIR_DE = "2026-09-18";
 
 /** A Stripe recusa `trial_end` a menos de 48 horas; uma hora de folga evita a borda. */
 const MINIMO_TRIAL_NA_STRIPE_MS = 49 * HORA_MS;
@@ -59,6 +60,9 @@ export function fimDoTesteSemRelogio(criadoEm: Date, agora: Date): Date {
 
 /** O prazo que nasce com a conta, conforme a versão dos Termos aceita no cadastro. */
 export function relogioDoCadastro(versaoAceita: string, agora: Date): Date | null {
+  if (versaoAceita >= TERMOS_TESTE_7_DIAS_A_PARTIR_DE) {
+    return fimDoTesteSemRelogio(agora, agora);
+  }
   return prometeuTesteGratis(versaoAceita) ? fimDoTesteSemRelogio(agora, agora) : null;
 }
 
@@ -67,8 +71,7 @@ export function relogioDoCadastro(versaoAceita: string, agora: Date): Date | nul
  *
  * Conta com assinatura na Stripe fica de fora: ali o escritor único de
  * `trialEndsAt` é converger.ts, e um relógio local seria um segundo escritor
- * no mesmo campo. Conta que aceitou Termos sem teste também fica de fora: ela
- * está em GRATIS, e dar prazo a ela seria inventar um mês grátis.
+ * no mesmo campo.
  */
 export function relogioParaGravar(
   empresa: {
@@ -81,6 +84,9 @@ export function relogioParaGravar(
 ): Date | null {
   const temAssinatura = empresa.subscriptionStatus !== null && empresa.subscriptionStatus !== undefined;
   if (temAssinatura || empresa.trialEndsAt) return null;
+  if (empresa.termosVersao && empresa.termosVersao >= TERMOS_TESTE_7_DIAS_A_PARTIR_DE) {
+    return fimDoTesteSemRelogio(empresa.createdAt, agora);
+  }
   if (!prometeuTesteGratis(empresa.termosVersao)) return null;
   return fimDoTesteSemRelogio(empresa.createdAt, agora);
 }

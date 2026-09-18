@@ -22,13 +22,10 @@
 
 /**
  * Muda sempre que o texto de Termos ou Privacidade mudar. Formato: AAAA-MM-DD.
- *
- * 2026-09-15: conta nova sem mês grátis, três planos (mensal no cartão, 30 dias e
- * anual), Garantia Dinheiro Recuperado e fornecedor identificado por CPF ou CNPJ.
- * É a mesma data de TERMOS_SEM_TESTE_A_PARTIR_DE (lib/billing/relogio.ts): quem
- * aceita esta versão nasce sem prazo de teste.
+ * 2026-09-18: período de teste gratuito de 7 dias com acesso total liberado,
+ * seguido do plano de R$ 97/mês, garantia e conformidade legal.
  */
-export const VERSAO_DOCUMENTOS = "2026-09-15";
+export const VERSAO_DOCUMENTOS = "2026-09-18";
 
 /**
  * Preencher antes da primeira cobrança. Desde 15/09/2026 quem presta o serviço é a

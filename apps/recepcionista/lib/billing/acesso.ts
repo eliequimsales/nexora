@@ -75,23 +75,9 @@ export const ACOES_SEMPRE_LIVRES: Acao[] = [
 export const TOLERANCIA_DIAS = 7;
 
 /**
- * Duração do trial: 30 dias, o "primeiro mês grátis".
- *
- * O número não é redondo por marketing — é o primeiro dia em que a medição é
- * honesta. O Protocolo 4 Toques manda o último toque no dia 25; antes disso a
- * sequência não terminou e a tela seria obrigada a dizer "ainda não dá para
- * saber" justo quando o dono precisa decidir se paga.
- *
- * Sem cartão na entrada: o público não tem cartão de crédito para assinatura
- * na entrada, e exigir cartão para TESTAR eliminaria
- * essa fatia no ponto mais caro do funil. O custo dessa escolha é real e está
- * pago em outro lugar: no fim do trial a assinatura PAUSA em vez de cobrar, e
- * é o motor de reengajamento que traz o dono de volta.
- *
- * Vale só para quem aceitou Termos que prometiam o mês grátis — ver
- * lib/billing/relogio.ts.
+ * Duração do teste grátis: 7 dias de acesso total liberado para experimentar.
  */
-export const TRIAL_DIAS = 30;
+export const TRIAL_DIAS = 7;
 
 const DIA_MS = 86_400_000;
 

@@ -56,8 +56,8 @@ describe("fimDoTesteSemRelogio", () => {
     expect(fimDoTesteSemRelogio(AGORA, AGORA)).toEqual(emDias(TRIAL_DIAS));
   });
 
-  it("conta no começo do teste fica com o prazo que o cadastro prometeu", () => {
-    expect(fimDoTesteSemRelogio(diasAtras(10), AGORA)).toEqual(emDias(TRIAL_DIAS - 10));
+  it("conta criada no passado ganha o aviso de 7 dias antes de travar", () => {
+    expect(fimDoTesteSemRelogio(diasAtras(10), AGORA)).toEqual(emDias(AVISO_DO_RELOGIO_DIAS));
   });
 
   // Quem se cadastrou há dois meses nunca foi avisado de prazo nenhum. Travar
@@ -66,7 +66,7 @@ describe("fimDoTesteSemRelogio", () => {
     expect(fimDoTesteSemRelogio(diasAtras(60), AGORA)).toEqual(emDias(AVISO_DO_RELOGIO_DIAS));
   });
 
-  it("conta perto do fim dos 30 dias nunca recebe menos que o aviso", () => {
+  it("conta perto do fim dos 7 dias nunca recebe menos que o aviso", () => {
     expect(fimDoTesteSemRelogio(diasAtras(TRIAL_DIAS - 2), AGORA)).toEqual(
       emDias(AVISO_DO_RELOGIO_DIAS),
     );
@@ -78,8 +78,12 @@ describe("relogioDoCadastro", () => {
     expect(relogioDoCadastro("2026-09-10", AGORA)).toEqual(emDias(TRIAL_DIAS));
   });
 
-  it("com Termos sem teste grátis, a conta nasce sem prazo", () => {
+  it("com Termos sem teste grátis (versão 2026-09-15), a conta nasce sem prazo", () => {
     expect(relogioDoCadastro(TERMOS_SEM_TESTE_A_PARTIR_DE, AGORA)).toBeNull();
+  });
+
+  it("com Termos com teste de 7 dias (versão 2026-09-18), a conta ganha os 7 dias", () => {
+    expect(relogioDoCadastro("2026-09-18", AGORA)).toEqual(emDias(TRIAL_DIAS));
   });
 });
 
