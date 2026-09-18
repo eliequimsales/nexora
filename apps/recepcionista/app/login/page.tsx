@@ -44,7 +44,6 @@ function LoginForm() {
       const next = searchParams.get("next");
       const target =
         next &&
-        !next.startsWith("/painel/configuracoes") &&
         /^\/[A-Za-z0-9\-._~/]*$/.test(next)
           ? next
           : "/painel/clientes/importar";

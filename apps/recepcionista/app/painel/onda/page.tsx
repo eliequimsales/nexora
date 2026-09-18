@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { deveSilenciar, MOTIVOS_PULO, rotuloDoMotivo } from "@/lib/recuperacao/pulo";
 import { variantesDeTelefone } from "@/lib/recuperacao/telefone";
 import { NOME_DA_ESTEIRA } from "@/lib/recuperacao/esteiras";
@@ -447,33 +448,49 @@ export default function PaginaOnda() {
 
         <div className="flex flex-wrap items-center gap-2">
           {whatsappLigado ? (
-            restantes > 1 && (
+            <>
+              <Link
+                href="/painel/configuracoes"
+                className="rounded-xl border border-emerald-500/30 px-3 py-2 text-xs font-semibold text-emerald-400 transition hover:bg-emerald-500/10"
+              >
+                Ver conexão
+              </Link>
+              {restantes > 1 && (
+                <button
+                  type="button"
+                  disabled={disparandoLote}
+                  onClick={dispararLoteRestante}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3.5 py-2 font-display text-xs font-bold text-night transition hover:bg-emerald-400 disabled:opacity-50"
+                >
+                  {disparandoLote ? (
+                    <>
+                      <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-night border-t-transparent" />
+                      <span>Disparando {progressoLote.atual} de {progressoLote.total}...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>⚡</span> Disparar mensagens restantes ({restantes})
+                    </>
+                  )}
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                disabled={disparandoLote}
-                onClick={dispararLoteRestante}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3.5 py-2 font-display text-xs font-bold text-night transition hover:bg-emerald-400 disabled:opacity-50"
+                onClick={() => setModalWhatsAppAberto(true)}
+                className="rounded-xl bg-amber px-4 py-2 font-display text-xs font-bold text-night transition hover:brightness-110"
               >
-                {disparandoLote ? (
-                  <>
-                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-night border-t-transparent" />
-                    <span>Disparando {progressoLote.atual} de {progressoLote.total}...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>⚡</span> Disparar mensagens restantes ({restantes})
-                  </>
-                )}
+                Escanear QR Code
               </button>
-            )
-          ) : (
-            <button
-              type="button"
-              onClick={() => setModalWhatsAppAberto(true)}
-              className="rounded-xl bg-amber px-4 py-2 font-display text-xs font-bold text-night transition hover:brightness-110"
-            >
-              Ligar meu WhatsApp
-            </button>
+              <Link
+                href="/painel/configuracoes"
+                className="rounded-xl border border-amber/30 px-3 py-2 font-display text-xs font-medium text-panel-sub transition hover:text-panel-ink"
+              >
+                Tela completa
+              </Link>
+            </div>
           )}
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -10,6 +10,7 @@ describe("Fase 2: Conexão Direta do WhatsApp & Disparo com 1 Clique", () => {
     expect(onda).toContain("Enviar mensagem de recuperação");
     expect(onda).toContain("ModalConectarWhatsApp");
     expect(onda).toContain("/api/onda/enviar");
+    expect(onda).toContain("/painel/configuracoes");
   });
 
   it("o modal de conexão explica os passos sem usar termos técnicos proibidos", () => {
@@ -32,5 +33,19 @@ describe("Fase 2: Conexão Direta do WhatsApp & Disparo com 1 Clique", () => {
     expect(rota).toContain("exigirAcesso");
     expect(rota).toContain("ENVIAR_TOQUE");
     expect(rota).toContain("variantesDeTelefone");
+  });
+
+  it("a tela de configurações (/painel/configuracoes) está ativa para conexão via QR Code sem redirecionamento artificial", () => {
+    const configuracoes = readFileSync(join(RAIZ, "app/painel/configuracoes/page.tsx"), "utf8");
+    expect(configuracoes).not.toContain("router.replace(\"/painel/clientes/importar\")");
+    expect(configuracoes).not.toContain("redirecionando");
+    expect(configuracoes).toContain("Passo");
+    expect(configuracoes).toContain("Ligar meu WhatsApp");
+  });
+
+  it("a tela de Minha Conta possui o link para ligar o WhatsApp", () => {
+    const assinatura = readFileSync(join(RAIZ, "app/painel/assinatura/page.tsx"), "utf8");
+    expect(assinatura).toContain("Conexão do WhatsApp");
+    expect(assinatura).toContain("/painel/configuracoes");
   });
 });

@@ -222,6 +222,26 @@ export default async function PaginaAssinatura({
         )}
       </section>
 
+      {/* Conexão do WhatsApp */}
+      <section className="rounded-2xl border border-panel-line bg-panel-card p-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-medium uppercase tracking-wide text-panel-sub">
+              Conexão do WhatsApp
+            </h2>
+            <p className="mt-1 text-sm text-panel-ink">
+              Conecte seu aparelho via QR Code para disparar mensagens de recuperação direto pelo seu número com 1 clique.
+            </p>
+          </div>
+          <Link
+            href="/painel/configuracoes"
+            className="rounded-xl bg-amber px-4 py-2.5 font-display text-sm font-bold text-night transition hover:brightness-110"
+          >
+            Ligar meu WhatsApp
+          </Link>
+        </div>
+      </section>
+
       <section className="rounded-2xl border border-panel-line bg-panel-card p-6">
         <h2 className="text-sm font-medium uppercase tracking-wide text-panel-sub">
           {acoes.planos.length > 0 ? "Planos" : "Sua assinatura"}
