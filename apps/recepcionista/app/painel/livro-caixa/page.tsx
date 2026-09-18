@@ -33,7 +33,7 @@ export default async function LivroCaixaPage() {
   // "este mês" significar coisas diferentes em duas telas do mesmo produto.
   const comecoDoMes = inicioDoMes();
 
-  const [mes, acumulado, totalDeEntradas, extrato, aguardando] = await Promise.all([
+  const [mes, acumulado, totalDeEntradas, extrato, aguardando, totalToquesEnviados] = await Promise.all([
     prisma.recoveryEntry.aggregate({
       where: { companyId, attributed: true, returnedAt: { gte: comecoDoMes } },
       _sum: { valueCents: true },
@@ -63,6 +63,7 @@ export default async function LivroCaixaPage() {
       },
     }),
     prisma.recoveryTouch.count({ where: { companyId, outcome: "AGUARDANDO" } }),
+    prisma.recoveryTouch.count({ where: { companyId, outcome: { not: "PULADO" } } }),
   ]);
 
   const totalDoMesCents = mes._sum.valueCents ?? 0;
@@ -142,6 +143,27 @@ export default async function LivroCaixaPage() {
             totalCents={totalGeralCents}
           />
 
+          {/* Mini-funil de Eficiência de Reativação */}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-panel-line bg-panel-card p-4">
+              <p className="text-xs uppercase tracking-wider text-panel-sub">Mensagens Enviadas</p>
+              <p className="mt-1 font-display text-2xl font-bold text-panel-ink tabular-nums">{totalToquesEnviados}</p>
+              <p className="text-xs text-panel-sub">mensagens disparadas</p>
+            </div>
+            <div className="rounded-2xl border border-panel-line bg-panel-card p-4">
+              <p className="text-xs uppercase tracking-wider text-panel-sub">Clientes Resgatados</p>
+              <p className="mt-1 font-display text-2xl font-bold text-emerald-400 tabular-nums">{acumulado._count}</p>
+              <p className="text-xs text-panel-sub">voltaram e pagaram</p>
+            </div>
+            <div className="rounded-2xl border border-panel-line bg-panel-card p-4">
+              <p className="text-xs uppercase tracking-wider text-panel-sub">Taxa de Conversão</p>
+              <p className="mt-1 font-display text-2xl font-bold text-amber-deep tabular-nums">
+                {totalToquesEnviados > 0 ? `${Math.round((acumulado._count / totalToquesEnviados) * 100)}%` : "—"}
+              </p>
+              <p className="text-xs text-panel-sub">dos clientes chamados</p>
+            </div>
+          </div>
+
           <div className="rounded-2xl border border-panel-line bg-panel-card">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-panel-line px-5 py-4">
               <h2 className="font-display font-semibold text-panel-ink">Quem voltou</h2>
@@ -163,9 +185,16 @@ export default async function LivroCaixaPage() {
                   <span className="text-xs text-panel-sub">
                     sumido há {e.daysAway} dias · voltou na {e.touchNumber}ª mensagem
                   </span>
-                  <span className="ml-auto font-display font-semibold text-panel-ink">
-                    {emReais(e.valueCents)}
-                  </span>
+                  <div className="ml-auto flex items-center gap-2">
+                    {e.attributed && (
+                      <span className="hidden rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-400 sm:inline-block">
+                        Recuperado ✓
+                      </span>
+                    )}
+                    <span className="font-display font-semibold text-panel-ink">
+                      {emReais(e.valueCents)}
+                    </span>
+                  </div>
                   {!e.attributed && (
                     /* Voltou fora da janela em que dá para provar a causa. Fica
                        no extrato e NÃO entra no total — inflar o número é a

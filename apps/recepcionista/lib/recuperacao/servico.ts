@@ -29,6 +29,7 @@ export type CardDaOnda = {
   valorCents: number;
   toque: number;
   mensagem: string;
+  mensagens: Record<number, string>;
 };
 
 function primeiroNome(nome: string): string {
@@ -175,6 +176,12 @@ export async function montarOndaDaSemana(
       negocio: empresa?.name ?? "",
       link,
     }),
+    mensagens: {
+      1: mensagemDoToque(1, { primeiroNome: primeiroNome(c.nome), negocio: empresa?.name ?? "", link }),
+      2: mensagemDoToque(2, { primeiroNome: primeiroNome(c.nome), negocio: empresa?.name ?? "", link }),
+      3: mensagemDoToque(3, { primeiroNome: primeiroNome(c.nome), negocio: empresa?.name ?? "", link }),
+      4: mensagemDoToque(4, { primeiroNome: primeiroNome(c.nome), negocio: empresa?.name ?? "", link }),
+    },
   }));
 
   const composicao = cards.reduce<Record<string, number>>((acc, c) => {

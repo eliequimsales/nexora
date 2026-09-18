@@ -32,6 +32,7 @@ type Card = {
   valorCents: number;
   toque: number;
   mensagem: string;
+  mensagens?: Record<number, string>;
 };
 
 type Vazio = {
@@ -77,6 +78,18 @@ const ROTULO_ESTEIRA: Record<string, { texto: string; classe: string }> = {
   RESGATE: { texto: NOME_DA_ESTEIRA.RESGATE, classe: "bg-panel-line text-panel-sub" },
 };
 
+const ROTULOS_MENSAGEM: Record<number, { titulo: string; desc: string }> = {
+  1: { titulo: "1ª Opção", desc: "Saudade" },
+  2: { titulo: "2ª Opção", desc: "Horário" },
+  3: { titulo: "3ª Opção", desc: "Agendar" },
+  4: { titulo: "4ª Opção", desc: "Despedida" },
+};
+
+function textoAtivoDoCard(card: Card, toqueSelecionado?: number): string {
+  const t = toqueSelecionado ?? card.toque;
+  return card.mensagens?.[t] ?? card.mensagem;
+}
+
 /**
  * O gesto em um clique: abre a conversa com a mensagem já escrita.
  *
@@ -85,12 +98,13 @@ const ROTULO_ESTEIRA: Record<string, { texto: string; classe: string }> = {
  * dono (com país, sem país, com e sem o nono dígito). Sem número reconhecível,
  * o botão simplesmente não aparece — link quebrado é pior que ausência.
  */
-function linkDoWhatsApp(card: Card): string | null {
+function linkDoWhatsApp(card: Card, textoCustom?: string): string | null {
   const comPais = variantesDeTelefone(card.telefone).find(
     (v) => v.startsWith("55") && v.length >= 12,
   );
   if (!comPais) return null;
-  return `https://wa.me/${comPais}?text=${encodeURIComponent(card.mensagem)}`;
+  const texto = textoCustom ?? card.mensagem;
+  return `https://wa.me/${comPais}?text=${encodeURIComponent(texto)}`;
 }
 
 export default function PaginaOnda() {
@@ -111,13 +125,15 @@ export default function PaginaOnda() {
   const [feitos, setFeitos] = useState<Record<string, string>>({});
   const [copiado, setCopiado] = useState("");
   const [pulando, setPulando] = useState("");
+  const [toquesSelecionados, setToquesSelecionados] = useState<Record<string, number>>({});
+  const [tamanhoLote, setTamanhoLote] = useState<12 | 25>(12);
 
-  const carregar = useCallback(async () => {
+  const carregar = useCallback(async (tamanho = 12) => {
     setCarregando(true);
     setErro("");
     setRecusa(null);
     try {
-      const res = await fetch("/api/onda");
+      const res = await fetch(`/api/onda?tamanho=${tamanho}`);
       const json = await res.json();
       if (!res.ok) {
         // O servidor manda o motivo e o caminho para resolver. Achatar tudo em
@@ -137,22 +153,28 @@ export default function PaginaOnda() {
   }, []);
 
   useEffect(() => {
-    void carregar();
-  }, [carregar]);
+    void carregar(tamanhoLote);
+  }, [carregar, tamanhoLote]);
 
-  const copiar = async (card: Card) => {
-    await navigator.clipboard.writeText(card.mensagem);
+  const trocarTamanho = (novoTamanho: 12 | 25) => {
+    setTamanhoLote(novoTamanho);
+    void carregar(novoTamanho);
+  };
+
+  const copiar = async (card: Card, texto: string) => {
+    await navigator.clipboard.writeText(texto);
     setCopiado(card.id);
     window.setTimeout(() => setCopiado(""), 1600);
   };
 
   const marcar = async (card: Card, resultado: string, extra: Record<string, unknown> = {}) => {
+    const toqueEfetivo = toquesSelecionados[card.id] ?? card.toque;
     const res = await fetch("/api/onda", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         clienteId: card.clienteId,
-        toque: card.toque,
+        toque: toqueEfetivo,
         esteira: card.esteira,
         resultado,
         ...extra,
@@ -293,6 +315,37 @@ export default function PaginaOnda() {
           {resolvidos} de {total} resolvidos · Leva uns{" "}
           {Math.max(1, Math.round(total * 0.75))} minutos
         </p>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-panel-line bg-panel-card p-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-panel-sub">Volume da Onda</p>
+            <p className="text-xs text-panel-ink">Alterne a quantidade de mensagens para esta semana:</p>
+          </div>
+          <div className="flex gap-1.5">
+            <button
+              type="button"
+              onClick={() => trocarTamanho(12)}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                tamanhoLote === 12
+                  ? "bg-amber text-night shadow-sm"
+                  : "border border-panel-line text-panel-sub hover:text-panel-ink"
+              }`}
+            >
+              12 clientes (~9 min)
+            </button>
+            <button
+              type="button"
+              onClick={() => trocarTamanho(25)}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                tamanhoLote === 25
+                  ? "bg-amber text-night shadow-sm"
+                  : "border border-panel-line text-panel-sub hover:text-panel-ink"
+              }`}
+            >
+              25 clientes (Acelerado)
+            </button>
+          </div>
+        </div>
+
         <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-panel-line">
           <div
             className="h-full bg-amber transition-all"
@@ -357,7 +410,9 @@ export default function PaginaOnda() {
         {onda.cards.map((card) => {
           const feito = feitos[card.id];
           const rotulo = ROTULO_ESTEIRA[card.esteira];
-          const zap = linkDoWhatsApp(card);
+          const toqueAtivo = toquesSelecionados[card.id] ?? card.toque;
+          const texto = textoAtivoDoCard(card, toqueAtivo);
+          const zap = linkDoWhatsApp(card, texto);
 
           return (
             <article
@@ -431,8 +486,44 @@ export default function PaginaOnda() {
                 </div>
               ) : (
                 <>
+                  {/* Seletor de Mensagens */}
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between text-xs text-panel-sub">
+                      <span>Opções de mensagem para esse cliente:</span>
+                      <span className="font-medium text-panel-ink">
+                        {ROTULOS_MENSAGEM[toqueAtivo]?.titulo} ({ROTULOS_MENSAGEM[toqueAtivo]?.desc})
+                      </span>
+                    </div>
+                    <div className="mt-1.5 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                      {[1, 2, 3, 4].map((num) => {
+                        const isRecomendado = card.toque === num;
+                        const isSelecionado = toqueAtivo === num;
+                        return (
+                          <button
+                            key={num}
+                            type="button"
+                            onClick={() => setToquesSelecionados((ts) => ({ ...ts, [card.id]: num }))}
+                            className={`flex flex-col items-center justify-center rounded-lg border px-2 py-1 text-xs transition ${
+                              isSelecionado
+                                ? "border-amber bg-amber/20 font-semibold text-amber-deep shadow-sm"
+                                : "border-panel-line bg-panel-bg text-panel-sub hover:text-panel-ink"
+                            }`}
+                          >
+                            <span className="flex items-center gap-1 font-medium">
+                              {ROTULOS_MENSAGEM[num]?.titulo}
+                              {isRecomendado && (
+                                <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-deep" title="Recomendada pela Nexora" />
+                              )}
+                            </span>
+                            <span className="text-[10px] opacity-75">{ROTULOS_MENSAGEM[num]?.desc}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   <pre className="mt-3 whitespace-pre-wrap rounded-xl border border-panel-line bg-panel-bg p-3 font-sans text-sm text-panel-ink">
-                    {card.mensagem}
+                    {texto}
                   </pre>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {zap && (
@@ -440,14 +531,15 @@ export default function PaginaOnda() {
                         href={zap}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="rounded-lg bg-amber px-3 py-2 text-sm font-semibold text-night"
+                        onClick={() => marcar(card, "AGUARDANDO")}
+                        className="rounded-lg bg-amber px-3 py-2 text-sm font-semibold text-night transition hover:brightness-110"
                       >
                         Abrir conversa no WhatsApp
                       </a>
                     )}
                     <button
                       type="button"
-                      onClick={() => copiar(card)}
+                      onClick={() => copiar(card, texto)}
                       className="rounded-lg border border-panel-line px-3 py-2 text-sm text-panel-ink hover:border-panel-sub"
                     >
                       {copiado === card.id ? "Copiado ✓" : "Copiar mensagem"}

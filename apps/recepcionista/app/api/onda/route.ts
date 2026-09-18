@@ -41,7 +41,7 @@ const marcarSchema = z.object({
     .optional(),
 });
 
-export async function GET() {
+export async function GET(request: Request) {
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
@@ -54,8 +54,12 @@ export async function GET() {
   const barrado = await exigirAcesso(companyId, "GERAR_ONDA");
   if (barrado) return barrado;
 
+  const url = new URL(request.url);
+  const tamanhoParam = Number(url.searchParams.get("tamanho"));
+  const tamanho = tamanhoParam === 25 ? 25 : undefined;
+
   try {
-    const onda = await montarOndaDaSemana(companyId);
+    const onda = await montarOndaDaSemana(companyId, { tamanho });
 
     // OS PENDENTES DA SEMANA PASSADA.
     //
