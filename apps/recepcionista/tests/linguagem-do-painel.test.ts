@@ -31,6 +31,7 @@ const TELAS = [
   "app/painel/clientes/importar/page.tsx",
   "app/painel/onda/page.tsx",
   "app/painel/livro-caixa/page.tsx",
+  "app/painel/agenda/page.tsx",
   // Texto de painel também, e dos mais lidos: o checklist é a primeira coisa
   // que o dono vê ao entrar, e o cartão de retorno é o número que o faz renovar.
   "components/painel/checklist-ativacao.tsx",

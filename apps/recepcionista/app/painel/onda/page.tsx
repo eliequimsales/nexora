@@ -738,6 +738,14 @@ export default function PaginaOnda() {
                       Voltou e pagou {reais(card.ticketMedioCents)}
                     </button>
 
+                    <Link
+                      href="/painel/agenda"
+                      className="rounded-lg border border-panel-line px-3 py-2 text-sm text-panel-ink hover:border-amber/40 hover:text-amber"
+                      title="Abrir a Agenda Inteligente"
+                    >
+                      🗓️ Agendar na agenda
+                    </Link>
+
                     <button
                       type="button"
                       onClick={() => setPulando(card.id)}

@@ -93,7 +93,14 @@ export default async function PainelLayout({ children }: { children: React.React
             </Link>
             <PainelNavDesktop items={NAV} />
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/painel/agenda"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-amber/30 bg-amber/10 px-3 py-1.5 text-xs font-bold text-amber transition hover:bg-amber/20"
+            >
+              <span>🗓️</span>
+              <span>Agenda</span>
+            </Link>
             <span className="hidden text-sm text-panel-sub md:inline">{company.name}</span>
             <LogoutButton />
           </div>
