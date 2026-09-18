@@ -6,6 +6,9 @@ import {
   criarAgendamento,
   concluirAtendimento,
   atualizarStatusAgendamento,
+  obterGradeDoDia,
+  listarProfissionais,
+  salvarProfissionais,
 } from "@/lib/agenda/painel";
 import { classificar } from "@/lib/recuperacao/esteiras";
 import { calcularCiclo } from "@/lib/recuperacao/ciclo";
@@ -37,6 +40,10 @@ vi.mock("@/lib/db", () => {
     },
     company: {
       findUnique: vi.fn(),
+    },
+    companyProfile: {
+      findUnique: vi.fn(),
+      upsert: vi.fn(),
     },
     $transaction: vi.fn(async (cb) => cb(db)),
   };
@@ -286,4 +293,89 @@ describe("Fase 3: Agenda Inteligente da Nexora", () => {
       expect(classificacao.diasAlemDoCiclo).toBeGreaterThan(0);
     });
   });
+
+  describe("Grade Multi-Profissionais e Gestão de Equipe", () => {
+    it("lista profissionais padrão quando não houver equipe customizada salva", async () => {
+      (prisma.companyProfile.findUnique as any).mockResolvedValueOnce(null);
+
+      const equipe = await listarProfissionais("comp_1");
+      expect(equipe.length).toBeGreaterThanOrEqual(2);
+      expect(equipe.map((p) => p.nome)).toContain("Breno Silva");
+      expect(equipe.map((p) => p.nome)).toContain("Thiago Barber");
+    });
+
+    it("salva equipe personalizada no perfil da empresa", async () => {
+      const novaEquipe = [
+        { id: "p1", nome: "Lucas Barbeiro", cargo: "Master" },
+        { id: "p2", nome: "Rafael Barber", cargo: "Barbeiro" },
+      ];
+
+      (prisma.companyProfile.upsert as any).mockResolvedValueOnce({});
+
+      const res = await salvarProfissionais("comp_1", novaEquipe);
+      expect(res).toEqual(novaEquipe);
+      expect(prisma.companyProfile.upsert).toHaveBeenCalledWith({
+        where: { companyId: "comp_1" },
+        create: { companyId: "comp_1", serviceRules: JSON.stringify(novaEquipe) },
+        update: { serviceRules: JSON.stringify(novaEquipe) },
+      });
+    });
+
+    it("obterGradeDoDia gera 48 intervalos de 15 minutos e organiza atendimentos por profissional", async () => {
+      (prisma.companyProfile.findUnique as any).mockResolvedValueOnce(null);
+      (prisma.company.findUnique as any).mockResolvedValueOnce({
+        id: "comp_1",
+        name: "Barber Club",
+        slug: "barber-club",
+        profile: { segments: ["barbearia"] },
+      });
+
+      const appointmentStarts = instanteLocalParaUtc("2026-06-15", "14:30");
+      const appointmentEnds = new Date(appointmentStarts.getTime() + 30 * 60 * 1000);
+
+      (prisma.appointment.findMany as any).mockResolvedValueOnce([
+        {
+          id: "app_matheus",
+          companyId: "comp_1",
+          customerId: "cli_matheus",
+          startsAt: appointmentStarts,
+          endsAt: appointmentEnds,
+          status: "MARCADO",
+          source: "PAINEL",
+          notes: JSON.stringify({ profissional: "Breno Silva", observacoes: "Barba alinhada" }),
+          customer: {
+            id: "cli_matheus",
+            name: "Matheus Mazella",
+            phone: "11999998888",
+            notes: "",
+            optOut: false,
+            visits: [],
+          },
+          service: {
+            id: "srv_barba",
+            name: "Barba",
+            durationMin: 30,
+            priceCents: 3000,
+          },
+        },
+      ]);
+
+      const grade = await obterGradeDoDia("comp_1", "2026-06-15");
+
+      // Deve cobrir das 08:00 até 20:00 (intervalos de 15 min = 49 slots de 08:00 a 20:00 inclusivos)
+      expect(grade.slotsHorario).toContain("08:00");
+      expect(grade.slotsHorario).toContain("12:45");
+      expect(grade.slotsHorario).toContain("13:45");
+      expect(grade.slotsHorario).toContain("14:30");
+      expect(grade.slotsHorario).toContain("20:00");
+
+      // Mapa grade deve conter Matheus Mazella às 14:30 para Breno Silva
+      expect(grade.mapaGrade["14:30"]).toBeDefined();
+      expect(grade.mapaGrade["14:30"]["Breno Silva"]).toBeDefined();
+      expect(grade.mapaGrade["14:30"]["Breno Silva"].nome).toBe("Matheus Mazella");
+      expect(grade.mapaGrade["14:30"]["Breno Silva"].servicoNome).toBe("Barba");
+      expect(grade.mapaGrade["14:30"]["Breno Silva"].valorCents).toBe(3000);
+    });
+  });
 });
+

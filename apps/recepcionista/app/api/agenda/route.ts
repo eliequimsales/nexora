@@ -8,9 +8,11 @@ import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 import {
   criarAgendamento,
   formatarDataLocal,
-  listarAgendamentos,
   listarServicos,
+  obterGradeDoDia,
   obterResumoDaAgenda,
+  salvarProfissionais,
+  type Profissional,
 } from "@/lib/agenda/painel";
 
 export const dynamic = "force-dynamic";
@@ -28,13 +30,24 @@ const agendamentoSchema = z.object({
   data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida (formato YYYY-MM-DD)"),
   hora: z.string().regex(/^\d{2}:\d{2}$/, "Horário inválido (formato HH:MM)"),
   duracaoMin: z.number().int().positive().max(720).optional(),
+  profissionalNome: z.string().trim().max(80).optional().nullable(),
   observacoes: z.string().max(500).optional(),
   jaAtendido: z.boolean().optional(),
 });
 
+const profissionaisSchema = z.object({
+  profissionais: z.array(
+    z.object({
+      id: z.string().min(1),
+      nome: z.string().trim().min(1).max(80),
+      cargo: z.string().trim().max(50),
+    }),
+  ),
+});
+
 /**
  * GET /api/agenda
- * Retorna os agendamentos e métricas da data solicitada (ou de hoje).
+ * Retorna a grade completa de horários por profissionais, métricas e serviços.
  */
 export async function GET(request: Request) {
   const companyId = await getSessionCompanyId();
@@ -59,8 +72,8 @@ export async function GET(request: Request) {
       select: { slug: true, name: true },
     });
 
-    const [agendamentos, resumo, servicos] = await Promise.all([
-      listarAgendamentos(companyId, { data: dataSelecionada }),
+    const [grade, resumo, servicos] = await Promise.all([
+      obterGradeDoDia(companyId, dataSelecionada),
       obterResumoDaAgenda(companyId, dataSelecionada),
       listarServicos(companyId),
     ]);
@@ -71,7 +84,9 @@ export async function GET(request: Request) {
     return NextResponse.json({
       ok: true,
       data: dataSelecionada,
-      agendamentos,
+      grade,
+      profissionais: grade.profissionais,
+      agendamentos: grade.agendamentos,
       resumo,
       servicos,
       empresaNome: empresa?.name,
@@ -86,7 +101,7 @@ export async function GET(request: Request) {
 
 /**
  * POST /api/agenda
- * Cria um novo agendamento, auto-cadastrando o cliente caso ele ainda não exista.
+ * Cria um novo agendamento ou atualiza os profissionais da equipe.
  */
 export async function POST(request: Request) {
   const companyId = await getSessionCompanyId();
@@ -100,6 +115,17 @@ export async function POST(request: Request) {
 
   try {
     const json = await request.json();
+
+    // Se a requisição for para salvar a equipe de profissionais:
+    if (json.acao === "salvar_profissionais") {
+      const parsedProf = profissionaisSchema.safeParse(json);
+      if (!parsedProf.success) {
+        return NextResponse.json({ error: "Lista de profissionais inválida" }, { status: 400 });
+      }
+      const salvos = await salvarProfissionais(companyId, parsedProf.data.profissionais);
+      return NextResponse.json({ ok: true, profissionais: salvos });
+    }
+
     const parsed = agendamentoSchema.safeParse(json);
     if (!parsed.success) {
       return NextResponse.json(

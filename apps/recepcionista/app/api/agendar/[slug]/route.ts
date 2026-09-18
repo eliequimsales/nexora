@@ -8,6 +8,7 @@ import { respostaDeLimite } from "@/lib/limites";
 import { entradaPorLink } from "@/lib/agenda/entrada-publica";
 import { hashTelefone } from "@/lib/dados/excluir";
 import { ehConflitoDeConcorrencia } from "@/lib/agenda/concorrencia";
+import { listarProfissionais } from "@/lib/agenda/painel";
 
 /** Sinaliza, de dentro da transação, que o horário foi ocupado no caminho. */
 class ConflitoDeHorario extends Error {}
@@ -41,6 +42,7 @@ const agendarSchema = z.object({
   dia: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida"),
   // "09:30"
   hora: z.string().regex(/^\d{2}:\d{2}$/, "Horário inválido"),
+  profissional: z.string().trim().max(80).optional(),
 });
 
 async function carregarNegocio(slug: string) {
@@ -59,9 +61,20 @@ async function carregarNegocio(slug: string) {
   });
 }
 
+const HORARIOS_PADRAO: Horario[] = [
+  { day: 1, open: "08:00", close: "20:00" },
+  { day: 2, open: "08:00", close: "20:00" },
+  { day: 3, open: "08:00", close: "20:00" },
+  { day: 4, open: "08:00", close: "20:00" },
+  { day: 5, open: "08:00", close: "20:00" },
+  { day: 6, open: "08:00", close: "19:00" },
+];
+
 function horariosDoPerfil(businessHours: unknown): Horario[] {
-  if (!Array.isArray(businessHours)) return [];
-  return businessHours as Horario[];
+  if (Array.isArray(businessHours) && businessHours.length > 0) {
+    return businessHours as Horario[];
+  }
+  return HORARIOS_PADRAO;
 }
 
 /** Datas dos próximos dias, à meia-noite UTC, como o motor de slots espera. */
@@ -137,10 +150,13 @@ export async function GET(
       }))
       .filter((d) => d.horas.length > 0);
 
+    const profissionais = await listarProfissionais(negocio.id);
+
     return NextResponse.json({
       negocio: { nome: negocio.name, endereco: negocio.profile?.address ?? "" },
       servicos: negocio.services,
       servicoSelecionado: servico.id,
+      profissionais,
       dias: agenda,
     });
   } catch (error) {
@@ -292,6 +308,9 @@ export async function POST(
               startsAt,
               endsAt,
               source: "LINK",
+              notes: JSON.stringify({
+                profissional: parsed.data.profissional || "Breno Silva",
+              }),
             },
           });
         },
@@ -315,6 +334,7 @@ export async function POST(
         confirmacao: {
           negocio: negocio.name,
           servico: servico.name,
+          profissional: parsed.data.profissional || "Breno Silva",
           dia,
           hora,
         },

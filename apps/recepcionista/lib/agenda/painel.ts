@@ -6,6 +6,17 @@ import { variantesDeTelefone } from "@/lib/recuperacao/telefone";
 const MIN_MS = 60 * 1000;
 const OFFSET_BRASILIA = -180; // UTC-3 em minutos
 
+export type Profissional = {
+  id: string;
+  nome: string;
+  cargo: string;
+};
+
+export const PROFISSIONAIS_PADRAO: Profissional[] = [
+  { id: "prof_1", nome: "Breno Silva", cargo: "Barbeiro" },
+  { id: "prof_2", nome: "Thiago Barber", cargo: "Barbeiro" },
+];
+
 /**
  * Converte data (YYYY-MM-DD) e hora (HH:MM) local em instante Date UTC.
  */
@@ -40,6 +51,45 @@ export function formatarDataLocal(d: Date, offsetMin = OFFSET_BRASILIA): string 
   return `${ano}-${mes}-${dia}`;
 }
 
+/**
+ * Lista os profissionais da equipe da empresa.
+ */
+export async function listarProfissionais(companyId: string): Promise<Profissional[]> {
+  try {
+    const profile = await prisma.companyProfile.findUnique({
+      where: { companyId },
+      select: { serviceRules: true },
+    });
+
+    if (profile?.serviceRules && profile.serviceRules.startsWith("[")) {
+      const parsed = JSON.parse(profile.serviceRules);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed as Profissional[];
+      }
+    }
+  } catch {
+    // fallback
+  }
+
+  return PROFISSIONAIS_PADRAO;
+}
+
+/**
+ * Salva a lista de profissionais da equipe da empresa.
+ */
+export async function salvarProfissionais(
+  companyId: string,
+  profissionais: Profissional[],
+): Promise<Profissional[]> {
+  const payload = JSON.stringify(profissionais);
+  await prisma.companyProfile.upsert({
+    where: { companyId },
+    create: { companyId, serviceRules: payload },
+    update: { serviceRules: payload },
+  });
+  return profissionais;
+}
+
 export type CriarAgendamentoInput = {
   nome: string;
   telefone: string;
@@ -49,6 +99,7 @@ export type CriarAgendamentoInput = {
   data: string; // YYYY-MM-DD
   hora: string; // HH:MM
   duracaoMin?: number;
+  profissionalNome?: string | null;
   observacoes?: string;
   jaAtendido?: boolean;
 };
@@ -71,6 +122,14 @@ export async function criarAgendamento(companyId: string, input: CriarAgendament
 
   const startsAt = instanteLocalParaUtc(input.data, input.hora);
   const endsAt = new Date(startsAt.getTime() + duracao * MIN_MS);
+
+  const profissional = input.profissionalNome?.trim() || "Breno Silva";
+
+  // Serializa profissional e observações no campo notes de forma segura
+  const payloadNotes = JSON.stringify({
+    profissional,
+    observacoes: input.observacoes?.trim() || "",
+  });
 
   return prisma.$transaction(async (tx) => {
     // 1. Busca cliente por qualquer variante de telefone
@@ -119,7 +178,6 @@ export async function criarAgendamento(companyId: string, input: CriarAgendament
         if (!valorCents) valorCents = servicoDb.priceCents;
       }
     } else if (serviceName) {
-      // Tenta achar serviço pelo nome exato ou cria um serviço padrão
       const existente = await tx.service.findFirst({
         where: { companyId, name: { equals: serviceName, mode: "insensitive" } },
         select: { id: true, priceCents: true },
@@ -153,7 +211,7 @@ export async function criarAgendamento(companyId: string, input: CriarAgendament
         endsAt,
         status: statusInicial,
         source: "PAINEL",
-        notes: input.observacoes ?? "",
+        notes: payloadNotes,
       },
       include: {
         customer: { select: { id: true, name: true, phone: true } },
@@ -307,7 +365,6 @@ export async function listarAgendamentos(
     inicioRange = opcoes.inicio;
     fimRange = opcoes.fim;
   } else {
-    // Padrão: hoje
     const hojeStr = formatarDataLocal(new Date());
     inicioRange = instanteLocalParaUtc(hojeStr, "00:00");
     fimRange = instanteLocalParaUtc(hojeStr, "23:59");
@@ -349,6 +406,19 @@ export async function listarAgendamentos(
     const horaInicio = formatarHoraLocal(ag.startsAt);
     const horaFim = formatarHoraLocal(ag.endsAt);
 
+    let profissional = "Breno Silva";
+    let observacoes = ag.notes;
+
+    if (ag.notes && ag.notes.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(ag.notes);
+        if (parsed.profissional) profissional = parsed.profissional;
+        if (parsed.observacoes !== undefined) observacoes = parsed.observacoes;
+      } catch {
+        // mantém texto bruto
+      }
+    }
+
     return {
       id: ag.id,
       clienteId: ag.customer.id,
@@ -362,15 +432,56 @@ export async function listarAgendamentos(
       horaInicio,
       horaFim,
       horarioFormatado: `${horaInicio} - ${horaFim}`,
+      profissional,
       status: ag.status,
       source: ag.source,
-      observacoes: ag.notes,
+      observacoes,
       historicoVisitas: visitas.length,
       cicloDias: ciclo.dias,
       cicloConfianca: ciclo.confianca,
       proximoRetornoEsperado: proximoEsperado ? formatarDataLocal(proximoEsperado) : null,
     };
   });
+}
+
+/**
+ * Monta a grade horária em colunas (exatamente como na imagem de referência).
+ * - Linhas: horários das 08:00 às 20:00 (em passos de 15 minutos).
+ * - Colunas: profissionais da equipe (ex: Breno Silva, Thiago Barber).
+ * - Células: agendamentos alocados ou slots livres com "+".
+ */
+export async function obterGradeDoDia(companyId: string, dataStr: string) {
+  const [profissionais, agendamentos] = await Promise.all([
+    listarProfissionais(companyId),
+    listarAgendamentos(companyId, { data: dataStr }),
+  ]);
+
+  // Gera horários das 08:00 até 20:00 com intervalos de 15 minutos (48 slots)
+  const slotsHorario: string[] = [];
+  for (let h = 8; h <= 20; h++) {
+    for (let m = 0; m < 60; m += 15) {
+      if (h === 20 && m > 0) break;
+      const hh = String(h).padStart(2, "0");
+      const mm = String(m).padStart(2, "0");
+      slotsHorario.push(`${hh}:${mm}`);
+    }
+  }
+
+  // Agrupa agendamentos por [horario][profissional]
+  const mapaGrade: Record<string, Record<string, any>> = {};
+  for (const ag of agendamentos) {
+    if (ag.status === "CANCELADO") continue;
+    if (!mapaGrade[ag.horaInicio]) mapaGrade[ag.horaInicio] = {};
+    mapaGrade[ag.horaInicio][ag.profissional] = ag;
+  }
+
+  return {
+    data: dataStr,
+    profissionais,
+    slotsHorario,
+    mapaGrade,
+    agendamentos,
+  };
 }
 
 /**
