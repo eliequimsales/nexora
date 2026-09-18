@@ -106,6 +106,20 @@ function formatarTelefone(telefone: string): string {
   return telefone;
 }
 
+const HORARIOS_SELECAO = [
+  "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+  "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30",
+  "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00",
+];
+
+function ajustarHorario(horaAtual: string, deltaMinutos: number): string {
+  const [h, m] = (horaAtual || "09:00").split(":").map(Number);
+  const total = Math.max(0, Math.min(23 * 60 + 59, (isNaN(h) ? 9 : h) * 60 + (isNaN(m) ? 0 : m) + deltaMinutos));
+  const novoH = String(Math.floor(total / 60)).padStart(2, "0");
+  const novoM = String(total % 60).padStart(2, "0");
+  return `${novoH}:${novoM}`;
+}
+
 export default function PaginaAgenda() {
   const [dataSelecionada, setDataSelecionada] = useState<string>(dataHojeIso());
   const [grade, setGrade] = useState<GradeDoDia | null>(null);
@@ -128,10 +142,7 @@ export default function PaginaAgenda() {
   const [formProfissional, setFormProfissional] = useState<string>("");
   const [formServicoId, setFormServicoId] = useState<string>("");
   const [formServicoNome, setFormServicoNome] = useState<string>("");
-  const [formValor, setFormValor] = useState<string>("");
   const [formHora, setFormHora] = useState<string>("09:00");
-  const [formDuracaoMin, setFormDuracaoMin] = useState<number>(30);
-  const [formJaAtendido, setFormJaAtendido] = useState<boolean>(false);
   const [formObservacoes, setFormObservacoes] = useState<string>("");
 
   // Modal Detalhes do Agendamento
@@ -214,9 +225,6 @@ export default function PaginaAgenda() {
     setFormTelefone("");
     setFormServicoId("");
     setFormServicoNome("");
-    setFormValor("");
-    setFormDuracaoMin(30);
-    setFormJaAtendido(false);
     setFormObservacoes("");
     setModalAberto(true);
   };
@@ -280,9 +288,13 @@ export default function PaginaAgenda() {
     setSalvando(true);
     try {
       let valorCents = 0;
-      if (formValor.trim()) {
-        const limpo = formValor.replace(/[^\d,.]/g, "").replace(",", ".");
-        valorCents = Math.round(parseFloat(limpo) * 100) || 0;
+      let duracaoMin = 30;
+      if (formServicoId) {
+        const s = servicos.find((item) => item.id === formServicoId);
+        if (s) {
+          valorCents = s.priceCents;
+          duracaoMin = s.durationMin || 30;
+        }
       }
 
       const profNome = formProfissional.trim() || profissionaisExibidos[0]?.nome || "Breno Silva";
@@ -298,10 +310,10 @@ export default function PaginaAgenda() {
           valorCents,
           data: dataSelecionada,
           hora: formHora,
-          duracaoMin: formDuracaoMin,
+          duracaoMin,
           profissionalNome: profNome,
           observacoes: formObservacoes.trim() || undefined,
-          jaAtendido: formJaAtendido,
+          jaAtendido: true,
         }),
       });
 
@@ -311,7 +323,7 @@ export default function PaginaAgenda() {
         return;
       }
 
-      setFeedbackAcao(data.mensagem || "Atendimento agendado com sucesso!");
+      setFeedbackAcao(data.mensagem || "Atendimento registrado e cliente sob radar!");
       setTimeout(() => setFeedbackAcao(""), 4500);
 
       // Reset form
@@ -319,10 +331,7 @@ export default function PaginaAgenda() {
       setFormTelefone("");
       setFormServicoId("");
       setFormServicoNome("");
-      setFormValor("");
       setFormHora("09:00");
-      setFormDuracaoMin(30);
-      setFormJaAtendido(false);
       setFormObservacoes("");
       setModalAberto(false);
 
@@ -1171,85 +1180,88 @@ export default function PaginaAgenda() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5">
-                <div>
-                  <label className="block text-xs font-medium text-panel-sub">
-                    Serviço
-                  </label>
-                  {servicos.length > 0 ? (
-                    <select
-                      value={formServicoId}
-                      onChange={(e) => {
-                        const id = e.target.value;
-                        setFormServicoId(id);
-                        const s = servicos.find((item) => item.id === id);
-                        if (s) {
-                          setFormServicoNome(s.name);
-                          setFormValor((s.priceCents / 100).toFixed(2));
-                          setFormDuracaoMin(s.durationMin);
-                        }
-                      }}
-                      className="mt-1 w-full rounded-xl border border-panel-line bg-panel-bg px-3 py-2 text-xs text-panel-ink focus:border-amber focus:outline-none"
-                    >
-                      <option value="">Selecionar serviço...</option>
-                      {servicos.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name} ({formatarEmReais(s.priceCents)})
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      type="text"
-                      placeholder="Ex: Corte e Barba"
-                      value={formServicoNome}
-                      onChange={(e) => setFormServicoNome(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-panel-line bg-panel-bg px-3 py-2 text-xs text-panel-ink placeholder:text-panel-sub/50 focus:border-amber focus:outline-none"
-                    />
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-panel-sub">
-                    Valor (R$)
-                  </label>
+              <div>
+                <label className="block text-xs font-medium text-panel-sub">
+                  Serviço (opcional)
+                </label>
+                {servicos.length > 0 ? (
+                  <select
+                    value={formServicoId}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      setFormServicoId(id);
+                      const s = servicos.find((item) => item.id === id);
+                      if (s) {
+                        setFormServicoNome(s.name);
+                      }
+                    }}
+                    className="mt-1 w-full rounded-xl border border-panel-line bg-panel-bg px-3.5 py-2 text-xs text-panel-ink focus:border-amber focus:outline-none"
+                  >
+                    <option value="">Selecionar serviço (opcional)...</option>
+                    {servicos.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
                   <input
                     type="text"
-                    placeholder="Ex: 60,00"
-                    value={formValor}
-                    onChange={(e) => setFormValor(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-panel-line bg-panel-bg px-3 py-2 text-xs text-panel-ink placeholder:text-panel-sub/50 focus:border-amber focus:outline-none"
+                    placeholder="Nome do serviço"
+                    value={formServicoNome}
+                    onChange={(e) => setFormServicoNome(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-panel-line bg-panel-bg px-3.5 py-2 text-xs text-panel-ink placeholder:text-panel-sub/50 focus:border-amber focus:outline-none"
                   />
-                </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5">
-                <div>
+              {/* Seletor de Horário Clicável Mobile-First */}
+              <div>
+                <div className="flex items-center justify-between">
                   <label className="block text-xs font-medium text-panel-sub">
-                    Horário de início *
+                    Horário do atendimento *
                   </label>
-                  <input
-                    type="time"
-                    required
-                    value={formHora}
-                    onChange={(e) => setFormHora(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-panel-line bg-panel-bg px-3 py-2 text-xs text-panel-ink focus:border-amber focus:outline-none"
-                  />
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setFormHora((prev) => ajustarHorario(prev, -15))}
+                      className="rounded-lg border border-panel-line bg-panel-bg px-2 py-0.5 text-xs font-bold text-panel-ink hover:border-amber/40 hover:text-amber transition"
+                      title="Voltar 15 minutos"
+                    >
+                      -15m
+                    </button>
+                    <span className="rounded-lg bg-amber px-2.5 py-0.5 font-mono text-xs font-bold text-night shadow-sm">
+                      {formHora}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setFormHora((prev) => ajustarHorario(prev, 15))}
+                      className="rounded-lg border border-panel-line bg-panel-bg px-2 py-0.5 text-xs font-bold text-panel-ink hover:border-amber/40 hover:text-amber transition"
+                      title="Avançar 15 minutos"
+                    >
+                      +15m
+                    </button>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-panel-sub">
-                    Duração (minutos)
-                  </label>
-                  <input
-                    type="number"
-                    min={5}
-                    max={360}
-                    step={5}
-                    value={formDuracaoMin}
-                    onChange={(e) => setFormDuracaoMin(Number(e.target.value))}
-                    className="mt-1 w-full rounded-xl border border-panel-line bg-panel-bg px-3 py-2 text-xs text-panel-ink focus:border-amber focus:outline-none"
-                  />
+                <div className="mt-2 grid grid-cols-4 sm:grid-cols-6 gap-1.5 max-h-28 overflow-y-auto p-1.5 rounded-xl border border-panel-line bg-panel-bg">
+                  {HORARIOS_SELECAO.map((h) => {
+                    const ativo = formHora === h;
+                    return (
+                      <button
+                        key={h}
+                        type="button"
+                        onClick={() => setFormHora(h)}
+                        className={`rounded-lg py-1.5 text-center font-mono text-xs transition ${
+                          ativo
+                            ? "bg-amber text-night font-bold shadow-sm"
+                            : "bg-panel-card border border-panel-line/60 text-panel-sub hover:border-amber/40 hover:text-panel-ink"
+                        }`}
+                      >
+                        {h}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1259,30 +1271,21 @@ export default function PaginaAgenda() {
                 </label>
                 <input
                   type="text"
-                  placeholder="Ex: Preferência com tesoura"
+                  placeholder="Alguma anotação sobre o atendimento"
                   value={formObservacoes}
                   onChange={(e) => setFormObservacoes(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-panel-line bg-panel-bg px-3 py-2 text-xs text-panel-ink placeholder:text-panel-sub/50 focus:border-amber focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-panel-line bg-panel-bg px-3.5 py-2 text-xs text-panel-ink placeholder:text-panel-sub/50 focus:border-amber focus:outline-none"
                 />
               </div>
 
-              {/* Checkbox Atendimento Já Realizado */}
-              <div className="rounded-xl border border-panel-line bg-panel-card p-3">
-                <label className="flex items-start gap-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formJaAtendido}
-                    onChange={(e) => setFormJaAtendido(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-panel-line bg-panel-bg text-amber focus:ring-amber"
-                  />
-                  <span className="text-xs text-panel-ink">
-                    <strong>Atendimento já realizado?</strong>
-                    <span className="block text-[11px] text-panel-sub mt-0.5">
-                      Registra a visita e o valor imediatamente no seu caixa, e coloca o cliente sob
-                      monitoramento de retorno da Nexora.
-                    </span>
-                  </span>
-                </label>
+              {/* Registro Automático e Monitoramento Ativo (Sem Checkbox) */}
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300 flex items-start gap-2.5">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[11px] mt-0.5">
+                  ✓
+                </span>
+                <span className="leading-snug">
+                  <strong>Atendimento ativo e monitorado:</strong> a visita é registrada automaticamente no seu caixa e a Nexora acompanha o retorno deste cliente.
+                </span>
               </div>
 
               <div className="flex items-center justify-end gap-2.5 pt-2">

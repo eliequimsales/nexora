@@ -319,11 +319,6 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
               </span>
               <span>Escolha o Serviço</span>
             </h2>
-            {servicoAtual && (
-              <span className="text-xs font-bold text-amber-400">
-                {reais(servicoAtual.priceCents)}
-              </span>
-            )}
           </div>
 
           <div className="grid gap-2 sm:grid-cols-2">
@@ -342,14 +337,12 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
                 >
                   <div className="w-full flex items-center justify-between">
                     <span className="font-semibold text-sm text-white">{s.name}</span>
-                    <span className="font-mono text-xs font-bold text-amber-400">
-                      {reais(s.priceCents)}
-                    </span>
+                    {selecionado ? (
+                      <span className="text-[11px] font-bold text-amber-400">
+                        Selecionado ✓
+                      </span>
+                    ) : null}
                   </div>
-                  <span className="text-[11px] text-neutral-400 mt-2 flex items-center gap-1">
-                    <span>⏱️</span>
-                    <span>{s.durationMin} minutos</span>
-                  </span>
                 </button>
               );
             })}
