@@ -5,6 +5,7 @@ import { deveSilenciar, MOTIVOS_PULO, rotuloDoMotivo } from "@/lib/recuperacao/p
 import { variantesDeTelefone } from "@/lib/recuperacao/telefone";
 import { NOME_DA_ESTEIRA } from "@/lib/recuperacao/esteiras";
 import { CartaoDaOferta } from "@/components/cobranca/cartao-da-oferta";
+import { ModalConectarWhatsApp } from "@/components/painel/modal-conectar-whatsapp";
 
 /**
  * A ONDA DE SEGUNDA
@@ -128,6 +129,30 @@ export default function PaginaOnda() {
   const [toquesSelecionados, setToquesSelecionados] = useState<Record<string, number>>({});
   const [tamanhoLote, setTamanhoLote] = useState<12 | 25>(12);
 
+  // Conexão direta do WhatsApp
+  const [statusWhatsApp, setStatusWhatsApp] = useState<string>("DESLIGADO");
+  const [modalWhatsAppAberto, setModalWhatsAppAberto] = useState(false);
+  const [enviandoDireto, setEnviandoDireto] = useState<string | null>(null);
+  const [disparandoLote, setDisparandoLote] = useState(false);
+  const [progressoLote, setProgressoLote] = useState<{ atual: number; total: number }>({ atual: 0, total: 0 });
+
+  const checarWhatsApp = useCallback(async () => {
+    try {
+      const res = await fetch("/api/whatsapp/status");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.state?.status) {
+        setStatusWhatsApp(data.state.status);
+      }
+    } catch {
+      // Falhas silenciosas de rede
+    }
+  }, []);
+
+  useEffect(() => {
+    void checarWhatsApp();
+  }, [checarWhatsApp]);
+
   const carregar = useCallback(async (tamanho = 12) => {
     setCarregando(true);
     setErro("");
@@ -185,6 +210,60 @@ export default function PaginaOnda() {
       setFeitos((f) => ({ ...f, [card.id]: json.efeito }));
       setPulando("");
     }
+  };
+
+  /** Dispara a mensagem diretamente pelo WhatsApp conectado da empresa */
+  const enviarDireto = async (card: Card) => {
+    const toqueEfetivo = toquesSelecionados[card.id] ?? card.toque;
+    const textoEfetivo = textoAtivoDoCard(card, toqueEfetivo);
+    setEnviandoDireto(card.id);
+    try {
+      const res = await fetch("/api/onda/enviar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clienteId: card.clienteId,
+          toque: toqueEfetivo,
+          esteira: card.esteira,
+          mensagem: textoEfetivo,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        if (json.precisaConectar) {
+          setModalWhatsAppAberto(true);
+        } else {
+          alert(json.error ?? "Não consegui enviar a mensagem agora. Tente novamente.");
+        }
+        return;
+      }
+      setFeitos((f) => ({ ...f, [card.id]: json.efeito }));
+    } catch {
+      alert("Falha de conexão ao enviar a mensagem. Verifique sua internet.");
+    } finally {
+      setEnviandoDireto(null);
+    }
+  };
+
+  /** Disparo sequencial dos clientes restantes com pausa de segurança */
+  const dispararLoteRestante = async () => {
+    if (!onda) return;
+    const pendentes = onda.cards.filter((c) => !feitos[c.id]);
+    if (pendentes.length === 0) return;
+
+    setDisparandoLote(true);
+    setProgressoLote({ atual: 0, total: pendentes.length });
+
+    for (let i = 0; i < pendentes.length; i++) {
+      const card = pendentes[i];
+      setProgressoLote({ atual: i + 1, total: pendentes.length });
+      await enviarDireto(card);
+      // Pausa segura de 2,5 segundos entre envios para proteção do WhatsApp
+      if (i < pendentes.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 2500));
+      }
+    }
+    setDisparandoLote(false);
   };
 
   /**
@@ -248,6 +327,8 @@ export default function PaginaOnda() {
 
   const resolvidos = Object.keys(feitos).length;
   const total = onda.cards.length;
+  const restantes = total - resolvidos;
+  const whatsappLigado = statusWhatsApp === "CONNECTED";
 
   // Tela vazia honesta: encher a lista com cliente marginal mata a confiança na
   // primeira mensagem que o dono manda para alguém que esteve lá semana
@@ -258,122 +339,163 @@ export default function PaginaOnda() {
       <main className="max-w-2xl p-6">
         <h1 className="mb-2 font-display text-2xl text-panel-ink">Reativar clientes</h1>
         <div className="rounded-2xl border border-panel-line bg-panel-card p-6">
-          <p className="mb-2 font-medium text-panel-ink">
-            {vazio?.titulo ?? "Hoje você não precisa abrir"}
+          <p className="font-semibold text-panel-ink">
+            {vazio?.titulo ?? "Nenhum cliente para chamar agora."}
           </p>
-          <p className="text-sm text-panel-sub">
+          <p className="mt-2 text-sm leading-relaxed text-panel-sub">
             {vazio?.explicacao ??
-              "Ninguém da sua lista está atrasado o suficiente para valer uma mensagem esta semana."}
+              "Sua lista está em dia. Quando alguém passar do tempo de voltar, aparece aqui."}
           </p>
-          <a
-            href={vazio?.acao.href ?? "/painel/clientes/importar"}
-            className="mt-5 inline-flex rounded-xl bg-amber px-5 py-3 text-sm font-semibold text-night transition hover:brightness-110"
-          >
-            {vazio?.acao.texto ?? "Trazer meus clientes"}
-          </a>
+          {vazio?.acao && (
+            <a
+              href={vazio.acao.href}
+              className="mt-4 inline-block rounded-xl bg-amber px-4 py-2 text-sm font-semibold text-night transition hover:brightness-110"
+            >
+              {vazio.acao.texto}
+            </a>
+          )}
         </div>
       </main>
     );
   }
 
   return (
-    <main className="max-w-2xl space-y-4 p-4 sm:p-6">
+    <main className="max-w-3xl space-y-6 p-6">
+      {/* Modal de Conexão do WhatsApp */}
+      <ModalConectarWhatsApp
+        aberto={modalWhatsAppAberto}
+        aoFechar={() => setModalWhatsAppAberto(false)}
+        aoConectar={() => {
+          setStatusWhatsApp("CONNECTED");
+          setModalWhatsAppAberto(false);
+        }}
+      />
+
       {vindoDoDiagnostico && (
-        <div className="rounded-2xl border border-panel-line bg-panel-card p-5">
-          <p className="font-display text-panel-ink">
-            Sua lista entrou inteira. Não precisa colar de novo.
+        <div className="rounded-2xl border border-amber/40 bg-amber/10 p-4">
+          <p className="font-semibold text-panel-ink">
+            Aqui estão os primeiros {total} clientes que o diagnóstico encontrou.
           </p>
-          <p className="mt-2 text-sm text-panel-sub">
-            Aqueles clientes que você viu na tela anterior estão aqui embaixo, com a
-            mensagem já escrita para cada um. Comece mandando para três — leva dois
-            minutos e você já sente se funciona.
+          <p className="mt-1 text-sm text-panel-sub">
+            A mensagem já está escrita com o que cada um costuma fazer aí. Você pode enviar
+            direto pelo seu WhatsApp com 1 clique ou abrir a conversa.
           </p>
         </div>
       )}
 
-      <header>
-        <h1 className="font-display text-2xl text-panel-ink">
-          Reativar clientes — {total} clientes
-        </h1>
-        {/*
-          A frase que explica a tela antes de o dono precisar saber o nome dela.
-          Diz "passou do tempo que ele mesmo costuma demorar" e não "mais de 30
-          dias" porque a conta é por pessoa: quem corta o cabelo a cada 24 dias
-          entra aqui antes dos 30, e quem vai ao salão a cada 45 não entra aos
-          31. Prometer um número redondo seria mais bonito e seria falso.
-        */}
-        <p className="mt-1 text-sm leading-relaxed text-panel-sub">
-          Estes clientes já compraram de você e pararam de voltar — cada um já passou do
-          tempo que ele mesmo costuma demorar. A Nexora já escreveu a mensagem para chamar
-          cada um de volta.
-        </p>
-        <p className="mt-2 text-sm text-panel-sub">
-          {reais(onda.totalEmJogoCents)} é o que essas pessoas costumam gastar juntas. É o
-          tamanho do que dá para recuperar — não é promessa.
-        </p>
-        <p className="mt-1 text-sm tabular-nums text-panel-sub">
-          {resolvidos} de {total} resolvidos · Leva uns{" "}
-          {Math.max(1, Math.round(total * 0.75))} minutos
-        </p>
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-panel-line bg-panel-card p-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-panel-sub">Volume da Onda</p>
-            <p className="text-xs text-panel-ink">Alterne a quantidade de mensagens para esta semana:</p>
-          </div>
-          <div className="flex gap-1.5">
-            <button
-              type="button"
-              onClick={() => trocarTamanho(12)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                tamanhoLote === 12
-                  ? "bg-amber text-night shadow-sm"
-                  : "border border-panel-line text-panel-sub hover:text-panel-ink"
-              }`}
-            >
-              12 clientes (~9 min)
-            </button>
-            <button
-              type="button"
-              onClick={() => trocarTamanho(25)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                tamanhoLote === 25
-                  ? "bg-amber text-night shadow-sm"
-                  : "border border-panel-line text-panel-sub hover:text-panel-ink"
-              }`}
-            >
-              25 clientes (Acelerado)
-            </button>
-          </div>
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl text-panel-ink">Reativar clientes</h1>
+          <p className="text-sm text-panel-sub">
+            Pessoas que já compraram de você e já passou o tempo que ele mesmo costuma demorar para voltar.
+          </p>
+          <p className="mt-1 text-xs text-panel-sub">
+            {resolvidos} de {total} resolvidos hoje.
+          </p>
         </div>
 
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-panel-line">
-          <div
-            className="h-full bg-amber transition-all"
-            style={{ width: `${(resolvidos / total) * 100}%` }}
-          />
+        {/* Seletor de Tamanho do Lote */}
+        <div className="flex items-center gap-1.5 rounded-xl border border-panel-line bg-panel-card p-1">
+          <button
+            type="button"
+            onClick={() => trocarTamanho(12)}
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+              tamanhoLote === 12
+                ? "bg-amber font-semibold text-night shadow-sm"
+                : "text-panel-sub hover:text-panel-ink"
+            }`}
+          >
+            Lote padrão (12)
+          </button>
+          <button
+            type="button"
+            onClick={() => trocarTamanho(25)}
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+              tamanhoLote === 25
+                ? "bg-amber font-semibold text-night shadow-sm"
+                : "text-panel-sub hover:text-panel-ink"
+            }`}
+          >
+            Lote expandido (25)
+          </button>
         </div>
       </header>
 
-      {/*
-        QUEM APARECEU?
-        Vem ANTES dos 12 cartões porque é dinheiro que já pode ter voltado e
-        ainda não está contado. "Enviei" grava AGUARDANDO (que é a verdade), e
-        sem esta pergunta tudo ficaria AGUARDANDO para sempre — o Livro-Caixa
-        ficaria mais vazio do que quando o botão mentia.
-      */}
-      {(onda.perguntar?.length ?? 0) > 0 && (
-        <div className="rounded-2xl border border-amber/40 bg-amber/10 p-5">
-          <h2 className="font-display font-semibold text-panel-ink">
-            Semana passada você falou com {onda.perguntar!.length}{" "}
-            {onda.perguntar!.length === 1 ? "pessoa" : "pessoas"}. Quem apareceu?
-          </h2>
+      {/* Barra de Status e Conexão do WhatsApp */}
+      <div className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4 ${
+        whatsappLigado
+          ? "border-emerald-500/30 bg-emerald-500/10"
+          : "border-amber/30 bg-amber/10"
+      }`}>
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-lg shadow-sm">
+            {whatsappLigado ? "🟢" : "📱"}
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-panel-ink">
+              {whatsappLigado
+                ? "Seu WhatsApp está ligado e pronto para disparar"
+                : "Ligue seu WhatsApp na Nexora"}
+            </p>
+            <p className="text-xs text-panel-sub">
+              {whatsappLigado
+                ? "Envios em 1 clique ativos diretamente pelo número do seu negócio."
+                : "Envie as mensagens com 1 clique direto pelo sistema, sem abrir janelas extras."}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {whatsappLigado ? (
+            restantes > 1 && (
+              <button
+                type="button"
+                disabled={disparandoLote}
+                onClick={dispararLoteRestante}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3.5 py-2 font-display text-xs font-bold text-night transition hover:bg-emerald-400 disabled:opacity-50"
+              >
+                {disparandoLote ? (
+                  <>
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-night border-t-transparent" />
+                    <span>Disparando {progressoLote.atual} de {progressoLote.total}...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>⚡</span> Disparar mensagens restantes ({restantes})
+                  </>
+                )}
+              </button>
+            )
+          ) : (
+            <button
+              type="button"
+              onClick={() => setModalWhatsAppAberto(true)}
+              className="rounded-xl bg-amber px-4 py-2 font-display text-xs font-bold text-night transition hover:brightness-110"
+            >
+              Ligar meu WhatsApp
+            </button>
+          )}
+        </div>
+      </div>
+
+      {onda.totalEmJogoCents > 0 && (
+        <p className="text-sm text-panel-sub">
+          Juntas, essas pessoas costumam gastar{" "}
+          <strong className="text-panel-ink">{reais(onda.totalEmJogoCents)}</strong> por visita.
+        </p>
+      )}
+
+      {/* PENDENTES DE SEMANAS ANTERIORES */}
+      {onda.perguntar && onda.perguntar.length > 0 && (
+        <div className="rounded-2xl border border-amber/40 bg-amber/10 p-4">
+          <h2 className="font-semibold text-panel-ink">Quem dessa lista apareceu?</h2>
           <p className="mt-1 text-sm text-panel-sub">
             Só entra em Dinheiro recuperado o que você disser aqui. Pode deixar para depois —
             volto a perguntar.
           </p>
 
           <ul className="mt-4 space-y-2">
-            {onda.perguntar!.map((p) => (
+            {onda.perguntar.map((p) => (
               <li
                 key={p.id}
                 className="flex flex-wrap items-center gap-2 rounded-xl border border-panel-line bg-panel-card px-4 py-3"
@@ -413,12 +535,13 @@ export default function PaginaOnda() {
           const toqueAtivo = toquesSelecionados[card.id] ?? card.toque;
           const texto = textoAtivoDoCard(card, toqueAtivo);
           const zap = linkDoWhatsApp(card, texto);
+          const enviandoEste = enviandoDireto === card.id;
 
           return (
             <article
               key={card.id}
               className={`rounded-2xl border bg-panel-card p-4 transition ${
-                feito ? "border-leaf/40 opacity-70" : "border-panel-line"
+                feito ? "border-emerald-500/40 opacity-75" : "border-panel-line"
               }`}
             >
               <div className="mb-2 flex items-start justify-between gap-3">
@@ -453,7 +576,10 @@ export default function PaginaOnda() {
               ) : null}
 
               {feito ? (
-                <p className="mt-3 text-sm text-amber-deep">{feito}</p>
+                <div className="mt-3 flex items-center gap-2 rounded-xl bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-400">
+                  <span>✓</span>
+                  <span>{feito}</span>
+                </div>
               ) : pulando === card.id ? (
                 <div className="mt-3">
                   <p className="text-xs leading-relaxed text-panel-sub">
@@ -525,18 +651,52 @@ export default function PaginaOnda() {
                   <pre className="mt-3 whitespace-pre-wrap rounded-xl border border-panel-line bg-panel-bg p-3 font-sans text-sm text-panel-ink">
                     {texto}
                   </pre>
-                  <div className="mt-3 flex flex-wrap gap-2">
+
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {/* Botão de Envio de 1 Clique */}
+                    {whatsappLigado ? (
+                      <button
+                        type="button"
+                        disabled={enviandoEste || disparandoLote}
+                        onClick={() => enviarDireto(card)}
+                        className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-bold text-night transition hover:bg-emerald-400 disabled:opacity-50"
+                      >
+                        {enviandoEste ? (
+                          <>
+                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-night border-t-transparent" />
+                            <span>Enviando pelo seu WhatsApp...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>⚡</span>
+                            <span>Enviar mensagem de recuperação</span>
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setModalWhatsAppAberto(true)}
+                        className="inline-flex items-center gap-2 rounded-lg bg-amber px-4 py-2 text-sm font-bold text-night transition hover:brightness-110"
+                      >
+                        <span>⚡</span>
+                        <span>Enviar mensagem de recuperação</span>
+                      </button>
+                    )}
+
+                    {/* Atalho alternativo: abrir direto no WhatsApp */}
                     {zap && (
                       <a
                         href={zap}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => marcar(card, "AGUARDANDO")}
-                        className="rounded-lg bg-amber px-3 py-2 text-sm font-semibold text-night transition hover:brightness-110"
+                        className="rounded-lg border border-panel-line px-3 py-2 text-sm text-panel-ink hover:border-panel-sub"
                       >
                         Abrir conversa no WhatsApp
                       </a>
                     )}
+
                     <button
                       type="button"
                       onClick={() => copiar(card, texto)}
@@ -544,17 +704,15 @@ export default function PaginaOnda() {
                     >
                       {copiado === card.id ? "Copiado ✓" : "Copiar mensagem"}
                     </button>
+
                     <button
                       type="button"
-                      // AGUARDANDO, nao SEM_RESPOSTA. O cliente acabou de
-                      // receber -- chamar isso de "nao respondeu" descartava
-                      // todo retorno que viesse depois, e o Livro-Caixa e
-                      // exatamente o que prova que a Nexora vale a mensalidade.
                       onClick={() => marcar(card, "AGUARDANDO")}
                       className="rounded-lg border border-panel-line px-3 py-2 text-sm text-panel-ink hover:border-panel-sub"
                     >
                       Já mandei
                     </button>
+
                     <button
                       type="button"
                       onClick={() => marcar(card, "VOLTOU", { valorCents: card.ticketMedioCents })}
@@ -562,6 +720,7 @@ export default function PaginaOnda() {
                     >
                       Voltou e pagou {reais(card.ticketMedioCents)}
                     </button>
+
                     <button
                       type="button"
                       onClick={() => setPulando(card.id)}
