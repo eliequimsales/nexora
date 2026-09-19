@@ -300,14 +300,15 @@ describe("Fase 3: Agenda Inteligente da Nexora", () => {
 
       const equipe = await listarProfissionais("comp_1");
       expect(equipe.length).toBeGreaterThanOrEqual(2);
-      expect(equipe.map((p) => p.nome)).toContain("Breno Silva");
-      expect(equipe.map((p) => p.nome)).toContain("Thiago Barber");
+      expect(equipe.map((p) => p.nome)).toContain("Profissional 1");
+      expect(equipe.map((p) => p.nome)).toContain("Profissional 2");
+      expect(equipe.every((p) => p.cargo === "Profissional")).toBe(true);
     });
 
     it("salva equipe personalizada no perfil da empresa", async () => {
       const novaEquipe = [
-        { id: "p1", nome: "Lucas Barbeiro", cargo: "Master" },
-        { id: "p2", nome: "Rafael Barber", cargo: "Barbeiro" },
+        { id: "p1", nome: "Dra. Camila", cargo: "Profissional" },
+        { id: "p2", nome: "Dra. Mariana", cargo: "Profissional" },
       ];
 
       (prisma.companyProfile.upsert as any).mockResolvedValueOnce({});
@@ -342,7 +343,7 @@ describe("Fase 3: Agenda Inteligente da Nexora", () => {
           endsAt: appointmentEnds,
           status: "MARCADO",
           source: "PAINEL",
-          notes: JSON.stringify({ profissional: "Breno Silva", observacoes: "Barba alinhada" }),
+          notes: JSON.stringify({ profissional: "Profissional 1", observacoes: "Primeiro atendimento" }),
           customer: {
             id: "cli_matheus",
             name: "Matheus Mazella",
@@ -352,8 +353,8 @@ describe("Fase 3: Agenda Inteligente da Nexora", () => {
             visits: [],
           },
           service: {
-            id: "srv_barba",
-            name: "Barba",
+            id: "srv_consulta",
+            name: "Consulta",
             durationMin: 30,
             priceCents: 3000,
           },
@@ -369,12 +370,12 @@ describe("Fase 3: Agenda Inteligente da Nexora", () => {
       expect(grade.slotsHorario).toContain("14:30");
       expect(grade.slotsHorario).toContain("20:00");
 
-      // Mapa grade deve conter Matheus Mazella às 14:30 para Breno Silva
+      // Mapa grade deve conter Matheus Mazella às 14:30 para Profissional 1
       expect(grade.mapaGrade["14:30"]).toBeDefined();
-      expect(grade.mapaGrade["14:30"]["Breno Silva"]).toBeDefined();
-      expect(grade.mapaGrade["14:30"]["Breno Silva"].nome).toBe("Matheus Mazella");
-      expect(grade.mapaGrade["14:30"]["Breno Silva"].servicoNome).toBe("Barba");
-      expect(grade.mapaGrade["14:30"]["Breno Silva"].valorCents).toBe(3000);
+      expect(grade.mapaGrade["14:30"]["Profissional 1"]).toBeDefined();
+      expect(grade.mapaGrade["14:30"]["Profissional 1"].nome).toBe("Matheus Mazella");
+      expect(grade.mapaGrade["14:30"]["Profissional 1"].servicoNome).toBe("Consulta");
+      expect(grade.mapaGrade["14:30"]["Profissional 1"].valorCents).toBe(3000);
     });
   });
 });

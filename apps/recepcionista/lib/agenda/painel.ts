@@ -13,8 +13,8 @@ export type Profissional = {
 };
 
 export const PROFISSIONAIS_PADRAO: Profissional[] = [
-  { id: "prof_1", nome: "Breno Silva", cargo: "Barbeiro" },
-  { id: "prof_2", nome: "Thiago Barber", cargo: "Barbeiro" },
+  { id: "prof_1", nome: "Profissional 1", cargo: "Profissional" },
+  { id: "prof_2", nome: "Profissional 2", cargo: "Profissional" },
 ];
 
 /**
@@ -123,7 +123,7 @@ export async function criarAgendamento(companyId: string, input: CriarAgendament
   const startsAt = instanteLocalParaUtc(input.data, input.hora);
   const endsAt = new Date(startsAt.getTime() + duracao * MIN_MS);
 
-  const profissional = input.profissionalNome?.trim() || "Breno Silva";
+  const profissional = input.profissionalNome?.trim() || "Profissional";
 
   // Serializa profissional e observações no campo notes de forma segura
   const payloadNotes = JSON.stringify({
@@ -456,7 +456,7 @@ export async function listarAgendamentos(
 /**
  * Monta a grade horária em colunas (exatamente como na imagem de referência).
  * - Linhas: horários das 08:00 às 20:00 (em passos de 15 minutos).
- * - Colunas: profissionais da equipe (ex: Breno Silva, Thiago Barber).
+ * - Colunas: profissionais da equipe (ex: Profissional 1, Profissional 2).
  * - Células: agendamentos alocados ou slots livres com "+".
  */
 export async function obterGradeDoDia(companyId: string, dataStr: string) {

@@ -328,7 +328,7 @@ export async function POST(
 
           const listaProfs = await listarProfissionais(negocio.id);
           const profissionalEscolhido =
-            parsed.data.profissional || listaProfs[0]?.nome || "Atendimento Principal";
+            parsed.data.profissional || listaProfs[0]?.nome || "Profissional";
 
           await tx.appointment.create({
             data: {

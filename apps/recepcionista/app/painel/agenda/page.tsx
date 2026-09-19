@@ -163,7 +163,7 @@ export default function PaginaAgenda() {
   const [modalProfissionaisAberto, setModalProfissionaisAberto] = useState<boolean>(false);
   const [listaEditavelProf, setListaEditavelProf] = useState<Profissional[]>([]);
   const [novoProfNome, setNovoProfNome] = useState<string>("");
-  const [novoProfCargo, setNovoProfCargo] = useState<string>("Especialista");
+  const [novoProfCargo, setNovoProfCargo] = useState<string>("Profissional");
   const [salvandoProf, setSalvandoProf] = useState<boolean>(false);
 
   const carregarAgenda = async (dataAlvo: string) => {
@@ -210,14 +210,14 @@ export default function PaginaAgenda() {
     for (const ag of agendamentos) {
       if (ag.profissional && !nomesAdicionados.has(ag.profissional)) {
         nomesAdicionados.add(ag.profissional);
-        list.push({ nome: ag.profissional, cargo: "Equipe" });
+        list.push({ nome: ag.profissional, cargo: "Profissional" });
       }
     }
 
     if (list.length === 0) {
       return [
-        { nome: "Atendimento Principal", cargo: "Especialista" },
-        { nome: "Equipe de Atendimento", cargo: "Profissional" },
+        { nome: "Profissional 1", cargo: "Profissional" },
+        { nome: "Profissional 2", cargo: "Profissional" },
       ];
     }
 
@@ -344,7 +344,7 @@ export default function PaginaAgenda() {
         }
       }
 
-      const profNome = formProfissional.trim() || profissionaisExibidos[0]?.nome || "Breno Silva";
+      const profNome = formProfissional.trim() || profissionaisExibidos[0]?.nome || "Profissional";
 
       const res = await fetch("/api/agenda", {
         method: "POST",
@@ -479,7 +479,7 @@ export default function PaginaAgenda() {
     for (const ag of agendamentos) {
       if (ag.status === "CANCELADO") continue;
       if (!mapa[ag.horaInicio]) mapa[ag.horaInicio] = {};
-      const prof = ag.profissional || "Breno Silva";
+      const prof = ag.profissional || "Profissional";
       mapa[ag.horaInicio][prof] = ag;
     }
     return mapa;
@@ -571,7 +571,7 @@ export default function PaginaAgenda() {
           <button
             onClick={() => {
               setFormHora("09:00");
-              setFormProfissional(profissionaisExibidos[0]?.nome || "Breno Silva");
+              setFormProfissional(profissionaisExibidos[0]?.nome || "Profissional");
               setModalAberto(true);
             }}
             className="inline-flex items-center gap-2 rounded-xl bg-amber px-4 py-2.5 text-sm font-bold text-night shadow-md transition hover:bg-amber-hover"

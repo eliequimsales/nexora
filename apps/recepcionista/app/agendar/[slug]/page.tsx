@@ -346,7 +346,7 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
     { id: "qualquer", nome: "Primeiro disponível", cargo: "Qualquer profissional" },
     ...(dados.profissionais && dados.profissionais.length > 0
       ? dados.profissionais
-      : [{ id: "prof_1", nome: "Atendimento Principal", cargo: "Especialista" }]),
+      : [{ id: "prof_1", nome: "Profissional", cargo: "Profissional" }]),
   ];
 
   const podeConfirmar =
