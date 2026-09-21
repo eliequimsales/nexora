@@ -12,6 +12,7 @@ import { PainelNavDesktop, PainelNavMobile } from "@/components/painel/navegacao
 // O MENU É O FLUXO DE VALOR, NÃO O ÍNDICE DO SISTEMA.
 const NAV = [
   { href: "/painel/clientes/importar", label: "Meus clientes" },
+  { href: "/painel/clientes/remover", label: "Remover cliente" },
   { href: "/painel/onda", label: "Reativar clientes" },
   { href: "/painel/livro-caixa", label: "Dinheiro recuperado" },
   { href: "/painel/assinatura", label: "Minha conta" },

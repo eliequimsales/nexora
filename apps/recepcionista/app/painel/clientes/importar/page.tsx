@@ -5,10 +5,10 @@ import { useEffect, useState } from "react";
 import { DECLARACAO_BASE } from "@/lib/legal/identidade";
 import { variantesDeTelefone } from "@/lib/recuperacao/telefone";
 import { CartaoDaOferta } from "@/components/cobranca/cartao-da-oferta";
-import { CartaoRetorno } from "@/components/painel/cartao-retorno";
+import { CartaoDoAnual } from "@/components/cobranca/cartao-do-anual";
+import type { OfertaDoAnual } from "@/lib/billing/anual-na-prova";
 import { ChecklistAtivacao } from "@/components/painel/checklist-ativacao";
 import { progressoDaAtivacao, type SinaisDaAtivacao } from "@/lib/painel/ativacao";
-import { retornoDaAssinatura } from "@/lib/painel/retorno";
 import { trackFirstClientAdded, trackFirstRecoverySent } from "@/lib/analytics/pixel";
 
 /**
@@ -162,6 +162,8 @@ export default function PaginaImportar() {
   const [cadastrados, setCadastrados] = useState<ClienteCadastrado[]>([]);
   // A recusa de ENVIAR_TOQUE: a lista vem inteira, a mensagem pronta não.
   const [travaMensagem, setTravaMensagem] = useState<Recusa | null>(null);
+  // O anual no momento da prova, pronto do servidor.
+  const [anual, setAnual] = useState<OfertaDoAnual | null>(null);
   // Os sinais do topo da tela: os três passos e o que já voltou no mês.
   const [painel, setPainel] = useState<{
     ativacao: SinaisDaAtivacao;
@@ -189,6 +191,7 @@ export default function PaginaImportar() {
         const data = await res.json();
         setCadastrados(data.clientes || []);
         setTravaMensagem(data.trava ?? null);
+        setAnual(data.anual ?? null);
         setPainel(
           data.ativacao && data.retorno
             ? { ativacao: data.ativacao, retorno: data.retorno }
@@ -445,24 +448,39 @@ export default function PaginaImportar() {
         para mostrar — antes disso ele repetiria, com outras palavras, o passo
         que está logo acima dele.
       */}
-      {painel && <ChecklistAtivacao sinais={painel.ativacao} />}
-      {painel &&
-        (progressoDaAtivacao(painel.ativacao).concluida ||
-          painel.retorno.recuperadoMesCents > 0) && (
-          <CartaoRetorno
-            retorno={retornoDaAssinatura({
-              recuperadoCents: painel.retorno.recuperadoMesCents,
-              ticketMedioCents: painel.retorno.ticketMedioCents,
-            })}
-            totalCents={painel.retorno.recuperadoTotalCents}
-          />
-        )}
+      {/* Abas de navegação interna entre Meus clientes e Remover cliente */}
+      <div className="flex items-center gap-2 border-b border-panel-line pb-3">
+        <Link
+          href="/painel/clientes/importar"
+          className="rounded-xl bg-amber px-4 py-2 text-sm font-bold text-night shadow-sm"
+        >
+          Meus clientes
+        </Link>
+        <Link
+          href="/painel/clientes/remover"
+          className="rounded-xl px-4 py-2 text-sm font-semibold text-panel-sub hover:bg-white hover:text-panel-ink transition"
+        >
+          Remover cliente
+        </Link>
+      </div>
 
-      <header>
-        <h1 className="font-display text-2xl text-panel-ink">Trazer meus clientes</h1>
-        <p className="mt-1 text-sm text-panel-sub">
-          Adicione os dados dos seus clientes pelos campos abaixo ou, se preferir, cole sua planilha.
-        </p>
+      {painel && <ChecklistAtivacao sinais={painel.ativacao} />}
+      {anual && <CartaoDoAnual oferta={anual} />}
+
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl text-panel-ink">Meus clientes</h1>
+          <p className="mt-1 text-sm text-panel-sub">
+            Adicione os dados dos seus clientes pelos campos abaixo ou, se preferir, cole sua planilha.
+          </p>
+        </div>
+        <Link
+          href="/painel/clientes/remover"
+          className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50/60 px-4 py-2 text-xs font-bold text-red-700 hover:bg-red-100 transition shadow-sm"
+        >
+          <span>🗑️</span>
+          <span>Remover cliente</span>
+        </Link>
       </header>
 
       {/* Opção sem planilhas: Agenda Inteligente */}

@@ -27,13 +27,14 @@ const NAV = [...layout.matchAll(/\{\s*href:\s*"([^"]+)",\s*label:\s*"([^"]+)"\s*
 );
 
 describe("o menu do painel", () => {
-  it("tem exatamente quatro itens", () => {
-    expect(NAV).toHaveLength(4);
+  it("tem exatamente cinco itens", () => {
+    expect(NAV).toHaveLength(5);
   });
 
   it("segue a ordem do fluxo de valor", () => {
     expect(NAV.map((i) => i.href)).toEqual([
       "/painel/clientes/importar",
+      "/painel/clientes/remover",
       "/painel/onda",
       "/painel/livro-caixa",
       "/painel/assinatura",

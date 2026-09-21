@@ -106,8 +106,8 @@ describe("onde o retorno aparece", () => {
     expect(livro).toContain("<CartaoRetorno");
   });
 
-  it("o painel mostra o mesmo cartão, com a mesma conta", () => {
-    expect(leia("app/painel/clientes/importar/page.tsx")).toContain("<CartaoRetorno");
+  it("o cartão de retorno fica no Dinheiro recuperado e não polui a tela de Meus clientes", () => {
+    expect(leia("app/painel/clientes/importar/page.tsx")).not.toContain("<CartaoRetorno");
   });
 
   it("o cartão usa a paleta do painel, não a do funil", () => {
