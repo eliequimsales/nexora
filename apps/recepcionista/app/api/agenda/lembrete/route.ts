@@ -13,7 +13,7 @@ import {
   obterLembretes,
 } from "@/lib/agenda/painel";
 import { variantesDeTelefone } from "@/lib/recuperacao/telefone";
-import { sendWhatsAppText } from "@/lib/whatsapp/evolution";
+import { enviarWhatsApp } from "@/lib/whatsapp/envio";
 
 export const dynamic = "force-dynamic";
 
@@ -136,7 +136,7 @@ export async function POST(request: Request) {
           );
           if (comPais) {
             try {
-              await sendWhatsAppText(perfil.whatsappInstance, comPais, texto);
+              await enviarWhatsApp(perfil.whatsappInstance, comPais, texto);
               await marcarLembreteEnviado(companyId, item.id);
               enviadosComSucesso++;
             } catch (err) {
@@ -252,7 +252,7 @@ export async function POST(request: Request) {
         );
       }
 
-      await sendWhatsAppText(perfil.whatsappInstance, comPais, textoFinal);
+      await enviarWhatsApp(perfil.whatsappInstance, comPais, textoFinal);
       await marcarLembreteEnviado(companyId, itemAlvo.id);
 
       return NextResponse.json({

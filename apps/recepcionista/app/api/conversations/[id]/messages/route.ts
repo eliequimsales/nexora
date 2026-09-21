@@ -4,7 +4,7 @@ import { getSessionCompanyId } from "@/lib/auth";
 import { logError } from "@/lib/errors";
 import { humanMessageSchema } from "@/lib/validation";
 import { recordTeamObservation } from "@/lib/training";
-import { sendWhatsAppText } from "@/lib/whatsapp/evolution";
+import { enviarWhatsApp } from "@/lib/whatsapp/envio";
 import { LIMITES, limitar } from "@/lib/limites";
 import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 
@@ -49,7 +49,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   }
 
   try {
-    await sendWhatsAppText(instance, conversation.customerPhone, parsed.data.content);
+    await enviarWhatsApp(instance, conversation.customerPhone, parsed.data.content);
   } catch (error) {
     await logError("human-reply", error, companyId);
     return NextResponse.json({ error: "Falha ao enviar pelo WhatsApp" }, { status: 502 });

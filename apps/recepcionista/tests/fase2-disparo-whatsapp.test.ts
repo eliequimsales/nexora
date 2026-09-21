@@ -28,7 +28,9 @@ describe("Fase 2: Conexão Direta do WhatsApp & Disparo com 1 Clique", () => {
 
   it("a rota /api/onda/enviar valida parâmetros e auto-registra AGUARDANDO", () => {
     const rota = readFileSync(join(RAIZ, "app/api/onda/enviar/route.ts"), "utf8");
-    expect(rota).toContain("sendWhatsAppText");
+    // O envio passa pelo registro (lib/whatsapp/envio.ts): sem ele, o eco da
+    // mensagem da Onda pareceria o dono respondendo pelo celular.
+    expect(rota).toContain("enviarWhatsApp");
     expect(rota).toContain('outcome: "AGUARDANDO"');
     expect(rota).toContain("exigirAcesso");
     expect(rota).toContain("ENVIAR_TOQUE");

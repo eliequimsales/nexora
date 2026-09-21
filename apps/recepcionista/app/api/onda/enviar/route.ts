@@ -7,7 +7,7 @@ import { logError } from "@/lib/errors";
 import { LIMITES, limitar } from "@/lib/limites";
 import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 import { variantesDeTelefone } from "@/lib/recuperacao/telefone";
-import { sendWhatsAppText } from "@/lib/whatsapp/evolution";
+import { enviarWhatsApp } from "@/lib/whatsapp/envio";
 
 export const dynamic = "force-dynamic";
 
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
     }
 
     // 4. Dispara a mensagem via Evolution API pelo número do dono
-    await sendWhatsAppText(perfil.whatsappInstance, comPais, mensagem.trim());
+    await enviarWhatsApp(perfil.whatsappInstance, comPais, mensagem.trim());
 
     // 5. Auto-registro: salva o status AGUARDANDO no banco de dados
     const pendente = await prisma.recoveryTouch.findFirst({

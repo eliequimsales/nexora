@@ -9,7 +9,8 @@ import { asSegments, getApprovedKnowledge, recordKnowledgeGap } from "./training
 import { slugifySegment, type SegmentTopic } from "./segments";
 import { pediuParaParar } from "./recuperacao/optout";
 import { variantesDeTelefone } from "./recuperacao/telefone";
-import { sendWhatsAppText, type IncomingWhatsAppMessage } from "./whatsapp/evolution";
+import type { IncomingWhatsAppMessage } from "./whatsapp/evolution";
+import { enviarWhatsApp } from "./whatsapp/envio";
 import type { Faq } from "./validation";
 import { horarioDaEmpresa } from "./agenda/horario";
 
@@ -148,7 +149,7 @@ export async function handleIncomingMessage(incoming: IncomingWhatsAppMessage): 
       });
 
       if (conversation.status !== "HUMAN" && conversation.status !== "WAITING_HUMAN") {
-        await sendWhatsAppText(incoming.instance, incoming.phone, CONFIRMACAO_DESCADASTRO);
+        await enviarWhatsApp(incoming.instance, incoming.phone, CONFIRMACAO_DESCADASTRO);
         await saveOutgoing(conversation.id, CONFIRMACAO_DESCADASTRO);
       }
       logTiming("descadastro", startedAt);
@@ -161,7 +162,7 @@ export async function handleIncomingMessage(incoming: IncomingWhatsAppMessage): 
     // 6. Handoff sem IA: termos padrão (atendente, humano, suporte...) + os da empresa
     const handoffTerms = [...DEFAULT_HANDOFF_TERMS, ...asKeywords(profile.handoffKeywords)];
     if (matchesHandoffKeyword(incoming.text, handoffTerms)) {
-      await sendWhatsAppText(incoming.instance, incoming.phone, TRANSFER_MESSAGE);
+      await enviarWhatsApp(incoming.instance, incoming.phone, TRANSFER_MESSAGE);
       await saveOutgoing(conversation.id, TRANSFER_MESSAGE);
       await requestHuman(conversation.id, "Cliente pediu atendimento da equipe");
       logTiming("handoff", startedAt);
@@ -178,7 +179,7 @@ export async function handleIncomingMessage(incoming: IncomingWhatsAppMessage): 
       isFirstMessage: isFirstMessage || wasFinished,
     });
     if (quickReply) {
-      await sendWhatsAppText(incoming.instance, incoming.phone, quickReply);
+      await enviarWhatsApp(incoming.instance, incoming.phone, quickReply);
       await saveOutgoing(conversation.id, quickReply);
       logTiming("cadastro", startedAt);
       return;
@@ -254,7 +255,7 @@ async function respondWithAi(
       await recordKnowledgeGap(conversation.companyId, incoming.text, result.motivo_transferencia);
     }
 
-    await sendWhatsAppText(incoming.instance, incoming.phone, result.resposta);
+    await enviarWhatsApp(incoming.instance, incoming.phone, result.resposta);
     await saveOutgoing(conversation.id, result.resposta);
     logTiming("ia", startedAt, {
       pre: preAiAt - startedAt,
@@ -293,7 +294,7 @@ async function respondWithAi(
     await logError("ai-reply", error, conversation.companyId);
     // Degradação honesta: avisa o cliente e chama a equipe em vez de deixar no vácuo
     try {
-      await sendWhatsAppText(incoming.instance, incoming.phone, FALLBACK_MESSAGE);
+      await enviarWhatsApp(incoming.instance, incoming.phone, FALLBACK_MESSAGE);
       await saveOutgoing(conversation.id, FALLBACK_MESSAGE);
     } catch (sendError) {
       await logError("ai-reply-fallback", sendError, conversation.companyId);

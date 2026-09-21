@@ -1,7 +1,7 @@
 import { prisma } from "./db";
 import { logError } from "./errors";
 import { problemaNoGateway } from "./whatsapp/endereco";
-import { sendWhatsAppText } from "./whatsapp/evolution";
+import { enviarWhatsApp } from "./whatsapp/envio";
 
 export interface FollowUpCandidate {
   status: string;
@@ -108,7 +108,7 @@ export async function runFollowUps(): Promise<number> {
       if (!eligible) continue;
 
       try {
-        await sendWhatsAppText(
+        await enviarWhatsApp(
           profile.whatsappInstance!,
           conversation.customerPhone,
           profile.followUpMessage,

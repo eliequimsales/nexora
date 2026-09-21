@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  idDoEnvio,
   parseConnectionUpdate,
   parseQrUpdate,
   parseWebhookPayload,
@@ -136,5 +137,30 @@ describe("parseQrUpdate", () => {
     expect(parseQrUpdate({ event: "connection.update", instance: "x", data: {} })).toBeNull();
     expect(parseQrUpdate({ event: "qrcode.updated", instance: "x", data: {} })).toBeNull();
     expect(parseQrUpdate("lixo")).toBeNull();
+  });
+});
+
+/**
+ * O ID DE CADA ENVIO.
+ *
+ * O webhook devolve o eco de cada mensagem que a Nexora envia pelo número do
+ * dono, e ele chega igual a uma mensagem que o dono digitou. O id que a
+ * Evolution devolve no envio é o que permite separar as duas coisas.
+ */
+describe("idDoEnvio", () => {
+  it("lê o id que a Evolution devolve no envio", () => {
+    expect(
+      idDoEnvio({
+        key: { remoteJid: "5511999998888@s.whatsapp.net", fromMe: true, id: "3EB0C431C26A1916E1" },
+        status: "PENDING",
+      }),
+    ).toBe("3EB0C431C26A1916E1");
+  });
+
+  it("sem id reconhecível, devolve null em vez de inventar", () => {
+    expect(idDoEnvio({})).toBeNull();
+    expect(idDoEnvio(null)).toBeNull();
+    expect(idDoEnvio({ key: { id: "" } })).toBeNull();
+    expect(idDoEnvio({ key: { id: 42 } })).toBeNull();
   });
 });

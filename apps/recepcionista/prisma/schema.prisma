@@ -331,6 +331,20 @@ model Message {
   @@index([conversationId, createdAt])
 }
 
+// Mensagem que a PRÓPRIA Nexora enviou pelo WhatsApp do dono. O webhook devolve
+// o eco dela com `fromMe`, igual a uma mensagem digitada pelo dono no celular;
+// sem este registro, cada envio da Nexora pareceria o dono assumindo a conversa.
+// Guarda só o id: nem texto, nem telefone.
+model EnvioWhatsApp {
+  id        String   @id @default(cuid())
+  instance  String
+  messageId String
+  criadoEm  DateTime @default(now())
+
+  @@unique([instance, messageId])
+  @@index([criadoEm])
+}
+
 model Lead {
   id             String       @id @default(cuid())
   companyId      String

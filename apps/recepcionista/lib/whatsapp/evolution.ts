@@ -107,12 +107,31 @@ async function evoFetch(path: string, init?: { method?: string; body?: unknown }
   }
 }
 
-/** Envia mensagem de texto pelo WhatsApp via Evolution API. */
-export async function sendWhatsAppText(instance: string, phone: string, text: string): Promise<void> {
-  await evoFetch(`/message/sendText/${encodeURIComponent(instance)}`, {
+/**
+ * O id que a Evolution dá à mensagem que acabou de sair. Sem ele, o eco dela no
+ * webhook é indistinguível do dono digitando no celular.
+ */
+export function idDoEnvio(resposta: unknown): string | null {
+  const id = (resposta as { key?: { id?: unknown } } | null)?.key?.id;
+  return typeof id === "string" && id.trim() ? id.trim() : null;
+}
+
+/**
+ * Envia mensagem de texto pelo WhatsApp via Evolution API.
+ *
+ * Não chame direto: use `enviarWhatsApp` (lib/whatsapp/envio.ts), que registra
+ * o id do envio. tests/envio-whatsapp.test.ts trava isso.
+ */
+export async function sendWhatsAppText(
+  instance: string,
+  phone: string,
+  text: string,
+): Promise<{ messageId: string | null }> {
+  const resposta = await evoFetch(`/message/sendText/${encodeURIComponent(instance)}`, {
     method: "POST",
     body: { number: phone, text },
   });
+  return { messageId: idDoEnvio(resposta) };
 }
 
 /**
