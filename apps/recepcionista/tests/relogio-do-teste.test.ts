@@ -9,8 +9,10 @@ import {
   prometeuTesteGratis,
   relogioDoCadastro,
   relogioParaGravar,
+  TERMOS_PRIMEIRA_ONDA_A_PARTIR_DE,
   TERMOS_SEM_TESTE_A_PARTIR_DE,
 } from "@/lib/billing/relogio";
+import { VERSAO_DOCUMENTOS } from "@/lib/legal/identidade";
 
 /**
  * O RELÓGIO DO TESTE GRÁTIS.
@@ -85,6 +87,17 @@ describe("relogioDoCadastro", () => {
   it("com Termos com teste de 7 dias (versão 2026-09-18), a conta ganha os 7 dias", () => {
     expect(relogioDoCadastro("2026-09-18", AGORA)).toEqual(emDias(TRIAL_DIAS));
   });
+
+  // Desde 21/09/2026 a prova é a primeira Onda, não um relógio.
+  it("com Termos da primeira Onda (versão 2026-09-21), a conta nasce sem prazo", () => {
+    expect(relogioDoCadastro(TERMOS_PRIMEIRA_ONDA_A_PARTIR_DE, AGORA)).toBeNull();
+    expect(relogioDoCadastro("2027-01-01", AGORA)).toBeNull();
+  });
+
+  it("a versão em vigor é a da primeira Onda: conta nova nasce GRATIS", () => {
+    expect(VERSAO_DOCUMENTOS >= TERMOS_PRIMEIRA_ONDA_A_PARTIR_DE).toBe(true);
+    expect(relogioDoCadastro(VERSAO_DOCUMENTOS, AGORA)).toBeNull();
+  });
 });
 
 describe("relogioParaGravar", () => {
@@ -125,6 +138,20 @@ describe("relogioParaGravar", () => {
           trialEndsAt: null,
           createdAt: diasAtras(1),
           termosVersao: TERMOS_SEM_TESTE_A_PARTIR_DE,
+        },
+        AGORA,
+      ),
+    ).toBeNull();
+  });
+
+  it("conta que aceitou os Termos da primeira Onda não ganha relógio: fica em GRATIS", () => {
+    expect(
+      relogioParaGravar(
+        {
+          subscriptionStatus: null,
+          trialEndsAt: null,
+          createdAt: diasAtras(1),
+          termosVersao: TERMOS_PRIMEIRA_ONDA_A_PARTIR_DE,
         },
         AGORA,
       ),

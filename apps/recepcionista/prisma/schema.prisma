@@ -50,6 +50,10 @@ model Company {
   // automática: vencido, a conta volta ao estado de quem não pagou.
   // Escritor único: aplicarPasse, em lib/billing/converger.ts.
   acessoPagoAte        DateTime?
+  // PRIMEIRA ONDA POR NOSSA CONTA (lib/billing/primeira-onda.ts): quando a conta
+  // GRATIS gerou a primeira Onda com clientes. O prazo de 7 dias conta daqui.
+  // Nula enquanto ela não foi gerada. Escritor único: comecarPrimeiraOnda.
+  primeiraOndaEm       DateTime?
   // card | boleto — a Stripe no Brasil não faz Pix recorrente.
   paymentMethodType    String?
   // CPF/CNPJ do cliente, para a NFS-e que é emitida FORA da Stripe.

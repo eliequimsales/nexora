@@ -1,5 +1,8 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { emReais, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
+import { TERMOS } from "@/lib/legal/termos";
 import {
   ACOES_DA_PRIMEIRA_ONDA,
   avisoDaPrimeiraOnda,
@@ -140,5 +143,63 @@ describe("avisoDaPrimeiraOnda — o que o painel diz", () => {
   it("a trava de Meus clientes aponta para a primeira Onda, sem pedir plano", () => {
     expect(TRAVA_NA_PRIMEIRA_ONDA.acao.href).toBe("/painel/onda");
     expect(TRAVA_NA_PRIMEIRA_ONDA.motivo).not.toMatch(/R\$/);
+  });
+});
+
+const RAIZ = join(__dirname, "..");
+const semComentarios = (s: string) =>
+  s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+const leia = (rel: string) => semComentarios(readFileSync(join(RAIZ, rel), "utf8"));
+const termos = TERMOS.secoes
+  .flatMap((s) => [s.titulo, ...s.paragrafos, ...(s.itens ?? [])])
+  .join("\n");
+
+describe("a primeira Onda nos lugares certos", () => {
+  it("a exceção mora em exigirAcesso, com a contagem do banco", () => {
+    const guarda = leia("lib/billing/guarda.ts");
+    expect(guarda).toContain("podeNaPrimeiraOnda(");
+    expect(guarda).toContain("primeiraOndaDaEmpresa(");
+  });
+
+  it("acesso.ts continua dizendo que GRATIS não age", () => {
+    expect(leia("lib/billing/acesso.ts")).not.toContain("podeNaPrimeiraOnda");
+  });
+
+  it("a primeira Onda começa uma vez só, mesmo com duas abas", () => {
+    expect(leia("lib/billing/primeira-onda-da-conta.ts")).toMatch(
+      /updateMany\(\{\s*where:\s*\{\s*id:\s*companyId,\s*primeiraOndaEm:\s*null/,
+    );
+  });
+
+  it("a contagem é de mensagens: os pulados ficam de fora", () => {
+    expect(leia("lib/billing/primeira-onda-da-conta.ts")).toMatch(/not:\s*"PULADO"/);
+  });
+
+  // Abrir a tela antes de subir a lista não pode gastar os dias.
+  it("o prazo só começa quando a Onda gerada tem clientes", () => {
+    expect(leia("app/api/onda/route.ts")).toMatch(
+      /onda\.cards\.length\s*>\s*0[\s\S]{0,80}comecarPrimeiraOnda\(/,
+    );
+  });
+
+  it("a primeira Onda tem o tamanho padrão: o lote de 25 fica para quem tem plano", () => {
+    expect(leia("app/api/onda/route.ts")).toMatch(/!primeira\s*&&\s*tamanhoParam\s*===\s*25/);
+  });
+
+  // Marcar resultado nunca trava: sem a lista junto da recusa, a parede diria
+  // "ninguém respondeu" para quem só não teve onde marcar.
+  it("a recusa da Onda leva os contatos que esperam resposta", () => {
+    expect(leia("app/api/onda/route.ts")).toMatch(/\.\.\.recusa,\s*perguntar/);
+  });
+
+  it("Meus clientes aponta para a primeira Onda enquanto ela não foi usada", () => {
+    expect(leia("app/api/clientes/route.ts")).toContain("TRAVA_NA_PRIMEIRA_ONDA");
+  });
+
+  it("os Termos prometem a primeira Onda com os números do código", () => {
+    expect(termos).toContain("primeira Onda por nossa conta");
+    expect(termos).toContain(`${TAMANHO_DA_ONDA} mensagens`);
+    expect(termos).toContain(`${DIAS_DA_PRIMEIRA_ONDA} dias`);
+    expect(termos).not.toContain("dias de teste gratuito");
   });
 });

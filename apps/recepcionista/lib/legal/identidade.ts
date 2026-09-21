@@ -22,10 +22,11 @@
 
 /**
  * Muda sempre que o texto de Termos ou Privacidade mudar. Formato: AAAA-MM-DD.
- * 2026-09-18: período de teste gratuito de 7 dias com acesso total liberado,
- * seguido do plano de R$ 97/mês, garantia e conformidade legal.
+ * 2026-09-18: período de teste gratuito de 7 dias com acesso total liberado.
+ * 2026-09-21: a primeira Onda por nossa conta no lugar do teste de 7 dias, e a
+ * implantação opcional no pagamento.
  */
-export const VERSAO_DOCUMENTOS = "2026-09-18";
+export const VERSAO_DOCUMENTOS = "2026-09-21";
 
 /**
  * Preencher antes da primeira cobrança. Desde 15/09/2026 quem presta o serviço é a

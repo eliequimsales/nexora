@@ -3,6 +3,8 @@ import { getSessionCompanyId } from "@/lib/auth";
 import { podeExecutar } from "@/lib/billing/acesso";
 import { estadoDaEmpresa } from "@/lib/billing/guarda";
 import { ofertaDaEmpresa } from "@/lib/billing/oferta-da-conta";
+import { TRAVA_NA_PRIMEIRA_ONDA } from "@/lib/billing/primeira-onda";
+import { primeiraOndaDaEmpresa } from "@/lib/billing/primeira-onda-da-conta";
 import { prisma } from "@/lib/db";
 import { inicioDoMes } from "@/lib/painel/retorno";
 import { rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
@@ -38,7 +40,12 @@ export async function GET() {
   }
 
   // Sem 402 aqui: recusar a rota inteira sequestraria a lista. A trava vira campo.
-  const permissao = podeExecutar(await estadoDaEmpresa(companyId), "ENVIAR_TOQUE");
+  const estado = await estadoDaEmpresa(companyId);
+  const permissao = podeExecutar(estado, "ENVIAR_TOQUE");
+  // Sem plano, a primeira Onda mora em Reativar clientes: enquanto ela não foi
+  // usada, a trava daqui aponta para ela em vez de pedir um plano.
+  const primeiraPorUsar =
+    estado === "GRATIS" && (await primeiraOndaDaEmpresa(companyId)).situacao !== "USADA";
 
   const empresa = await prisma.company.findUnique({
     where: { id: companyId },
@@ -236,11 +243,13 @@ export async function GET() {
     // Regra Zero: sem a mensagem, a tela recebe o motivo e o caminho para resolver.
     trava: permissao.pode
       ? null
-      : {
-          motivo: permissao.motivo,
-          acao: permissao.acao,
-          // Mesma oferta da recusa da onda. Falha no cálculo não derruba a lista.
-          oferta: await ofertaDaEmpresa(companyId).catch(() => null),
-        },
+      : primeiraPorUsar
+        ? { ...TRAVA_NA_PRIMEIRA_ONDA, oferta: null }
+        : {
+            motivo: permissao.motivo,
+            acao: permissao.acao,
+            // Mesma oferta da recusa da onda. Falha no cálculo não derruba a lista.
+            oferta: await ofertaDaEmpresa(companyId).catch(() => null),
+          },
   });
 }

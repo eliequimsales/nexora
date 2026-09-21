@@ -35,6 +35,12 @@ export const AVISO_DO_RELOGIO_DIAS = 7;
 export const TERMOS_SEM_TESTE_A_PARTIR_DE = "2026-09-15";
 export const TERMOS_TESTE_7_DIAS_A_PARTIR_DE = "2026-09-18";
 
+/**
+ * Primeira versão dos Termos com a primeira Onda por nossa conta no lugar do
+ * teste de 7 dias: a conta nova nasce sem relógio (GRATIS) e a prova é a Onda.
+ */
+export const TERMOS_PRIMEIRA_ONDA_A_PARTIR_DE = "2026-09-21";
+
 /** A Stripe recusa `trial_end` a menos de 48 horas; uma hora de folga evita a borda. */
 const MINIMO_TRIAL_NA_STRIPE_MS = 49 * HORA_MS;
 
@@ -60,6 +66,7 @@ export function fimDoTesteSemRelogio(criadoEm: Date, agora: Date): Date {
 
 /** O prazo que nasce com a conta, conforme a versão dos Termos aceita no cadastro. */
 export function relogioDoCadastro(versaoAceita: string, agora: Date): Date | null {
+  if (versaoAceita >= TERMOS_PRIMEIRA_ONDA_A_PARTIR_DE) return null;
   if (versaoAceita >= TERMOS_TESTE_7_DIAS_A_PARTIR_DE) {
     return fimDoTesteSemRelogio(agora, agora);
   }
@@ -84,7 +91,9 @@ export function relogioParaGravar(
 ): Date | null {
   const temAssinatura = empresa.subscriptionStatus !== null && empresa.subscriptionStatus !== undefined;
   if (temAssinatura || empresa.trialEndsAt) return null;
-  if (empresa.termosVersao && empresa.termosVersao >= TERMOS_TESTE_7_DIAS_A_PARTIR_DE) {
+  const versao = empresa.termosVersao;
+  if (versao && versao >= TERMOS_PRIMEIRA_ONDA_A_PARTIR_DE) return null;
+  if (versao && versao >= TERMOS_TESTE_7_DIAS_A_PARTIR_DE) {
     return fimDoTesteSemRelogio(empresa.createdAt, agora);
   }
   if (!prometeuTesteGratis(empresa.termosVersao)) return null;

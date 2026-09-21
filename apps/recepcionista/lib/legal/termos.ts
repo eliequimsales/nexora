@@ -1,6 +1,6 @@
 import { FORNECEDOR, tipoDoDocumento, VERSAO_DOCUMENTOS } from "./identidade";
 import { emReais, PRECO_ANUAL_CENTS, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
-import { TOLERANCIA_DIAS, TRIAL_DIAS } from "@/lib/billing/acesso";
+import { TOLERANCIA_DIAS } from "@/lib/billing/acesso";
 import {
   ENVIOS_POR_ONDA,
   GARANTIA_DIAS,
@@ -8,7 +8,9 @@ import {
   PRAZO_PEDIDO_DIAS,
 } from "@/lib/billing/garantia";
 import { PLANOS } from "@/lib/billing/planos";
+import { DIAS_DA_PRIMEIRA_ONDA } from "@/lib/billing/primeira-onda";
 import { MIN_RECUPERAVEL_CENTS, MIN_SUMIDOS } from "@/lib/recuperacao/estimativa";
+import { TAMANHO_DA_ONDA } from "@/lib/recuperacao/onda";
 
 /**
  * TERMOS DE USO.
@@ -66,7 +68,7 @@ export const TERMOS: { atualizadoEm: string; secoes: Secao[] } = {
       titulo: "3. Preço, planos, garantia e cobrança",
       paragrafos: [
         "Sem plano, a Nexora é grátis e sem prazo: você importa a sua lista, vê o diagnóstico de quem sumiu e pode exportar tudo quando quiser, sem cartão.",
-        `Toda nova conta conta com ${TRIAL_DIAS} dias de teste gratuito com acesso total para experimentar o envio de ondas, sem necessidade de cartão de crédito. Terminado esse período sem a contratação de um plano, o envio de novas ondas pausa — nada é cobrado e nada é apagado. Contas criadas com versões anteriores mantêm o período gratuito que aceitaram.`,
+        `Toda conta nova ganha a primeira Onda por nossa conta, sem cartão: você gera a Onda da semana e manda até ${TAMANHO_DA_ONDA} mensagens dela em até ${DIAS_DA_PRIMEIRA_ONDA} dias, contados de quando ela é gerada. Depois disso, as próximas Ondas pedem um plano — nada é cobrado sozinho e nada é apagado. Contas criadas com versões anteriores destes Termos mantêm o período gratuito que aceitaram.`,
         `São três planos, todos com a Nexora completa e impostos inclusos, sem taxa de adesão, taxa de instalação ou cobrança por cliente cadastrado: ${PRECO} por mês no cartão, com renovação automática; ${emReais(PLANOS.pix_30_dias.valorCents)} por ${DIAS_DO_PASSE} dias, pagos uma vez no Pix ou no cartão; e ${emReais(PRECO_ANUAL_CENTS)} por 12 meses, pagos uma vez no Pix ou no cartão.`,
         `Nos planos de ${DIAS_DO_PASSE} dias e anual não há cobrança automática: quando o período termina, o envio de novas ondas para até você pagar de novo, e nada é apagado. Pagando antes do fim, os dias novos começam depois dos que você já tinha.`,
         "Para contratar é preciso confirmar o e-mail antes. Mandamos um link no cadastro e você pode pedir outro pelo painel. A exigência não é burocracia: a lei nos obriga a mandar o comprovante da contratação para o seu e-mail, e não dá para cumprir isso sem ter certeza de que o endereço é seu. Quem entra com o Google já vem confirmado.",
