@@ -230,7 +230,7 @@ export default async function PaginaAssinatura({
               Conexão do WhatsApp
             </h2>
             <p className="mt-1 text-sm text-panel-ink">
-              Conecte seu aparelho via QR Code para disparar mensagens de recuperação direto pelo seu número com 1 clique.
+              Ligue o WhatsApp do seu negócio pelo QR Code para as mensagens da Onda saírem pelo seu número.
             </p>
           </div>
           <Link
@@ -405,8 +405,8 @@ function avisoDoPrazo(estado: EstadoConta, e: Empresa): string | null {
 const RESUMO: Record<EstadoConta, (e: Empresa, agora: Date) => string> = {
   // Quem nunca teve teste não pode ler "seu teste terminou".
   GRATIS: () =>
-    "Plano gratuito: o diagnóstico, a importação e a exportação da sua lista são livres. " +
-    "Para liberar as mensagens prontas, escolha um plano.",
+    "Plano gratuito: o diagnóstico, a importação e a exportação da sua lista são livres, e " +
+    "a primeira Onda é por nossa conta. Para as próximas, escolha um plano.",
   TRIAL: (e) =>
     e.trialEndsAt
       ? `Você está no período de teste, até ${dataBr(e.trialEndsAt)}. Nada foi cobrado.`

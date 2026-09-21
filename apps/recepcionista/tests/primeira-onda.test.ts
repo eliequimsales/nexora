@@ -203,3 +203,33 @@ describe("a primeira Onda nos lugares certos", () => {
     expect(termos).not.toContain("dias de teste gratuito");
   });
 });
+
+describe("o painel mostra a primeira Onda", () => {
+  it("o topo do painel avisa a conta GRATIS em que ponto ela está", () => {
+    const layout = leia("app/painel/layout.tsx");
+    expect(layout).toContain("avisoDaPrimeiraOnda(");
+    expect(layout).toMatch(/estado === "GRATIS"/);
+  });
+
+  it("na primeira Onda, a tela não oferece o lote de 25", () => {
+    expect(leia("app/painel/onda/page.tsx")).toMatch(/!onda\.primeiraOnda\s*&&/);
+  });
+
+  it("depois da parede, a tela da Onda continua perguntando quem apareceu", () => {
+    const pagina = leia("app/painel/onda/page.tsx");
+    expect(pagina).toMatch(/recusa\.perguntar/);
+    expect(pagina).toContain("<QuemApareceu");
+  });
+
+  it("Minha conta diz o que a conta sem plano tem", () => {
+    expect(leia("app/painel/assinatura/page.tsx")).toContain("a primeira Onda é por nossa conta");
+  });
+
+  it("as telas por onde a primeira Onda passa não prometem clique nem disparo", () => {
+    for (const tela of ["app/painel/onda/page.tsx", "app/painel/assinatura/page.tsx"]) {
+      const texto = leia(tela);
+      expect(texto, tela).not.toMatch(/1 clique|um clique/i);
+      expect(texto, tela).not.toMatch(/disparar|disparando/i);
+    }
+  });
+});

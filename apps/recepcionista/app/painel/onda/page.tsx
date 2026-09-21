@@ -61,6 +61,8 @@ type Onda = {
   vazio: Vazio | null;
   /** Contatos de semanas anteriores em que o dono ainda não disse o que houve. */
   perguntar?: Pendente[];
+  /** A primeira Onda por nossa conta, quando a conta está sem plano. */
+  primeiraOnda?: { enviadas: number; ate: string | null; total: number } | null;
 };
 
 /** A recusa que o servidor manda quando a assinatura não cobre a ação. */
@@ -69,6 +71,8 @@ type Recusa = {
   acao: { texto: string; href: string };
   /** A conta da lista do dono, quando ele ainda pode escolher um plano. */
   oferta?: import("@/lib/billing/oferta").Oferta | null;
+  /** Marcar nunca trava: os contatos que esperam resposta vêm junto da recusa. */
+  perguntar?: Pendente[];
 };
 
 const reais = (cents: number) =>
@@ -109,6 +113,63 @@ function linkDoWhatsApp(card: Card, textoCustom?: string): string | null {
   return `https://wa.me/${comPais}?text=${encodeURIComponent(texto)}`;
 }
 
+/**
+ * QUEM DESSA LISTA APARECEU?
+ *
+ * Os contatos de semanas anteriores em que o dono ainda não disse o que houve.
+ * Marcar nunca trava (MARCAR_RESULTADO): a lista aparece com a Onda e também
+ * embaixo da oferta, depois da parede — senão a primeira Onda mostraria
+ * "ninguém respondeu" para quem só não teve onde marcar.
+ */
+function QuemApareceu({
+  pendentes,
+  aoMarcar,
+}: {
+  pendentes: Pendente[];
+  aoMarcar: (p: Pendente, resultado: string, extra?: Record<string, unknown>) => void;
+}) {
+  if (pendentes.length === 0) return null;
+  return (
+    <div className="rounded-2xl border border-amber/40 bg-amber/10 p-4">
+      <h2 className="font-semibold text-panel-ink">Quem dessa lista apareceu?</h2>
+      <p className="mt-1 text-sm text-panel-sub">
+        Só entra em Dinheiro recuperado o que você disser aqui. Pode deixar para depois —
+        volto a perguntar.
+      </p>
+
+      <ul className="mt-4 space-y-2">
+        {pendentes.map((p) => (
+          <li
+            key={p.id}
+            className="flex flex-wrap items-center gap-2 rounded-xl border border-panel-line bg-panel-card px-4 py-3"
+          >
+            <span className="font-medium text-panel-ink">{p.nome}</span>
+            <span className="text-xs text-panel-sub">
+              faz {Math.floor((Date.now() - new Date(p.enviadoEm).getTime()) / 86_400_000)} dias
+            </span>
+            <div className="ml-auto flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => aoMarcar(p, "VOLTOU", { valorCents: p.ticketMedioCents })}
+                className="rounded-lg border border-amber/40 px-3 py-1.5 text-sm text-amber-deep hover:bg-amber/10"
+              >
+                Voltou{p.ticketMedioCents > 0 ? ` (${reais(p.ticketMedioCents)})` : ""}
+              </button>
+              <button
+                type="button"
+                onClick={() => aoMarcar(p, "SEM_RESPOSTA")}
+                className="rounded-lg border border-panel-line px-3 py-1.5 text-sm text-panel-sub hover:text-panel-ink"
+              >
+                Não veio
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export default function PaginaOnda() {
   // Quem chega do diagnóstico acabou de ver os próprios clientes sumidos e
   // criou a conta por causa disso. Cair numa tela igual à de sempre quebra a
@@ -134,7 +195,7 @@ export default function PaginaOnda() {
   const [statusWhatsApp, setStatusWhatsApp] = useState<string>("DESLIGADO");
   const [modalWhatsAppAberto, setModalWhatsAppAberto] = useState(false);
   const [enviandoDireto, setEnviandoDireto] = useState<string | null>(null);
-  const [disparandoLote, setDisparandoLote] = useState(false);
+  const [enviandoLote, setEnviandoLote] = useState(false);
   const [progressoLote, setProgressoLote] = useState<{ atual: number; total: number }>({ atual: 0, total: 0 });
 
   const checarWhatsApp = useCallback(async () => {
@@ -165,7 +226,12 @@ export default function PaginaOnda() {
         // O servidor manda o motivo e o caminho para resolver. Achatar tudo em
         // "não consegui agora" deixava o dono bloqueado sem forma de pagar.
         if (json.acao?.href) {
-          setRecusa({ motivo: json.error ?? "", acao: json.acao, oferta: json.oferta ?? null });
+          setRecusa({
+            motivo: json.error ?? "",
+            acao: json.acao,
+            oferta: json.oferta ?? null,
+            perguntar: json.perguntar ?? [],
+          });
         }
         else setErro(json.error ?? "Não consegui montar sua lista agora. Tenta de novo?");
         return;
@@ -247,12 +313,12 @@ export default function PaginaOnda() {
   };
 
   /** Disparo sequencial dos clientes restantes com pausa de segurança */
-  const dispararLoteRestante = async () => {
+  const enviarRestantes = async () => {
     if (!onda) return;
     const pendentes = onda.cards.filter((c) => !feitos[c.id]);
     if (pendentes.length === 0) return;
 
-    setDisparandoLote(true);
+    setEnviandoLote(true);
     setProgressoLote({ atual: 0, total: pendentes.length });
 
     for (let i = 0; i < pendentes.length; i++) {
@@ -264,7 +330,7 @@ export default function PaginaOnda() {
         await new Promise((resolve) => setTimeout(resolve, 2500));
       }
     }
-    setDisparandoLote(false);
+    setEnviandoLote(false);
   };
 
   /**
@@ -279,6 +345,10 @@ export default function PaginaOnda() {
     extra: Record<string, unknown> = {},
   ) => {
     setOnda((atual) =>
+      atual ? { ...atual, perguntar: (atual.perguntar ?? []).filter((x) => x.id !== p.id) } : atual,
+    );
+    // Depois da parede, a mesma pergunta mora embaixo da oferta.
+    setRecusa((atual) =>
       atual ? { ...atual, perguntar: (atual.perguntar ?? []).filter((x) => x.id !== p.id) } : atual,
     );
 
@@ -305,8 +375,10 @@ export default function PaginaOnda() {
 
   if (recusa) {
     return (
-      <main className="max-w-2xl p-6">
+      <main className="max-w-2xl space-y-6 p-6">
         <CartaoDaOferta motivo={recusa.motivo} acao={recusa.acao} oferta={recusa.oferta ?? null} />
+        {/* Marcar quem apareceu nunca trava: é assim que a parede mostra o que a Onda fez. */}
+        <QuemApareceu pendentes={recusa.perguntar ?? []} aoMarcar={marcarPendente} />
       </main>
     );
   }
@@ -379,7 +451,7 @@ export default function PaginaOnda() {
           </p>
           <p className="mt-1 text-sm text-panel-sub">
             A mensagem já está escrita com o que cada um costuma fazer aí. Você pode enviar
-            direto pelo seu WhatsApp com 1 clique ou abrir a conversa.
+            pelo seu WhatsApp ligado ou abrir a conversa e mandar de lá.
           </p>
         </div>
       )}
@@ -395,31 +467,33 @@ export default function PaginaOnda() {
           </p>
         </div>
 
-        {/* Seletor de Tamanho do Lote */}
-        <div className="flex items-center gap-1.5 rounded-xl border border-panel-line bg-panel-card p-1">
-          <button
-            type="button"
-            onClick={() => trocarTamanho(12)}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-              tamanhoLote === 12
-                ? "bg-amber font-semibold text-night shadow-sm"
-                : "text-panel-sub hover:text-panel-ink"
-            }`}
-          >
-            Lote padrão (12)
-          </button>
-          <button
-            type="button"
-            onClick={() => trocarTamanho(25)}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-              tamanhoLote === 25
-                ? "bg-amber font-semibold text-night shadow-sm"
-                : "text-panel-sub hover:text-panel-ink"
-            }`}
-          >
-            Lote expandido (25)
-          </button>
-        </div>
+        {/* Seletor de Tamanho do Lote — a primeira Onda por nossa conta tem o tamanho padrão. */}
+        {!onda.primeiraOnda && (
+          <div className="flex items-center gap-1.5 rounded-xl border border-panel-line bg-panel-card p-1">
+            <button
+              type="button"
+              onClick={() => trocarTamanho(12)}
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                tamanhoLote === 12
+                  ? "bg-amber font-semibold text-night shadow-sm"
+                  : "text-panel-sub hover:text-panel-ink"
+              }`}
+            >
+              Lote padrão (12)
+            </button>
+            <button
+              type="button"
+              onClick={() => trocarTamanho(25)}
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                tamanhoLote === 25
+                  ? "bg-amber font-semibold text-night shadow-sm"
+                  : "text-panel-sub hover:text-panel-ink"
+              }`}
+            >
+              Lote expandido (25)
+            </button>
+          </div>
+        )}
       </header>
 
       {/* Barra de Status e Conexão do WhatsApp */}
@@ -434,14 +508,12 @@ export default function PaginaOnda() {
           </span>
           <div>
             <p className="text-sm font-semibold text-panel-ink">
-              {whatsappLigado
-                ? "Seu WhatsApp está ligado e pronto para disparar"
-                : "Ligue seu WhatsApp na Nexora"}
+              {whatsappLigado ? "Seu WhatsApp está ligado" : "Ligue seu WhatsApp na Nexora"}
             </p>
             <p className="text-xs text-panel-sub">
               {whatsappLigado
-                ? "Envios em 1 clique ativos diretamente pelo número do seu negócio."
-                : "Envie as mensagens com 1 clique direto pelo sistema, sem abrir janelas extras."}
+                ? "As mensagens saem pelo número do seu negócio, uma de cada vez."
+                : "Ligue pelo QR Code e mande daqui, sem abrir uma conversa por vez."}
             </p>
           </div>
         </div>
@@ -458,19 +530,17 @@ export default function PaginaOnda() {
               {restantes > 1 && (
                 <button
                   type="button"
-                  disabled={disparandoLote}
-                  onClick={dispararLoteRestante}
+                  disabled={enviandoLote}
+                  onClick={enviarRestantes}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3.5 py-2 font-display text-xs font-bold text-night transition hover:bg-emerald-400 disabled:opacity-50"
                 >
-                  {disparandoLote ? (
+                  {enviandoLote ? (
                     <>
                       <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-night border-t-transparent" />
-                      <span>Disparando {progressoLote.atual} de {progressoLote.total}...</span>
+                      <span>Enviando {progressoLote.atual} de {progressoLote.total}...</span>
                     </>
                   ) : (
-                    <>
-                      <span>⚡</span> Disparar mensagens restantes ({restantes})
-                    </>
+                    <>Enviar as restantes ({restantes})</>
                   )}
                 </button>
               )}
@@ -503,47 +573,7 @@ export default function PaginaOnda() {
       )}
 
       {/* PENDENTES DE SEMANAS ANTERIORES */}
-      {onda.perguntar && onda.perguntar.length > 0 && (
-        <div className="rounded-2xl border border-amber/40 bg-amber/10 p-4">
-          <h2 className="font-semibold text-panel-ink">Quem dessa lista apareceu?</h2>
-          <p className="mt-1 text-sm text-panel-sub">
-            Só entra em Dinheiro recuperado o que você disser aqui. Pode deixar para depois —
-            volto a perguntar.
-          </p>
-
-          <ul className="mt-4 space-y-2">
-            {onda.perguntar.map((p) => (
-              <li
-                key={p.id}
-                className="flex flex-wrap items-center gap-2 rounded-xl border border-panel-line bg-panel-card px-4 py-3"
-              >
-                <span className="font-medium text-panel-ink">{p.nome}</span>
-                <span className="text-xs text-panel-sub">
-                  faz {Math.floor((Date.now() - new Date(p.enviadoEm).getTime()) / 86_400_000)} dias
-                </span>
-                <div className="ml-auto flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      marcarPendente(p, "VOLTOU", { valorCents: p.ticketMedioCents })
-                    }
-                    className="rounded-lg border border-amber/40 px-3 py-1.5 text-sm text-amber-deep hover:bg-amber/10"
-                  >
-                    Voltou{p.ticketMedioCents > 0 ? ` (${reais(p.ticketMedioCents)})` : ""}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => marcarPendente(p, "SEM_RESPOSTA")}
-                    className="rounded-lg border border-panel-line px-3 py-1.5 text-sm text-panel-sub hover:text-panel-ink"
-                  >
-                    Não veio
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <QuemApareceu pendentes={onda.perguntar ?? []} aoMarcar={marcarPendente} />
 
       <div className="space-y-3">
         {onda.cards.map((card) => {
@@ -674,7 +704,7 @@ export default function PaginaOnda() {
                     {whatsappLigado ? (
                       <button
                         type="button"
-                        disabled={enviandoEste || disparandoLote}
+                        disabled={enviandoEste || enviandoLote}
                         onClick={() => enviarDireto(card)}
                         className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-bold text-night transition hover:bg-emerald-400 disabled:opacity-50"
                       >
