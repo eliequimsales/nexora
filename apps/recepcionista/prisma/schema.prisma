@@ -120,6 +120,27 @@ model Company {
   verificacoes   VerificacaoEmail[]
   passes         PassePago[]
   garantia       Garantia?
+  implantacao    Implantacao?
+}
+
+// IMPLANTAÇÃO — item opcional do checkout, uma por negócio (lib/billing/implantacao.ts).
+//
+// Nasce na convergência da sessão paga que trouxe o item. A sessão é única pelo
+// mesmo motivo do PassePago: webhook e página de retorno convergem juntos. Uma
+// segunda compra da mesma empresa não vira linha: vai para o ErrorLog, para devolver.
+model Implantacao {
+  id        String  @id @default(cuid())
+  companyId String  @unique
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  stripeSessionId String @unique
+  valorCents      Int
+
+  compradaEm DateTime  @default(now())
+  // Marcada por quem fez a chamada. Os Termos dão 15 dias.
+  feitaEm    DateTime?
+
+  @@index([compradaEm])
 }
 
 // PASSE PAGO: um pagamento avulso que compensou — 30 dias no Pix ou 12 meses à

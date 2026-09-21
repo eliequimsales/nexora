@@ -1,5 +1,11 @@
 import { FORNECEDOR, tipoDoDocumento, VERSAO_DOCUMENTOS } from "./identidade";
-import { emReais, PRECO_ANUAL_CENTS, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
+import {
+  emReais,
+  PRECO_ANUAL_CENTS,
+  PRECO_IMPLANTACAO_CENTS,
+  PRECO_MENSAL_CENTS,
+} from "@/lib/billing/preco";
+import { MINUTOS_DA_CHAMADA, PRAZO_DA_IMPLANTACAO_DIAS } from "@/lib/billing/implantacao";
 import { TOLERANCIA_DIAS } from "@/lib/billing/acesso";
 import {
   ENVIOS_POR_ONDA,
@@ -69,8 +75,9 @@ export const TERMOS: { atualizadoEm: string; secoes: Secao[] } = {
       paragrafos: [
         "Sem plano, a Nexora é grátis e sem prazo: você importa a sua lista, vê o diagnóstico de quem sumiu e pode exportar tudo quando quiser, sem cartão.",
         `Toda conta nova ganha a primeira Onda por nossa conta, sem cartão: você gera a Onda da semana e manda até ${TAMANHO_DA_ONDA} mensagens dela em até ${DIAS_DA_PRIMEIRA_ONDA} dias, contados de quando ela é gerada. Depois disso, as próximas Ondas pedem um plano — nada é cobrado sozinho e nada é apagado. Contas criadas com versões anteriores destes Termos mantêm o período gratuito que aceitaram.`,
-        `São três planos, todos com a Nexora completa e impostos inclusos, sem taxa de adesão, taxa de instalação ou cobrança por cliente cadastrado: ${PRECO} por mês no cartão, com renovação automática; ${emReais(PLANOS.pix_30_dias.valorCents)} por ${DIAS_DO_PASSE} dias, pagos uma vez no Pix ou no cartão; e ${emReais(PRECO_ANUAL_CENTS)} por 12 meses, pagos uma vez no Pix ou no cartão.`,
+        `São três planos, todos com a Nexora completa e impostos inclusos, sem taxa de adesão, sem taxa de instalação obrigatória e sem cobrança por cliente cadastrado: ${PRECO} por mês no cartão, com renovação automática; ${emReais(PLANOS.pix_30_dias.valorCents)} por ${DIAS_DO_PASSE} dias, pagos uma vez no Pix ou no cartão; e ${emReais(PRECO_ANUAL_CENTS)} por 12 meses, pagos uma vez no Pix ou no cartão.`,
         `Nos planos de ${DIAS_DO_PASSE} dias e anual não há cobrança automática: quando o período termina, o envio de novas ondas para até você pagar de novo, e nada é apagado. Pagando antes do fim, os dias novos começam depois dos que você já tinha.`,
+        `Implantação, opcional. No pagamento de um plano você pode acrescentar a implantação, por ${emReais(PRECO_IMPLANTACAO_CENTS)} uma vez: uma chamada de até ${MINUTOS_DA_CHAMADA} minutos, marcada pelo WhatsApp depois do pagamento, em que conferimos a sua lista com você, completamos o que faltar para a Nexora ler certo, ligamos o seu WhatsApp e mandamos juntos as primeiras mensagens da Onda da semana. As vagas são limitadas por semana e, quando acabam, a implantação sai da tela de pagamento até a semana seguinte. Se a chamada não acontecer em até ${PRAZO_DA_IMPLANTACAO_DIAS} dias da compra por falta de horário da Nexora, devolvemos o valor da implantação. O arrependimento da seção 4 vale também para ela.`,
         "Para contratar é preciso confirmar o e-mail antes. Mandamos um link no cadastro e você pode pedir outro pelo painel. A exigência não é burocracia: a lei nos obriga a mandar o comprovante da contratação para o seu e-mail, e não dá para cumprir isso sem ter certeza de que o endereço é seu. Quem entra com o Google já vem confirmado.",
         `No plano mensal, a cobrança é recorrente e processada pela Stripe. Se um pagamento falhar, você continua com acesso normal por ${TOLERANCIA_DIAS} dias enquanto resolve; depois desse prazo o envio de novas ondas para de funcionar, mas seus dados continuam acessíveis para leitura e exportação.`,
         "Aumentos de preço só valem para você depois de avisados por e-mail com pelo menos 30 dias de antecedência. Se não concordar, é só cancelar antes de a nova cobrança acontecer.",

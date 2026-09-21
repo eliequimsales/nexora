@@ -92,6 +92,8 @@ export function parametrosDoCheckout(p: {
    */
   garantia: boolean;
   env: Record<string, string | undefined>;
+  /** Price da implantação que a rota decidiu oferecer (lib/billing/implantacao.ts), ou nada. */
+  implantacao?: string | null;
 }): Stripe.Checkout.SessionCreateParams {
   const plano = PLANOS[p.plano];
   const garantia = p.garantia ? "sim" : "nao";
@@ -99,6 +101,9 @@ export function parametrosDoCheckout(p: {
   const comum = {
     customer: p.customerId,
     line_items: [{ price: (p.env[plano.variavelDoPreco] ?? "").trim(), quantity: 1 }],
+    // A implantação entra como item opcional: o dono marca ou não na própria tela
+    // da Stripe. Só existe quando a rota decidiu oferecer.
+    ...(p.implantacao ? { optional_items: [{ price: p.implantacao, quantity: 1 }] } : {}),
     // O tenant precisa viajar no objeto que os webhooks entregam.
     metadata: {
       companyId: p.companyId,
