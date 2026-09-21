@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { iniciaisDe, montarOferta, textosDaOferta } from "@/lib/billing/oferta";
+import { GARANTIA_DIAS } from "@/lib/billing/garantia";
+import { iniciaisDe, montarOferta, textosDaOferta, type Oferta } from "@/lib/billing/oferta";
 import { emReais, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
 import type { Diagnostico } from "@/lib/importacao/diagnostico";
 import { JANELA_DIAS } from "@/lib/recuperacao/estimativa";
@@ -99,6 +100,21 @@ describe("montarOferta — a conta é a da lista dele", () => {
     expect(o.faixaMinCents).toBe(0);
     expect(o.clientesQuePagamOPlano).toBeNull();
   });
+
+  it("nasce sem primeira Onda e com a garantia de quem está acima do Corte Honesto", () => {
+    const o = montarOferta(diagnostico(), 4_800);
+    expect(o.primeiraOnda).toBeNull();
+    expect(o.comGarantia).toBe(true);
+    const pequena = montarOferta(
+      diagnostico({
+        sumidos: 3,
+        corteHonesto: true,
+        recuperavelCents: { min: 5_000, central: 6_000, max: 7_000 },
+      }),
+      4_800,
+    );
+    expect(pequena.comGarantia).toBe(false);
+  });
 });
 
 describe("iniciaisDe", () => {
@@ -193,5 +209,100 @@ describe("textosDaOferta — o que o cartão diz", () => {
     expect(t.titulo).not.toMatch(/\d/);
     expect(t.ancora).toBeNull();
     expect(t.recomendaNaoAssinar).toBe(false);
+  });
+});
+
+/**
+ * A PAREDE COM O QUE A PRIMEIRA ONDA FEZ.
+ *
+ * Quando a primeira Onda por nossa conta acaba, a recusa mostra o resultado dela
+ * pelas marcações do próprio dono. Sem resposta marcada, a parede diz isso sem
+ * drama: resposta costuma chegar depois.
+ */
+const OFERTA: Oferta = {
+  sumidos: 40,
+  faixaMinCents: 200_000,
+  faixaMaxCents: 400_000,
+  corteHonesto: false,
+  semValor: false,
+  semData: false,
+  ticketMedioCents: 5_000,
+  clientesQuePagamOPlano: 2,
+  clientesNaOnda: 12,
+  previa: [],
+  comGarantia: true,
+  primeiraOnda: null,
+};
+
+const onda = (over: Partial<NonNullable<Oferta["primeiraOnda"]>> = {}) => ({
+  enviadas: 12,
+  responderam: 0,
+  voltaram: 0,
+  recuperadoCents: 0,
+  ...over,
+});
+
+describe("a parede com o que a primeira Onda fez", () => {
+  it("com resposta e dinheiro de volta, mostra o que voltou", () => {
+    const t = textosDaOferta({
+      ...OFERTA,
+      primeiraOnda: onda({ responderam: 3, voltaram: 2, recuperadoCents: 18_000 }),
+    });
+    expect(t.rotulo).toBe("O que a sua primeira Onda fez");
+    expect(t.titulo).toContain("12 mensagens enviadas");
+    expect(t.titulo).toContain("3 clientes responderam");
+    expect(t.prova).toContain(emReais(18_000));
+    expect(t.ancora).toContain("vezes a mensalidade");
+    expect(t.recomendaNaoAssinar).toBe(false);
+  });
+
+  it("sem resposta marcada, diz isso sem drama e aponta onde marcar", () => {
+    const t = textosDaOferta({ ...OFERTA, primeiraOnda: onda() });
+    expect(t.titulo).toBe("Sua primeira Onda: 12 mensagens enviadas.");
+    expect(t.prova).toContain("Nenhuma resposta marcada ainda");
+    expect(t.prova).toContain("Reativar clientes");
+  });
+
+  it("uma mensagem só fica no singular", () => {
+    const t = textosDaOferta({ ...OFERTA, primeiraOnda: onda({ enviadas: 1, responderam: 1 }) });
+    expect(t.titulo).toBe("Sua primeira Onda: 1 mensagem enviada, 1 cliente respondeu.");
+  });
+
+  it("primeira Onda que não saiu não vira prova: volta a conta da lista", () => {
+    const t = textosDaOferta({ ...OFERTA, primeiraOnda: onda({ enviadas: 0 }) });
+    expect(t.rotulo).toBe("O que a sua lista mostra");
+    expect(t.titulo).toContain("fora do ritmo");
+  });
+
+  it("abaixo do Corte Honesto, a recomendação vence — a não ser que a Onda já tenha pago a mensalidade", () => {
+    const pequena: Oferta = {
+      ...OFERTA,
+      corteHonesto: true,
+      sumidos: 2,
+      faixaMinCents: 3_000,
+      comGarantia: false,
+    };
+    expect(
+      textosDaOferta({ ...pequena, primeiraOnda: onda({ recuperadoCents: 5_000 }) })
+        .recomendaNaoAssinar,
+    ).toBe(true);
+    expect(
+      textosDaOferta({ ...pequena, primeiraOnda: onda({ recuperadoCents: PRECO_MENSAL_CENTS }) })
+        .recomendaNaoAssinar,
+    ).toBe(false);
+  });
+
+  it("a garantia aparece quando a compra a levaria, com os números do código", () => {
+    const t = textosDaOferta(OFERTA);
+    expect(t.garantia).toContain("Garantia Dinheiro Recuperado");
+    expect(t.garantia).toContain(`${GARANTIA_DIAS} dias`);
+    expect(t.garantia).toContain(emReais(PRECO_MENSAL_CENTS));
+    expect(textosDaOferta({ ...OFERTA, comGarantia: false }).garantia).toBeNull();
+  });
+
+  it("a âncora fala a língua do dono", () => {
+    const t = textosDaOferta(OFERTA);
+    expect(t.ancora).not.toMatch(/ticket/i);
+    expect(t.ancora).toContain("por visita");
   });
 });

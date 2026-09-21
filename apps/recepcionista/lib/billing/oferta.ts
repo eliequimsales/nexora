@@ -1,7 +1,9 @@
 import type { Diagnostico } from "@/lib/importacao/diagnostico";
 import { JANELA_DIAS } from "@/lib/recuperacao/estimativa";
 import { TAMANHO_DA_ONDA } from "@/lib/recuperacao/onda";
+import { GARANTIA_DIAS, ONDAS_MINIMAS } from "./garantia";
 import { emReais, PRECO_MENSAL_CENTS } from "./preco";
+import type { ResultadoDaPrimeiraOnda } from "./primeira-onda";
 
 /**
  * A OFERTA QUE APARECE ONDE A AÇÃO TRAVA.
@@ -34,14 +36,24 @@ export type Oferta = {
   clientesNaOnda: number;
   /** Iniciais e dias sem vir. Nome inteiro e telefone nunca saem daqui. */
   previa: PreviaDaOnda[];
+  /** A compra levaria a Garantia Dinheiro Recuperado: acima do Corte Honesto e sem garantia antes. */
+  comGarantia: boolean;
+  /** O que a primeira Onda fez, quando a conta já a gerou. */
+  primeiraOnda: ResultadoDaPrimeiraOnda | null;
 };
 
 export type TextosDaOferta = {
+  /** A etiqueta do cartão: de onde vem o número que ele mostra. */
+  rotulo: string;
   titulo: string;
   prova: string;
   ancora: string | null;
   recomendaNaoAssinar: boolean;
+  /** A garantia que a compra levaria, dita antes do pagamento; null quando não leva. */
+  garantia: string | null;
 };
+
+type TextosSemMoldura = Omit<TextosDaOferta, "rotulo" | "garantia">;
 
 /** "Marcos da Silva" → "M. S.". Primeira e última palavra, em maiúscula. */
 export function iniciaisDe(nome: string): string {
@@ -56,12 +68,13 @@ export function montarOferta(d: Diagnostico, ticketMedioCents: number | null): O
   const ticket = ticketMedioCents && ticketMedioCents > 0 ? ticketMedioCents : null;
   // A assinatura se paga assim que a receita mínima recuperável cobre a mensalidade (R$ 97/mês)
   const cobreMensalidade = !semValor && d.sumidos > 0 && d.recuperavelCents.min >= PRECO_MENSAL_CENTS;
+  const corteHonesto = cobreMensalidade ? false : d.corteHonesto;
 
   return {
     sumidos: d.sumidos,
     faixaMinCents: d.recuperavelCents.min,
     faixaMaxCents: d.recuperavelCents.max,
-    corteHonesto: cobreMensalidade ? false : d.corteHonesto,
+    corteHonesto,
     semValor,
     semData: d.faltando.data,
     ticketMedioCents: ticket,
@@ -71,13 +84,93 @@ export function montarOferta(d: Diagnostico, ticketMedioCents: number | null): O
     clientesQuePagamOPlano: !semValor && ticket ? Math.ceil(PRECO_MENSAL_CENTS / ticket) : null,
     clientesNaOnda: Math.min(TAMANHO_DA_ONDA, d.sumidos),
     previa: d.nomes.map((n) => ({ iniciais: iniciaisDe(n.nome), diasSemVir: n.diasSumido })),
+    // Mesma regra do checkout: acima do Corte Honesto, a compra leva a garantia.
+    // Quem já teve a dela é tirado em oferta-da-conta.ts, que enxerga o banco.
+    comGarantia: !corteHonesto,
+    primeiraOnda: null,
   };
 }
 
 const clientesSeus = (n: number) =>
   n === 1 ? "1 cliente seu está fora do ritmo" : `${n} clientes seus estão fora do ritmo`;
 
+/** "A mensalidade se paga com N clientes voltando", na língua do dono. */
+function ancoraDaVisita(o: Oferta): string | null {
+  const n = o.clientesQuePagamOPlano;
+  if (!n || !o.ticketMedioCents) return null;
+  return (
+    `A mensalidade de ${emReais(PRECO_MENSAL_CENTS)} se paga com ${n} ` +
+    `${n === 1 ? "cliente voltando" : "clientes voltando"} uma vez ` +
+    `(cada cliente seu gasta em média ${emReais(o.ticketMedioCents)} por visita).`
+  );
+}
+
+const plural = (n: number, um: string, varios: string) => (n === 1 ? `1 ${um}` : `${n} ${varios}`);
+
+/**
+ * O QUE A PRIMEIRA ONDA FEZ, pelas marcações do próprio dono. Sem resposta
+ * marcada, a parede diz isso sem drama: resposta costuma chegar depois.
+ */
+function textosDaPrimeiraOnda(o: Oferta, r: ResultadoDaPrimeiraOnda): TextosSemMoldura {
+  const mensagens = plural(r.enviadas, "mensagem enviada", "mensagens enviadas");
+  const titulo =
+    r.responderam > 0
+      ? `Sua primeira Onda: ${mensagens}, ${plural(r.responderam, "cliente respondeu", "clientes responderam")}.`
+      : `Sua primeira Onda: ${mensagens}.`;
+
+  const proximas =
+    o.sumidos > 0
+      ? `Sua lista ainda tem ${plural(o.sumidos, "cliente fora do ritmo", "clientes fora do ritmo")}, ` +
+        "e as próximas Ondas saem toda segunda com um plano."
+      : "As próximas Ondas saem toda segunda com um plano, quando alguém passar do tempo de voltar.";
+
+  const prova =
+    r.recuperadoCents > 0
+      ? `${emReais(r.recuperadoCents)} já entraram em Dinheiro recuperado com a primeira Onda. ${proximas}`
+      : r.responderam > 0
+        ? "Ninguém marcado como volta paga ainda: quando a pessoa vier e pagar, marque em " +
+          `Reativar clientes e o valor entra em Dinheiro recuperado. ${proximas}`
+        : "Nenhuma resposta marcada ainda. Resposta costuma chegar nos dias seguintes: " +
+          `quando chegar, marque em Reativar clientes quem apareceu. ${proximas}`;
+
+  const vezes = r.recuperadoCents / PRECO_MENSAL_CENTS;
+  const ancora =
+    vezes >= 1
+      ? `A primeira Onda já trouxe ${vezes.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} ` +
+        `vezes a mensalidade de ${emReais(PRECO_MENSAL_CENTS)}.`
+      : ancoraDaVisita(o);
+
+  return { titulo, prova, ancora, recomendaNaoAssinar: false };
+}
+
+const TEXTO_DA_GARANTIA =
+  `Garantia Dinheiro Recuperado: se em ${GARANTIA_DIAS} dias você mandar as mensagens de ` +
+  `${ONDAS_MINIMAS} ondas, marcar quem voltou e o dinheiro recuperado não chegar a ` +
+  `${emReais(PRECO_MENSAL_CENTS)}, devolvemos tudo o que você pagou.`;
+
 export function textosDaOferta(o: Oferta): TextosDaOferta {
+  const lista = textosDaLista(o);
+  const r = o.primeiraOnda;
+  // A prova da primeira Onda só entra quando ela saiu. Abaixo do Corte Honesto, a
+  // recomendação honesta vence — a não ser que a Onda já tenha pago a mensalidade.
+  const usaPrimeiraOnda =
+    r !== null &&
+    r.enviadas > 0 &&
+    (!lista.recomendaNaoAssinar || r.recuperadoCents >= PRECO_MENSAL_CENTS);
+
+  const textos = usaPrimeiraOnda && r ? textosDaPrimeiraOnda(o, r) : lista;
+  return {
+    ...textos,
+    rotulo: textos.recomendaNaoAssinar
+      ? "Recomendação honesta"
+      : usaPrimeiraOnda
+        ? "O que a sua primeira Onda fez"
+        : "O que a sua lista mostra",
+    garantia: o.comGarantia && !textos.recomendaNaoAssinar ? TEXTO_DA_GARANTIA : null,
+  };
+}
+
+function textosDaLista(o: Oferta): TextosSemMoldura {
   if (o.semData) {
     return {
       titulo: "Ainda não dá para saber quem parou de voltar.",
@@ -117,19 +210,13 @@ export function textosDaOferta(o: Oferta): TextosDaOferta {
     };
   }
 
-  const n = o.clientesQuePagamOPlano;
   return {
     titulo: `${clientesSeus(o.sumidos)}.`,
     prova:
       `Pela sua própria lista, eles representam entre ${emReais(o.faixaMinCents)} e ` +
       `${emReais(o.faixaMaxCents)} em receita potencial nos próximos ${JANELA_DIAS} dias. ` +
       "É estimativa, não é garantia: depende de as mensagens saírem e de quem responder.",
-    ancora:
-      n && o.ticketMedioCents
-        ? `A mensalidade de ${emReais(PRECO_MENSAL_CENTS)} se paga com ${n} ` +
-          `${n === 1 ? "cliente voltando" : "clientes voltando"} uma vez ` +
-          `(ticket médio da sua lista: ${emReais(o.ticketMedioCents)}).`
-        : null,
+    ancora: ancoraDaVisita(o),
     recomendaNaoAssinar: false,
   };
 }
