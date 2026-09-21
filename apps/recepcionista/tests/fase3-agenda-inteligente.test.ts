@@ -15,7 +15,10 @@ import { calcularCiclo } from "@/lib/recuperacao/ciclo";
 
 // Mock do prisma para isolamento em testes unitários rápidos
 vi.mock("@/lib/db", () => {
-  const db = {
+  // Com tipo de propósito: sem ele, o `db` se refere a si mesmo no próprio
+  // inicializador (`$transaction` devolve `cb(db)`) e o tsc estrito recusa o
+  // arquivo inteiro com "implicitly has type 'any'".
+  const db: Record<string, unknown> = {
     customer: {
       findFirst: vi.fn(),
       create: vi.fn(),
