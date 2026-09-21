@@ -8,6 +8,7 @@ import {
   TRIAL_DIAS,
   type EstadoConta,
 } from "@/lib/billing/acesso";
+import { anualDaEmpresa } from "@/lib/billing/anual-da-conta";
 import { convergirDoCheckout } from "@/lib/billing/converger";
 import { GARANTIA_DIAS, ONDAS_MINIMAS, type SituacaoDaGarantia } from "@/lib/billing/garantia";
 import { garantiaDaEmpresa } from "@/lib/billing/garantia-da-conta";
@@ -26,6 +27,7 @@ import { logError } from "@/lib/errors";
 import { linkDeSuporte } from "@/lib/institucional";
 import { FORNECEDOR, variaveisPendentesDoFornecedor } from "@/lib/legal/identidade";
 import { MIN_RECUPERAVEL_CENTS, MIN_SUMIDOS } from "@/lib/recuperacao/estimativa";
+import { CartaoDoAnual } from "@/components/cobranca/cartao-do-anual";
 import { BotoesAssinatura, type OpcaoDePlano } from "./botoes";
 import { BotaoDaGarantia } from "./garantia";
 
@@ -139,6 +141,10 @@ export default async function PaginaAssinatura({
   );
   const linkDaImplantacao = whatsDaImplantacao ?? linkDeSuporte(FORNECEDOR);
 
+  // O anual no momento da prova: só para quem paga mês a mês e já recuperou mais
+  // que três mensalidades em 30 dias. Falha no cálculo não derruba a tela.
+  const anual = await anualDaEmpresa(companyId, estado, agora).catch(() => null);
+
   // A garantia que uma compra NOVA levaria. Só existe enquanto a conta não tem a
   // dela (é uma por negócio), e usa a mesma conta do checkout: a tela não pode
   // prometer a garantia que a compra não vai carregar.
@@ -240,6 +246,8 @@ export default async function PaginaAssinatura({
           </>
         )}
       </section>
+
+      {anual && <CartaoDoAnual oferta={anual} />}
 
       {/* Conexão do WhatsApp */}
       <section className="rounded-2xl border border-panel-line bg-panel-card p-6">

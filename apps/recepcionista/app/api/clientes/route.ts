@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionCompanyId } from "@/lib/auth";
 import { podeExecutar } from "@/lib/billing/acesso";
+import { anualDaEmpresa } from "@/lib/billing/anual-da-conta";
 import { estadoDaEmpresa } from "@/lib/billing/guarda";
 import { ofertaDaEmpresa } from "@/lib/billing/oferta-da-conta";
 import { TRAVA_NA_PRIMEIRA_ONDA } from "@/lib/billing/primeira-onda";
@@ -240,6 +241,8 @@ export async function GET() {
             )
           : null,
     },
+    // O anual no momento da prova, pronto para a tela. Falha não derruba a lista.
+    anual: await anualDaEmpresa(companyId, estado).catch(() => null),
     // Regra Zero: sem a mensagem, a tela recebe o motivo e o caminho para resolver.
     trava: permissao.pode
       ? null

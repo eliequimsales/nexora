@@ -5,7 +5,9 @@ import { useEffect, useState } from "react";
 import { DECLARACAO_BASE } from "@/lib/legal/identidade";
 import { variantesDeTelefone } from "@/lib/recuperacao/telefone";
 import { CartaoDaOferta } from "@/components/cobranca/cartao-da-oferta";
+import { CartaoDoAnual } from "@/components/cobranca/cartao-do-anual";
 import { CartaoRetorno } from "@/components/painel/cartao-retorno";
+import type { OfertaDoAnual } from "@/lib/billing/anual-na-prova";
 import { ChecklistAtivacao } from "@/components/painel/checklist-ativacao";
 import { progressoDaAtivacao, type SinaisDaAtivacao } from "@/lib/painel/ativacao";
 import { retornoDaAssinatura } from "@/lib/painel/retorno";
@@ -162,6 +164,8 @@ export default function PaginaImportar() {
   const [cadastrados, setCadastrados] = useState<ClienteCadastrado[]>([]);
   // A recusa de ENVIAR_TOQUE: a lista vem inteira, a mensagem pronta não.
   const [travaMensagem, setTravaMensagem] = useState<Recusa | null>(null);
+  // O anual no momento da prova, pronto do servidor.
+  const [anual, setAnual] = useState<OfertaDoAnual | null>(null);
   // Os sinais do topo da tela: os três passos e o que já voltou no mês.
   const [painel, setPainel] = useState<{
     ativacao: SinaisDaAtivacao;
@@ -189,6 +193,7 @@ export default function PaginaImportar() {
         const data = await res.json();
         setCadastrados(data.clientes || []);
         setTravaMensagem(data.trava ?? null);
+        setAnual(data.anual ?? null);
         setPainel(
           data.ativacao && data.retorno
             ? { ativacao: data.ativacao, retorno: data.retorno }
@@ -457,6 +462,7 @@ export default function PaginaImportar() {
             totalCents={painel.retorno.recuperadoTotalCents}
           />
         )}
+      {anual && <CartaoDoAnual oferta={anual} />}
 
       <header>
         <h1 className="font-display text-2xl text-panel-ink">Trazer meus clientes</h1>
