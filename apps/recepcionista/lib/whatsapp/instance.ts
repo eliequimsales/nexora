@@ -12,6 +12,7 @@ export type WhatsAppStatus = "DISCONNECTED" | "WAITING_QR" | "CONNECTED" | "ERRO
 export interface WhatsAppState {
   status: WhatsAppStatus;
   qrCode: string | null;
+  pairingCode?: string | null;
   connectedAt: string | null;
   error: string | null;
 }
@@ -48,15 +49,19 @@ async function saveState(
   await prisma.companyProfile.update({ where: { companyId }, data });
 }
 
-function toState(profile: {
-  whatsappStatus: string;
-  whatsappQrCode: string | null;
-  whatsappConnectedAt: Date | null;
-  whatsappError: string | null;
-}): WhatsAppState {
+function toState(
+  profile: {
+    whatsappStatus: string;
+    whatsappQrCode: string | null;
+    whatsappConnectedAt: Date | null;
+    whatsappError: string | null;
+  },
+  pairingCode: string | null = null,
+): WhatsAppState {
   return {
     status: (profile.whatsappStatus as WhatsAppStatus) ?? "DISCONNECTED",
     qrCode: profile.whatsappQrCode,
+    pairingCode,
     connectedAt: profile.whatsappConnectedAt?.toISOString() ?? null,
     error: profile.whatsappError,
   };
@@ -64,15 +69,17 @@ function toState(profile: {
 
 /**
  * Cria (se necessário) a instância da empresa na Evolution, configura o
- * webhook automaticamente e gera o QR Code para conexão.
+ * webhook automaticamente e gera o QR Code ou Código de Pareamento para conexão.
  */
-export async function connectWhatsApp(companyId: string): Promise<WhatsAppState> {
+export async function connectWhatsApp(companyId: string, phone?: string): Promise<WhatsAppState> {
   const name = instanceNameFor(companyId);
+  let pairingCode: string | null = null;
 
   try {
     await createInstance(name);
     await setWebhook(name, webhookUrl());
-    const result = await connectInstance(name);
+    const result = await connectInstance(name, phone);
+    pairingCode = result.pairingCode;
 
     if (result.state === "open") {
       await saveState(companyId, {
@@ -99,7 +106,7 @@ export async function connectWhatsApp(companyId: string): Promise<WhatsAppState>
   }
 
   const profile = await prisma.companyProfile.findUniqueOrThrow({ where: { companyId } });
-  return toState(profile);
+  return toState(profile, pairingCode);
 }
 
 /** Consulta o estado real na Evolution e sincroniza o banco. */

@@ -212,21 +212,31 @@ export async function getConnectionState(instance: string): Promise<string | nul
 }
 
 /**
- * Inicia a conexão e retorna o QR Code (data URL base64) quando disponível.
+ * Inicia a conexão e retorna o QR Code (data URL base64) ou o Código de Pareamento (pairingCode).
  * Se o número já estiver conectado, retorna state "open" sem QR.
  */
 export async function connectInstance(
   instance: string,
-): Promise<{ qrCode: string | null; state: string | null }> {
-  const data = (await evoFetch(`/instance/connect/${encodeURIComponent(instance)}`)) as {
+  phone?: string,
+): Promise<{ qrCode: string | null; pairingCode: string | null; state: string | null }> {
+  const cleanPhone = phone ? phone.replace(/\D/g, "") : null;
+  const url = cleanPhone
+    ? `/instance/connect/${encodeURIComponent(instance)}?number=${encodeURIComponent(
+        cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`,
+      )}`
+    : `/instance/connect/${encodeURIComponent(instance)}`;
+
+  const data = (await evoFetch(url)) as {
     base64?: string;
     code?: string;
+    pairingCode?: string;
     qrcode?: { base64?: string };
     instance?: { state?: string };
   };
 
   const qrCode = data.base64 ?? data.qrcode?.base64 ?? null;
-  return { qrCode, state: data.instance?.state ?? null };
+  const pairingCode = data.pairingCode ?? data.code ?? null;
+  return { qrCode, pairingCode, state: data.instance?.state ?? null };
 }
 
 const WEBHOOK_EVENTS = ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED"];
