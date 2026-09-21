@@ -7,6 +7,8 @@ import { LIMITES, limitar } from "@/lib/limites";
 import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 import {
   formatarDataLocal,
+  formatarHoraLocal,
+  gerarTextoLembrete,
   marcarLembreteEnviado,
   obterLembretes,
 } from "@/lib/agenda/painel";
@@ -166,12 +168,75 @@ export async function POST(request: Request) {
       );
     }
 
-    const itemAlvo = todosLembretes.find((l) => l.id === agendamentoId);
+    let itemAlvo = todosLembretes.find((l) => l.id === agendamentoId);
+
     if (!itemAlvo) {
-      return NextResponse.json(
-        { error: "Agendamento não encontrado para esta data" },
-        { status: 404 },
-      );
+      // Busca direto no banco caso a data enviada divirja do instante do agendamento
+      const appt = await prisma.appointment.findFirst({
+        where: { id: agendamentoId, companyId },
+        include: {
+          customer: true,
+          service: true,
+          company: { select: { name: true, profile: { select: { address: true } } } },
+        },
+      });
+
+      if (!appt || !appt.customer) {
+        return NextResponse.json(
+          { error: "Agendamento não encontrado" },
+          { status: 404 },
+        );
+      }
+
+      const dataIso = formatarDataLocal(appt.startsAt);
+      const horaStr = formatarHoraLocal(appt.startsAt);
+      let profissionalNome = "Profissional";
+      try {
+        if (appt.notes && appt.notes.startsWith("{")) {
+          const parsedNotes = JSON.parse(appt.notes);
+          if (parsedNotes.profissional) profissionalNome = parsedNotes.profissional;
+        }
+      } catch {}
+
+      const empresaNome = appt.company?.name || "Nosso Estabelecimento";
+      const servicoNome = appt.service?.name || "Atendimento";
+      const textoPronto = gerarTextoLembrete({
+        clienteNome: appt.customer.name,
+        dataIso,
+        hora: horaStr,
+        servicoNome,
+        profissionalNome,
+        empresaNome,
+        endereco: appt.company?.profile?.address || undefined,
+      });
+
+      itemAlvo = {
+        id: appt.id,
+        clienteId: appt.customerId,
+        nome: appt.customer.name,
+        telefone: appt.customer.phone,
+        servicoId: appt.serviceId,
+        servicoNome,
+        valorCents: appt.service?.priceCents ?? 0,
+        duracaoMin: appt.service?.durationMin ?? 30,
+        data: dataIso,
+        horaInicio: horaStr,
+        horaFim: formatarHoraLocal(appt.endsAt),
+        horarioFormatado: `${horaStr} - ${formatarHoraLocal(appt.endsAt)}`,
+        profissional: profissionalNome,
+        status: appt.status,
+        source: appt.source,
+        observacoes: "",
+        historicoVisitas: 0,
+        cicloDias: 30,
+        cicloConfianca: "baixa" as const,
+        proximoRetornoEsperado: null,
+        lembreteEnviado: false,
+        lembreteEnviadoEm: null,
+        lembreteStatus: "PENDENTE",
+        mensagemPronta: textoPronto,
+        whatsappUrl: `https://wa.me/55${appt.customer.phone.replace(/\D/g, "")}?text=${encodeURIComponent(textoPronto)}`,
+      };
     }
 
     const textoFinal = mensagemPersonalizada || itemAlvo.mensagemPronta;

@@ -292,13 +292,14 @@ export default function PaginaAgenda() {
     }
 
     try {
+      const dataAlvoEnvio = agendamentoSelecionado?.data || dataSelecionada;
       const res = await fetch("/api/agenda/lembrete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           agendamentoId,
           emLote,
-          data: dataSelecionada,
+          data: dataAlvoEnvio,
         }),
       });
 
@@ -335,8 +336,10 @@ export default function PaginaAgenda() {
     try {
       let valorCents = 0;
       let duracaoMin = 30;
-      if (formServicoId) {
-        const s = servicos.find((item) => item.id === formServicoId);
+      if (formServicoNome.trim()) {
+        const s = servicos.find(
+          (item) => item.name.toLowerCase() === formServicoNome.trim().toLowerCase(),
+        );
         if (s) {
           valorCents = s.priceCents;
           duracaoMin = s.durationMin || 30;
@@ -399,7 +402,7 @@ export default function PaginaAgenda() {
     const novo: Profissional = {
       id: `prof_${Date.now()}`,
       nome: novoProfNome.trim(),
-      cargo: novoProfCargo.trim() || "Profissional",
+      cargo: "Profissional",
     };
     setListaEditavelProf([...listaEditavelProf, novo]);
     setNovoProfNome("");
@@ -1364,7 +1367,7 @@ export default function PaginaAgenda() {
                 >
                   {profissionaisExibidos.map((p) => (
                     <option key={p.nome} value={p.nome}>
-                      {p.nome} ({p.cargo})
+                      {p.nome} {p.cargo && p.cargo !== "Profissional" ? `(${p.cargo})` : ""}
                     </option>
                   ))}
                 </select>
@@ -1374,35 +1377,13 @@ export default function PaginaAgenda() {
                 <label className="block text-xs font-medium text-panel-sub">
                   Serviço (opcional)
                 </label>
-                {servicos.length > 0 ? (
-                  <select
-                    value={formServicoId}
-                    onChange={(e) => {
-                      const id = e.target.value;
-                      setFormServicoId(id);
-                      const s = servicos.find((item) => item.id === id);
-                      if (s) {
-                        setFormServicoNome(s.name);
-                      }
-                    }}
-                    className="mt-1 w-full rounded-xl border border-panel-line bg-panel-bg px-3.5 py-2 text-xs text-panel-ink focus:border-amber focus:outline-none"
-                  >
-                    <option value="">Selecionar serviço (opcional)...</option>
-                    {servicos.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    type="text"
-                    placeholder="Nome do serviço"
-                    value={formServicoNome}
-                    onChange={(e) => setFormServicoNome(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-panel-line bg-panel-bg px-3.5 py-2 text-xs text-panel-ink placeholder:text-panel-sub/50 focus:border-amber focus:outline-none"
-                  />
-                )}
+                <input
+                  type="text"
+                  placeholder="Nome do serviço (ex: Consulta, Lavagem, Corte...)"
+                  value={formServicoNome}
+                  onChange={(e) => setFormServicoNome(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-panel-line bg-panel-bg px-3.5 py-2 text-xs text-panel-ink placeholder:text-panel-sub/50 focus:border-amber focus:outline-none"
+                />
               </div>
 
               {/* Seletor de Horário Clicável Mobile-First */}
@@ -1535,7 +1516,9 @@ export default function PaginaAgenda() {
                     >
                       <div>
                         <span className="font-semibold text-xs text-panel-ink">{p.nome}</span>
-                        <span className="block text-[11px] text-panel-sub">{p.cargo}</span>
+                        {p.cargo && p.cargo !== "Profissional" && (
+                          <span className="block text-[11px] text-panel-sub">{p.cargo}</span>
+                        )}
                       </div>
 
                       <button
@@ -1556,28 +1539,19 @@ export default function PaginaAgenda() {
                 <span className="block text-xs font-semibold text-panel-ink">
                   + Adicionar membro da equipe
                 </span>
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="text"
-                    placeholder="Ex: Profissional Carlos"
-                    value={novoProfNome}
-                    onChange={(e) => setNovoProfNome(e.target.value)}
-                    className="rounded-lg border border-panel-line bg-panel-card px-3 py-1.5 text-xs text-panel-ink placeholder:text-panel-sub/50 focus:border-amber focus:outline-none"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Especialidade ou cargo"
-                    value={novoProfCargo}
-                    onChange={(e) => setNovoProfCargo(e.target.value)}
-                    className="rounded-lg border border-panel-line bg-panel-card px-3 py-1.5 text-xs text-panel-ink placeholder:text-panel-sub/50 focus:border-amber focus:outline-none"
-                  />
-                </div>
+                <input
+                  type="text"
+                  placeholder="Nome (ex: Carlos)"
+                  value={novoProfNome}
+                  onChange={(e) => setNovoProfNome(e.target.value)}
+                  className="w-full rounded-lg border border-panel-line bg-panel-card px-3 py-2 text-xs text-panel-ink placeholder:text-panel-sub/50 focus:border-amber focus:outline-none"
+                />
                 <button
                   type="button"
                   onClick={handleAdicionarProfissional}
-                  className="w-full rounded-lg bg-panel-card border border-panel-line py-1.5 text-xs font-medium text-panel-ink hover:border-amber/40 hover:text-amber transition"
+                  className="w-full rounded-lg bg-panel-card border border-panel-line py-2 text-xs font-bold text-panel-ink hover:border-amber/40 hover:text-amber transition"
                 >
-                  + Inserir na lista
+                  Adicionar profissional
                 </button>
               </div>
 
