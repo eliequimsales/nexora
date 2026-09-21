@@ -10,7 +10,8 @@ import { slugifySegment, type SegmentTopic } from "./segments";
 import { pediuParaParar } from "./recuperacao/optout";
 import { variantesDeTelefone } from "./recuperacao/telefone";
 import { sendWhatsAppText, type IncomingWhatsAppMessage } from "./whatsapp/evolution";
-import type { BusinessHour, Faq } from "./validation";
+import type { Faq } from "./validation";
+import { horarioDaEmpresa } from "./agenda/horario";
 
 const TRANSFER_MESSAGE = "Claro, vou chamar nossa equipe para continuar seu atendimento.";
 const FALLBACK_MESSAGE = "Vou encaminhar para nossa equipe te ajudar melhor. 🙏";
@@ -21,10 +22,6 @@ function logTiming(path: string, startedAt: number, marks: Record<string, number
     .map(([key, value]) => `${key}=${value}ms`)
     .join(" ");
   console.log(`[timing] caminho=${path} ${parts} total=${Date.now() - startedAt}ms`.replace("  ", " "));
-}
-
-function asBusinessHours(value: unknown): BusinessHour[] {
-  return Array.isArray(value) ? (value as BusinessHour[]) : [];
 }
 
 function asFaqs(value: unknown): Faq[] {
@@ -175,7 +172,7 @@ export async function handleIncomingMessage(incoming: IncomingWhatsAppMessage): 
     const quickReply = matchQuickReply(incoming.text, {
       companyName: profile.company.name,
       greetingMessage: profile.greetingMessage,
-      businessHours: asBusinessHours(profile.businessHours),
+      businessHours: horarioDaEmpresa(profile.businessHours),
       address: profile.address,
       paymentMethods: profile.paymentMethods,
       isFirstMessage: isFirstMessage || wasFinished,
@@ -218,7 +215,7 @@ async function respondWithAi(
       }),
     ]);
 
-    const businessHours = asBusinessHours(profile.businessHours);
+    const businessHours = horarioDaEmpresa(profile.businessHours);
     const systemPrompt = buildSystemPrompt({
       companyName: profile.company.name,
       description: profile.description,

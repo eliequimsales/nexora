@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { HORARIO_PADRAO, horarioDaEmpresa, semanaCompleta } from "@/lib/agenda/horario";
 
 /**
  * MEU ATENDENTE NO WHATSAPP — a tela de ativação do produto.
@@ -78,12 +79,9 @@ const WA_STATUS_INFO: Record<WhatsAppState["status"], { label: string; bolinha: 
 
 const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
-const DEFAULT_HOURS: BusinessHour[] = Array.from({ length: 7 }, (_, day) => ({
-  day,
-  open: "08:00",
-  close: "18:00",
-  closed: day === 0,
-}));
+// O mesmo padrão da página de agendar e do atendimento (lib/agenda/horario.ts):
+// a tela mostra o horário que vale de verdade, não um palpite só dela.
+const DEFAULT_HOURS: BusinessHour[] = HORARIO_PADRAO.map((h) => ({ ...h }));
 
 // Atalhos de horário — cada um gera a semana inteira com um clique
 const HOUR_PRESETS: { label: string; build: () => BusinessHour[] }[] = [
@@ -283,10 +281,7 @@ export default function ConfiguracoesPage() {
         aiTone: profile.aiTone ?? EMPTY_FORM.aiTone,
         greetingMessage: profile.greetingMessage ?? "",
         awayMessage: profile.awayMessage ?? "",
-        businessHours:
-          Array.isArray(profile.businessHours) && profile.businessHours.length === 7
-            ? profile.businessHours
-            : DEFAULT_HOURS,
+        businessHours: semanaCompleta(horarioDaEmpresa(profile.businessHours)),
         faqs: Array.isArray(profile.faqs) ? profile.faqs : [],
         handoffKeywords: Array.isArray(profile.handoffKeywords) ? profile.handoffKeywords : [],
         followUpEnabled: profile.followUpEnabled ?? false,

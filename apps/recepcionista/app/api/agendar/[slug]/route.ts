@@ -4,8 +4,8 @@ import {
   calcularSlots,
   gerarGoogleCalendarLink,
   separarSlotsPorTurno,
-  type Horario,
 } from "@/lib/agenda/disponibilidade";
+import { horarioDaEmpresa } from "@/lib/agenda/horario";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
@@ -64,22 +64,6 @@ async function carregarNegocio(slug: string) {
       },
     },
   });
-}
-
-const HORARIOS_PADRAO: Horario[] = [
-  { day: 1, open: "08:00", close: "20:00" },
-  { day: 2, open: "08:00", close: "20:00" },
-  { day: 3, open: "08:00", close: "20:00" },
-  { day: 4, open: "08:00", close: "20:00" },
-  { day: 5, open: "08:00", close: "20:00" },
-  { day: 6, open: "08:00", close: "19:00" },
-];
-
-function horariosDoPerfil(businessHours: unknown): Horario[] {
-  if (Array.isArray(businessHours) && businessHours.length > 0) {
-    return businessHours as Horario[];
-  }
-  return HORARIOS_PADRAO;
 }
 
 /** Datas dos próximos dias, à meia-noite UTC, como o motor de slots espera. */
@@ -156,7 +140,7 @@ export async function GET(
           .map((a) => ({ startsAt: a.startsAt, endsAt: a.endsAt }))
       : todosAgendamentos.map((a) => ({ startsAt: a.startsAt, endsAt: a.endsAt }));
 
-    const horarios = horariosDoPerfil(negocio.profile?.businessHours);
+    const horarios = horarioDaEmpresa(negocio.profile?.businessHours);
 
     const agenda = dias
       .map((dia) => {
@@ -275,7 +259,7 @@ export async function POST(
           // cliente aparece e não tem cadeira.
           const livres = calcularSlots({
             dia: diaData,
-            horarios: horariosDoPerfil(negocio.profile?.businessHours),
+            horarios: horarioDaEmpresa(negocio.profile?.businessHours),
             duracaoMin: servico.durationMin,
             ocupados,
             agora,
