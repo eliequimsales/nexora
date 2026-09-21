@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { emailConfigurado } from "@/lib/reengajamento/email";
 import { AvisoVerificarEmail } from "./aviso-verificar";
 import { LogoutButton } from "@/components/logout-button";
+import { BotaoBaixarApp } from "@/components/install-prompt";
 import { PainelNavDesktop, PainelNavMobile } from "@/components/painel/navegacao";
 
 // O MENU É O FLUXO DE VALOR, NÃO O ÍNDICE DO SISTEMA.
@@ -94,6 +95,7 @@ export default async function PainelLayout({ children }: { children: React.React
             <PainelNavDesktop items={NAV} />
           </div>
           <div className="flex items-center gap-3">
+            <BotaoBaixarApp />
             <Link
               href="/painel/agenda"
               className="inline-flex items-center gap-1.5 rounded-lg border border-amber/30 bg-amber/10 px-3 py-1.5 text-xs font-bold text-amber transition hover:bg-amber/20"
