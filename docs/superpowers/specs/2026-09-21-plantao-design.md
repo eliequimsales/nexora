@@ -22,16 +22,16 @@ Ele também fecha o ciclo da recuperação: a Onda sai à tarde e a resposta do 
 | Horário | **Herdado da agenda**: o Plantão atende quando a agenda diz fechado. Nenhuma tela nova de horário. |
 | Identidade | Se apresenta como **atendimento automático** do negócio, uma vez, na primeira mensagem. |
 
-### Em aberto — decidir antes da Fase 1
+### Preço — decidido pelo fundador em 21/09/2026
 
-A esteira aprovada no mesmo dia põe o Plantão como o que justifica o **Nexora Completo (R$ 197/mês)**, e a decisão acima o põe **dentro do plano de R$ 97**. As duas aprovações se contradizem só aqui. Proposta de conciliação, para o fundador confirmar:
+A esteira aprovada no mesmo dia punha o Plantão como o que justifica o **Nexora Completo**, e a decisão acima o punha **dentro do plano de R$ 97**. A conciliação foi aprovada assim:
 
-- O plano de R$ 97 inclui o Plantão até o **teto justo** (ponto de partida: **200 conversas por mês**).
-- Passando do teto, o Plantão **não some**: continua respondendo com texto fixo ("anotei, a equipe responde às 9h"), sem IA, e o painel avisa o dono.
-- O **Completo** tira o teto e libera equipe ilimitada — o teto vira o gatilho do degrau, em vez de um corte.
-- O número do teto é calibrado com o contador de mensagens da noite antes do lançamento da Fase 1.
+- **Plano Nexora (R$ 97/mês)** inclui o Plantão com teto de **200 conversas por mês**.
+- **Nexora Completo (R$ 197/mês)** tira o teto de conversas e libera equipe e profissionais ilimitados.
+- Passando do teto, o Plantão **não some**: continua respondendo com texto fixo ("anotei, a equipe responde às 9h"), sem IA, e o painel avisa o dono. O teto vira o gatilho do degrau, em vez de um corte.
+- O teto e o Completo entram com a Fase 1. O contador de conversas da noite confirma o número antes do lançamento.
 
-Nada da Fase 0 depende dessa resposta.
+Nada da Fase 0 dependia dessa resposta.
 
 ## Princípios
 
