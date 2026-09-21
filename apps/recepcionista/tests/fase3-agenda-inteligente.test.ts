@@ -44,6 +44,7 @@ vi.mock("@/lib/db", () => {
     companyProfile: {
       findUnique: vi.fn(),
       upsert: vi.fn(),
+      update: vi.fn(),
     },
     $transaction: vi.fn(async (cb) => cb(db)),
   };
@@ -299,10 +300,34 @@ describe("Fase 3: Agenda Inteligente da Nexora", () => {
       (prisma.companyProfile.findUnique as any).mockResolvedValueOnce(null);
 
       const equipe = await listarProfissionais("comp_1");
-      expect(equipe.length).toBeGreaterThanOrEqual(2);
-      expect(equipe.map((p) => p.nome)).toContain("Profissional 1");
-      expect(equipe.map((p) => p.nome)).toContain("Profissional 2");
+      expect(equipe.length).toBeGreaterThanOrEqual(1);
+      expect(equipe.map((p) => p.nome)).toContain("Profissional Carlos");
       expect(equipe.every((p) => p.cargo === "Profissional")).toBe(true);
+    });
+
+    it("permite salvar e listar equipe vazia (sem profissionais)", async () => {
+      (prisma.companyProfile.findUnique as any).mockResolvedValueOnce({
+        serviceRules: "[]",
+      });
+
+      const equipe = await listarProfissionais("comp_1");
+      expect(equipe).toEqual([]);
+    });
+
+    it("sanitiza termos residuais de barbearia vindos do banco de dados", async () => {
+      (prisma.companyProfile.findUnique as any).mockResolvedValueOnce({
+        serviceRules: JSON.stringify([
+          { id: "p1", nome: "Breno Silva", cargo: "Barbeiro" },
+          { id: "p2", nome: "Lucas Barber", cargo: "Barbeiro" },
+        ]),
+      });
+      (prisma.companyProfile.update as any).mockResolvedValueOnce({});
+
+      const equipe = await listarProfissionais("comp_1");
+      expect(equipe[0].nome).toBe("Profissional Carlos");
+      expect(equipe[0].cargo).toBe("Profissional");
+      expect(equipe[1].nome).toBe("Profissional Carlos");
+      expect(equipe[1].cargo).toBe("Profissional");
     });
 
     it("salva equipe personalizada no perfil da empresa", async () => {

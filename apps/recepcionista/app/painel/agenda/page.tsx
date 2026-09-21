@@ -216,8 +216,7 @@ export default function PaginaAgenda() {
 
     if (list.length === 0) {
       return [
-        { nome: "Profissional 1", cargo: "Profissional" },
-        { nome: "Profissional 2", cargo: "Profissional" },
+        { nome: "Atendimento Geral", cargo: "Profissional" },
       ];
     }
 
@@ -391,14 +390,7 @@ export default function PaginaAgenda() {
   };
 
   const abrirModalProfissionais = () => {
-    setListaEditavelProf(
-      profissionais.length > 0
-        ? [...profissionais]
-        : [
-            { id: "prof_1", nome: "Atendimento Principal", cargo: "Especialista" },
-            { id: "prof_2", nome: "Equipe de Atendimento", cargo: "Profissional" },
-          ],
-    );
+    setListaEditavelProf([...profissionais]);
     setModalProfissionaisAberto(true);
   };
 
@@ -414,10 +406,6 @@ export default function PaginaAgenda() {
   };
 
   const handleRemoverProfissional = (id: string) => {
-    if (listaEditavelProf.length <= 1) {
-      alert("Mantenha ao menos um profissional na equipe.");
-      return;
-    }
     setListaEditavelProf(listaEditavelProf.filter((p) => p.id !== id));
   };
 
@@ -1535,25 +1523,32 @@ export default function PaginaAgenda() {
             <div className="mt-4 space-y-4">
               {/* Lista dos profissionais atuais */}
               <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                {listaEditavelProf.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex items-center justify-between rounded-xl border border-panel-line bg-panel-card px-3.5 py-2.5"
-                  >
-                    <div>
-                      <span className="font-semibold text-xs text-panel-ink">{p.nome}</span>
-                      <span className="block text-[11px] text-panel-sub">{p.cargo}</span>
-                    </div>
-
-                    <button
-                      onClick={() => handleRemoverProfissional(p.id)}
-                      className="text-xs text-red-400 hover:text-red-300 p-1"
-                      title="Remover profissional"
-                    >
-                      Remover
-                    </button>
+                {listaEditavelProf.length === 0 ? (
+                  <div className="rounded-xl border border-panel-line bg-panel-card p-4 text-center text-xs text-panel-sub">
+                    Nenhum profissional cadastrado. A agenda funcionará com atendimento geral.
                   </div>
-                ))}
+                ) : (
+                  listaEditavelProf.map((p) => (
+                    <div
+                      key={p.id}
+                      className="flex items-center justify-between rounded-xl border border-panel-line bg-panel-card px-3.5 py-2.5"
+                    >
+                      <div>
+                        <span className="font-semibold text-xs text-panel-ink">{p.nome}</span>
+                        <span className="block text-[11px] text-panel-sub">{p.cargo}</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoverProfissional(p.id)}
+                        className="text-xs text-red-400 hover:text-red-300 p-1"
+                        title="Remover profissional"
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  ))
+                )}
               </div>
 
               {/* Formulário para adicionar novo profissional */}
@@ -1564,7 +1559,7 @@ export default function PaginaAgenda() {
                 <div className="grid grid-cols-2 gap-2">
                   <input
                     type="text"
-                    placeholder="Nome do profissional"
+                    placeholder="Ex: Profissional Carlos"
                     value={novoProfNome}
                     onChange={(e) => setNovoProfNome(e.target.value)}
                     className="rounded-lg border border-panel-line bg-panel-card px-3 py-1.5 text-xs text-panel-ink placeholder:text-panel-sub/50 focus:border-amber focus:outline-none"

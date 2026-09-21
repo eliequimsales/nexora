@@ -13,9 +13,28 @@ export type Profissional = {
 };
 
 export const PROFISSIONAIS_PADRAO: Profissional[] = [
-  { id: "prof_1", nome: "Profissional 1", cargo: "Profissional" },
-  { id: "prof_2", nome: "Profissional 2", cargo: "Profissional" },
+  { id: "prof_1", nome: "Profissional Carlos", cargo: "Profissional" },
 ];
+
+export function sanitizarProfissional(p: unknown): Profissional {
+  const item = typeof p === "object" && p !== null ? (p as Record<string, unknown>) : {};
+  let nome = String(item.nome || "").trim();
+  let cargo = String(item.cargo || "").trim();
+
+  // Elimina qualquer menção residual a termos de barbearia (Barbeiro, Barber, Breno)
+  if (/barbeir|barber|breno/i.test(nome) || !nome) {
+    nome = "Profissional Carlos";
+  }
+  if (/barbeir|barber/i.test(cargo) || !cargo) {
+    cargo = "Profissional";
+  }
+
+  return {
+    id: String(item.id || `prof_${Math.random().toString(36).slice(2, 9)}`),
+    nome,
+    cargo,
+  };
+}
 
 /**
  * Converte data (YYYY-MM-DD) e hora (HH:MM) local em instante Date UTC.
@@ -61,10 +80,23 @@ export async function listarProfissionais(companyId: string): Promise<Profission
       select: { serviceRules: true },
     });
 
-    if (profile?.serviceRules && profile.serviceRules.startsWith("[")) {
+    if (profile?.serviceRules && profile.serviceRules.trim().startsWith("[")) {
       const parsed = JSON.parse(profile.serviceRules);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed as Profissional[];
+      if (Array.isArray(parsed)) {
+        // Se a lista foi salva (mesmo se vazia []), respeitamos a escolha do lojista
+        const sanitizados = parsed.map(sanitizarProfissional);
+
+        // Se o banco continha termos residuais de barbearia, atualiza silenciosamente
+        if (JSON.stringify(parsed) !== JSON.stringify(sanitizados)) {
+          void prisma.companyProfile
+            .update({
+              where: { companyId },
+              data: { serviceRules: JSON.stringify(sanitizados) },
+            })
+            .catch(() => {});
+        }
+
+        return sanitizados;
       }
     }
   } catch {
@@ -81,13 +113,14 @@ export async function salvarProfissionais(
   companyId: string,
   profissionais: Profissional[],
 ): Promise<Profissional[]> {
-  const payload = JSON.stringify(profissionais);
+  const sanitizados = profissionais.map(sanitizarProfissional);
+  const payload = JSON.stringify(sanitizados);
   await prisma.companyProfile.upsert({
     where: { companyId },
     create: { companyId, serviceRules: payload },
     update: { serviceRules: payload },
   });
-  return profissionais;
+  return sanitizados;
 }
 
 export type CriarAgendamentoInput = {
