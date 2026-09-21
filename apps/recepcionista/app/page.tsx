@@ -7,6 +7,7 @@ import { TemaNexora } from "@/components/tema-nexora";
 import { GARANTIA_DIAS, ONDAS_MINIMAS } from "@/lib/billing/garantia";
 import { PLANOS } from "@/lib/billing/planos";
 import { emReais, PRECO_ANUAL_CENTS, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
+import { DIAS_DA_PRIMEIRA_ONDA } from "@/lib/billing/primeira-onda";
 import { O_QUE_A_NEXORA_NAO_E, PERGUNTAS_FREQUENTES } from "@/lib/perguntas";
 import { classificar, NOME_DA_ESTEIRA } from "@/lib/recuperacao/esteiras";
 import { MIN_SUMIDOS } from "@/lib/recuperacao/estimativa";
@@ -42,7 +43,12 @@ export const metadata: Metadata = {
  * Desenho: docs/superpowers/specs/2026-09-10-visual-antigo-no-funil-design.md
  */
 
-const SELOS = ["7 dias grátis", "Sem cartão para começar", "Sem integração", "Funciona com planilha"];
+const SELOS = [
+  "1ª Onda por nossa conta",
+  "Sem cartão para começar",
+  "Sem integração",
+  "Funciona com planilha",
+];
 
 /**
  * A ONDA DE EXEMPLO — e a tela diz que é exemplo.
@@ -99,7 +105,7 @@ const PASSOS = [
 ];
 
 const INCLUI = [
-  "7 dias de teste grátis com envio de mensagens liberado",
+  "A primeira Onda por nossa conta, sem cartão",
   `Garantia Dinheiro Recuperado de ${GARANTIA_DIAS} dias`,
   "Sua lista importada do jeito que ela estiver",
   "Doze mensagens prontas por semana, escritas para cada cliente",
@@ -150,11 +156,11 @@ export default function Home() {
             <p className="mx-auto max-w-2xl text-lg leading-relaxed text-nx-secondary sm:text-xl">
               A Nexora mostra quem parou de comprar, quanto dinheiro isso representa e a
               mensagem exata pra trazer cada um de volta.{" "}
-              <strong className="text-nx-primary">Experimente grátis por 7 dias</strong>, sem cartão.
+              <strong className="text-nx-primary">A primeira Onda é por nossa conta</strong>, sem cartão.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3 pt-3">
               <CtaLink href="/cadastro" ctaName="hero" className={`${BOTAO_DOURADO} px-7 py-4 text-base`}>
-                Testar 7 dias grátis sem cartão <span aria-hidden="true">→</span>
+                Começar minha primeira Onda grátis <span aria-hidden="true">→</span>
               </CtaLink>
               <a
                 href="#calculadora"
@@ -302,15 +308,15 @@ export default function Home() {
         <section id="preco" className="scroll-mt-20 bg-nx-surface-2/30 px-6 py-20">
           <div className="mx-auto grid max-w-5xl gap-14 lg:grid-cols-2 lg:items-center">
             <div>
-              <h2 className="text-3xl font-bold sm:text-4xl">7 dias grátis, depois R$ 97/mês</h2>
+              <h2 className="text-3xl font-bold sm:text-4xl">Primeira Onda grátis, depois R$ 97/mês</h2>
               <p className="mt-8 flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <span className="whitespace-nowrap text-7xl font-bold tracking-tight">R$ 97</span>
-                <span className="text-nx-secondary">/mês após o teste de 7 dias</span>
+                <span className="text-nx-secondary">/mês a partir da segunda Onda</span>
               </p>
               <p className="mt-6 max-w-md leading-relaxed text-nx-secondary">
-                O diagnóstico é grátis e você tem 7 dias com acesso liberado para mandar suas
-                primeiras mensagens e recuperar clientes antes de pagar qualquer coisa — não
-                pedimos cartão para começar.
+                O diagnóstico é grátis e a primeira Onda também: até {TAMANHO_DA_ONDA} mensagens
+                prontas para mandar do seu WhatsApp em até {DIAS_DA_PRIMEIRA_ONDA} dias, antes de
+                pagar qualquer coisa — não pedimos cartão para começar.
               </p>
               <p className="mt-4 max-w-md rounded-lg border border-nx-gold/30 bg-nx-gold/5 p-4 text-sm leading-relaxed text-nx-secondary">
                 <strong className="font-semibold text-nx-primary">
@@ -326,7 +332,7 @@ export default function Home() {
                 .
               </p>
               <CtaLink href="/cadastro" ctaName="preco" className={`${BOTAO_DOURADO} mt-9 px-7 py-4`}>
-                Testar 7 dias grátis sem cartão <span aria-hidden="true">→</span>
+                Começar minha primeira Onda grátis <span aria-hidden="true">→</span>
               </CtaLink>
             </div>
             <ul className="rounded-xl border border-nx-border bg-nx-surface px-6">
@@ -362,14 +368,14 @@ export default function Home() {
         <section className="px-6 pb-24 pt-10">
           <div className="mx-auto max-w-3xl rounded-2xl border border-nx-gold/30 bg-nx-surface p-8 text-center sm:p-12">
             <h2 className="text-3xl font-bold leading-tight sm:text-4xl">
-              Recupere seus clientes nos próximos 7 dias de graça.
+              Chame de volta seus primeiros clientes esta semana, por nossa conta.
             </h2>
             <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-nx-secondary">
-              Crie sua conta em 15 segundos, sem cartão de crédito. Envie sua primeira onda
-              gratuita e veja o dinheiro entrando no seu caixa antes da primeira mensalidade.
+              Crie sua conta em 15 segundos, sem cartão de crédito. Suba sua lista, receba a
+              primeira Onda pronta e mande do seu WhatsApp. Você só paga se quiser a próxima.
             </p>
             <CtaLink href="/cadastro" ctaName="final" className={`${BOTAO_DOURADO} mt-8 px-8 py-4 text-lg`}>
-              Começar teste de 7 dias grátis <span aria-hidden="true">→</span>
+              Começar minha primeira Onda grátis <span aria-hidden="true">→</span>
             </CtaLink>
           </div>
         </section>
@@ -380,7 +386,7 @@ export default function Home() {
       {/* No celular o botão nunca sai da tela — veio da Nexora antiga. */}
       <div className="fixed inset-x-0 bottom-0 z-50 border-t border-nx-border bg-nx-bg/95 p-3 backdrop-blur-md sm:hidden">
         <CtaLink href="/cadastro" ctaName="mobile_sticky" className={`${BOTAO_DOURADO} w-full px-5 py-3.5`}>
-          Testar 7 dias grátis sem cartão <span aria-hidden="true">→</span>
+          Começar minha primeira Onda grátis <span aria-hidden="true">→</span>
         </CtaLink>
       </div>
     </TemaNexora>

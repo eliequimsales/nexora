@@ -3,7 +3,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { GARANTIA_DIAS, ONDAS_MINIMAS } from "@/lib/billing/garantia";
 import { FORMAS_DE_PAGAMENTO, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
-import { prometeuTesteGratis } from "@/lib/billing/relogio";
+import { DIAS_DA_PRIMEIRA_ONDA } from "@/lib/billing/primeira-onda";
+import { prometeuTesteGratis, relogioDoCadastro } from "@/lib/billing/relogio";
 import { VERSAO_DOCUMENTOS } from "@/lib/legal/identidade";
 import { TAMANHO_DA_ONDA } from "@/lib/recuperacao/onda";
 
@@ -50,6 +51,16 @@ describe("os números da página são os números do produto", () => {
     expect(landing.toLowerCase()).not.toContain("primeiro mês é grátis");
   });
 
+  // Desde 21/09/2026 a conta nova ganha a primeira Onda, não dias de teste.
+  it("a primeira Onda anunciada é a que a conta nova ganha", () => {
+    expect(relogioDoCadastro(VERSAO_DOCUMENTOS, new Date())).toBeNull();
+    expect(DIAS_DA_PRIMEIRA_ONDA).toBe(7);
+    expect(landing).toContain("primeira Onda");
+    expect(landing).toContain("DIAS_DA_PRIMEIRA_ONDA");
+    expect(landing.toLowerCase()).not.toContain("7 dias grátis");
+    expect(landing.toLowerCase()).not.toContain("teste de 7 dias");
+  });
+
   it("a garantia anunciada sai das constantes da garantia", () => {
     expect(GARANTIA_DIAS).toBe(30);
     expect(ONDAS_MINIMAS).toBe(3);
@@ -73,6 +84,7 @@ describe("nenhuma tela de entrada promete o mês grátis que a conta nova não t
       expect(texto).not.toContain("mês grátis");
       expect(texto).not.toContain("primeiro mês é grátis");
       expect(texto).not.toContain("meses são grátis");
+      expect(texto).not.toContain("7 dias grátis");
     });
   }
 });
