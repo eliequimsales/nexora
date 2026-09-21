@@ -221,6 +221,14 @@ describe("o painel mostra a primeira Onda", () => {
     expect(pagina).toContain("<QuemApareceu");
   });
 
+  // A 12ª mensagem pode sair no meio do "Enviar as restantes": o lote para, e a
+  // tela recarrega na parede em vez de abrir um alerta por mensagem recusada.
+  it("quando a primeira Onda acaba no meio do lote, o lote para e a tela vira a parede", () => {
+    const pagina = leia("app/painel/onda/page.tsx");
+    expect(pagina).toMatch(/res\.status === 402\)\s*\{\s*void carregar\(/);
+    expect(pagina).toMatch(/if \(!\(await enviarDireto\(card\)\)\) break;/);
+  });
+
   it("Minha conta diz o que a conta sem plano tem", () => {
     expect(leia("app/painel/assinatura/page.tsx")).toContain("a primeira Onda é por nossa conta");
   });

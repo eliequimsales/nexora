@@ -279,8 +279,12 @@ export default function PaginaOnda() {
     }
   };
 
-  /** Dispara a mensagem diretamente pelo WhatsApp conectado da empresa */
-  const enviarDireto = async (card: Card) => {
+  /**
+   * Envia a mensagem pelo WhatsApp ligado da empresa. Devolve false quando o lote
+   * precisa parar: o WhatsApp caiu, ou a ação travou (a primeira Onda acabou no
+   * meio) — e aí a tela recarrega e vira a parede, com o resultado da Onda.
+   */
+  const enviarDireto = async (card: Card): Promise<boolean> => {
     const toqueEfetivo = toquesSelecionados[card.id] ?? card.toque;
     const textoEfetivo = textoAtivoDoCard(card, toqueEfetivo);
     setEnviandoDireto(card.id);
@@ -299,14 +303,20 @@ export default function PaginaOnda() {
       if (!res.ok) {
         if (json.precisaConectar) {
           setModalWhatsAppAberto(true);
-        } else {
-          alert(json.error ?? "Não consegui enviar a mensagem agora. Tente novamente.");
+          return false;
         }
-        return;
+        if (res.status === 402) {
+          void carregar(tamanhoLote);
+          return false;
+        }
+        alert(json.error ?? "Não consegui enviar a mensagem agora. Tente novamente.");
+        return true;
       }
       setFeitos((f) => ({ ...f, [card.id]: json.efeito }));
+      return true;
     } catch {
       alert("Falha de conexão ao enviar a mensagem. Verifique sua internet.");
+      return true;
     } finally {
       setEnviandoDireto(null);
     }
@@ -324,7 +334,7 @@ export default function PaginaOnda() {
     for (let i = 0; i < pendentes.length; i++) {
       const card = pendentes[i];
       setProgressoLote({ atual: i + 1, total: pendentes.length });
-      await enviarDireto(card);
+      if (!(await enviarDireto(card))) break;
       // Pausa segura de 2,5 segundos entre envios para proteção do WhatsApp
       if (i < pendentes.length - 1) {
         await new Promise((resolve) => setTimeout(resolve, 2500));
