@@ -7,8 +7,8 @@ import { connectWhatsApp } from "@/lib/whatsapp/instance";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-/** Cria a instância da empresa na Evolution, configura o webhook e gera o QR. */
-export async function POST() {
+/** Cria a instância da empresa na Evolution, configura o webhook e gera o QR ou Código de Pareamento. */
+export async function POST(request: Request) {
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
@@ -21,7 +21,17 @@ export async function POST() {
   const barrado = await exigirAcesso(companyId, "CONECTAR_WHATSAPP");
   if (barrado) return barrado;
 
-  const state = await connectWhatsApp(companyId);
+  let phone: string | undefined;
+  try {
+    const body = await request.json();
+    if (body && typeof body.phone === "string") {
+      phone = body.phone;
+    }
+  } catch {
+    // Chamada sem body JSON (conexão QR padrão)
+  }
+
+  const state = await connectWhatsApp(companyId, phone);
   if (state.status === "ERROR") {
     return NextResponse.json(
       { error: state.error ?? "Falha ao conectar com o servidor de WhatsApp", state },
