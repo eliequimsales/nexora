@@ -17,7 +17,6 @@ const NAV = [
   { href: "/painel/clientes/remover", label: "Remover cliente" },
   { href: "/painel/onda", label: "Reativar clientes" },
   { href: "/painel/livro-caixa", label: "Dinheiro recuperado" },
-  { href: "/painel/assinatura", label: "Minha conta" },
 ];
 
 export default async function PainelLayout({ children }: { children: React.ReactNode }) {

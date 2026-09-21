@@ -149,7 +149,7 @@ export function PainelNavMobile({ items }: { items: NavItem[] }) {
       aria-label="Menu principal para celular"
       className="border-b border-panel-line bg-panel-card px-3 py-2 sm:hidden"
     >
-      <div className="grid grid-cols-5 gap-1 rounded-2xl border border-panel-line/80 bg-panel-bg p-1 shadow-inner">
+      <div className="grid grid-cols-4 gap-1.5 rounded-2xl border border-panel-line/80 bg-panel-bg p-1 shadow-inner">
         {items.map((item) => {
           const ativo = estaAtivo(item.href, pathname);
           return (
