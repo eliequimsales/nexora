@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   idDoEnvio,
   parseConnectionUpdate,
+  parseMensagemDoDono,
   parseQrUpdate,
   parseWebhookPayload,
 } from "@/lib/whatsapp/evolution";
@@ -162,5 +163,57 @@ describe("idDoEnvio", () => {
     expect(idDoEnvio(null)).toBeNull();
     expect(idDoEnvio({ key: { id: "" } })).toBeNull();
     expect(idDoEnvio({ key: { id: 42 } })).toBeNull();
+  });
+});
+
+/**
+ * A MENSAGEM QUE SAI DO NÚMERO DO DONO.
+ *
+ * O leitor das mensagens do cliente descarta tudo que é `fromMe`, e por isso o
+ * sistema não via quando o dono respondia pelo celular. Este leitor pega essas
+ * mensagens — sem decidir se é o dono ou o eco de um envio da Nexora.
+ */
+describe("parseMensagemDoDono", () => {
+  const doDono = (overrides: Record<string, unknown> = {}) =>
+    basePayload({
+      key: { remoteJid: "5511999998888@s.whatsapp.net", fromMe: true, id: "3EB0DONO" },
+      messageTimestamp: 1790000000,
+      ...overrides,
+    });
+
+  it("lê a mensagem que saiu do número do dono", () => {
+    expect(parseMensagemDoDono(doDono())).toEqual({
+      instance: "clinica-sorriso",
+      phone: "5511999998888",
+      messageId: "3EB0DONO",
+      enviadaEm: new Date(1790000000 * 1000),
+    });
+  });
+
+  it("foto e áudio também valem: o dono respondeu do mesmo jeito", () => {
+    expect(parseMensagemDoDono(doDono({ message: { audioMessage: { seconds: 12 } } }))).not.toBeNull();
+  });
+
+  it("aceita o horário como texto e fica sem horário quando ele não vem", () => {
+    expect(parseMensagemDoDono(doDono({ messageTimestamp: "1790000000" }))?.enviadaEm).toEqual(
+      new Date(1790000000 * 1000),
+    );
+    expect(parseMensagemDoDono(doDono({ messageTimestamp: undefined }))?.enviadaEm).toBeNull();
+  });
+
+  it("mensagem do cliente não é do dono", () => {
+    expect(parseMensagemDoDono(basePayload())).toBeNull();
+  });
+
+  it("ignora grupos, outros eventos e lixo", () => {
+    expect(
+      parseMensagemDoDono(doDono({ key: { remoteJid: "123@g.us", fromMe: true, id: "X" } })),
+    ).toBeNull();
+    expect(parseMensagemDoDono({ ...doDono(), event: "connection.update" })).toBeNull();
+    expect(parseMensagemDoDono(null)).toBeNull();
+  });
+
+  it("o leitor das mensagens do cliente continua ignorando as do dono", () => {
+    expect(parseWebhookPayload(doDono())).toBeNull();
   });
 });

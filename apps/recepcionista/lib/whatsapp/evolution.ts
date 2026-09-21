@@ -21,6 +21,9 @@ const webhookSchema = z
         id: z.string().optional(),
       }),
       pushName: z.string().nullish(),
+      // Segundos desde 1970, pelo relógio do WhatsApp. Separa sincronização de
+      // histórico do dono respondendo agora (lib/plantao/dono.ts).
+      messageTimestamp: z.union([z.number(), z.string()]).optional(),
       message: z
         .object({
           conversation: z.string().optional(),
@@ -66,6 +69,54 @@ export function parseWebhookPayload(payload: unknown): IncomingWhatsAppMessage |
     text,
     senderName: data.pushName?.trim() || null,
     messageId: data.key.id ?? null,
+  };
+}
+
+/** Mensagem que saiu do número do dono: digitada por ele ou eco de um envio da Nexora. */
+export interface MensagemDoDono {
+  instance: string;
+  /** O cliente com quem o dono está falando. */
+  phone: string;
+  messageId: string | null;
+  /** Quando a mensagem saiu, pelo relógio do WhatsApp. null quando não veio. */
+  enviadaEm: Date | null;
+}
+
+function lerHorario(valor: unknown): Date | null {
+  const segundos =
+    typeof valor === "number" ? valor : typeof valor === "string" ? Number(valor) : Number.NaN;
+  return Number.isFinite(segundos) && segundos > 0 ? new Date(segundos * 1000) : null;
+}
+
+/**
+ * A MENSAGEM QUE SAIU DO NÚMERO DO DONO.
+ *
+ * `parseWebhookPayload` descarta tudo que é `fromMe`, e por isso o sistema não
+ * via quando o dono respondia pelo celular. Este leitor pega exatamente essas
+ * mensagens — de qualquer tipo, porque responder com foto ou áudio também é o
+ * dono assumindo. Ele não decide nada: a mesma entrada pode ser o dono
+ * digitando ou o eco de um envio da própria Nexora, e quem separa uma coisa da
+ * outra é lib/plantao/dono.ts.
+ */
+export function parseMensagemDoDono(payload: unknown): MensagemDoDono | null {
+  const parsed = webhookSchema.safeParse(payload);
+  if (!parsed.success) return null;
+
+  const { event, instance, data } = parsed.data;
+  if (event.toLowerCase().replace(/_/g, ".") !== "messages.upsert") return null;
+  if (!data.key.fromMe) return null;
+
+  const jid = data.key.remoteJid;
+  if (!jid.endsWith("@s.whatsapp.net")) return null; // grupos e listas de transmissão
+
+  const phone = jid.split("@")[0].replace(/\D/g, "");
+  if (phone.length < 8) return null;
+
+  return {
+    instance,
+    phone,
+    messageId: data.key.id ?? null,
+    enviadaEm: lerHorario(data.messageTimestamp),
   };
 }
 
