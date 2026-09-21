@@ -3,9 +3,11 @@ import { handleIncomingMessage } from "@/lib/conversation-service";
 import { logError } from "@/lib/errors";
 import {
   parseConnectionUpdate,
+  parseMensagemDoDono,
   parseQrUpdate,
   parseWebhookPayload,
 } from "@/lib/whatsapp/evolution";
+import { dependenciasReais, registrarMensagemDoDono } from "@/lib/plantao/dono";
 import { applyConnectionUpdate, applyQrUpdate } from "@/lib/whatsapp/instance";
 import { safeEqual } from "@/lib/rate-limit";
 
@@ -46,6 +48,14 @@ export async function POST(request: Request) {
     const qrUpdate = parseQrUpdate(payload);
     if (qrUpdate) {
       await applyQrUpdate(qrUpdate.instance, qrUpdate.qrCode);
+      return NextResponse.json({ ok: true });
+    }
+
+    // Mensagem que saiu do número do dono: ele respondeu pelo celular, ou é o
+    // eco de um envio da própria Nexora. lib/plantao/dono.ts separa os dois.
+    const doDono = parseMensagemDoDono(payload);
+    if (doDono) {
+      await registrarMensagemDoDono(doDono, dependenciasReais);
       return NextResponse.json({ ok: true });
     }
 

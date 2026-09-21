@@ -307,6 +307,10 @@ model Conversation {
   lastCustomerMessageAt DateTime?
   lastFollowUpAt        DateTime?
 
+  // Quando o dono respondeu esta conversa pelo próprio celular. O Plantão fica
+  // em silêncio depois disso (lib/plantao/portao.ts). Só a hora: nunca o texto.
+  donoAssumiuEm DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
