@@ -73,7 +73,7 @@ type Recusa = { motivo: string; acao: { texto: string; href: string } };
 const WA_STATUS_INFO: Record<WhatsAppState["status"], { label: string; bolinha: string }> = {
   DISCONNECTED: { label: "Seu WhatsApp ainda não está ligado", bolinha: "bg-panel-line" },
   WAITING_QR: { label: "Aguardando você escanear o QR Code", bolinha: "bg-amber" },
-  CONNECTED: { label: "Atendente online e atendendo", bolinha: "bg-emerald-500" },
+  CONNECTED: { label: "WhatsApp ligado", bolinha: "bg-emerald-500" },
   ERROR: { label: "Não consegui ligar seu WhatsApp", bolinha: "bg-red-500" },
 };
 
@@ -357,8 +357,9 @@ export default function ConfiguracoesPage() {
       <div>
         <h1 className="font-display text-2xl font-bold">WhatsApp</h1>
         <p className="mt-1 text-sm text-panel-sub">
-          Sua atendente responde os clientes 24 horas por dia, no seu número. Ela só fala o
-          que você ensinar nesta página — nada é inventado.
+          Ligue o WhatsApp do seu negócio para as mensagens da Onda e os lembretes da agenda
+          saírem pelo seu número. Respostas automáticas estão desligadas: nada responde sozinho
+          aos seus clientes até você ligar o Plantão.
         </p>
       </div>
 
@@ -377,7 +378,7 @@ export default function ConfiguracoesPage() {
       <Passo
         numero={1}
         title="Ligar meu WhatsApp"
-        hint="Sem este passo a atendente não recebe nem responde nada."
+        hint="Sem este passo, a Nexora não consegue enviar as mensagens da Onda nem os lembretes da agenda pelo seu número."
       >
         <div className="flex flex-wrap items-center gap-2">
           <span className={`h-2.5 w-2.5 rounded-full ${selo.bolinha}`} />
@@ -436,8 +437,9 @@ export default function ConfiguracoesPage() {
 
         {status === "CONNECTED" && (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-            <strong>Para testar:</strong> pegue outro celular e mande uma mensagem para o seu
-            número. Em alguns segundos sua atendente responde sozinha.
+            <strong>Pronto.</strong> As mensagens da Onda e os lembretes da agenda já saem pelo
+            seu número. Nada responde sozinho aos seus clientes: isso só muda quando você ligar
+            o Plantão.
           </div>
         )}
 
@@ -448,8 +450,8 @@ export default function ConfiguracoesPage() {
 
       <Passo
         numero={2}
-        title="O que a atendente precisa saber sobre o seu negócio"
-        hint="É com isto que ela responde. O que não estiver aqui, ela não inventa: ela chama você."
+        title="O que o seu atendimento precisa saber sobre o seu negócio"
+        hint="Guarde aqui o que um cliente costuma perguntar. Nada disto é enviado sozinho por enquanto: é o que o Plantão vai usar, e o que não estiver aqui ele não inventa."
       >
         <Field label="Nome do seu negócio">
           <input className={inputClass} value={form.name} onChange={(e) => set("name", e.target.value)} />
