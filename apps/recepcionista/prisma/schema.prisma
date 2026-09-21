@@ -273,6 +273,10 @@ model CompanyProfile {
   followUpMessage    String  @default("")
   maxFollowUps       Int     @default(2)
 
+  // O Plantão: atendimento automático só com a loja fechada. Nasce DESLIGADO —
+  // conectar o WhatsApp para mandar a Onda não liga resposta automática nenhuma.
+  plantaoAtivo Boolean @default(false)
+
   // Conexão WhatsApp (Evolution API) — uma instância por empresa (nexora-{companyId})
   whatsappInstance    String?   @unique
   whatsappStatus      String    @default("DISCONNECTED") // DISCONNECTED | WAITING_QR | CONNECTED | ERROR

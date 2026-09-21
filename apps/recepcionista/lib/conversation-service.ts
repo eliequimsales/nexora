@@ -13,6 +13,7 @@ import type { IncomingWhatsAppMessage } from "./whatsapp/evolution";
 import { enviarWhatsApp } from "./whatsapp/envio";
 import type { Faq } from "./validation";
 import { horarioDaEmpresa } from "./agenda/horario";
+import { portaoDoPlantao } from "./plantao/portao";
 
 const TRANSFER_MESSAGE = "Claro, vou chamar nossa equipe para continuar seu atendimento.";
 const FALLBACK_MESSAGE = "Vou encaminhar para nossa equipe te ajudar melhor. 🙏";
@@ -153,6 +154,22 @@ export async function handleIncomingMessage(incoming: IncomingWhatsAppMessage): 
         await saveOutgoing(conversation.id, CONFIRMACAO_DESCADASTRO);
       }
       logTiming("descadastro", startedAt);
+      return;
+    }
+
+    // 4.6 O PORTÃO DO PLANTÃO.
+    //
+    // Nada responde sozinho sem o dono ligar o Plantão, e o Plantão só fala com
+    // a agenda fechada e com o dono fora da conversa. A mensagem do cliente já
+    // foi salva acima: silêncio não é perder o que ele escreveu.
+    const portao = portaoDoPlantao({
+      plantaoAtivo: profile.plantaoAtivo,
+      horarios: horarioDaEmpresa(profile.businessHours),
+      donoAssumiuEm: conversation.donoAssumiuEm,
+      agora: now,
+    });
+    if (!portao.responde) {
+      logTiming(`silencio-${portao.motivo.toLowerCase()}`, startedAt);
       return;
     }
 
