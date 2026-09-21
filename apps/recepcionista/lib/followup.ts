@@ -1,7 +1,7 @@
 import { prisma } from "./db";
 import { logError } from "./errors";
 import { problemaNoGateway } from "./whatsapp/endereco";
-import { enviarWhatsApp } from "./whatsapp/envio";
+import { enviarWhatsApp, instanciaInexistente } from "./whatsapp/envio";
 
 export interface FollowUpCandidate {
   status: string;
@@ -66,9 +66,13 @@ export async function runFollowUps(): Promise<number> {
 
   const profiles = await prisma.companyProfile.findMany({
     where: {
+      // O lembrete é do atendimento automático: com o Plantão desligado, que é o
+      // padrão, nada sai sozinho — nem este lembrete.
+      plantaoAtivo: true,
       followUpEnabled: true,
       followUpMessage: { not: "" },
       whatsappInstance: { not: null },
+      whatsappStatus: "CONNECTED",
     },
     select: {
       companyId: true,
@@ -124,6 +128,10 @@ export async function runFollowUps(): Promise<number> {
         });
         sent += 1;
       } catch (error) {
+        // A conexão desta empresa sumiu do servidor: vale para todas as conversas
+        // dela. enviarWhatsApp já marcou o WhatsApp como não ligado, e a próxima
+        // rodada nem chega aqui.
+        if (instanciaInexistente(error)) break;
         if (servidorFora(error)) {
           // Falha do servidor vale para todas as conversas. Tentar a próxima só
           // repete o erro — e, se o 502 chegou depois de a mensagem sair, o

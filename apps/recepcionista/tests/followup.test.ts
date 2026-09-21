@@ -134,3 +134,28 @@ describe("runFollowUps para a rodada quando o servidor cai", () => {
     expect(fonte).toMatch(/__servidorFora\s*=\s*false/);
   });
 });
+
+/**
+ * O LEMBRETE ANTIGO É DO ATENDENTE — E O ATENDENTE AGORA É O PLANTÃO.
+ *
+ * Ele mandava mensagem sozinho para quem parou de responder, e em 21/09/2026
+ * tentava a cada 5 minutos, conversa por conversa, uma conexão que não existia
+ * mais no servidor. Agora só roda com o Plantão ligado e o WhatsApp ligado, e
+ * "instância não existe" encerra a rodada daquela empresa em vez de repetir.
+ */
+describe("o lembrete antigo", () => {
+  const fonte = readFileSync(join(RAIZ, "lib/followup.ts"), "utf8");
+
+  it("só roda para quem ligou o Plantão e está com o WhatsApp ligado", () => {
+    expect(fonte).toMatch(/plantaoAtivo:\s*true/);
+    expect(fonte).toMatch(/whatsappStatus:\s*"CONNECTED"/);
+  });
+
+  it("conexão que não existe mais encerra a rodada daquela empresa", () => {
+    expect(fonte).toMatch(/if\s*\(\s*instanciaInexistente\(\s*error\s*\)\s*\)\s*break;/);
+  });
+
+  it("envia pelo registro de envios", () => {
+    expect(fonte).toContain("enviarWhatsApp(");
+  });
+});
