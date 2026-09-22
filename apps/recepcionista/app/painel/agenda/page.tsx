@@ -176,6 +176,14 @@ export default function PaginaAgenda() {
   const [agendamentos, setAgendamentos] = useState<AgendamentoItem[]>([]);
   const [resumo, setResumo] = useState<ResumoAgenda | null>(null);
   const [servicos, setServicos] = useState<Servico[]>([]);
+  const [diasComAgendamentos, setDiasComAgendamentos] = useState<string[]>([]);
+  const [proximoAgendamento, setProximoAgendamento] = useState<{
+    data: string;
+    hora: string;
+    clienteNome: string;
+    servicoNome: string;
+    profissional: string;
+  } | null>(null);
   const [linkPublico, setLinkPublico] = useState<string | null>(null);
   const [carregando, setCarregando] = useState<boolean>(true);
   const [erro, setErro] = useState<string>("");
@@ -242,6 +250,8 @@ export default function PaginaAgenda() {
       setAgendamentos(data.agendamentos || data.grade?.agendamentos || []);
       setResumo(data.resumo || null);
       setServicos(data.servicos || []);
+      setDiasComAgendamentos(data.diasComAgendamentos || []);
+      setProximoAgendamento(data.proximoAgendamento || null);
       setLinkPublico(data.linkPublico || null);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Erro ao carregar a agenda";
@@ -424,7 +434,7 @@ export default function PaginaAgenda() {
           duracaoMin,
           profissionalNome: profNome,
           observacoes: formObservacoes.trim() || undefined,
-          jaAtendido: true,
+          jaAtendido: false,
         }),
       });
 
@@ -532,12 +542,24 @@ export default function PaginaAgenda() {
 
     for (const ag of agendamentos) {
       if (ag.status === "CANCELADO") continue;
-      if (!mapa[ag.horaInicio]) mapa[ag.horaInicio] = {};
+
+      let slotAlvo = ag.horaInicio;
+      if (!slotsHorario.includes(slotAlvo)) {
+        const [h, m] = slotAlvo.split(":").map(Number);
+        if (!isNaN(h) && !isNaN(m)) {
+          const mArredondado = Math.round(m / 15) * 15;
+          const hFinal = mArredondado === 60 ? h + 1 : h;
+          const mFinal = mArredondado === 60 ? 0 : mArredondado;
+          slotAlvo = `${String(hFinal).padStart(2, "0")}:${String(mFinal).padStart(2, "0")}`;
+        }
+      }
+
+      if (!mapa[slotAlvo]) mapa[slotAlvo] = {};
       const prof = nomesValidos.has(ag.profissional) ? ag.profissional : padraoNome;
-      mapa[ag.horaInicio][prof] = ag;
+      mapa[slotAlvo][prof] = ag;
     }
     return mapa;
-  }, [agendamentos, profissionaisExibidos]);
+  }, [agendamentos, profissionaisExibidos, slotsHorario]);
 
   // Contagem de atendimentos pendentes de lembrete
   const pendentesLembrete = useMemo(() => {
@@ -626,6 +648,15 @@ export default function PaginaAgenda() {
                     {d.isHoje && !isSelecionado && (
                       <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-amber" />
                     )}
+                    {/* Ponto indicador de agendamento existente neste dia */}
+                    {diasComAgendamentos.includes(d.dataIso) && (
+                      <span
+                        className={`absolute -top-1 -right-0.5 flex h-2 w-2 rounded-full ${
+                          isSelecionado ? "bg-night ring-1 ring-amber" : "bg-amber ring-1 ring-night"
+                        }`}
+                        title="Possui atendimentos marcados"
+                      />
+                    )}
                   </button>
                 );
               })}
@@ -701,7 +732,7 @@ export default function PaginaAgenda() {
               </span>
             </div>
             <p className="text-xs text-panel-sub max-w-2xl leading-relaxed">
-              Envie este link para seus clientes no WhatsApp ou Instagram. O cliente vê apenas os serviços e horários vagos para marcar sozinho — ele <strong className="text-panel-ink font-semibold">não</strong> tem acesso ao seu painel nem aos seus outros atendimentos.
+              Envie este link para seus clientes no WhatsApp ou Instagram. O cliente vê apenas os horários vagos para marcar sozinho — ele <strong className="text-panel-ink font-semibold">não</strong> tem acesso ao seu painel nem aos seus outros atendimentos.
             </p>
           </div>
 
@@ -747,6 +778,32 @@ export default function PaginaAgenda() {
           </div>
         </div>
       </div>
+
+      {/* Destaque amigável do Próximo Agendamento quando o dia selecionado estiver vazio */}
+      {proximoAgendamento && dataSelecionada !== proximoAgendamento.data && agendamentos.length === 0 && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-amber/30 bg-amber/10 p-4 shadow-sm animate-fade-in">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber text-night font-bold text-base">
+              📅
+            </span>
+            <div>
+              <div className="text-xs font-bold text-panel-ink">
+                Você tem agendamento marcado para {proximoAgendamento.data === hoje ? "hoje" : formatarDataExtenso(proximoAgendamento.data)} às {proximoAgendamento.hora}
+              </div>
+              <div className="text-[11px] text-panel-sub">
+                Cliente: <span className="font-semibold text-panel-ink">{proximoAgendamento.clienteNome}</span> · Atendimento: {proximoAgendamento.servicoNome} · Com: {proximoAgendamento.profissional}
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDataSelecionada(proximoAgendamento.data)}
+            className="shrink-0 rounded-xl bg-amber px-4 py-2 text-xs font-bold text-night shadow-sm transition hover:bg-amber-hover"
+          >
+            Ver este dia →
+          </button>
+        </div>
+      )}
 
       {/* Faixa Resumo do Dia (Limpa, Direta e Sem Contaminação) */}
       {resumo && (

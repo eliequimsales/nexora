@@ -643,8 +643,20 @@ export async function obterResumoDaAgenda(companyId: string, dataStr: string) {
  * Lista serviços cadastrados da empresa.
  */
 export async function listarServicos(companyId: string) {
+  // Limpeza preventiva: desativa qualquer resquício de "lavagem de cabelo"
+  await prisma.service
+    .updateMany({
+      where: { companyId, name: { contains: "lavagem de cabelo", mode: "insensitive" } },
+      data: { active: false },
+    })
+    .catch(() => {});
+
   return prisma.service.findMany({
-    where: { companyId, active: true },
+    where: {
+      companyId,
+      active: true,
+      NOT: { name: { contains: "lavagem de cabelo", mode: "insensitive" } },
+    },
     orderBy: { order: "asc" },
     select: {
       id: true,
