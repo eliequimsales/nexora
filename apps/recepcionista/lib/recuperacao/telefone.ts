@@ -60,3 +60,11 @@ export function variantesDeTelefone(bruto: string): string[] {
   }
   return [...saida];
 }
+
+/** O número como o dono lê: "5511988887777" → "(11) 98888-7777". O resto volta como veio. */
+export function telefoneFalado(numero: string): string {
+  const local = semPais(apenasDigitos(numero));
+  if (!local) return numero;
+  const meio = local.length === 11 ? 7 : 6;
+  return `(${local.slice(0, 2)}) ${local.slice(2, meio)}-${local.slice(meio)}`;
+}

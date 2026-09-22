@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { variantesDeTelefone } from "@/lib/recuperacao/telefone";
+import { telefoneFalado, variantesDeTelefone } from "@/lib/recuperacao/telefone";
 
 /**
  * A base do dono vem de planilha e guarda 11 dígitos ("11988881234").
@@ -48,5 +48,17 @@ describe("higiene", () => {
     const a = variantesDeTelefone("11988881234");
     const b = variantesDeTelefone("11977771234");
     expect(a.some((x) => b.includes(x))).toBe(false);
+  });
+});
+
+describe("telefoneFalado — o número como o dono lê", () => {
+  it("celular e fixo, com ou sem o 55", () => {
+    expect(telefoneFalado("5511988887777")).toBe("(11) 98888-7777");
+    expect(telefoneFalado("11988887777")).toBe("(11) 98888-7777");
+    expect(telefoneFalado("551133334444")).toBe("(11) 3333-4444");
+  });
+
+  it("o que não é telefone brasileiro volta como veio", () => {
+    expect(telefoneFalado("12345")).toBe("12345");
   });
 });

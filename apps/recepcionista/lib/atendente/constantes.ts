@@ -34,6 +34,16 @@ export const VALIDADE_DA_OFERTA_MS = 2 * HORA_MS;
  */
 export const ESPERA_DA_RAJADA_MS = 2_000;
 
+/** O resgate roda a cada minuto. */
+export const INTERVALO_DO_RESGATE_MS = MINUTO_MS;
+
+/**
+ * Com a loja fechada, quem responde é o webhook, na hora. O resgate só pega a
+ * mensagem que passou desta idade sem resposta — antes disso, o webhook ainda
+ * pode estar respondendo, e os dois responderiam juntos.
+ */
+export const CARENCIA_DO_RESGATE_MS = 2 * MINUTO_MS;
+
 /** Mensagem pendente mais velha que isto não é respondida pelo resgate: já esfriou. */
 export const IDADE_MAXIMA_DO_RESGATE_MS = 60 * MINUTO_MS;
 

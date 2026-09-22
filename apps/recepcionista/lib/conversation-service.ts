@@ -83,7 +83,7 @@ export async function handleIncomingMessage(incoming: IncomingWhatsAppMessage): 
           lastCustomerMessageAt: now,
           customerName: conversation.customerName ?? incoming.senderName,
           // Cliente voltou depois de finalizada: reabre um novo ciclo com o Atendente
-          ...(wasFinished ? { status: "AI" as const, followUpCount: 0 } : {}),
+          ...(wasFinished ? { status: "AI" as const } : {}),
         },
       });
     }

@@ -63,6 +63,21 @@ export function instanciaInexistente(erro: unknown): boolean {
   );
 }
 
+/**
+ * A falha é do servidor do WhatsApp, e não de uma conversa?
+ *
+ * 5xx da Evolution, ou nenhuma resposta: rede, DNS, recusa ou tempo esgotado.
+ * 4xx fica de fora de propósito — número inválido é problema daquela conversa
+ * e não pode parar o resgate das outras.
+ */
+export function servidorFora(erro: unknown): boolean {
+  if (!(erro instanceof Error)) return false;
+  if (/Evolution API respondeu 5\d\d\b/.test(erro.message)) return true;
+  return /fetch failed|ECONNREFUSED|ECONNRESET|ENOTFOUND|ETIMEDOUT|EAI_AGAIN|socket hang up|aborted due to timeout/i.test(
+    erro.message,
+  );
+}
+
 export const AVISO_CONEXAO_PERDIDA =
   "A ligação do seu WhatsApp com a Nexora caiu. Ligue de novo pelo QR Code para voltar a enviar.";
 

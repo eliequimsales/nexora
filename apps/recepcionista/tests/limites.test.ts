@@ -78,7 +78,6 @@ describe("nenhuma rota autenticada fica sem teto", () => {
       "sair precisa funcionar sempre; barrar o logout prenderia a pessoa na sessão",
     "app/api/billing/webhook/route.ts":
       "quem chama é a Stripe, com assinatura verificada; limitar aqui perderia evento de cobrança",
-    "app/api/cron/follow-ups/route.ts": "protegida por CRON_SECRET, chamada pelo agendador",
     "app/api/cron/reengajamento/route.ts": "protegida por CRON_SECRET, chamada pelo agendador",
   };
 

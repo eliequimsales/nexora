@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { atrasoDeDigitacao, AVISO_CONEXAO_PERDIDA, instanciaInexistente } from "@/lib/whatsapp/envio";
+import { atrasoDeDigitacao, AVISO_CONEXAO_PERDIDA, instanciaInexistente, servidorFora } from "@/lib/whatsapp/envio";
 
 /**
  * TODO ENVIO DA NEXORA PASSA PELO REGISTRO.
@@ -95,5 +95,45 @@ describe("conexão que não existe mais no servidor", () => {
     expect(envio).toMatch(/instanciaInexistente\(\s*erro\s*\)/);
     expect(envio).toContain('whatsappStatus: "DISCONNECTED"');
     expect(AVISO_CONEXAO_PERDIDA).toMatch(/QR Code/);
+  });
+});
+
+/**
+ * SERVIDOR FORA NÃO É PROBLEMA DE CONVERSA.
+ *
+ * Em 15/09/2026 a Evolution respondia 502 e o worker tentava as mesmas conversas
+ * a cada 5 minutos, para sempre. Além de soterrar o log, um 502 que chega DEPOIS
+ * de a mensagem sair faria o cliente final receber o mesmo texto de novo a cada
+ * rodada — o envio repetido que a Nexora promete não fazer.
+ *
+ * Falha do servidor vale para todas as conversas: a rodada do resgate para na
+ * primeira. Erro de UMA conversa (número inválido, 4xx) segue conversa a conversa.
+ */
+describe("servidorFora", () => {
+  const daEvolution = (status: number) =>
+    new Error(`Evolution API respondeu ${status} em /message/sendText/nexora-x: {"status":"error"}`);
+
+  it("5xx da Evolution é o servidor, não a conversa", () => {
+    for (const status of [500, 502, 503, 504]) {
+      expect(servidorFora(daEvolution(status)), String(status)).toBe(true);
+    }
+  });
+
+  it("nenhuma resposta (rede, DNS, recusa, tempo esgotado) também é o servidor", () => {
+    expect(servidorFora(new TypeError("fetch failed"))).toBe(true);
+    expect(servidorFora(new Error("connect ECONNREFUSED 10.0.0.1:443"))).toBe(true);
+    expect(servidorFora(new Error("getaddrinfo ENOTFOUND evolution.internal"))).toBe(true);
+    expect(servidorFora(new Error("The operation was aborted due to timeout"))).toBe(true);
+  });
+
+  it("4xx é problema daquela conversa: número inválido não para a rodada", () => {
+    for (const status of [400, 401, 404, 422]) {
+      expect(servidorFora(daEvolution(status)), String(status)).toBe(false);
+    }
+  });
+
+  it("valor que não é Error não é tratado como queda", () => {
+    expect(servidorFora("mensagem solta")).toBe(false);
+    expect(servidorFora(undefined)).toBe(false);
   });
 });

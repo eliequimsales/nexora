@@ -189,7 +189,6 @@ describe("nada pode falhar aberto quando falta um segredo", () => {
   const GUARDAM_SEGREDO = [
     "middleware.ts",
     "app/api/webhook/whatsapp/route.ts",
-    "app/api/cron/follow-ups/route.ts",
     "app/api/cron/reengajamento/route.ts",
   ];
 

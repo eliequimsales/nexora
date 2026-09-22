@@ -8,6 +8,7 @@ import { estadoDaEmpresa } from "@/lib/billing/guarda";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
 import { JANELA_DIAS } from "@/lib/recuperacao/atribuicao";
+import { telefoneFalado } from "@/lib/recuperacao/telefone";
 import { enviarEmail } from "@/lib/reengajamento/email";
 import { recordKnowledgeGap } from "@/lib/training";
 import type { BusinessHour } from "@/lib/validation";
@@ -175,14 +176,6 @@ export function numeroDoDono(bruto: string | null | undefined): string | null {
   if (d.length === 10 || d.length === 11) return `55${d}`;
   if ((d.length === 12 || d.length === 13) && d.startsWith("55")) return d;
   return null;
-}
-
-/** "5511988887777" → "(11) 98888-7777". */
-function telefoneFalado(numero: string): string {
-  const d = numero.replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, "");
-  if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
-  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
-  return numero;
 }
 
 /** O aviso que vai para o WhatsApp do próprio dono quando alguém escreve uma urgência. */

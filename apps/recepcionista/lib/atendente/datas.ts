@@ -205,6 +205,28 @@ export function proximaAbertura(
   return null;
 }
 
+/**
+ * A última vez que a loja fechou antes de agora — o começo do "enquanto você
+ * estava fechado" do resumo da manhã. Dia fechado pelo botão não abre nem
+ * fecha; expediente que vira a madrugada fecha no dia seguinte. null quando nada
+ * fechou nos últimos oito dias.
+ */
+export function ultimoFechamento(horarios: BusinessHour[], diasFechados: string[], agora: Date): Date | null {
+  const hoje = localDe(agora).data;
+  let ultimo: Date | null = null;
+  for (let i = 0; i <= 8; i++) {
+    const data = somarDias(hoje, -i);
+    if (diasFechados.includes(data)) continue;
+    const config = horarios.find((h) => h.day === diaDaSemanaDe(data));
+    if (!config || config.closed || config.open === config.close) continue;
+    const abre = minutosDe(config.open);
+    const fecha = minutosDe(config.close);
+    const fechou = fecha > abre ? instanteLocal(data, fecha) : instanteLocal(somarDias(data, 1), fecha);
+    if (fechou.getTime() <= agora.getTime() && (!ultimo || fechou.getTime() > ultimo.getTime())) ultimo = fechou;
+  }
+  return ultimo;
+}
+
 /** "hoje às 14h", "amanhã às 9h", "segunda às 9h" ou "12/10 às 9h". */
 export function textoDaVolta(abertura: Date | null, agora: Date): string | null {
   if (!abertura) return null;
