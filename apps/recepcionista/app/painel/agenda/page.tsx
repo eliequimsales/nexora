@@ -90,7 +90,8 @@ function formatarDataExtenso(dataIso: string): string {
     month: "long",
     year: "numeric",
   };
-  return d.toLocaleDateString("pt-BR", opcoes);
+  const str = d.toLocaleDateString("pt-BR", opcoes);
+  return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
 function formatarEmReais(cents: number): string {
@@ -132,12 +133,11 @@ export default function PaginaAgenda() {
   const [agendamentos, setAgendamentos] = useState<AgendamentoItem[]>([]);
   const [resumo, setResumo] = useState<ResumoAgenda | null>(null);
   const [servicos, setServicos] = useState<Servico[]>([]);
-  const [empresaNome, setEmpresaNome] = useState<string>("");
   const [linkPublico, setLinkPublico] = useState<string | null>(null);
   const [carregando, setCarregando] = useState<boolean>(true);
   const [erro, setErro] = useState<string>("");
   const [feedbackAcao, setFeedbackAcao] = useState<string>("");
-  const [modoVisualizacao, setModoVisualizacao] = useState<"grade" | "lista" | "lembretes">("grade");
+  const [modoVisualizacao, setModoVisualizacao] = useState<"grade" | "lista">("grade");
   const [enviandoLembreteId, setEnviandoLembreteId] = useState<string | null>(null);
   const [disparandoLote, setDisparandoLote] = useState<boolean>(false);
 
@@ -163,7 +163,6 @@ export default function PaginaAgenda() {
   const [modalProfissionaisAberto, setModalProfissionaisAberto] = useState<boolean>(false);
   const [listaEditavelProf, setListaEditavelProf] = useState<Profissional[]>([]);
   const [novoProfNome, setNovoProfNome] = useState<string>("");
-  const [novoProfCargo, setNovoProfCargo] = useState<string>("Profissional");
   const [salvandoProf, setSalvandoProf] = useState<boolean>(false);
 
   const carregarAgenda = async (dataAlvo: string) => {
@@ -172,7 +171,7 @@ export default function PaginaAgenda() {
     try {
       const res = await fetch(`/api/agenda?data=${dataAlvo}`);
       if (!res.ok) {
-        throw new Error("Erro ao carregar os atendimentos");
+        throw new Error("Não consegui carregar os atendimentos");
       }
       const data = await res.json();
       setGrade(data.grade || null);
@@ -180,7 +179,6 @@ export default function PaginaAgenda() {
       setAgendamentos(data.agendamentos || data.grade?.agendamentos || []);
       setResumo(data.resumo || null);
       setServicos(data.servicos || []);
-      setEmpresaNome(data.empresaNome || "");
       setLinkPublico(data.linkPublico || null);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Erro ao carregar a agenda";
@@ -372,7 +370,7 @@ export default function PaginaAgenda() {
         return;
       }
 
-      setFeedbackAcao(data.mensagem || "Atendimento registrado e cliente sob radar!");
+      setFeedbackAcao(data.mensagem || "Atendimento registrado com sucesso!");
       setTimeout(() => setFeedbackAcao(""), 4500);
 
       // Reset form
@@ -476,8 +474,15 @@ export default function PaginaAgenda() {
     return mapa;
   }, [agendamentos]);
 
+  // Contagem de atendimentos pendentes de lembrete
+  const pendentesLembrete = useMemo(() => {
+    return agendamentos.filter(
+      (a) => (a.status === "MARCADO" || a.status === "CONFIRMADO") && !a.lembreteEnviado,
+    ).length;
+  }, [agendamentos]);
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+    <div className="mx-auto max-w-7xl space-y-6">
       {/* Toast de Confirmação */}
       {feedbackAcao && (
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl border border-emerald-500/40 bg-night p-4 text-sm font-medium text-emerald-300 shadow-2xl animate-fade-in">
@@ -488,32 +493,32 @@ export default function PaginaAgenda() {
         </div>
       )}
 
-      {/* Topo da Agenda (Idêntico ao design de sistemas líderes) */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      {/* Topo da Agenda: Título e Ações Principais */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-3xl font-bold tracking-tight text-panel-ink sm:text-4xl">
+          <h1 className="font-display text-2xl font-bold tracking-tight text-panel-ink sm:text-3xl">
             Agenda
           </h1>
-          <p className="mt-1 text-sm font-medium text-panel-sub capitalize">
+          <p className="mt-0.5 text-xs text-panel-sub font-medium">
             {formatarDataExtenso(dataSelecionada)}
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Navegação Rápida entre Dias: < Hoje > */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Navegação de Data: < Hoje > */}
           <div className="flex items-center rounded-xl border border-panel-line bg-panel-card p-1 shadow-sm">
             <button
               onClick={() => setDataSelecionada(somarDiasIso(dataSelecionada, -1))}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-panel-sub transition hover:bg-panel-bg hover:text-panel-ink"
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-panel-sub transition hover:bg-panel-bg hover:text-panel-ink"
               title="Dia anterior"
             >
               ‹
             </button>
             <button
               onClick={() => setDataSelecionada(hoje)}
-              className={`px-3 py-1 text-xs font-bold rounded-lg transition ${
+              className={`px-3 py-1 text-xs font-semibold rounded-lg transition ${
                 dataSelecionada === hoje
-                  ? "bg-amber text-night"
+                  ? "bg-amber text-night font-bold"
                   : "text-panel-sub hover:text-panel-ink"
               }`}
             >
@@ -521,7 +526,7 @@ export default function PaginaAgenda() {
             </button>
             <button
               onClick={() => setDataSelecionada(somarDiasIso(dataSelecionada, 1))}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-panel-sub transition hover:bg-panel-bg hover:text-panel-ink"
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-panel-sub transition hover:bg-panel-bg hover:text-panel-ink"
               title="Próximo dia"
             >
               ›
@@ -533,30 +538,30 @@ export default function PaginaAgenda() {
             type="date"
             value={dataSelecionada}
             onChange={(e) => e.target.value && setDataSelecionada(e.target.value)}
-            className="rounded-xl border border-panel-line bg-panel-card px-3 py-2 text-xs font-medium text-panel-ink shadow-sm focus:border-amber focus:outline-none"
+            className="rounded-xl border border-panel-line bg-panel-card px-2.5 py-1.5 text-xs font-medium text-panel-ink shadow-sm focus:border-amber focus:outline-none"
           />
 
-          {/* Botão de Link Público */}
+          {/* Botão de Equipe */}
+          <button
+            onClick={abrirModalProfissionais}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-panel-line bg-panel-card px-3 py-1.5 text-xs font-medium text-panel-ink shadow-sm transition hover:border-amber/40 hover:text-amber"
+            title="Gerenciar profissionais"
+          >
+            <span>👥</span>
+            <span>Equipe</span>
+          </button>
+
+          {/* Botão Link Público */}
           {linkPublico && (
             <button
               onClick={() => setModalLinkAberto(true)}
-              className="inline-flex items-center gap-2 rounded-xl border border-panel-line bg-panel-card px-3.5 py-2.5 text-xs font-semibold text-panel-ink shadow-sm transition hover:border-amber/40 hover:text-amber"
-              title="Link para clientes agendarem sozinhos"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-panel-line bg-panel-card px-3 py-1.5 text-xs font-medium text-panel-ink shadow-sm transition hover:border-amber/40 hover:text-amber"
+              title="Copiar link para clientes agendarem"
             >
               <span>🔗</span>
               <span className="hidden sm:inline">Link de agendamento</span>
             </button>
           )}
-
-          {/* Botão de Profissionais */}
-          <button
-            onClick={abrirModalProfissionais}
-            className="inline-flex items-center gap-2 rounded-xl border border-panel-line bg-panel-card px-3.5 py-2.5 text-xs font-semibold text-panel-ink shadow-sm transition hover:border-amber/40 hover:text-amber"
-            title="Adicionar ou editar profissionais"
-          >
-            <span>👥</span>
-            <span className="hidden sm:inline">Equipe</span>
-          </button>
 
           {/* Botão Novo Agendamento */}
           <button
@@ -565,7 +570,7 @@ export default function PaginaAgenda() {
               setFormProfissional(profissionaisExibidos[0]?.nome || "Profissional");
               setModalAberto(true);
             }}
-            className="inline-flex items-center gap-2 rounded-xl bg-amber px-4 py-2.5 text-sm font-bold text-night shadow-md transition hover:bg-amber-hover"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-amber px-3.5 py-1.5 text-xs font-bold text-night shadow-sm transition hover:bg-amber-hover"
           >
             <span>+</span>
             <span>Novo agendamento</span>
@@ -573,133 +578,122 @@ export default function PaginaAgenda() {
         </div>
       </div>
 
-      {/* Faixa de Métricas e Indicadores do Dia */}
+      {/* Faixa Resumo do Dia (Limpa, Direta e Sem Contaminação) */}
       {resumo && (
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="rounded-2xl border border-panel-line bg-panel-card p-3.5 shadow-sm">
-            <span className="text-xs font-medium text-panel-sub">Atendimentos no dia</span>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="font-display text-2xl font-bold text-panel-ink">
-                {resumo.totalGeral}
-              </span>
-              <span className="text-xs text-panel-sub">
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-panel-line bg-panel-card px-5 py-3 text-xs shadow-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-panel-sub">Atendimentos hoje:</span>
+            <strong className="font-bold text-panel-ink text-sm">
+              {resumo.totalGeral}
+            </strong>
+            {resumo.totalConcluidos > 0 && (
+              <span className="text-panel-sub">
                 ({resumo.totalConcluidos} concluídos)
               </span>
-            </div>
+            )}
           </div>
 
-          <div className="rounded-2xl border border-panel-line bg-panel-card p-3.5 shadow-sm">
-            <span className="text-xs font-medium text-panel-sub">Confirmados</span>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="font-display text-2xl font-bold text-amber">
-                {resumo.totalConfirmados}
-              </span>
-              <span className="text-xs text-panel-sub">horários</span>
-            </div>
+          <span className="text-panel-line font-light">|</span>
+
+          <div className="flex items-center gap-2">
+            <span className="text-panel-sub">Confirmados:</span>
+            <strong className="font-bold text-amber text-sm">
+              {resumo.totalConfirmados}
+            </strong>
           </div>
 
-          <div className="rounded-2xl border border-panel-line bg-panel-card p-3.5 shadow-sm">
-            <span className="text-xs font-medium text-panel-sub">Receita concluída</span>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="font-display text-2xl font-bold text-emerald-400">
-                {formatarEmReais(resumo.receitaRealizadaCents)}
-              </span>
-            </div>
+          <span className="text-panel-line font-light">|</span>
+
+          <div className="flex items-center gap-2">
+            <span className="text-panel-sub">Receita concluída:</span>
+            <strong className="font-bold text-emerald-600 text-sm">
+              {formatarEmReais(resumo.receitaRealizadaCents)}
+            </strong>
           </div>
 
-          <div className="rounded-2xl border border-panel-line bg-panel-card p-3.5 shadow-sm">
-            <span className="text-xs font-medium text-panel-sub">Clientes na sua lista</span>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="font-display text-2xl font-bold text-panel-ink">
-                {resumo.totalClientesNaBase}
-              </span>
-              <span className="text-xs text-panel-sub">sob radar</span>
+          {/* Ação rápida de lembrete em lote se houver pendências */}
+          {pendentesLembrete > 0 && (
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleEnviarLembrete(undefined, true)}
+                disabled={disparandoLote}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-amber/40 bg-amber/10 px-3 py-1 text-xs font-semibold text-amber transition hover:bg-amber/20 disabled:opacity-50"
+              >
+                <span>🔔</span>
+                <span>{disparandoLote ? "Enviando..." : `Lembrar clientes (${pendentesLembrete})`}</span>
+              </button>
             </div>
-          </div>
+          )}
         </div>
       )}
 
-      {/* Alternador de visualização: Grade por Profissional vs Lista corrida */}
-      <div className="mt-5 flex items-center justify-between">
-        <div className="inline-flex rounded-xl border border-panel-line bg-panel-card p-1 text-xs font-semibold">
+      {/* Alternador de Visualização: Grade vs Lista */}
+      <div className="flex items-center justify-between">
+        <div className="inline-flex rounded-xl border border-panel-line bg-panel-card p-1 text-xs font-semibold shadow-sm">
           <button
             onClick={() => setModoVisualizacao("grade")}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition ${
+            className={`rounded-lg px-3.5 py-1.5 transition ${
               modoVisualizacao === "grade"
                 ? "bg-amber text-night font-bold shadow-sm"
                 : "text-panel-sub hover:text-panel-ink"
             }`}
           >
-            <span>📊</span>
-            <span>Grade por profissional</span>
+            Grade
           </button>
           <button
             onClick={() => setModoVisualizacao("lista")}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition ${
+            className={`rounded-lg px-3.5 py-1.5 transition ${
               modoVisualizacao === "lista"
                 ? "bg-amber text-night font-bold shadow-sm"
                 : "text-panel-sub hover:text-panel-ink"
             }`}
           >
-            <span>📋</span>
-            <span>Lista ({agendamentos.length})</span>
-          </button>
-          <button
-            onClick={() => setModoVisualizacao("lembretes")}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition ${
-              modoVisualizacao === "lembretes"
-                ? "bg-amber text-night font-bold shadow-sm"
-                : "text-panel-sub hover:text-panel-ink"
-            }`}
-          >
-            <span>🔔</span>
-            <span>Lembretes anti-faltas</span>
+            Lista {agendamentos.length > 0 ? `(${agendamentos.length})` : ""}
           </button>
         </div>
-
-        <span className="hidden text-xs text-panel-sub sm:inline">
-          Clique em qualquer horário livre com <strong>+</strong> para agendar
-        </span>
       </div>
 
       {/* Estado de Carregamento / Erro */}
       {carregando ? (
-        <div className="mt-6 rounded-2xl border border-panel-line bg-panel-card p-16 text-center text-sm text-panel-sub">
-          <div className="mx-auto mb-3 h-6 w-6 animate-spin rounded-full border-2 border-amber border-t-transparent" />
-          Carregando a grade da agenda...
+        <div className="rounded-2xl border border-panel-line bg-panel-card p-16 text-center text-xs text-panel-sub">
+          <div className="mx-auto mb-3 h-5 w-5 animate-spin rounded-full border-2 border-amber border-t-transparent" />
+          Carregando atendimentos...
         </div>
       ) : erro ? (
-        <div className="mt-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-center text-sm text-red-400">
+        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-center text-xs text-red-400">
           {erro}
         </div>
       ) : modoVisualizacao === "grade" ? (
         /* ========================================================================= */
-        /* GRADE MULTI-COLUNAS (EXATAMENTE COMO NA IMAGEM DE REFERÊNCIA)            */
+        /* GRADE HORÁRIA POR PROFISSIONAL (DESPOLUÍDA E SILENCIOSA)                  */
         /* ========================================================================= */
-        <div className="mt-4 overflow-hidden rounded-2xl border border-panel-line bg-panel-card shadow-sm">
+        <div className="overflow-hidden rounded-2xl border border-panel-line bg-panel-card shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
               <thead>
-                <tr className="border-b border-panel-line bg-panel-bg/60">
-                  {/* Coluna de Horário fixa */}
-                  <th className="sticky left-0 z-20 w-24 min-w-[90px] border-r border-panel-line bg-panel-card px-4 py-3.5 text-center text-xs font-semibold uppercase tracking-wider text-panel-sub">
+                <tr className="border-b border-panel-line bg-panel-bg/40">
+                  {/* Coluna Horário */}
+                  <th className="sticky left-0 z-20 w-20 min-w-[76px] border-r border-panel-line bg-panel-card px-3 py-3 text-center text-xs font-semibold text-panel-sub uppercase tracking-wider">
                     Horário
                   </th>
 
-                  {/* Colunas dos Profissionais */}
+                  {/* Colunas de Profissionais */}
                   {profissionaisExibidos.map((prof) => (
                     <th
                       key={prof.nome}
-                      className="min-w-[240px] px-6 py-3.5 border-r border-panel-line/60 last:border-r-0"
+                      className="min-w-[220px] px-5 py-3 border-r border-panel-line/60 last:border-r-0"
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="font-display text-sm font-bold text-panel-ink">
+                          <div className="font-display text-xs font-bold text-panel-ink">
                             {prof.nome}
                           </div>
-                          <div className="text-xs text-panel-sub">{prof.cargo}</div>
+                          <div className="text-[11px] text-panel-sub font-normal">
+                            {prof.cargo}
+                          </div>
                         </div>
-                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-panel-bg text-xs text-panel-sub">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-panel-bg text-[11px] text-panel-sub">
                           👤
                         </span>
                       </div>
@@ -708,44 +702,54 @@ export default function PaginaAgenda() {
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-panel-line/40">
+              <tbody className="divide-y divide-panel-line/30">
                 {slotsHorario.map((slot) => {
+                  const isHoraCheia = slot.endsWith(":00");
+
                   return (
                     <tr
                       key={slot}
-                      className="group/row transition-colors hover:bg-panel-bg/30 h-[58px]"
+                      className={`group/row transition-colors hover:bg-panel-bg/20 h-[48px] ${
+                        isHoraCheia ? "bg-panel-bg/10" : ""
+                      }`}
                     >
-                      {/* Célula de Horário (Sticky na esquerda) */}
-                      <td className="sticky left-0 z-10 border-r border-panel-line bg-panel-card px-4 py-2 text-center font-mono text-xs font-medium text-panel-sub">
+                      {/* Célula de Horário */}
+                      <td
+                        className={`sticky left-0 z-10 border-r border-panel-line bg-panel-card px-3 py-1.5 text-center font-mono text-xs ${
+                          isHoraCheia
+                            ? "font-bold text-panel-ink"
+                            : "font-normal text-panel-sub/70"
+                        }`}
+                      >
                         {slot}
                       </td>
 
-                      {/* Células de cada Profissional */}
+                      {/* Células de Atendimento / Slot Livre */}
                       {profissionaisExibidos.map((prof) => {
                         const ag = mapaGrade[slot]?.[prof.nome];
 
                         return (
                           <td
                             key={`${slot}-${prof.nome}`}
-                            className="p-1.5 border-r border-panel-line/40 last:border-r-0 align-middle"
+                            className="p-1 border-r border-panel-line/30 last:border-r-0 align-middle"
                           >
                             {ag ? (
-                              /* CARD DE ATENDIMENTO AGENDADO (IDÊNTICO À IMAGEM) */
+                              /* CARD DE AGENDAMENTO */
                               <div
                                 onClick={() => setAgendamentoSelecionado(ag)}
-                                className={`group relative cursor-pointer rounded-xl border p-2.5 transition shadow-sm hover:scale-[1.01] hover:shadow-md ${
+                                className={`group relative cursor-pointer rounded-xl border p-2 transition shadow-sm hover:scale-[1.01] hover:shadow-md ${
                                   ag.status === "ATENDIDO"
-                                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                                    ? "border-emerald-500/40 bg-emerald-500/10 text-panel-ink"
                                     : ag.status === "CONFIRMADO"
-                                      ? "border-amber/50 bg-amber/10 text-panel-ink"
-                                      : "border-sky-500/30 bg-sky-500/10 text-panel-ink"
+                                    ? "border-amber/50 bg-amber/10 text-panel-ink"
+                                    : "border-sky-500/30 bg-sky-500/10 text-panel-ink"
                                 }`}
                               >
-                                <div className="flex items-start justify-between gap-2">
+                                <div className="flex items-start justify-between gap-1.5">
                                   <span className="truncate font-display text-xs font-bold text-panel-ink">
                                     {ag.nome}
                                   </span>
-                                  <span className="shrink-0 font-mono text-[11px] font-medium text-panel-sub">
+                                  <span className="shrink-0 font-mono text-[10px] text-panel-sub">
                                     {ag.horaInicio}
                                   </span>
                                 </div>
@@ -755,12 +759,12 @@ export default function PaginaAgenda() {
                                 </div>
 
                                 <div className="mt-1 flex items-center justify-between">
-                                  <span className="font-semibold text-xs text-sky-400">
+                                  <span className="font-semibold text-xs text-panel-ink">
                                     {ag.valorCents > 0 ? formatarEmReais(ag.valorCents) : "A combinar"}
                                   </span>
 
                                   {ag.status === "ATENDIDO" && (
-                                    <span className="text-[10px] font-bold text-emerald-400">
+                                    <span className="text-[10px] font-bold text-emerald-600">
                                       Concluído ✓
                                     </span>
                                   )}
@@ -772,14 +776,15 @@ export default function PaginaAgenda() {
                                 </div>
                               </div>
                             ) : (
-                              /* SLOT LIVRE: BOTÃO "+" COM HOVER EM BOX TRACEJADO (EXATAMENTE COMO NA IMAGEM) */
+                              /* SLOT LIVRE: VAZIO POR PADRÃO (SEM POLUIÇÃO VISUAL DE + PERMANENTE) */
                               <div
                                 onClick={() => abrirNovoParaSlot(slot, prof.nome)}
-                                className="group flex h-[46px] w-full cursor-pointer items-center justify-center rounded-xl border border-transparent transition-all duration-150 hover:border-dashed hover:border-sky-400/60 hover:bg-sky-500/5"
-                                title={`Agendar horário às ${slot} com ${prof.nome}`}
+                                className="group flex h-[40px] w-full cursor-pointer items-center justify-center rounded-xl border border-transparent transition duration-150 hover:border-dashed hover:border-amber/50 hover:bg-amber/5"
+                                title={`Agendar às ${slot} com ${prof.nome}`}
                               >
-                                <span className="text-panel-sub/40 transition group-hover:scale-125 group-hover:text-sky-400 font-bold text-sm">
-                                  +
+                                <span className="opacity-0 transition duration-150 group-hover:opacity-100 text-amber font-semibold text-xs flex items-center gap-1">
+                                  <span>+</span>
+                                  <span className="text-[11px] font-medium hidden sm:inline">Agendar</span>
                                 </span>
                               </div>
                             )}
@@ -793,30 +798,22 @@ export default function PaginaAgenda() {
             </table>
           </div>
         </div>
-      ) : modoVisualizacao === "lista" ? (
+      ) : (
         /* ========================================================================= */
         /* MODO LISTA CRONOLÓGICA DE ATENDIMENTOS DO DIA                             */
         /* ========================================================================= */
-        <div className="mt-4 space-y-3">
+        <div className="space-y-2.5">
           {agendamentos.length === 0 ? (
             <div className="rounded-2xl border border-panel-line bg-panel-card p-12 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber/10 text-2xl text-amber">
-                🗓️
-              </div>
-              <h3 className="mt-4 font-display text-lg font-bold text-panel-ink">
-                Nenhum atendimento marcado para este dia
-              </h3>
-              <p className="mx-auto mt-2 max-w-md text-sm text-panel-sub">
-                Clique no botão abaixo para adicionar um atendimento ou compartilhe seu link de agendamento.
+              <p className="text-xs text-panel-sub">
+                Nenhum atendimento marcado para este dia.
               </p>
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                <button
-                  onClick={() => setModalAberto(true)}
-                  className="rounded-xl bg-amber px-4 py-2.5 text-sm font-bold text-night hover:bg-amber-hover"
-                >
-                  + Novo agendamento
-                </button>
-              </div>
+              <button
+                onClick={() => setModalAberto(true)}
+                className="mt-3 rounded-xl bg-amber px-4 py-2 text-xs font-bold text-night hover:bg-amber-hover transition shadow-sm"
+              >
+                + Novo agendamento
+              </button>
             </div>
           ) : (
             agendamentos.map((ag) => {
@@ -833,17 +830,17 @@ export default function PaginaAgenda() {
               return (
                 <div
                   key={ag.id}
-                  className={`flex flex-col gap-4 rounded-2xl border p-4 transition sm:flex-row sm:items-center sm:justify-between ${
+                  className={`flex flex-col gap-3 rounded-2xl border p-3.5 transition sm:flex-row sm:items-center sm:justify-between ${
                     isConcluido
                       ? "border-emerald-500/30 bg-emerald-500/5"
                       : isCancelado
-                        ? "border-panel-line bg-panel-card opacity-60"
-                        : "border-panel-line bg-panel-card hover:border-amber/30"
+                      ? "border-panel-line bg-panel-card opacity-50"
+                      : "border-panel-line bg-panel-card hover:border-amber/30"
                   }`}
                 >
-                  <div className="flex items-start gap-4">
-                    <div className="flex flex-col items-center justify-center rounded-xl bg-panel-bg px-3 py-2 text-center border border-panel-line min-w-[75px]">
-                      <span className="font-mono text-sm font-bold text-panel-ink">
+                  <div className="flex items-center gap-3.5">
+                    <div className="flex flex-col items-center justify-center rounded-xl bg-panel-bg px-2.5 py-1.5 text-center border border-panel-line min-w-[70px]">
+                      <span className="font-mono text-xs font-bold text-panel-ink">
                         {ag.horaInicio}
                       </span>
                       <span className="font-mono text-[10px] text-panel-sub">
@@ -853,80 +850,52 @@ export default function PaginaAgenda() {
 
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-display font-semibold text-panel-ink">
+                        <span className="font-display font-semibold text-xs text-panel-ink">
                           {ag.nome}
                         </span>
 
-                        <span className="rounded-md border border-panel-line bg-panel-bg px-2 py-0.5 text-[11px] font-medium text-panel-sub">
+                        <span className="rounded-md border border-panel-line bg-panel-bg px-2 py-0.5 text-[10px] text-panel-sub">
                           {ag.profissional}
                         </span>
 
                         {isConcluido ? (
-                          <span className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-400">
+                          <span className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
                             Concluído ✓
                           </span>
                         ) : isConfirmado ? (
-                          <span className="rounded-md border border-amber/30 bg-amber/10 px-2 py-0.5 text-[11px] font-semibold text-amber">
+                          <span className="rounded-md border border-amber/30 bg-amber/10 px-2 py-0.5 text-[10px] font-semibold text-amber">
                             Confirmado
                           </span>
                         ) : isCancelado ? (
-                          <span className="rounded-md border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[11px] font-medium text-red-400">
-                            {ag.status === "FALTOU" ? "Faltou" : "Cancelado"}
+                          <span className="rounded-md border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[10px] font-medium text-red-400">
+                            Cancelado
                           </span>
                         ) : (
-                          <span className="rounded-md border border-blue-500/30 bg-blue-500/10 px-2 py-0.5 text-[11px] font-medium text-blue-400">
+                          <span className="rounded-md border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[10px] font-medium text-sky-600">
                             Marcado
                           </span>
                         )}
                       </div>
 
-                      <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-panel-sub">
-                        <a
-                          href={whatsappUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-panel-sub hover:text-emerald-400 hover:underline"
-                        >
-                          <span>💬</span>
-                          <span>{formatarTelefone(ag.telefone)}</span>
-                        </a>
-
-                        <span>•</span>
-                        <span className="font-medium text-panel-ink">{ag.servicoNome}</span>
-
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-panel-sub">
+                        <span>{ag.servicoNome}</span>
                         {ag.valorCents > 0 && (
                           <>
                             <span>•</span>
-                            <span className="font-semibold text-amber">
+                            <span className="font-semibold text-panel-ink">
                               {formatarEmReais(ag.valorCents)}
                             </span>
                           </>
                         )}
-                      </div>
-
-                      <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
-                        {ag.historicoVisitas > 1 ? (
-                          <span className="inline-flex items-center gap-1 rounded bg-panel-bg px-2 py-0.5 text-panel-sub border border-panel-line">
-                            <span>🔁</span>
-                            <span>Cliente assíduo · costuma voltar a cada {ag.cicloDias} dias</span>
-                          </span>
-                        ) : ag.historicoVisitas === 1 ? (
-                          <span className="inline-flex items-center gap-1 rounded bg-panel-bg px-2 py-0.5 text-panel-sub border border-panel-line">
-                            <span>✨</span>
-                            <span>1 visita anterior registrada</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 rounded bg-panel-bg px-2 py-0.5 text-panel-sub border border-panel-line">
-                            <span>🌱</span>
-                            <span>Novo cliente salvo pela agenda</span>
-                          </span>
-                        )}
-
-                        {ag.observacoes && (
-                          <span className="text-panel-sub italic">
-                            Obs: &quot;{ag.observacoes}&quot;
-                          </span>
-                        )}
+                        <span>•</span>
+                        <a
+                          href={whatsappUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:text-emerald-600 hover:underline"
+                        >
+                          {formatarTelefone(ag.telefone)}
+                        </a>
                       </div>
                     </div>
                   </div>
@@ -938,10 +907,9 @@ export default function PaginaAgenda() {
                           onClick={() =>
                             handleMudarStatus(ag.id, "ATENDIDO", ag.valorCents, ag.servicoNome)
                           }
-                          className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:bg-emerald-500/30 transition"
+                          className="rounded-xl bg-emerald-500/20 border border-emerald-500/40 px-3 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-500/30 transition"
                         >
-                          <span>✓</span>
-                          <span>Concluir atendimento</span>
+                          ✓ Concluir
                         </button>
 
                         {!isConfirmado && (
@@ -957,7 +925,7 @@ export default function PaginaAgenda() {
                           href={whatsappUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="rounded-xl border border-panel-line bg-panel-bg px-2.5 py-1.5 text-xs font-medium text-panel-sub hover:text-panel-ink"
+                          className="rounded-xl border border-panel-line bg-panel-bg px-2.5 py-1.5 text-xs font-medium text-panel-sub hover:text-panel-ink transition"
                         >
                           Lembrar WhatsApp
                         </a>
@@ -970,12 +938,6 @@ export default function PaginaAgenda() {
                           ✕
                         </button>
                       </>
-                    )}
-
-                    {isConcluido && (
-                      <span className="text-xs text-emerald-400/80 font-medium">
-                        Valor no caixa · Monitorado pela Nexora
-                      </span>
                     )}
 
                     {isCancelado && (
@@ -992,180 +954,15 @@ export default function PaginaAgenda() {
             })
           )}
         </div>
-      ) : (
-        /* ========================================================================= */
-        /* CENTRAL DE LEMBRETES ANTI-FALTAS                                          */
-        /* ========================================================================= */
-        <div className="mt-4 space-y-4">
-          <div className="rounded-2xl border border-amber/30 bg-amber/5 p-5 shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <span className="inline-flex items-center gap-1.5 rounded-md bg-amber/20 px-2.5 py-0.5 text-xs font-bold text-amber">
-                  <span>🔔</span>
-                  <span>Proteção contra Faltas</span>
-                </span>
-                <h3 className="mt-2 font-display text-base font-bold text-panel-ink">
-                  Lembretes de horários para clientes com atendimento marcado
-                </h3>
-                <p className="mt-0.5 text-xs text-panel-sub max-w-xl leading-relaxed">
-                  Lembretes reduzem o esquecimento em até 70%. Envie a mensagem personalizada com os detalhes do atendimento para o WhatsApp do cliente com 1 clique.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => handleEnviarLembrete(undefined, true)}
-                  disabled={
-                    disparandoLote ||
-                    agendamentos.filter(
-                      (a) => (a.status === "MARCADO" || a.status === "CONFIRMADO") && !a.lembreteEnviado,
-                    ).length === 0
-                  }
-                  className="inline-flex items-center gap-2 rounded-xl bg-amber px-4 py-2.5 text-xs font-bold text-night shadow hover:bg-amber-hover transition disabled:opacity-40"
-                >
-                  <span>⚡</span>
-                  <span>{disparandoLote ? "Enviando lembretes..." : "Lembrar todos do dia"}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {agendamentos.filter((a) => a.status === "MARCADO" || a.status === "CONFIRMADO").length === 0 ? (
-              <div className="rounded-2xl border border-panel-line bg-panel-card p-12 text-center text-xs text-panel-sub">
-                Nenhum horário marcado ou confirmado para esta data.
-              </div>
-            ) : (
-              agendamentos
-                .filter((a) => a.status === "MARCADO" || a.status === "CONFIRMADO")
-                .map((ag) => {
-                  const isEnviando = enviandoLembreteId === ag.id;
-                  const isJaEnviado = ag.lembreteEnviado;
-
-                  return (
-                    <div
-                      key={ag.id}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-panel-line bg-panel-card p-4 shadow-sm"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="rounded-xl border border-panel-line bg-panel-bg px-2.5 py-1.5 text-center shrink-0">
-                          <span className="font-mono text-xs font-bold text-panel-ink block">
-                            {ag.horaInicio}
-                          </span>
-                          <span className="font-mono text-[10px] text-panel-sub">
-                            até {ag.horaFim}
-                          </span>
-                        </div>
-
-                        <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-display font-semibold text-panel-ink">
-                              {ag.nome}
-                            </span>
-                            <span className="rounded-md border border-panel-line bg-panel-bg px-2 py-0.5 text-[11px] text-panel-sub">
-                              {ag.profissional}
-                            </span>
-                            {isJaEnviado ? (
-                              <span className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-400">
-                                ✓ Lembrete enviado
-                              </span>
-                            ) : (
-                              <span className="rounded-md border border-amber/30 bg-amber/10 px-2 py-0.5 text-[11px] font-semibold text-amber">
-                                Pendente
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-panel-sub">
-                            <span>{ag.servicoNome}</span>
-                            <span>•</span>
-                            <span className="font-mono">{formatarTelefone(ag.telefone)}</span>
-                            {ag.valorCents > 0 && (
-                              <>
-                                <span>•</span>
-                                <span className="font-semibold text-amber">
-                                  {formatarEmReais(ag.valorCents)}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleEnviarLembrete(ag.id)}
-                          disabled={isEnviando}
-                          className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition ${
-                            isJaEnviado
-                              ? "border border-panel-line bg-panel-bg text-panel-sub hover:text-panel-ink"
-                              : "bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30"
-                          }`}
-                        >
-                          <span>💬</span>
-                          <span>
-                            {isEnviando
-                              ? "Enviando..."
-                              : isJaEnviado
-                              ? "Reenviar lembrete"
-                              : "Lembrar no WhatsApp"}
-                          </span>
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })
-            )}
-          </div>
-        </div>
       )}
 
-      {/* Banner de Auto-Agendamento Online */}
-      {linkPublico && (
-        <div className="mt-8 rounded-2xl border border-amber/20 bg-gradient-to-br from-panel-card to-amber/5 p-6 shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <span className="rounded-md bg-amber/10 px-2 py-1 text-xs font-bold text-amber">
-                Agendamento Online Ativo
-              </span>
-              <h3 className="mt-2 font-display text-lg font-bold text-panel-ink">
-                Seus clientes escolhem o serviço e marcam direto no celular
-              </h3>
-              <p className="mt-1 max-w-xl text-xs text-panel-sub">
-                Coloque o link na sua bio do Instagram ou envie no WhatsApp. O cliente vê os horários disponíveis
-                em tempo real e agenda sozinho sem você precisar responder na hora.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-2 sm:items-end">
-              <button
-                onClick={copiarLinkPublico}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber px-4 py-2.5 text-xs font-bold text-night hover:bg-amber-hover transition shadow-sm"
-              >
-                <span>{linkCopiado ? "Link copiado! ✓" : "Copiar link de agendamento"}</span>
-              </button>
-              <a
-                href={linkPublico}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-center text-xs font-semibold text-panel-sub hover:text-amber underline"
-              >
-                Abrir página como cliente ↗
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Detalhes do Agendamento ao Clicar no Card da Grade */}
+      {/* Modal: Detalhes do Agendamento ao Clicar na Grade */}
       {agendamentoSelecionado && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-md rounded-2xl border border-panel-line bg-night p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-panel-line pb-4">
               <div>
-                <span className="text-[11px] font-semibold text-amber uppercase tracking-wide">
+                <span className="text-[10px] font-semibold text-amber uppercase tracking-wide">
                   Atendimento
                 </span>
                 <h3 className="font-display text-lg font-bold text-panel-ink">
@@ -1180,7 +977,7 @@ export default function PaginaAgenda() {
               </button>
             </div>
 
-            <div className="mt-4 space-y-3.5">
+            <div className="mt-4 space-y-3">
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div className="rounded-xl border border-panel-line bg-panel-card p-3">
                   <span className="text-panel-sub block text-[10px] uppercase">Horário</span>
@@ -1197,7 +994,7 @@ export default function PaginaAgenda() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-panel-line bg-panel-card p-3.5 space-y-2 text-xs">
+              <div className="rounded-xl border border-panel-line bg-panel-card p-3 space-y-2 text-xs">
                 <div className="flex justify-between">
                   <span className="text-panel-sub">Serviço:</span>
                   <strong className="text-panel-ink">{agendamentoSelecionado.servicoNome}</strong>
@@ -1228,7 +1025,7 @@ export default function PaginaAgenda() {
                 )}
               </div>
 
-              {/* Ações Rápidas */}
+              {/* Ações */}
               <div className="space-y-2 pt-2">
                 {agendamentoSelecionado.status !== "ATENDIDO" && (
                   <button
@@ -1243,7 +1040,7 @@ export default function PaginaAgenda() {
                     className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-bold text-night hover:bg-emerald-400 transition"
                   >
                     <span>✓</span>
-                    <span>Concluir atendimento e registrar no caixa</span>
+                    <span>Concluir atendimento</span>
                   </button>
                 )}
 
@@ -1271,20 +1068,6 @@ export default function PaginaAgenda() {
                       : "Enviar lembrete no WhatsApp"}
                   </span>
                 </button>
-
-                <a
-                  href={`https://wa.me/55${agendamentoSelecionado.telefone}?text=${encodeURIComponent(
-                    `Oi ${agendamentoSelecionado.nome.split(" ")[0]}, tudo bem? Passando para confirmar seu horário agendado para ${
-                      agendamentoSelecionado.data === hoje ? "hoje" : "o dia " + agendamentoSelecionado.data
-                    } às ${agendamentoSelecionado.horaInicio} com ${agendamentoSelecionado.profissional}.`,
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/20 transition"
-                >
-                  <span>💬</span>
-                  <span>Conversar no WhatsApp</span>
-                </a>
 
                 <div className="flex items-center justify-between pt-2">
                   <button
@@ -1327,7 +1110,7 @@ export default function PaginaAgenda() {
               </button>
             </div>
 
-            <form onSubmit={handleSalvarAgendamento} className="mt-4 space-y-3.5">
+            <form onSubmit={handleSalvarAgendamento} className="mt-4 space-y-3">
               <div>
                 <label className="block text-xs font-medium text-panel-sub">
                   Nome do cliente *
@@ -1338,7 +1121,7 @@ export default function PaginaAgenda() {
                   placeholder="Ex: João da Silva"
                   value={formNome}
                   onChange={(e) => setFormNome(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-panel-line bg-panel-bg px-3.5 py-2 text-sm text-panel-ink placeholder:text-panel-sub/50 focus:border-amber focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-panel-line bg-panel-bg px-3.5 py-2 text-xs text-panel-ink placeholder:text-panel-sub/50 focus:border-amber focus:outline-none"
                 />
               </div>
 
@@ -1352,7 +1135,7 @@ export default function PaginaAgenda() {
                   placeholder="Ex: (11) 98888-7777"
                   value={formTelefone}
                   onChange={(e) => setFormTelefone(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-panel-line bg-panel-bg px-3.5 py-2 text-sm text-panel-ink placeholder:text-panel-sub/50 focus:border-amber focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-panel-line bg-panel-bg px-3.5 py-2 text-xs text-panel-ink placeholder:text-panel-sub/50 focus:border-amber focus:outline-none"
                 />
               </div>
 
@@ -1379,14 +1162,14 @@ export default function PaginaAgenda() {
                 </label>
                 <input
                   type="text"
-                  placeholder="Nome do serviço (ex: Consulta, Lavagem, Corte...)"
+                  placeholder="Nome do serviço (ex: Corte, Consulta...)"
                   value={formServicoNome}
                   onChange={(e) => setFormServicoNome(e.target.value)}
                   className="mt-1 w-full rounded-xl border border-panel-line bg-panel-bg px-3.5 py-2 text-xs text-panel-ink placeholder:text-panel-sub/50 focus:border-amber focus:outline-none"
                 />
               </div>
 
-              {/* Seletor de Horário Clicável Mobile-First */}
+              {/* Seletor de Horário */}
               <div>
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-medium text-panel-sub">
@@ -1415,7 +1198,7 @@ export default function PaginaAgenda() {
                   </div>
                 </div>
 
-                <div className="mt-2 grid grid-cols-4 sm:grid-cols-6 gap-1.5 max-h-28 overflow-y-auto p-1.5 rounded-xl border border-panel-line bg-panel-bg">
+                <div className="mt-2 grid grid-cols-4 sm:grid-cols-6 gap-1 max-h-24 overflow-y-auto p-1.5 rounded-xl border border-panel-line bg-panel-bg">
                   {HORARIOS_SELECAO.map((h) => {
                     const ativo = formHora === h;
                     return (
@@ -1423,7 +1206,7 @@ export default function PaginaAgenda() {
                         key={h}
                         type="button"
                         onClick={() => setFormHora(h)}
-                        className={`rounded-lg py-1.5 text-center font-mono text-xs transition ${
+                        className={`rounded-lg py-1 text-center font-mono text-xs transition ${
                           ativo
                             ? "bg-amber text-night font-bold shadow-sm"
                             : "bg-panel-card border border-panel-line/60 text-panel-sub hover:border-amber/40 hover:text-panel-ink"
@@ -1449,28 +1232,18 @@ export default function PaginaAgenda() {
                 />
               </div>
 
-              {/* Registro Automático e Monitoramento Ativo (Sem Checkbox) */}
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300 flex items-start gap-2.5">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[11px] mt-0.5">
-                  ✓
-                </span>
-                <span className="leading-snug">
-                  <strong>Atendimento ativo e monitorado:</strong> a visita é registrada automaticamente no seu caixa e a Nexora acompanha o retorno deste cliente.
-                </span>
-              </div>
-
               <div className="flex items-center justify-end gap-2.5 pt-2">
                 <button
                   type="button"
                   onClick={() => setModalAberto(false)}
-                  className="rounded-xl border border-panel-line px-4 py-2.5 text-xs font-semibold text-panel-sub hover:text-panel-ink"
+                  className="rounded-xl border border-panel-line px-4 py-2 text-xs font-semibold text-panel-sub hover:text-panel-ink"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={salvando}
-                  className="rounded-xl bg-amber px-5 py-2.5 text-xs font-bold text-night hover:bg-amber-hover transition disabled:opacity-50"
+                  className="rounded-xl bg-amber px-5 py-2 text-xs font-bold text-night hover:bg-amber-hover transition disabled:opacity-50"
                 >
                   {salvando ? "Salvando..." : "Salvar agendamento"}
                 </button>
@@ -1502,7 +1275,7 @@ export default function PaginaAgenda() {
             </div>
 
             <div className="mt-4 space-y-4">
-              {/* Lista dos profissionais atuais */}
+              {/* Lista de profissionais */}
               <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                 {listaEditavelProf.length === 0 ? (
                   <div className="rounded-xl border border-panel-line bg-panel-card p-4 text-center text-xs text-panel-sub">
@@ -1534,7 +1307,7 @@ export default function PaginaAgenda() {
                 )}
               </div>
 
-              {/* Formulário para adicionar novo profissional */}
+              {/* Formulário para adicionar */}
               <div className="rounded-xl border border-panel-line bg-panel-bg p-3 space-y-2">
                 <span className="block text-xs font-semibold text-panel-ink">
                   + Adicionar membro da equipe
@@ -1551,7 +1324,7 @@ export default function PaginaAgenda() {
                   onClick={handleAdicionarProfissional}
                   className="w-full rounded-lg bg-panel-card border border-panel-line py-2 text-xs font-bold text-panel-ink hover:border-amber/40 hover:text-amber transition"
                 >
-                  Adicionar profissional
+                  Adicionar à lista
                 </button>
               </div>
 
@@ -1583,7 +1356,7 @@ export default function PaginaAgenda() {
           <div className="w-full max-w-md rounded-2xl border border-panel-line bg-night p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-panel-line pb-4">
               <h3 className="font-display text-lg font-bold text-panel-ink">
-                Seu Link Público de Agendamento
+                Link de Agendamento
               </h3>
               <button
                 onClick={() => setModalLinkAberto(false)}
@@ -1596,7 +1369,7 @@ export default function PaginaAgenda() {
             <div className="mt-4 space-y-4">
               <p className="text-xs text-panel-sub leading-relaxed">
                 Envie este link para seus clientes no WhatsApp ou cole no perfil do Instagram.
-                Quem agendar por ele escolhe o serviço e o horário, e entra automaticamente na sua lista.
+                O cliente escolhe o serviço e o horário, e entra automaticamente na sua agenda.
               </p>
 
               <div className="flex items-center gap-2 rounded-xl border border-panel-line bg-panel-bg p-2">
@@ -1610,7 +1383,7 @@ export default function PaginaAgenda() {
                   onClick={copiarLinkPublico}
                   className="whitespace-nowrap rounded-lg bg-amber px-3 py-1.5 text-xs font-bold text-night hover:bg-amber-hover"
                 >
-                  {linkCopiado ? "Copiado!" : "Copiar"}
+                  {linkCopiado ? "Copiado! ✓" : "Copiar"}
                 </button>
               </div>
 
@@ -1619,7 +1392,7 @@ export default function PaginaAgenda() {
                   href={linkPublico}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-xl border border-panel-line px-4 py-2 text-xs font-semibold text-panel-ink hover:border-amber/40 hover:text-amber"
+                  className="rounded-xl border border-panel-line px-4 py-2 text-xs font-semibold text-panel-ink hover:border-amber/40 hover:text-amber transition"
                 >
                   Abrir página como cliente ↗
                 </a>
