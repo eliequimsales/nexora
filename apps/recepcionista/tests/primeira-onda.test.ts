@@ -211,8 +211,8 @@ describe("o painel mostra a primeira Onda", () => {
     expect(layout).toMatch(/estado === "GRATIS"/);
   });
 
-  it("na primeira Onda, a tela não oferece o lote de 25", () => {
-    expect(leia("app/painel/onda/page.tsx")).toMatch(/!onda\.primeiraOnda\s*&&/);
+  it("a tela não oferece mais o lote expandido de 25", () => {
+    expect(leia("app/painel/onda/page.tsx")).not.toContain("Lote expandido");
   });
 
   it("depois da parede, a tela da Onda continua perguntando quem apareceu", () => {

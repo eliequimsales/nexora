@@ -189,7 +189,6 @@ export default function PaginaOnda() {
   const [copiado, setCopiado] = useState("");
   const [pulando, setPulando] = useState("");
   const [toquesSelecionados, setToquesSelecionados] = useState<Record<string, number>>({});
-  const [tamanhoLote, setTamanhoLote] = useState<12 | 25>(12);
 
   // Conexão direta do WhatsApp
   const [statusWhatsApp, setStatusWhatsApp] = useState<string>("DESLIGADO");
@@ -245,13 +244,8 @@ export default function PaginaOnda() {
   }, []);
 
   useEffect(() => {
-    void carregar(tamanhoLote);
-  }, [carregar, tamanhoLote]);
-
-  const trocarTamanho = (novoTamanho: 12 | 25) => {
-    setTamanhoLote(novoTamanho);
-    void carregar(novoTamanho);
-  };
+    void carregar(12);
+  }, [carregar]);
 
   const copiar = async (card: Card, texto: string) => {
     await navigator.clipboard.writeText(texto);
@@ -306,7 +300,7 @@ export default function PaginaOnda() {
           return false;
         }
         if (res.status === 402) {
-          void carregar(tamanhoLote);
+          void carregar(12);
           return false;
         }
         alert(json.error ?? "Não consegui enviar a mensagem agora. Tente novamente.");
@@ -476,34 +470,6 @@ export default function PaginaOnda() {
             {resolvidos} de {total} resolvidos hoje.
           </p>
         </div>
-
-        {/* Seletor de Tamanho do Lote — a primeira Onda por nossa conta tem o tamanho padrão. */}
-        {!onda.primeiraOnda && (
-          <div className="flex items-center gap-1.5 rounded-xl border border-panel-line bg-panel-card p-1">
-            <button
-              type="button"
-              onClick={() => trocarTamanho(12)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-                tamanhoLote === 12
-                  ? "bg-amber font-semibold text-night shadow-sm"
-                  : "text-panel-sub hover:text-panel-ink"
-              }`}
-            >
-              Lote padrão (12)
-            </button>
-            <button
-              type="button"
-              onClick={() => trocarTamanho(25)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-                tamanhoLote === 25
-                  ? "bg-amber font-semibold text-night shadow-sm"
-                  : "text-panel-sub hover:text-panel-ink"
-              }`}
-            >
-              Lote expandido (25)
-            </button>
-          </div>
-        )}
       </header>
 
       {/* Barra de Status e Conexão do WhatsApp */}
