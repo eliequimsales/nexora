@@ -63,7 +63,13 @@ function aplicaTema(rel: string): void {
   expect(fonte, rel).toMatch(/<TemaNexora>/);
 }
 
-const HOME = ["app/page.tsx", "components/calculadora.tsx", "components/rodape-funil.tsx"];
+const HOME = [
+  "app/page.tsx",
+  "components/calculadora.tsx",
+  "components/rodape-funil.tsx",
+  // A demonstração do Atendente Virtual no hero (22/09/2026).
+  "components/demo-atendente.tsx",
+];
 const ACESSO = [
   "app/cadastro/page.tsx",
   "app/login/page.tsx",
@@ -158,6 +164,10 @@ describe("a home", () => {
 
   it("a calculadora usa só o tema do funil", () => {
     expect(achadosDoTemaAntigo("components/calculadora.tsx")).toEqual([]);
+  });
+
+  it("a demonstração do Atendente usa só o tema do funil", () => {
+    expect(achadosDoTemaAntigo("components/demo-atendente.tsx")).toEqual([]);
   });
 
   it("o hero leva à calculadora, e a calculadora está na home", () => {

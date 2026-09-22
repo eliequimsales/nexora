@@ -1,6 +1,12 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import {
+  MINUTOS_SEM_RESPOSTA,
+  SEMANA_GRATIS_CONVERSAS,
+  SEMANA_GRATIS_DIAS,
+  TETO_CONVERSAS_MES,
+} from "@/lib/atendente/constantes";
 import { GARANTIA_DIAS, ONDAS_MINIMAS } from "@/lib/billing/garantia";
 import { FORMAS_DE_PAGAMENTO, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
 import { DIAS_DA_PRIMEIRA_ONDA } from "@/lib/billing/primeira-onda";
@@ -66,6 +72,24 @@ describe("os números da página são os números do produto", () => {
     expect(ONDAS_MINIMAS).toBe(3);
     expect(landing).toContain("Garantia Dinheiro Recuperado");
     expect(landing).toContain("GARANTIA_DIAS");
+  });
+
+  // O Atendente Virtual: cada número da página sai da constante que o portão aplica.
+  it("o teto, a semana grátis e os 5 minutos do Atendente saem das constantes", () => {
+    expect(TETO_CONVERSAS_MES).toBe(200);
+    expect(SEMANA_GRATIS_DIAS).toBe(7);
+    expect(SEMANA_GRATIS_CONVERSAS).toBe(50);
+    expect(MINUTOS_SEM_RESPOSTA).toBe(5);
+    for (const constante of ["TETO_CONVERSAS_MES", "SEMANA_GRATIS_DIAS", "SEMANA_GRATIS_CONVERSAS", "MINUTOS_SEM_RESPOSTA"]) {
+      expect(landing, constante).toContain(constante);
+    }
+    expect(landing).not.toMatch(/até 200 conversas|50 conversas|5 minutos sem/);
+  });
+
+  it("o risco zero promete as duas entradas grátis, e nada além delas", () => {
+    expect(landing).toContain("primeira semana do Atendente");
+    expect(landing).toContain("primeira Onda");
+    expect(landing.toLowerCase()).not.toContain("para sempre grátis");
   });
 });
 

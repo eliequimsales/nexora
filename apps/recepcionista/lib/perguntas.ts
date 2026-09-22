@@ -1,3 +1,10 @@
+import {
+  MAX_RESPOSTAS_POR_DIA,
+  MINUTOS_SEM_RESPOSTA,
+  SEMANA_GRATIS_CONVERSAS,
+  SEMANA_GRATIS_DIAS,
+  TETO_CONVERSAS_MES,
+} from "@/lib/atendente/constantes";
 import { GARANTIA_DIAS, ONDAS_MINIMAS } from "@/lib/billing/garantia";
 import { PLANOS } from "@/lib/billing/planos";
 import { emReais, PRECO_ANUAL_CENTS, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
@@ -20,7 +27,29 @@ export const PERGUNTAS_FREQUENTES: Pergunta[] = [
   {
     pergunta: "A Nexora manda mensagem para os meus clientes sozinha?",
     resposta:
-      "Não. Ela escreve a mensagem, e você lê e manda do seu próprio WhatsApp. É de propósito: número que manda muita mensagem não pedida pode ser limitado ou bloqueado pelo WhatsApp, e o número do seu negócio é a sua agenda.",
+      "Para quem sumiu, não: na reativação, ela escreve a mensagem, e você lê e manda do seu próprio WhatsApp. É de propósito — número que manda muita mensagem não pedida pode ser limitado ou bloqueado pelo WhatsApp, e o número do seu negócio é a sua agenda. O Atendente Virtual, se você ligar, só responde quem escreveu primeiro: nunca começa conversa e nunca insiste.",
+  },
+  {
+    pergunta: "O Atendente Virtual finge ser uma pessoa?",
+    resposta:
+      "Não. Na primeira resposta do dia, ele se apresenta como atendente virtual do seu negócio, com o nome que você escolher. Preço, horário e endereço ele só diz o que está no seu cadastro, e horário livre ele tira da sua agenda de verdade.",
+  },
+  {
+    pergunta: "Ele atende também com a loja aberta?",
+    resposta: `Só se ninguém responder em ${MINUTOS_SEM_RESPOSTA} minutos — e só se você deixar essa opção ligada. Com a loja aberta, a mensagem é sua. Se você responder pelo celular, ele sai daquela conversa.`,
+  },
+  {
+    pergunta: "E quando ele não sabe a resposta?",
+    resposta:
+      "Ele diz que não tem aquela informação confirmada, anota a pergunta para você e avisa quando a equipe volta. Nunca inventa preço, prazo ou desconto. O que você ensinar, ele passa a responder.",
+  },
+  {
+    pergunta: "Meu número corre risco com o Atendente?",
+    resposta: `A conexão por QR Code não é a oficial do WhatsApp, e números podem ser restringidos. O Atendente só responde quem escreveu primeiro, no máximo ${MAX_RESPOSTAS_POR_DIA} respostas por conversa por dia, e nunca manda mensagem sozinho — isso reduz o risco, mas não zera.`,
+  },
+  {
+    pergunta: "O que acontece depois da semana grátis do Atendente?",
+    resposta: `A primeira semana é por nossa conta, sem cartão: ${SEMANA_GRATIS_DIAS} dias ou ${SEMANA_GRATIS_CONVERSAS} conversas, o que vier primeiro, a partir de quando você ligar. Depois, ele para de responder até você escolher um plano — e você vê o que ele fez na semana antes de decidir. No plano de ${emReais(PRECO_MENSAL_CENTS)} por mês, ele atende até ${TETO_CONVERSAS_MES} conversas por mês.`,
   },
   {
     pergunta: "Preciso de cartão de crédito?",
@@ -56,14 +85,19 @@ export const O_QUE_A_NEXORA_NAO_E: NaoE[] = [
     explicacao: `São ${TAMANHO_DA_ONDA} mensagens por semana, escolhidas pelo ritmo de cada cliente, e cada uma sai do seu WhatsApp depois que você lê.`,
   },
   {
-    titulo: "Não fala pelo seu número sem você",
+    titulo: "Não começa conversa pelo seu número",
     explicacao:
-      "Na recuperação de clientes, a Nexora escreve a mensagem e quem manda é você. Nada sai do seu WhatsApp sem você apertar enviar.",
+      "Na reativação, a Nexora escreve a mensagem e quem manda é você. O Atendente Virtual, se você ligar, só responde quem escreveu primeiro — nunca puxa conversa nem insiste.",
   },
   {
-    titulo: "Não é CRM nem sistema de agenda",
+    titulo: "Não é robô fingindo ser gente",
     explicacao:
-      "Ela não substitui o que você já usa para marcar horário. Cuida de outra coisa: de quem parou de marcar.",
+      "O Atendente se apresenta como atendente virtual, e preço e horário ele só diz o que está no seu cadastro. O que ele não sabe, ele anota para você.",
+  },
+  {
+    titulo: "Não é CRM",
+    explicacao:
+      "Não pede para você cadastrar cliente por cliente nem mudar o seu jeito de trabalhar. A agenda que vem junto é simples: o seu link para o cliente marcar sozinho, e é nela que o Atendente marca.",
   },
   {
     titulo: "Não é promessa de faturamento",

@@ -1,4 +1,10 @@
 import { describe, expect, it } from "vitest";
+import {
+  MINUTOS_SEM_RESPOSTA,
+  SEMANA_GRATIS_CONVERSAS,
+  SEMANA_GRATIS_DIAS,
+  TETO_CONVERSAS_MES,
+} from "@/lib/atendente/constantes";
 import { GARANTIA_DIAS, ONDAS_MINIMAS } from "@/lib/billing/garantia";
 import { PLANOS } from "@/lib/billing/planos";
 import { emReais, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
@@ -73,5 +79,47 @@ describe("o que a Nexora não é", () => {
     expect(tudo).toContain("CRM");
     expect(tudo.toLowerCase()).toContain("faturamento");
     expect(tudo).not.toMatch(PROIBIDAS);
+  });
+
+  // Desde o Atendente Virtual e a agenda, duas frases antigas viraram mentira.
+  it("não contradiz a agenda nem o Atendente", () => {
+    const tudo = O_QUE_A_NEXORA_NAO_E.map((i) => `${i.titulo} ${i.explicacao}`).join(" ");
+    expect(tudo).not.toMatch(/não substitui o que você já usa para marcar horário/i);
+    expect(tudo).not.toMatch(/Nada sai do seu WhatsApp sem você/i);
+    expect(tudo).toMatch(/só responde quem escreveu primeiro/);
+  });
+});
+
+describe("as perguntas sobre o Atendente Virtual", () => {
+  it("diz que ele não finge ser gente", () => {
+    expect(resposta("finge")).toContain("atendente virtual");
+  });
+
+  it("diz quando ele atende com a loja aberta, com o número da constante", () => {
+    expect(resposta("aberta")).toContain(`${MINUTOS_SEM_RESPOSTA} minutos`);
+  });
+
+  it("diz o que ele faz quando não sabe", () => {
+    expect(resposta("não sabe")).toMatch(/anota/);
+  });
+
+  it("é honesto sobre o risco do número", () => {
+    const r = resposta("risco");
+    expect(r).toContain("não é a oficial do WhatsApp");
+    expect(r).toContain("não zera");
+  });
+
+  it("explica a semana grátis e o que vem depois, com os números das constantes", () => {
+    const r = resposta("semana");
+    expect(r).toContain(`${SEMANA_GRATIS_DIAS} dias`);
+    expect(r).toContain(`${SEMANA_GRATIS_CONVERSAS} conversas`);
+    expect(r).toContain(`${TETO_CONVERSAS_MES} conversas`);
+    expect(r).toContain(emReais(PRECO_MENSAL_CENTS));
+  });
+
+  it("a primeira pergunta não promete mais que nada responde sozinho", () => {
+    const r = resposta("sozinha");
+    expect(r).toMatch(/Atendente Virtual/);
+    expect(r).toMatch(/só responde quem escreveu primeiro/);
   });
 });

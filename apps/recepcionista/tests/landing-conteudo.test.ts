@@ -23,10 +23,45 @@ const PROIBIDAS =
   /disparar mensagens|ia escolhe|banid[oa] em \d|perdem até|garantidos|um clique|1 clique|equipe distribuída|\bRRI\b/i;
 
 describe("o hero", () => {
-  it("fala da dor com as palavras aprovadas", () => {
+  // Desde 22/09/2026 o hero é a dor da resposta: o Atendente Virtual entrou na
+  // esteira. A frase aprovada da reativação continua na página, na seção dela.
+  it("fala da dor de quem responde tarde", () => {
+    const home = semQuebras(leia("app/page.tsx"));
+    expect(home).toContain("Seu cliente mandou mensagem às 22h.");
+    expect(home).toContain("Quem respondeu primeiro ficou com ele.");
+  });
+
+  it("a frase aprovada da reativação continua na página", () => {
     const home = semQuebras(leia("app/page.tsx"));
     expect(home).toContain("Seus clientes não avisam que estão indo embora.");
     expect(home).toContain("Eles simplesmente param de voltar.");
+  });
+});
+
+describe("a demonstração do Atendente Virtual", () => {
+  const demo = leia("components/demo-atendente.tsx");
+
+  it("está no hero da home", () => {
+    const home = leia("app/page.tsx");
+    expect(home).toMatch(/import\s*\{\s*DemoAtendente\s*\}\s*from\s*["']@\/components\/demo-atendente["']/);
+    expect(home).toContain("<DemoAtendente />");
+  });
+
+  it("usa os mesmos textos do motor, nos três jeitos", () => {
+    expect(demo).toContain("textosDoJeito(");
+    expect(demo).toContain("conversaDeExemplo(");
+    expect(demo).toContain("JEITOS");
+  });
+
+  it("se declara exemplo, e as três cenas estão lá", () => {
+    expect(demo).toMatch(/Exemplo/);
+    expect(semQuebras(demo)).toMatch(/22h/);
+    expect(semQuebras(demo)).toMatch(/[Dd]omingo/);
+    expect(demo).toContain("MINUTOS_SEM_RESPOSTA");
+  });
+
+  it("mostra o \"digitando…\"", () => {
+    expect(demo).toContain("digitando…");
   });
 });
 
@@ -72,7 +107,12 @@ describe("o que a Nexora não é, e as perguntas", () => {
 });
 
 describe("nenhuma promessa que o produto não cumpre", () => {
-  for (const arquivo of ["app/page.tsx", "components/calculadora.tsx", "app/barbearia/page.tsx"]) {
+  for (const arquivo of [
+    "app/page.tsx",
+    "components/calculadora.tsx",
+    "app/barbearia/page.tsx",
+    "components/demo-atendente.tsx",
+  ]) {
     it(arquivo, () => {
       expect(leia(arquivo)).not.toMatch(PROIBIDAS);
     });
