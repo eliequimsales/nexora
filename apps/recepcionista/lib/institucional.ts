@@ -11,6 +11,8 @@ import { identificacaoCompleta, lerFornecedor, tipoDoDocumento } from "@/lib/leg
 type Fornecedor = ReturnType<typeof lerFornecedor>;
 
 export const LINKS_DO_RODAPE = [
+  // No topo do funil a oferta é uma só; a tabela fica aqui, para quem procurar.
+  { texto: "Preços", href: "/precos" },
   { texto: "Sobre", href: "/sobre" },
   { texto: "Termos de Uso", href: "/termos" },
   { texto: "Privacidade & LGPD", href: "/privacidade" },

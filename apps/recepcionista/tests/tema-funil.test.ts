@@ -94,7 +94,25 @@ const DIAGNOSTICO = [
 ];
 /** Páginas de nicho, como /barbearia: a cara da home, com a conversa do ramo. */
 const NICHO = ["app/barbearia/page.tsx"];
-const FUNIL = ["components/tema-nexora.tsx", ...HOME, ...ACESSO, ...DIAGNOSTICO, ...NICHO];
+/** A tabela de preços, para quem foi procurar: mesma cara da home. */
+const PRECOS = ["app/precos/page.tsx"];
+const FUNIL = [
+  "components/tema-nexora.tsx",
+  ...HOME,
+  ...ACESSO,
+  ...DIAGNOSTICO,
+  ...NICHO,
+  ...PRECOS,
+];
+
+describe("a página de preços", () => {
+  for (const arquivo of PRECOS) {
+    it(`${arquivo} usa só o tema do funil e recebe o TemaNexora`, () => {
+      expect(achadosDoTemaAntigo(arquivo)).toEqual([]);
+      aplicaTema(arquivo);
+    });
+  }
+});
 
 describe("as páginas de nicho", () => {
   for (const arquivo of NICHO) {

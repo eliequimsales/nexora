@@ -28,6 +28,17 @@ export const PRECO_ANUAL_CENTS = 97_000;
  */
 export const PRECO_IMPLANTACAO_CENTS = 9_700;
 
+/**
+ * R$ 197,00 — o Nexora Completo: sem teto de conversas do Atendente e sem
+ * limite de profissionais. Preço decidido pelo fundador em 21/09/2026.
+ *
+ * NÃO É VENDÁVEL: não existe Price na Stripe nem entrada em PLANOS, e o produto
+ * ainda não aplica nenhum dos dois limites. A constante existe para a página de
+ * preços mostrar o degrau — e a tela que a usa é obrigada a dizer que ele ainda
+ * não está à venda (tests/precos.test.ts).
+ */
+export const PRECO_COMPLETO_CENTS = 19_700;
+
 export function emReais(cents: number): string {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }

@@ -52,8 +52,11 @@ describe("a linha da empresa no rodapé", () => {
 });
 
 describe("os links do rodapé", () => {
-  it("são Sobre, Termos, Privacidade & LGPD e Status, e todos levam a páginas que existem", () => {
+  it("são Preços, Sobre, Termos, Privacidade & LGPD e Status, e todos levam a páginas que existem", () => {
     expect(LINKS_DO_RODAPE.map((l) => l.href)).toEqual([
+      // A tabela de preços não aparece no topo do funil, onde a oferta é uma só.
+      // O rodapé é onde quem foi procurar encontra (esteira comercial, 21/09/2026).
+      "/precos",
       "/sobre",
       "/termos",
       "/privacidade",

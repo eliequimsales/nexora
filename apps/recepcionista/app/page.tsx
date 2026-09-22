@@ -436,9 +436,15 @@ export default function Home() {
                 </Link>
                 .
               </p>
-              <CtaLink href="/cadastro" ctaName="preco" className={`${BOTAO_DOURADO} mt-9 px-7 py-4`}>
-                Recuperar meus clientes grátis <span aria-hidden="true">→</span>
-              </CtaLink>
+              <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-3">
+                <CtaLink href="/cadastro" ctaName="preco" className={`${BOTAO_DOURADO} px-7 py-4`}>
+                  Recuperar meus clientes grátis <span aria-hidden="true">→</span>
+                </CtaLink>
+                {/* A tabela é para quem for procurar: na entrada, a oferta é uma só. */}
+                <Link href="/precos" className="text-sm font-semibold text-nx-gold hover:underline">
+                  Ver os três jeitos de pagar <span aria-hidden="true">→</span>
+                </Link>
+              </div>
             </div>
             <ul className="rounded-xl border border-nx-border bg-nx-surface px-6">
               {INCLUI.map((item) => (

@@ -53,8 +53,27 @@ const BESTEIRA: Pergunta = {
     "Preço, horário e serviço saem só do seu cadastro e da sua agenda, e os números são conferidos antes de a mensagem sair. O que ele não sabe, ele não inventa: diz que vai confirmar, anota a pergunta para você e avisa quando a equipe volta.",
 };
 
+const GARANTIA: Pergunta = {
+  pergunta: "E se ninguém voltar?",
+  resposta: `Aí o dinheiro volta para você. Com a Garantia Dinheiro Recuperado, se em ${GARANTIA_DIAS} dias você mandar as mensagens de ${ONDAS_MINIMAS} ondas, marcar quem voltou e o dinheiro que voltou não chegar a ${emReais(PRECO_MENSAL_CENTS)}, devolvemos tudo o que você pagou. Vale uma vez por negócio, para lista com pelo menos ${MIN_SUMIDOS} clientes sumidos e ${emReais(MIN_RECUPERAVEL_CENTS)} para recuperar.`,
+};
+
+const CANCELAR: Pergunta = {
+  pergunta: "Como eu cancelo?",
+  resposta:
+    "Pelo painel, sem falar com ninguém e sem multa. No mensal, você continua com acesso até o fim do período que já pagou. No Pix e no anual não há o que cancelar: eles não renovam sozinhos.",
+};
+
+const LISTA_PEQUENA: Pergunta = {
+  pergunta: "E se a minha lista de clientes for pequena?",
+  resposta: `O diagnóstico avisa antes de você pagar. Com menos de ${MIN_SUMIDOS} clientes sumidos ou de ${emReais(MIN_RECUPERAVEL_CENTS)} para recuperar, a recomendação é não assinar agora, porque a mensalidade tende a custar mais do que volta.`,
+};
+
 /** As quatro dúvidas que a home responde, na ordem em que elas aparecem na cabeça de quem vai começar. */
 export const PERGUNTAS_DA_HOME: Pergunta[] = [CARTAO, RISCO, SEM_PLANILHA, BESTEIRA];
+
+/** As quatro de quem está olhando preço: o que se paga, o que volta, como sai e quando não vale a pena. */
+export const PERGUNTAS_DOS_PRECOS: Pergunta[] = [CARTAO, GARANTIA, CANCELAR, LISTA_PEQUENA];
 
 export const PERGUNTAS_FREQUENTES: Pergunta[] = [
   {
@@ -83,20 +102,10 @@ export const PERGUNTAS_FREQUENTES: Pergunta[] = [
     resposta: `A primeira semana é por nossa conta, sem cartão: ${SEMANA_GRATIS_DIAS} dias ou ${SEMANA_GRATIS_CONVERSAS} conversas, o que vier primeiro, a partir de quando você ligar. Depois, ele para de responder até você escolher um plano — e você vê o que ele fez na semana antes de decidir. No plano de ${emReais(PRECO_MENSAL_CENTS)} por mês, ele atende até ${TETO_CONVERSAS_MES} conversas por mês.`,
   },
   CARTAO,
-  {
-    pergunta: "E se ninguém voltar?",
-    resposta: `Aí o dinheiro volta para você. Com a Garantia Dinheiro Recuperado, se em ${GARANTIA_DIAS} dias você mandar as mensagens de ${ONDAS_MINIMAS} ondas, marcar quem voltou e o dinheiro que voltou não chegar a ${emReais(PRECO_MENSAL_CENTS)}, devolvemos tudo o que você pagou. Vale uma vez por negócio, para lista com pelo menos ${MIN_SUMIDOS} clientes sumidos e ${emReais(MIN_RECUPERAVEL_CENTS)} para recuperar.`,
-  },
+  GARANTIA,
   SEM_PLANILHA,
-  {
-    pergunta: "Como eu cancelo?",
-    resposta:
-      "Pelo painel, sem falar com ninguém e sem multa. No mensal, você continua com acesso até o fim do período que já pagou. No Pix e no anual não há o que cancelar: eles não renovam sozinhos.",
-  },
-  {
-    pergunta: "E se a minha lista de clientes for pequena?",
-    resposta: `O diagnóstico avisa antes de você pagar. Com menos de ${MIN_SUMIDOS} clientes sumidos ou de ${emReais(MIN_RECUPERAVEL_CENTS)} para recuperar, a recomendação é não assinar agora, porque a mensalidade tende a custar mais do que volta.`,
-  },
+  CANCELAR,
+  LISTA_PEQUENA,
   {
     pergunta: "Quanto tempo isso toma por semana?",
     resposta: `Uns nove minutos. São ${TAMANHO_DA_ONDA} mensagens prontas, uma vez por semana, para ler, ajustar se quiser e mandar.`,
