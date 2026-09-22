@@ -8,6 +8,7 @@ import {
   PLANOS,
   precoPendenteDoPlano,
 } from "@/lib/billing/planos";
+import { implantacaoParaOCheckout } from "@/lib/billing/implantacao-da-conta";
 import { ofertaDaEmpresa } from "@/lib/billing/oferta-da-conta";
 import { fimDoTrialNoCheckout } from "@/lib/billing/relogio";
 import { garantirRelogio } from "@/lib/billing/relogio-da-conta";
@@ -188,6 +189,10 @@ export async function POST(request: Request) {
         return true;
       });
 
+    // A IMPLANTAÇÃO, opcional, na mesma tela de pagamento. Oferecida só quando a
+    // regra deixa (lib/billing/implantacao.ts), e nunca derruba o checkout.
+    const implantacao = await implantacaoParaOCheckout(companyId, fimDoTrial !== null, agora);
+
     const sessao = await stripe().checkout.sessions.create(
       parametrosDoCheckout({
         plano,
@@ -197,6 +202,7 @@ export async function POST(request: Request) {
         fimDoTrial,
         garantia,
         env: process.env,
+        implantacao,
       }),
     );
 

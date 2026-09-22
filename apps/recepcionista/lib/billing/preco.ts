@@ -21,6 +21,13 @@ export const PRECO_MENSAL_CENTS = 9_700;
  */
 export const PRECO_ANUAL_CENTS = 97_000;
 
+/**
+ * R$ 97,00, uma vez: a implantação opcional no pagamento (lib/billing/implantacao.ts).
+ * Aprovada pelo fundador em 21/09/2026. O valor cobrado é o do Price em
+ * STRIPE_IMPLANTACAO_PRICE_ID: os dois precisam bater.
+ */
+export const PRECO_IMPLANTACAO_CENTS = 9_700;
+
 export function emReais(cents: number): string {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }

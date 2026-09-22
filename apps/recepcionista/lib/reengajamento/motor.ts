@@ -256,9 +256,11 @@ export function decidirToque(s: Sinais, agora: Date): Toque | null {
   ) {
     return {
       momento: "TRIAL_ACABANDO",
-      assunto: "Seu mês grátis termina em 3 dias",
+      // "Teste grátis", e não "mês grátis": desde os Termos de 18/09 o teste tem 7
+      // dias, e o assunto não pode prometer um mês que a conta nunca teve.
+      assunto: "Seu teste grátis termina em 3 dias",
       corpo: comNumero(
-        `${s.nome}, seu mês de teste acaba em 3 dias. Depois disso a Nexora para de ` +
+        `${s.nome}, seu teste grátis acaba em 3 dias. Depois disso a Nexora para de ` +
           `montar a onda semanal — mas nada seu é apagado, e você continua podendo ler ` +
           `e exportar sua base quando quiser.\n\n` +
           `Se a Nexora te trouxe cliente, o painel mostra quanto. Se não trouxe, não ` +
@@ -276,7 +278,7 @@ export function decidirToque(s: Sinais, agora: Date): Toque | null {
     if (!jaFoi("TRIAL_ACABOU")) {
       return {
         momento: "TRIAL_ACABOU",
-        assunto: "Seu mês grátis acabou — e sua base continua aqui",
+        assunto: "Seu teste grátis acabou — e sua lista continua aqui",
         corpo: comNumero(
           `${s.nome}, o período de teste terminou. Não cobrei nada e não vou cobrar sem ` +
             `você mandar.\n\n` +

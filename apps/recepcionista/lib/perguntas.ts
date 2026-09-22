@@ -24,7 +24,7 @@ export const PERGUNTAS_FREQUENTES: Pergunta[] = [
   },
   {
     pergunta: "Preciso de cartão de crédito?",
-    resposta: `Não para começar: o diagnóstico é grátis e não pede cartão. Para liberar as mensagens, dá para pagar ${emReais(PLANOS.pix_30_dias.valorCents)} por ${PLANOS.pix_30_dias.dias} dias no Pix, sem renovação automática, ou ${emReais(PRECO_ANUAL_CENTS)} por 12 meses à vista. No cartão, a assinatura é de ${emReais(PRECO_MENSAL_CENTS)} por mês.`,
+    resposta: `Não para começar: o diagnóstico e a primeira Onda são grátis e não pedem cartão. Para as próximas Ondas, dá para pagar ${emReais(PLANOS.pix_30_dias.valorCents)} por ${PLANOS.pix_30_dias.dias} dias no Pix, sem renovação automática, ou ${emReais(PRECO_ANUAL_CENTS)} por 12 meses à vista. No cartão, a assinatura é de ${emReais(PRECO_MENSAL_CENTS)} por mês.`,
   },
   {
     pergunta: "E se ninguém voltar?",

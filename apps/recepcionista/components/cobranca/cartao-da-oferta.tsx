@@ -42,7 +42,7 @@ export function CartaoDaOferta({
       aria-labelledby="oferta-titulo"
     >
       <p className="text-[11px] font-semibold uppercase tracking-widest text-amber-deep">
-        {t.recomendaNaoAssinar ? "Recomendação honesta" : "O que a sua lista mostra"}
+        {t.rotulo}
       </p>
       <h2 id="oferta-titulo" className="mt-2 font-display text-xl text-panel-ink">
         {t.titulo}
@@ -65,6 +65,13 @@ export function CartaoDaOferta({
 
       {t.ancora && (
         <p className="mt-4 rounded-xl bg-amber/15 p-3 text-sm text-panel-ink">{t.ancora}</p>
+      )}
+
+      {/* O que a compra leva, dito antes do pagamento — nunca depois. */}
+      {t.garantia && (
+        <p className="mt-4 rounded-xl border border-amber/30 p-3 text-xs leading-relaxed text-panel-sub">
+          {t.garantia}
+        </p>
       )}
 
       {t.recomendaNaoAssinar ? (

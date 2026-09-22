@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionCompanyId } from "@/lib/auth";
-import { exigirAcesso } from "@/lib/billing/guarda";
+import { exigirAcesso, primeiraOndaSeGratis } from "@/lib/billing/guarda";
+import { comecarPrimeiraOnda, primeiraOndaDaEmpresa } from "@/lib/billing/primeira-onda-da-conta";
 import { prisma } from "@/lib/db";
+import { TAMANHO_DA_ONDA } from "@/lib/recuperacao/onda";
 import { logError } from "@/lib/errors";
 import { deveSilenciar, MOTIVOS_PULO } from "@/lib/recuperacao/pulo";
 import { montarOndaDaSemana } from "@/lib/recuperacao/servico";
@@ -41,6 +43,52 @@ const marcarSchema = z.object({
     .optional(),
 });
 
+/**
+ * OS PENDENTES DA SEMANA PASSADA.
+ *
+ * "Enviei" grava AGUARDANDO, que é a verdade — mas sem alguém perguntar depois,
+ * tudo ficaria AGUARDANDO para sempre e o Livro-Caixa ficaria mais vazio do que
+ * antes. Esta lista é a outra metade do conserto.
+ */
+async function pendentesParaPerguntar(companyId: string) {
+  const pendentes = await prisma.recoveryTouch.findMany({
+    where: {
+      companyId,
+      outcome: "AGUARDANDO",
+      sentAt: {
+        gte: new Date(Date.now() - (MAX_DIAS_PARA_COBRAR + 1) * 86_400_000),
+        lte: new Date(Date.now() - MIN_DIAS_PARA_COBRAR * 86_400_000),
+      },
+    },
+    select: {
+      id: true,
+      customerId: true,
+      touchNumber: true,
+      esteira: true,
+      sentAt: true,
+      customer: { select: { name: true, visits: { select: { valueCents: true }, take: 20 } } },
+    },
+    orderBy: { sentAt: "asc" },
+  });
+
+  return vencidosParaPerguntar(
+    pendentes.map((t) => ({
+      id: t.id,
+      clienteId: t.customerId,
+      nome: t.customer?.name ?? "cliente",
+      toqueNumero: t.touchNumber,
+      esteira: t.esteira,
+      ticketMedioCents:
+        t.customer && t.customer.visits.length > 0
+          ? Math.round(
+              t.customer.visits.reduce((s, v) => s + v.valueCents, 0) / t.customer.visits.length,
+            )
+          : 0,
+      enviadoEm: t.sentAt,
+    })),
+  );
+}
+
 export async function GET(request: Request) {
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
@@ -52,58 +100,37 @@ export async function GET(request: Request) {
   // Gerar a onda é a ação de saída que o produto vende. É ela que trava sem
   // assinatura — nunca a leitura da base, que é dado do próprio dono.
   const barrado = await exigirAcesso(companyId, "GERAR_ONDA");
-  if (barrado) return barrado;
+  if (barrado) {
+    // Marcar quem voltou nunca trava (MARCAR_RESULTADO). A recusa leva junto os
+    // contatos que esperam resposta: é assim que a primeira Onda mostra o que fez,
+    // e quem está sem plano continua dizendo quem apareceu.
+    const recusa = await barrado.json();
+    const perguntar = await pendentesParaPerguntar(companyId).catch(() => []);
+    return NextResponse.json({ ...recusa, perguntar }, { status: barrado.status });
+  }
 
+  // A primeira Onda de quem está sem plano tem o tamanho da Onda padrão.
+  const primeira = await primeiraOndaSeGratis(companyId);
   const url = new URL(request.url);
   const tamanhoParam = Number(url.searchParams.get("tamanho"));
-  const tamanho = tamanhoParam === 25 ? 25 : undefined;
+  const tamanho = !primeira && tamanhoParam === 25 ? 25 : undefined;
 
   try {
     const onda = await montarOndaDaSemana(companyId, { tamanho });
 
-    // OS PENDENTES DA SEMANA PASSADA.
-    //
-    // "Enviei" agora grava AGUARDANDO, que é a verdade — mas sem alguém
-    // perguntar depois, tudo ficaria AGUARDANDO para sempre e o Livro-Caixa
-    // ficaria mais vazio do que antes. Esta lista é a outra metade do conserto.
-    const pendentes = await prisma.recoveryTouch.findMany({
-      where: {
-        companyId,
-        outcome: "AGUARDANDO",
-        sentAt: {
-          gte: new Date(Date.now() - (MAX_DIAS_PARA_COBRAR + 1) * 86_400_000),
-          lte: new Date(Date.now() - MIN_DIAS_PARA_COBRAR * 86_400_000),
-        },
-      },
-      select: {
-        id: true,
-        customerId: true,
-        touchNumber: true,
-        esteira: true,
-        sentAt: true,
-        customer: { select: { name: true, visits: { select: { valueCents: true }, take: 20 } } },
-      },
-      orderBy: { sentAt: "asc" },
-    });
+    // O prazo só começa quando a Onda tem gente para chamar: abrir a tela antes
+    // de subir a lista não pode gastar os dias.
+    let primeiraOnda: { enviadas: number; ate: Date | null; total: number } | null = null;
+    if (primeira) {
+      if (primeira.situacao === "DISPONIVEL" && onda.cards.length > 0) {
+        await comecarPrimeiraOnda(companyId);
+      }
+      const atual = await primeiraOndaDaEmpresa(companyId);
+      primeiraOnda = { enviadas: atual.enviadas, ate: atual.ate, total: TAMANHO_DA_ONDA };
+    }
 
-    const perguntar = vencidosParaPerguntar(
-      pendentes.map((t) => ({
-        id: t.id,
-        clienteId: t.customerId,
-        nome: t.customer?.name ?? "cliente",
-        toqueNumero: t.touchNumber,
-        esteira: t.esteira,
-        ticketMedioCents:
-          t.customer && t.customer.visits.length > 0
-            ? Math.round(
-                t.customer.visits.reduce((s, v) => s + v.valueCents, 0) / t.customer.visits.length,
-              )
-            : 0,
-        enviadoEm: t.sentAt,
-      })),
-    );
-
-    return NextResponse.json({ ...onda, perguntar });
+    const perguntar = await pendentesParaPerguntar(companyId);
+    return NextResponse.json({ ...onda, perguntar, primeiraOnda });
   } catch (error) {
     await logError("onda-get", error, companyId);
     return NextResponse.json({ error: "Não consegui montar a onda agora" }, { status: 500 });

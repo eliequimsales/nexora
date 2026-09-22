@@ -24,6 +24,7 @@ import { companyIdDe, deveProvisionar, fimDoPeriodoPago, periodoFimDe } from "./
 import { stripe } from "./stripe";
 import { deveConfirmar, montarConfirmacao, montarConfirmacaoDoPasse } from "./confirmacao";
 import { diasDoPasse, fimDoAcessoAtual, periodoDoPasse } from "./passe";
+import { registrarImplantacao } from "./implantacao-da-conta";
 import { enviarEmail } from "@/lib/reengajamento/email";
 import { logError } from "@/lib/errors";
 
@@ -401,6 +402,18 @@ export async function convergirDoCheckout(sessionId: string): Promise<string | n
   // `checkout.session.async_payment_succeeded` e esta função roda de novo.
   if (!deveProvisionar(sessao)) return companyId;
 
+  const resultado = await aplicarCompra(companyId, sessao);
+  // A implantação é lida depois do acesso gravado: um problema com ela nunca
+  // atrasa o que o dono pagou.
+  await registrarImplantacao(companyId, sessao);
+  return resultado;
+}
+
+/** O que a sessão paga liberou: o passe (pagamento avulso) ou a assinatura. */
+async function aplicarCompra(
+  companyId: string,
+  sessao: Stripe.Checkout.Session,
+): Promise<string | null> {
   // Pagamento avulso não tem assinatura: é o passe de 30 dias ou o anual.
   if (sessao.mode === "payment") return aplicarPasse(companyId, sessao);
 

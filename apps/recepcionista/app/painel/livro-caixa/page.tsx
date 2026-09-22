@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import { getSessionCompanyId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { emReais } from "@/lib/billing/preco";
+import { anualDaEmpresa } from "@/lib/billing/anual-da-conta";
+import { estadoDaEmpresa } from "@/lib/billing/guarda";
+import { CartaoDoAnual } from "@/components/cobranca/cartao-do-anual";
 import { CartaoRetorno } from "@/components/painel/cartao-retorno";
 import { inicioDoMes, retornoDaAssinatura } from "@/lib/painel/retorno";
 
@@ -68,6 +71,12 @@ export default async function LivroCaixaPage() {
 
   const totalDoMesCents = mes._sum.valueCents ?? 0;
   const totalGeralCents = acumulado._sum.valueCents ?? 0;
+
+  // A prova aparece aqui primeiro: é a tela do dinheiro. Falha no cálculo não
+  // derruba o extrato.
+  const anual = await estadoDaEmpresa(companyId)
+    .then((estado) => anualDaEmpresa(companyId, estado))
+    .catch(() => null);
 
   const data = new Intl.DateTimeFormat("pt-BR", {
     timeZone: "America/Sao_Paulo",
@@ -143,12 +152,15 @@ export default async function LivroCaixaPage() {
             totalCents={totalGeralCents}
           />
 
+          {/* O anual no momento da prova: acima de três mensalidades em 30 dias. */}
+          {anual && <CartaoDoAnual oferta={anual} />}
+
           {/* Mini-funil de Eficiência de Reativação */}
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-panel-line bg-panel-card p-4">
               <p className="text-xs uppercase tracking-wider text-panel-sub">Mensagens Enviadas</p>
               <p className="mt-1 font-display text-2xl font-bold text-panel-ink tabular-nums">{totalToquesEnviados}</p>
-              <p className="text-xs text-panel-sub">mensagens disparadas</p>
+              <p className="text-xs text-panel-sub">mensagens enviadas</p>
             </div>
             <div className="rounded-2xl border border-panel-line bg-panel-card p-4">
               <p className="text-xs uppercase tracking-wider text-panel-sub">Clientes Resgatados</p>

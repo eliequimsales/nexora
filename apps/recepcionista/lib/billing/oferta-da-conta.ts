@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { gerarDiagnostico, type ClienteBase } from "@/lib/importacao/diagnostico";
 import { medianaDoSegmento } from "@/lib/recuperacao/ciclo";
 import { montarOferta, type Oferta } from "./oferta";
+import { resultadoDaPrimeiraOndaDaEmpresa } from "./primeira-onda-da-conta";
 
 /**
  * A oferta calculada com a lista que o dono subiu.
@@ -12,10 +13,10 @@ import { montarOferta, type Oferta } from "./oferta";
  * não é oportunidade, é pessoa que disse não.
  */
 export async function ofertaDaEmpresa(companyId: string, hoje = new Date()): Promise<Oferta> {
-  const [empresa, clientes] = await Promise.all([
+  const [empresa, clientes, garantia] = await Promise.all([
     prisma.company.findUnique({
       where: { id: companyId },
-      select: { profile: { select: { segments: true } } },
+      select: { primeiraOndaEm: true, profile: { select: { segments: true } } },
     }),
     prisma.customer.findMany({
       where: { companyId, optOut: false },
@@ -25,6 +26,7 @@ export async function ofertaDaEmpresa(companyId: string, hoje = new Date()): Pro
         visits: { select: { occurredAt: true, valueCents: true } },
       },
     }),
+    prisma.garantia.findUnique({ where: { companyId }, select: { id: true } }),
   ]);
 
   const segmentos = Array.isArray(empresa?.profile?.segments)
@@ -49,5 +51,11 @@ export async function ofertaDaEmpresa(companyId: string, hoje = new Date()): Pro
     medianaSegmentoDias: medianaDoSegmento(segmentos[0] ?? null),
   });
 
-  return montarOferta(diagnostico, ticketMedioCents);
+  const oferta = montarOferta(diagnostico, ticketMedioCents);
+  const primeiraOnda = empresa?.primeiraOndaEm
+    ? await resultadoDaPrimeiraOndaDaEmpresa(companyId, empresa.primeiraOndaEm)
+    : null;
+
+  // A garantia é uma por negócio: quem já teve a dela não compra outra.
+  return { ...oferta, comGarantia: oferta.comGarantia && !garantia, primeiraOnda };
 }

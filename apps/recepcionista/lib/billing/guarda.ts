@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { estadoDaConta, podeExecutar, type Acao, type EstadoConta } from "./acesso";
 import { ofertaDaEmpresa } from "./oferta-da-conta";
+import { ACOES_DA_PRIMEIRA_ONDA, podeNaPrimeiraOnda } from "./primeira-onda";
+import { primeiraOndaDaEmpresa, type PrimeiraOndaDaConta } from "./primeira-onda-da-conta";
 import { garantirRelogio } from "./relogio-da-conta";
 
 /**
@@ -57,6 +59,13 @@ export async function exigirAcesso(
   const permissao = podeExecutar(estado, acao);
   if (permissao.pode) return null;
 
+  // A PRIMEIRA ONDA POR NOSSA CONTA. A regra pura continua dizendo que GRATIS não
+  // age; a exceção mora aqui porque depende da contagem que só o banco tem.
+  if (estado === "GRATIS" && ACOES_DA_PRIMEIRA_ONDA.includes(acao)) {
+    const primeira = await primeiraOndaDaEmpresa(companyId);
+    if (podeNaPrimeiraOnda(estado, acao, primeira.situacao)) return null;
+  }
+
   // "Bloqueado" sem o número dele é parede; com o número é decisão. Mas a oferta
   // nunca derruba a recusa: se o cálculo falhar, a recusa sai sem ela.
   const oferta = RECUSA_COM_OFERTA.includes(estado)
@@ -67,4 +76,13 @@ export async function exigirAcesso(
     { error: permissao.motivo, acao: permissao.acao, oferta },
     { status: permissao.http },
   );
+}
+
+/** Em que ponto está a primeira Onda — só para a conta GRATIS, que é quem a tem. */
+export async function primeiraOndaSeGratis(
+  companyId: string,
+  agora = new Date(),
+): Promise<PrimeiraOndaDaConta | null> {
+  if ((await estadoDaEmpresa(companyId)) !== "GRATIS") return null;
+  return primeiraOndaDaEmpresa(companyId, agora);
 }

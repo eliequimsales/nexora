@@ -8,9 +8,15 @@ import {
   TRIAL_DIAS,
   type EstadoConta,
 } from "@/lib/billing/acesso";
+import { anualDaEmpresa } from "@/lib/billing/anual-da-conta";
 import { convergirDoCheckout } from "@/lib/billing/converger";
 import { GARANTIA_DIAS, ONDAS_MINIMAS, type SituacaoDaGarantia } from "@/lib/billing/garantia";
 import { garantiaDaEmpresa } from "@/lib/billing/garantia-da-conta";
+import {
+  linkDoWhatsAppDeSuporte,
+  MINUTOS_DA_CHAMADA,
+  PRAZO_DA_IMPLANTACAO_DIAS,
+} from "@/lib/billing/implantacao";
 import { ofertaDaEmpresa } from "@/lib/billing/oferta-da-conta";
 import { acoesDaConta, PLANOS, precoPendenteDoPlano, type PlanoId } from "@/lib/billing/planos";
 import { emReais, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
@@ -18,8 +24,10 @@ import { garantirRelogio } from "@/lib/billing/relogio-da-conta";
 import { variaveisPendentesDaStripe } from "@/lib/billing/stripe";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
-import { variaveisPendentesDoFornecedor } from "@/lib/legal/identidade";
+import { linkDeSuporte } from "@/lib/institucional";
+import { FORNECEDOR, variaveisPendentesDoFornecedor } from "@/lib/legal/identidade";
 import { MIN_RECUPERAVEL_CENTS, MIN_SUMIDOS } from "@/lib/recuperacao/estimativa";
+import { CartaoDoAnual } from "@/components/cobranca/cartao-do-anual";
 import { BotoesAssinatura, type OpcaoDePlano } from "./botoes";
 import { BotaoDaGarantia } from "./garantia";
 
@@ -78,6 +86,7 @@ export default async function PaginaAssinatura({
   const lida = await prisma.company.findUnique({
     where: { id: companyId },
     select: {
+      name: true,
       createdAt: true,
       termosVersao: true,
       subscriptionStatus: true,
@@ -106,7 +115,7 @@ export default async function PaginaAssinatura({
 
   // North Star: Receita Recuperada COMPROVADA. Só o que foi atribuído — o resto
   // vai numa linha separada, nunca somado, para o número não inflar.
-  const [comprovado, semAtribuicao, garantia] = await Promise.all([
+  const [comprovado, semAtribuicao, garantia, implantacao] = await Promise.all([
     prisma.recoveryEntry.aggregate({
       where: { companyId, attributed: true },
       _sum: { valueCents: true },
@@ -118,7 +127,23 @@ export default async function PaginaAssinatura({
       _count: true,
     }),
     garantiaDaEmpresa(companyId, agora),
+    prisma.implantacao.findUnique({
+      where: { companyId },
+      select: { compradaEm: true, feitaEm: true },
+    }),
   ]);
+
+  // A implantação comprada é marcada pelo WhatsApp de suporte, lido na hora;
+  // sem ele, pelo e-mail de atendimento.
+  const whatsDaImplantacao = linkDoWhatsAppDeSuporte(
+    process.env,
+    `Oi! Comprei a implantação da Nexora para ${lida.name}. Quero marcar a chamada.`,
+  );
+  const linkDaImplantacao = whatsDaImplantacao ?? linkDeSuporte(FORNECEDOR);
+
+  // O anual no momento da prova: só para quem paga mês a mês e já recuperou mais
+  // que três mensalidades em 30 dias. Falha no cálculo não derruba a tela.
+  const anual = await anualDaEmpresa(companyId, estado, agora).catch(() => null);
 
   // A garantia que uma compra NOVA levaria. Só existe enquanto a conta não tem a
   // dela (é uma por negócio), e usa a mesma conta do checkout: a tela não pode
@@ -222,6 +247,8 @@ export default async function PaginaAssinatura({
         )}
       </section>
 
+      {anual && <CartaoDoAnual oferta={anual} />}
+
       {/* Conexão do WhatsApp */}
       <section className="rounded-2xl border border-panel-line bg-panel-card p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -230,7 +257,7 @@ export default async function PaginaAssinatura({
               Conexão do WhatsApp
             </h2>
             <p className="mt-1 text-sm text-panel-ink">
-              Conecte seu aparelho via QR Code para disparar mensagens de recuperação direto pelo seu número com 1 clique.
+              Ligue o WhatsApp do seu negócio pelo QR Code para as mensagens da Onda saírem pelo seu número.
             </p>
           </div>
           <Link
@@ -298,6 +325,33 @@ export default async function PaginaAssinatura({
           comprouComSucesso={Boolean(searchParams.ok)}
         />
       </section>
+
+      {implantacao && (
+        <section className="rounded-2xl border border-panel-line bg-panel-card p-6">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-panel-sub">
+            Implantação
+          </h2>
+          {implantacao.feitaEm ? (
+            <p className="mt-3 text-panel-ink">Feita em {dataBr(implantacao.feitaEm)}.</p>
+          ) : (
+            <>
+              <p className="mt-3 text-panel-ink">
+                Comprada em {dataBr(implantacao.compradaEm)}. A chamada tem até{" "}
+                {MINUTOS_DA_CHAMADA} minutos e acontece em até {PRAZO_DA_IMPLANTACAO_DIAS} dias
+                da compra.
+              </p>
+              <a
+                href={linkDaImplantacao}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 inline-block rounded-xl bg-amber px-4 py-2.5 text-sm font-semibold text-night transition hover:brightness-110"
+              >
+                {whatsDaImplantacao ? "Marcar pelo WhatsApp" : "Marcar por e-mail"}
+              </a>
+            </>
+          )}
+        </section>
+      )}
 
       {!semGarantiaAinda && (
         <section id="garantia" className="rounded-2xl border border-panel-line bg-panel-card p-6">
@@ -405,8 +459,8 @@ function avisoDoPrazo(estado: EstadoConta, e: Empresa): string | null {
 const RESUMO: Record<EstadoConta, (e: Empresa, agora: Date) => string> = {
   // Quem nunca teve teste não pode ler "seu teste terminou".
   GRATIS: () =>
-    "Plano gratuito: o diagnóstico, a importação e a exportação da sua lista são livres. " +
-    "Para liberar as mensagens prontas, escolha um plano.",
+    "Plano gratuito: o diagnóstico, a importação e a exportação da sua lista são livres, e " +
+    "a primeira Onda é por nossa conta. Para as próximas, escolha um plano.",
   TRIAL: (e) =>
     e.trialEndsAt
       ? `Você está no período de teste, até ${dataBr(e.trialEndsAt)}. Nada foi cobrado.`

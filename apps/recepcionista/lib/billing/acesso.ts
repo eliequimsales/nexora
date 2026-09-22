@@ -147,13 +147,14 @@ export type Permissao =
 const COM_ACESSO: EstadoConta[] = ["TRIAL", "ATIVO", "PASSE", "TOLERANCIA", "CANCELADO_COM_ACESSO"];
 
 const RECUSA: Record<string, { motivo: string; texto: string }> = {
-  // Quem nunca teve teste não pode ler "seu teste terminou". A recusa dele é a
-  // oferta: o trabalho está pronto, falta escolher o plano.
+  // Quem nunca teve teste não pode ler "seu teste terminou". E a recusa de GRATIS
+  // só aparece depois da primeira Onda por nossa conta: antes dela, exigirAcesso
+  // (guarda.ts) libera. A recusa é a oferta da próxima.
   GRATIS: {
     motivo:
-      "As mensagens prontas dos seus clientes estão esperando. Para liberar e mandar do " +
-      "seu WhatsApp, escolha um plano. Sua lista continua sua, com ou sem plano.",
-    texto: `Liberar as mensagens — ${emReais(PRECO_MENSAL_CENTS)}/mês`,
+      "Sua primeira Onda por nossa conta terminou. As próximas saem toda segunda, com " +
+      "um plano. Sua lista continua sua, com ou sem plano.",
+    texto: `Liberar a próxima Onda — ${emReais(PRECO_MENSAL_CENTS)}/mês`,
   },
   TRIAL_EXPIRADO: {
     motivo:
