@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   diaCurto,
+  diaFalado,
   horaFalada,
+  horarioFalado,
   lerPedidoDeDia,
   localDe,
   proximaAbertura,
@@ -87,6 +89,18 @@ describe("como o Atendente fala de hora e de dia", () => {
     expect(diaCurto("2026-09-23")).toBe("qua 23/09");
     expect(quandoFalado(emBrasilia("2026-09-23", 11))).toBe("quarta, 23/09, às 11h");
     expect(quandoFalado(emBrasilia("2026-09-26", 9, 30))).toBe("sábado, 26/09, às 9h30");
+  });
+});
+
+describe("diaFalado e horarioFalado", () => {
+  it("o dia pedido como o cliente fala", () => {
+    expect(diaFalado("2026-09-22", AGORA)).toBe("hoje");
+    expect(diaFalado("2026-09-23", AGORA)).toBe("amanhã");
+    expect(diaFalado("2026-09-26", AGORA)).toBe("sábado, 26/09");
+  });
+
+  it("a semana de funcionamento falada, com os dias iguais juntos", () => {
+    expect(horarioFalado(HORARIOS)).toBe("seg a sex das 9h às 19h; sáb das 9h às 14h; dom fechado");
   });
 });
 

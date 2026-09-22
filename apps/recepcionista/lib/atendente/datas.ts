@@ -140,6 +140,37 @@ export function diaCurto(data: string): string {
   return `${DIAS_CURTOS[diaDaSemanaDe(data)]} ${dia}/${mes}`;
 }
 
+/** O dia pedido, como o cliente fala: "hoje", "amanhã" ou "quarta, 23/09". */
+export function diaFalado(data: string, agora: Date): string {
+  const hoje = localDe(agora).data;
+  if (data === hoje) return "hoje";
+  if (data === somarDias(hoje, 1)) return "amanhã";
+  const [, mes, dia] = data.split("-");
+  return `${DIAS_FALADOS[diaDaSemanaDe(data)]}, ${dia}/${mes}`;
+}
+
+/** A semana de funcionamento falada: "seg a sex das 9h às 19h; sáb das 9h às 14h; dom fechado". */
+export function horarioFalado(horarios: BusinessHour[]): string {
+  const ordem = [1, 2, 3, 4, 5, 6, 0];
+  const grupos: { inicio: number; fim: number; texto: string }[] = [];
+  for (const dia of ordem) {
+    const h = horarios.find((x) => x.day === dia);
+    const texto =
+      !h || h.closed || h.open === h.close
+        ? "fechado"
+        : `das ${horaFalada(minutosDe(h.open))} às ${horaFalada(minutosDe(h.close))}`;
+    const ultimo = grupos.at(-1);
+    if (ultimo && ultimo.texto === texto) ultimo.fim = dia;
+    else grupos.push({ inicio: dia, fim: dia, texto });
+  }
+  return grupos
+    .map((g) => {
+      const rotulo = g.inicio === g.fim ? DIAS_CURTOS[g.inicio] : `${DIAS_CURTOS[g.inicio]} a ${DIAS_CURTOS[g.fim]}`;
+      return `${rotulo} ${g.texto}`;
+    })
+    .join("; ");
+}
+
 /** O horário marcado por extenso: "quarta, 23/09, às 11h". */
 export function quandoFalado(inicio: Date): string {
   const local = localDe(inicio);

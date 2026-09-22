@@ -10,6 +10,7 @@ import {
   primeiroNomeDoCliente,
   textosDoJeito,
   URGENCIA,
+  URGENCIA_CVV,
   type Jeito,
 } from "@/lib/atendente/jeitos";
 
@@ -37,6 +38,9 @@ function amostras(jeito: Jeito): string[] {
     t.ofertaLead({ servico: "Corte", detalhe: "R$ 45,00 · 40 min", quando: "amanhã" }),
     t.ofertaLead({ servico: "Corte", detalhe: null, quando: null }),
     t.respondaComNumero,
+    t.respondaParaAnotar,
+    t.anoteiHorario({ quando: "quarta, 23/09, às 11h", volta: "amanhã às 9h" }),
+    t.anoteiHorario({ quando: "quarta, 23/09, às 11h", volta: null }),
     t.escolherServico,
     t.confirmacao({ quando: "quarta, 23/09, às 11h", servico: "Corte", profissional: "Léo" }),
     t.confirmacao({ quando: "quarta, 23/09, às 11h", servico: "Corte", profissional: null }),
@@ -143,6 +147,12 @@ describe("os três jeitos", () => {
     const texto = URGENCIA("Clínica Sorriso");
     expect(texto).toContain("192");
     expect(texto).toContain("Clínica Sorriso");
+    expect(texto.match(EMOJI)).toBeNull();
+  });
+
+  it("risco à própria vida aponta para o CVV, sem emoji", () => {
+    const texto = URGENCIA_CVV("Clínica Sorriso");
+    expect(texto).toContain("188");
     expect(texto.match(EMOJI)).toBeNull();
   });
 });

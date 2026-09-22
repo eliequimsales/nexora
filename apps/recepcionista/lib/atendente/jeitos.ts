@@ -72,6 +72,9 @@ export interface Textos {
   convite: string;
   ofertaLead(p: { servico: string; detalhe: string | null; quando: string | null }): string;
   respondaComNumero: string;
+  /** "Marcar direto" desligado e sem link: a escolha vira anotação para a equipe confirmar. */
+  respondaParaAnotar: string;
+  anoteiHorario(p: { quando: string; volta: string | null }): string;
   escolherServico: string;
   confirmacao(p: { quando: string; servico: string; profissional: string | null }): string;
   ocupado: string;
@@ -104,6 +107,8 @@ const ACOLHEDOR: Textos = {
   ofertaLead: (p) =>
     `Tenho estes horários para ${p.servico}${entreParenteses(p.detalhe)}${espacoAntes(p.quando)}:`,
   respondaComNumero: "É só responder com o número que eu já deixo marcado.",
+  respondaParaAnotar: "É só responder com o número que eu deixo anotado para a equipe confirmar.",
+  anoteiHorario: (p) => `Anotei: ${p.quando}. A equipe confirma com você ${p.volta ?? "assim que puder"} 💛`,
   escolherServico: "Qual desses você quer? É só responder com o número:",
   confirmacao: (p) =>
     `Prontinho! ${p.quando} — ${p.servico}${p.profissional ? ` com ${p.profissional}` : ""}. ` +
@@ -141,6 +146,8 @@ const DIRETO: Textos = {
   convite: "Quer ver os horários livres?",
   ofertaLead: (p) => `Horários para ${p.servico}${entreParenteses(p.detalhe)}${espacoAntes(p.quando)}:`,
   respondaComNumero: "Responda com o número para marcar.",
+  respondaParaAnotar: "Responda com o número para a equipe confirmar.",
+  anoteiHorario: (p) => `Anotado: ${p.quando}. A equipe confirma ${p.volta ?? "em breve"}.`,
   escolherServico: "Qual serviço? Responda com o número:",
   confirmacao: (p) =>
     `Confirmado: ${p.quando}, ${p.servico}${p.profissional ? ` com ${p.profissional}` : ""}. ` +
@@ -171,6 +178,8 @@ const DESCONTRAIDO: Textos = {
   convite: "Bora ver um horário?",
   ofertaLead: (p) => `Olha o que tenho pra ${p.servico}${entreParenteses(p.detalhe)}${espacoAntes(p.quando)}:`,
   respondaComNumero: "Manda o número que eu já marco pra você.",
+  respondaParaAnotar: "Manda o número que eu deixo anotado pro pessoal confirmar.",
+  anoteiHorario: (p) => `Anotado: ${p.quando}! O pessoal confirma com você ${p.volta ?? "assim que der"}.`,
   escolherServico: "Qual deles vai ser? Manda o número:",
   confirmacao: (p) =>
     `Fechado! ${p.quando} — ${p.servico}${p.profissional ? ` com ${p.profissional}` : ""}. ` +
@@ -208,6 +217,18 @@ export function textosDoJeito(jeito: Jeito): Textos {
 export function URGENCIA(empresa: string): string {
   return (
     "Entendi. Se for uma emergência, ligue 192 (SAMU) ou procure o pronto-socorro mais próximo. " +
+    `Já deixei avisado para a equipe da ${empresa}.`
+  );
+}
+
+/**
+ * RISCO À PRÓPRIA VIDA — texto fixo que aponta para o CVV (188), gratuito e 24
+ * horas. Nenhuma orientação além de buscar ajuda; a equipe é avisada.
+ */
+export function URGENCIA_CVV(empresa: string): string {
+  return (
+    "Sinto muito que você esteja passando por isso. Se estiver pensando em se machucar, " +
+    "o CVV atende agora, de graça, pelo 188 ou em cvv.org.br. " +
     `Já deixei avisado para a equipe da ${empresa}.`
   );
 }
