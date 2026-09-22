@@ -308,8 +308,40 @@ async function rodar(agora: Date, estado: EstadoDoResgate): Promise<{ respondida
   return { respondidas };
 }
 
-/** Liga o resgate no boot do servidor (instrumentation.ts). */
-export function iniciarResgate(): void {
+/**
+ * O RESGATE SÓ RODA NO SERVIDOR OFICIAL.
+ *
+ * Todo `next start` ou `next dev` passa pelo instrumentation.ts, inclusive o
+ * servidor de revisão na máquina de alguém. Com o .env apontando para o banco e
+ * a Evolution de produção, ele viraria um segundo robô, respondendo os mesmos
+ * clientes em paralelo com a produção.
+ *
+ * Servidor oficial é o ambiente "production" do Railway, que o próprio Railway
+ * injeta em RAILWAY_ENVIRONMENT_NAME (conferido no serviço recepcionista em
+ * 22/09/2026). NODE_ENV não serve: todo `next start` roda como "production".
+ *
+ * Por que não um opt-in (ATENDENTE_RESGATE=ligado):
+ *   1. Esta marca já existe em produção e ninguém precisa lembrar dela. Um
+ *      opt-in é mais uma variável para cada deploy, e esquecê-la deixa cliente
+ *      sem resposta.
+ *   2. O opt-in não protege mais: quem copia a lista inteira de variáveis do
+ *      serviço leva as duas juntas. E ele convida a ligar o resgate "só para
+ *      testar" no .env de alguém.
+ *
+ * Outro ambiente do Railway (staging, PR) tem outro nome e fica desligado.
+ */
+export function servidorOficial(env: Record<string, string | undefined>): boolean {
+  return env.RAILWAY_ENVIRONMENT_NAME === "production";
+}
+
+/** Liga o resgate no boot do servidor (instrumentation.ts), só no servidor oficial. */
+export function iniciarResgate(env: Record<string, string | undefined> = process.env): void {
+  if (!servidorOficial(env)) {
+    // warn, e não log: vai para o stderr, que o Railway destaca. Fora da
+    // produção é o esperado; se um dia aparecer no Railway, o resgate parou.
+    console.warn("[atendente] resgate desligado fora da produção");
+    return;
+  }
   const estado = estadoDoResgate();
   if (estado.iniciado) return;
   estado.iniciado = true;

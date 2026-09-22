@@ -19,9 +19,11 @@ import { CARENCIA_DO_RESGATE_MS, IDADE_MAXIMA_DO_RESGATE_MS, MINUTOS_SEM_RESPOST
 import { ultimoFechamento } from "@/lib/atendente/datas";
 import { atender } from "@/lib/atendente/executar";
 import {
+  iniciarResgate,
   pendentesParaResgate,
   resumoDaManha,
   rodadaDoResgate,
+  servidorOficial,
   type AtendimentoDoResumo,
   type Candidata,
 } from "@/lib/atendente/resgate";
@@ -371,6 +373,60 @@ describe("o resumo da manhã na rodada", () => {
   it("com a loja fechada, nem tenta", async () => {
     await rodadaDoResgate(emBrasilia("2026-09-22", 22));
     expect(db.companyProfile.updateMany).not.toHaveBeenCalled();
+  });
+});
+
+// ——— Quem liga o resgate: só o servidor oficial ———
+
+describe("servidorOficial — o resgate só roda no servidor de produção", () => {
+  it("no ambiente production do Railway, sim", () => {
+    expect(servidorOficial({ RAILWAY_ENVIRONMENT_NAME: "production" })).toBe(true);
+  });
+
+  it("na máquina de alguém, não — nem com next start, que também é NODE_ENV=production", () => {
+    expect(servidorOficial({})).toBe(false);
+    expect(servidorOficial({ NODE_ENV: "production" })).toBe(false);
+  });
+
+  it("em outro ambiente do Railway, também não: vale o nome, não a presença", () => {
+    expect(servidorOficial({ RAILWAY_ENVIRONMENT_NAME: "staging" })).toBe(false);
+  });
+});
+
+describe("iniciarResgate", () => {
+  const memoria = globalThis as unknown as { __resgateDoAtendente?: unknown };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+    // O estado mora no globalThis: sem limpar, o "iniciado" vaza para o próximo teste.
+    delete memoria.__resgateDoAtendente;
+  });
+
+  it("fora da produção, não agenda nada e avisa numa linha", () => {
+    const aviso = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      iniciarResgate({ NODE_ENV: "production" });
+      expect(vi.getTimerCount()).toBe(0);
+      expect(aviso).toHaveBeenCalledTimes(1);
+      expect(String(aviso.mock.calls[0][0])).toMatch(/resgate desligado fora da produção/);
+    } finally {
+      aviso.mockRestore();
+    }
+  });
+
+  it("no servidor de produção, agenda a rodada", () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      iniciarResgate({ RAILWAY_ENVIRONMENT_NAME: "production" });
+      expect(vi.getTimerCount()).toBe(1);
+    } finally {
+      log.mockRestore();
+    }
   });
 });
 
