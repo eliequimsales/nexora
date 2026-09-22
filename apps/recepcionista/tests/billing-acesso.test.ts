@@ -164,8 +164,10 @@ describe("podeExecutar — regras", () => {
     }
   });
 
+  // A primeira Onda e a primeira semana do Atendente são exceções do guarda.ts,
+  // com a contagem do banco; a regra pura continua travando.
   it("nos estados sem acesso, as ações de saída travam", () => {
-    const saida: Acao[] = ["GERAR_ONDA", "ENVIAR_TOQUE", "CONECTAR_WHATSAPP"];
+    const saida: Acao[] = ["GERAR_ONDA", "ENVIAR_TOQUE", "CONECTAR_WHATSAPP", "LIGAR_ATENDENTE"];
     for (const estado of travados) {
       for (const acao of saida) {
         expect(podeExecutar(estado, acao).pode, `${acao} em ${estado}`).toBe(false);

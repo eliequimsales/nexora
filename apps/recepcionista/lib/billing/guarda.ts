@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { acessoDoAtendente, podeLigar } from "@/lib/atendente/portao";
+import { usoDoAtendente } from "@/lib/atendente/uso";
 import { prisma } from "@/lib/db";
 import { estadoDaConta, podeExecutar, type Acao, type EstadoConta } from "./acesso";
 import { ofertaDaEmpresa } from "./oferta-da-conta";
@@ -41,6 +43,9 @@ export async function estadoDaEmpresa(companyId: string): Promise<EstadoConta> {
   return estadoDaConta({ ...empresa, trialEndsAt }, agora);
 }
 
+/** O que a primeira semana do Atendente libera para quem está sem plano. */
+const ACOES_DA_SEMANA_DO_ATENDENTE: Acao[] = ["LIGAR_ATENDENTE", "CONECTAR_WHATSAPP"];
+
 /** Estados em que a recusa leva a oferta: quem ainda pode escolher um plano. */
 const RECUSA_COM_OFERTA: EstadoConta[] = ["GRATIS", "TRIAL_EXPIRADO"];
 
@@ -64,6 +69,15 @@ export async function exigirAcesso(
   if (estado === "GRATIS" && ACOES_DA_PRIMEIRA_ONDA.includes(acao)) {
     const primeira = await primeiraOndaDaEmpresa(companyId);
     if (podeNaPrimeiraOnda(estado, acao, primeira.situacao)) return null;
+  }
+
+  // A PRIMEIRA SEMANA DO ATENDENTE POR NOSSA CONTA: sete dias ou cinquenta
+  // conversas desde a primeira vez que ligou, uma vez por negócio. Ligar o
+  // WhatsApp vem junto — sem ele, o Atendente não tem por onde responder.
+  if (ACOES_DA_SEMANA_DO_ATENDENTE.includes(acao)) {
+    const agora = new Date();
+    const uso = await usoDoAtendente(companyId, agora);
+    if (podeLigar(acessoDoAtendente({ estado, ...uso, agora }))) return null;
   }
 
   // "Bloqueado" sem o número dele é parede; com o número é decisão. Mas a oferta

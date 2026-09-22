@@ -38,7 +38,8 @@ export type Acao =
   | "IMPORTAR"
   | "GERAR_ONDA"
   | "ENVIAR_TOQUE"
-  | "CONECTAR_WHATSAPP";
+  | "CONECTAR_WHATSAPP"
+  | "LIGAR_ATENDENTE";
 
 export const ACOES: Acao[] = [
   "VER_DADOS",
@@ -49,6 +50,7 @@ export const ACOES: Acao[] = [
   "GERAR_ONDA",
   "ENVIAR_TOQUE",
   "CONECTAR_WHATSAPP",
+  "LIGAR_ATENDENTE",
 ];
 
 /**
@@ -178,11 +180,26 @@ const RECUSA: Record<string, { motivo: string; texto: string }> = {
   },
 };
 
+/**
+ * A recusa do Atendente fala do Atendente. Quem está sem plano só chega aqui
+ * depois da primeira semana por nossa conta — a exceção mora em guarda.ts, com
+ * a contagem do banco.
+ */
+const RECUSA_DO_ATENDENTE = {
+  motivo:
+    "A primeira semana do Atendente por nossa conta terminou. Para ele continuar respondendo " +
+    "seus clientes, é só escolher um plano — suas conversas e sua agenda continuam suas.",
+  texto: `Continuar com o Atendente — ${emReais(PRECO_MENSAL_CENTS)}/mês`,
+};
+
 export function podeExecutar(estado: EstadoConta, acao: Acao): Permissao {
   if (ACOES_SEMPRE_LIVRES.includes(acao)) return { pode: true };
   if (COM_ACESSO.includes(estado)) return { pode: true };
 
-  const r = RECUSA[estado] ?? RECUSA.TRIAL_EXPIRADO;
+  // Pagamento recusado e conta cancelada mantêm a recusa deles: é o cartão ou a
+  // reativação que resolve, e é isso que o botão precisa dizer.
+  const doAtendente = acao === "LIGAR_ATENDENTE" && (estado === "GRATIS" || estado === "TRIAL_EXPIRADO");
+  const r = doAtendente ? RECUSA_DO_ATENDENTE : RECUSA[estado] ?? RECUSA.TRIAL_EXPIRADO;
   return {
     pode: false,
     motivo: r.motivo,
