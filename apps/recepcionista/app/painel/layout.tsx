@@ -15,6 +15,7 @@ import { PainelNavDesktop, PainelNavMobile } from "@/components/painel/navegacao
 const NAV = [
   { href: "/painel/clientes/importar", label: "Meus clientes" },
   { href: "/painel/onda", label: "Reativar clientes" },
+  { href: "/painel/atendente", label: "Atendente Virtual" },
   { href: "/painel/livro-caixa", label: "Dinheiro recuperado" },
 ];
 

@@ -36,6 +36,13 @@ const TELAS = [
   // que o dono vê ao entrar, e o cartão de retorno é o número que o faz renovar.
   "components/painel/checklist-ativacao.tsx",
   "components/painel/cartao-retorno.tsx",
+  // O Atendente Virtual: a tela e as cinco partes dela.
+  "app/painel/atendente/page.tsx",
+  "components/atendente/passo-jeito.tsx",
+  "components/atendente/passo-sabe.tsx",
+  "components/atendente/simulador.tsx",
+  "components/atendente/semana.tsx",
+  "components/atendente/painel-ligado.tsx",
 ];
 
 // O `[^:]` antes do `//` existe para não engolir `https://…` como se fosse
@@ -145,6 +152,8 @@ const FRASES_DO_SERVIDOR = [
   // chegam à tela sem passar por nenhuma das telas varridas acima.
   "lib/painel/ativacao.ts",
   "lib/painel/retorno.ts",
+  // O estado do Atendente e o uso chegam prontos daqui.
+  "lib/atendente/tela.ts",
 ];
 
 describe("o texto que o servidor manda para a tela também é em português de dono", () => {

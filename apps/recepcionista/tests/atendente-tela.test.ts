@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/db", () => ({ prisma: {} }));
@@ -138,5 +140,86 @@ describe("textoDoUso — contado como o dono entende", () => {
       },
     });
     expect(t).toBe("Semana por nossa conta: falta 1 dia ou 1 conversa.");
+  });
+});
+
+// ——— A tela: o que ela nunca diz, e as travas do "Ligar" ———
+
+const RAIZ = join(__dirname, "..");
+const TELAS_DO_ATENDENTE = [
+  "app/painel/atendente/page.tsx",
+  "components/atendente/passo-jeito.tsx",
+  "components/atendente/passo-sabe.tsx",
+  "components/atendente/simulador.tsx",
+  "components/atendente/semana.tsx",
+  "components/atendente/painel-ligado.tsx",
+  "lib/atendente/tela.ts",
+];
+const fonte = (rel: string) => readFileSync(join(RAIZ, rel), "utf8");
+
+/** O texto que o dono lê: literais e texto entre tags, sem comentário, import nem classe. */
+function visivel(codigo: string): string[] {
+  const limpo = codigo
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/(^|[^:])\/\/.*$/gm, "$1")
+    .replace(/^\s*import[\s\S]*?from\s+["'][^"']+["'];?\s*$/gm, " ")
+    .replace(/className=(\{(?:[^{}]|\{[^{}]*\})*\}|"[^"]*")/g, " ");
+  return [
+    ...[...limpo.matchAll(/"([^"\n]{2,})"/g)].map((m) => m[1]),
+    ...[...limpo.matchAll(/`([^`]{2,})`/g)].map((m) => m[1]),
+    ...[...limpo.matchAll(/>([^<>{}]{2,})</g)].map((m) => m[1]),
+  ].filter((t) => !/^[A-Za-z_][A-Za-z0-9_./-]*$/.test(t.trim()));
+}
+
+describe("a tela do Atendente mostra um funcionário, não uma tecnologia", () => {
+  for (const tela of TELAS_DO_ATENDENTE) {
+    it(`${tela} não fala de IA, prompt, token, modelo, instância nem webhook`, () => {
+      const achados = visivel(fonte(tela)).filter(
+        (t) =>
+          /\bIA\b/.test(t) ||
+          /intelig[êe]ncia artificial|\bprompts?\b|\btokens?\b|\bmodelos?\b|inst[âa]ncia|webhook/i.test(t),
+      );
+      expect(achados, achados.join(" | ")).toEqual([]);
+    });
+  }
+});
+
+describe("o \"Ligar no meu WhatsApp\"", () => {
+  // Sem os comentários: o cabeçalho do arquivo também fala do botão.
+  const simulador = fonte("components/atendente/simulador.tsx")
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/(^|[^:])\/\/.*$/gm, "$1");
+  const botao = simulador.indexOf("Ligar no meu WhatsApp");
+
+  it("só aparece depois do primeiro teste", () => {
+    expect(botao).toBeGreaterThan(-1);
+    expect(simulador.slice(Math.max(0, botao - 1500), botao)).toMatch(/\btestado\b/);
+  });
+
+  it("vem com a frase honesta sobre a conexão por QR Code, perto do botão", () => {
+    const perto = simulador.slice(Math.max(0, botao - 2500), botao + 2500);
+    expect(perto).toContain("não é a oficial do WhatsApp");
+    expect(perto).toMatch(/reduz o risco, mas não zera/);
+  });
+
+  it("sem WhatsApp, abre a conexão em vez de recusar", () => {
+    expect(simulador).toContain("ModalConectarWhatsApp");
+  });
+
+  it("a recusa da cobrança vira botão, com o caminho que resolve", () => {
+    expect(simulador).toMatch(/recusa\.acao\.href/);
+  });
+});
+
+describe("o passo 1 mostra a mesma conversa nos três jeitos", () => {
+  const passo = fonte("components/atendente/passo-jeito.tsx");
+
+  it("usa a conversa de exemplo do motor, e diz quando os horários são de exemplo", () => {
+    expect(passo).toContain("conversaDeExemplo(");
+    expect(passo).toMatch(/ehExemplo/);
+  });
+
+  it("oferece ouvir em voz alta quando o navegador tem voz", () => {
+    expect(passo).toContain("speechSynthesis");
   });
 });

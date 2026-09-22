@@ -45,6 +45,24 @@ function iconeParaRota(href: string) {
       </svg>
     );
   }
+  if (href.includes("atendente")) {
+    return (
+      <svg
+        className="h-4 w-4 shrink-0"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+        aria-hidden="true"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+        />
+      </svg>
+    );
+  }
   if (href.includes("livro-caixa")) {
     return (
       <svg
@@ -128,7 +146,7 @@ export function PainelNavMobile({ items }: { items: NavItem[] }) {
       aria-label="Menu principal para celular"
       className="border-b border-panel-line bg-panel-card px-3 py-2 sm:hidden"
     >
-      <div className="grid grid-cols-3 gap-1.5 rounded-2xl border border-panel-line/80 bg-panel-bg p-1 shadow-inner">
+      <div className="grid grid-cols-4 gap-1.5 rounded-2xl border border-panel-line/80 bg-panel-bg p-1 shadow-inner">
         {items.map((item) => {
           const ativo = estaAtivo(item.href, pathname);
           return (

@@ -27,16 +27,23 @@ const NAV = [...layout.matchAll(/\{\s*href:\s*"([^"]+)",\s*label:\s*"([^"]+)"\s*
 );
 
 describe("o menu do painel", () => {
-  it("tem exatamente três itens", () => {
-    expect(NAV).toHaveLength(3);
+  // O Atendente Virtual entrou como o quarto item em 22/09/2026: é a outra
+  // metade da esteira — o cliente que escreve e ninguém responde.
+  it("tem exatamente quatro itens", () => {
+    expect(NAV).toHaveLength(4);
   });
 
   it("segue a ordem do fluxo de valor", () => {
     expect(NAV.map((i) => i.href)).toEqual([
       "/painel/clientes/importar",
       "/painel/onda",
+      "/painel/atendente",
       "/painel/livro-caixa",
     ]);
+  });
+
+  it("o Atendente se chama pelo que é", () => {
+    expect(NAV.find((i) => i.href === "/painel/atendente")?.label).toBe("Atendente Virtual");
   });
 
   it("não leva para telas secundárias fora do fluxo direto de valor", () => {
