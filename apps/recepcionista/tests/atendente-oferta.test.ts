@@ -6,7 +6,7 @@ import {
   opcoesParaEscolha,
   type Livre,
 } from "@/lib/atendente/oferta";
-import { quandoAtendeTexto, semanaDoAtendente } from "@/lib/atendente/semana";
+import { quandoAtendeTexto } from "@/lib/atendente/semana";
 
 /**
  * TRÊS HORÁRIOS DE VERDADE, MONTADOS POR CÓDIGO.
@@ -82,10 +82,16 @@ describe("escolherTres", () => {
 });
 
 describe("formatarOpcao", () => {
+  const livre = { inicio: emBrasilia("2026-09-23", 9, 30), fim: emBrasilia("2026-09-23", 10), profissional: "Léo" };
+
   it("com e sem profissional", () => {
-    const livre = { inicio: emBrasilia("2026-09-23", 9, 30), fim: emBrasilia("2026-09-23", 10), profissional: "Léo" };
     expect(formatarOpcao(1, livre)).toBe("1 · qua 23/09, 9h30 com Léo");
     expect(formatarOpcao(2, { ...livre, profissional: null })).toBe("2 · qua 23/09, 9h30");
+  });
+
+  it("o nome do profissional sai como nome próprio, do jeito que o cliente lê", () => {
+    expect(formatarOpcao(1, { ...livre, profissional: "cleber" })).toBe("1 · qua 23/09, 9h30 com Cleber");
+    expect(formatarOpcao(1, { ...livre, profissional: "maria da silva" })).toBe("1 · qua 23/09, 9h30 com Maria da Silva");
   });
 });
 
@@ -131,32 +137,10 @@ const HORARIOS = [
   { day: 6, open: "09:00", close: "14:00", closed: false },
 ];
 
-describe("semanaDoAtendente — quem atende em cada faixa", () => {
-  const semana = semanaDoAtendente(HORARIOS);
+describe("quandoAtendeTexto — quando a loja está fechada, em palavras", () => {
+  const todoDia = (open: string, close: string) =>
+    [0, 1, 2, 3, 4, 5, 6].map((day) => ({ day, open, close, closed: false }));
 
-  it("começa na segunda e termina no domingo", () => {
-    expect(semana.map((d) => d.nome)).toEqual(["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]);
-  });
-
-  it("dia normal: o Atendente antes e depois do expediente", () => {
-    expect(semana[0].faixas).toEqual([
-      { de: 0, ate: 540, quem: "ATENDENTE" },
-      { de: 540, ate: 1140, quem: "VOCE" },
-      { de: 1140, ate: 1440, quem: "ATENDENTE" },
-    ]);
-  });
-
-  it("dia fechado: o Atendente o dia todo", () => {
-    expect(semana[6].faixas).toEqual([{ de: 0, ate: 1440, quem: "ATENDENTE" }]);
-  });
-
-  it("expediente que vira a madrugada continua no dia seguinte", () => {
-    expect(semana[4].faixas.at(-1)).toEqual({ de: 1080, ate: 1440, quem: "VOCE" });
-    expect(semana[5].faixas[0]).toEqual({ de: 0, ate: 120, quem: "VOCE" });
-  });
-});
-
-describe("quandoAtendeTexto — a semana em palavras", () => {
   it("junta os dias iguais", () => {
     const simples = HORARIOS.map((h) => (h.day === 5 ? { ...h, open: "09:00", close: "19:00" } : h));
     expect(quandoAtendeTexto(simples)).toEqual([
@@ -164,5 +148,22 @@ describe("quandoAtendeTexto — a semana em palavras", () => {
       "sáb: antes das 9h e depois das 14h",
       "dom: o dia todo",
     ]);
+  });
+
+  it("expediente que vira a madrugada: o fim da noite fica no dia seguinte", () => {
+    expect(quandoAtendeTexto(HORARIOS)).toEqual([
+      "seg a qui: antes das 9h e depois das 19h",
+      "sex: antes das 18h",
+      "sáb: das 2h às 9h e depois das 14h",
+      "dom: o dia todo",
+    ]);
+  });
+
+  it("quem abre toda noite fica fechado de dia", () => {
+    expect(quandoAtendeTexto(todoDia("18:00", "02:00"))).toEqual(["seg a dom: das 2h às 18h"]);
+  });
+
+  it("aberto até 23:59 não inventa um minuto fechado", () => {
+    expect(quandoAtendeTexto(todoDia("00:00", "23:59"))).toEqual(["seg a dom: nunca fecha"]);
   });
 });

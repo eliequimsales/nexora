@@ -1,39 +1,42 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Jeito } from "@/lib/atendente/jeitos";
-import type { TelaDoAtendente } from "@/lib/atendente/tela";
-import { PainelLigado } from "@/components/atendente/painel-ligado";
-import { PassoJeito } from "@/components/atendente/passo-jeito";
-import { PassoSabe } from "@/components/atendente/passo-sabe";
-import { Simulador } from "@/components/atendente/simulador";
+import type { TelaDoAtendente, Tom } from "@/lib/atendente/tela";
+import { Ajustes } from "@/components/atendente/ajustes";
+import { Celular } from "@/components/atendente/celular";
+import { Ligar } from "@/components/atendente/ligar";
+import { Situacao } from "@/components/atendente/situacao";
 
 /**
- * ATENDENTE VIRTUAL
+ * ATENDENTE VIRTUAL — UMA TELA SÓ, QUE SE EXPLICA SOZINHA.
  *
- * Antes de ligar: três passos — quem ele é e como fala, o que ele sabe (puxado
- * da agenda e do cadastro), e o teste num WhatsApp na tela, que libera o
- * "Ligar no meu WhatsApp". Depois de ligar: o estado, o que ele fez com a loja
- * fechada e o que precisa do dono. Nenhuma palavra técnica: o dono vê um
- * funcionário, não uma tecnologia.
+ * À esquerda, o celular: o Atendente conversando com os dados do negócio. É a
+ * explicação — e é também onde o dono testa. À direita, poucos ajustes, salvos
+ * sozinhos, e uma ação principal: ligar. Depois de ligado, o mesmo lugar mostra
+ * como ele está e o que precisa do dono.
  */
 
-type Passo = 1 | 2 | 3;
+const PILULA: Record<Tom, { texto: string; classe: string; ponto: string }> = {
+  ATENDENDO: { texto: "Atendendo agora", classe: "bg-emerald-50 text-emerald-800", ponto: "bg-emerald-500 animate-pulse" },
+  DE_OLHO: { texto: "Ligado", classe: "bg-emerald-50 text-emerald-800", ponto: "bg-emerald-500" },
+  ESPERANDO: { texto: "Ligado", classe: "bg-emerald-50 text-emerald-800", ponto: "bg-emerald-500" },
+  PARADO: { texto: "Parado", classe: "bg-red-50 text-red-700", ponto: "bg-red-500" },
+  DESLIGADO: { texto: "Desligado", classe: "bg-panel-card text-panel-sub border border-panel-line", ponto: "bg-panel-line" },
+};
 
-const PASSOS: { n: Passo; titulo: string }[] = [
-  { n: 1, titulo: "Quem ele é" },
-  { n: 2, titulo: "O que ele sabe" },
-  { n: 3, titulo: "Testar e ligar" },
-];
+/** Tempo sem digitar antes de salvar o nome. */
+const ESPERA_DO_NOME_MS = 700;
 
 export default function PaginaDoAtendente() {
   const [tela, setTela] = useState<TelaDoAtendente | null>(null);
   const [erro, setErro] = useState("");
-  const [passo, setPasso] = useState<Passo>(1);
-  const [ajustando, setAjustando] = useState(false);
   const [nome, setNome] = useState("");
   const [jeito, setJeito] = useState<Jeito>("ACOLHEDOR");
-  const [salvando, setSalvando] = useState(false);
+  const [testado, setTestado] = useState(false);
+  const [salvo, setSalvo] = useState(false);
+  const esperaDoNome = useRef<ReturnType<typeof setTimeout>>();
+  const esperaDoSalvo = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     let vivo = true;
@@ -43,23 +46,25 @@ export default function PaginaDoAtendente() {
         const j = await r.json().catch(() => null);
         if (!vivo) return;
         if (!r.ok || !j) {
-          setErro(j?.error ?? "Não consegui abrir o Atendente agora. Tente de novo em instantes.");
+          setErro(j?.error ?? "Não consegui abrir agora. Tente de novo.");
           return;
         }
         setTela(j);
         setNome(j.nome);
         setJeito(j.jeito);
+        setTestado(j.testado);
       } catch {
-        if (vivo) setErro("Não consegui abrir o Atendente agora. Confira a sua internet e tente de novo.");
+        if (vivo) setErro("Sem conexão agora. Tente de novo.");
       }
     })();
     return () => {
       vivo = false;
+      clearTimeout(esperaDoNome.current);
+      clearTimeout(esperaDoSalvo.current);
     };
   }, []);
 
-  async function ajustar(dados: Record<string, unknown>): Promise<boolean> {
-    setSalvando(true);
+  async function ajustar(dados: Record<string, unknown>) {
     setErro("");
     try {
       const r = await fetch("/api/atendente", {
@@ -69,31 +74,35 @@ export default function PaginaDoAtendente() {
       });
       const j = await r.json().catch(() => null);
       if (!r.ok || !j) {
-        setErro(j?.error ?? "Não consegui salvar agora. Tente de novo em instantes.");
-        return false;
+        setErro(j?.error ?? "Não consegui salvar agora. Tente de novo.");
+        return;
       }
       setTela(j);
-      return true;
+      setSalvo(true);
+      clearTimeout(esperaDoSalvo.current);
+      esperaDoSalvo.current = setTimeout(() => setSalvo(false), 1500);
     } catch {
-      setErro("Não consegui salvar agora. Confira a sua internet e tente de novo.");
-      return false;
-    } finally {
-      setSalvando(false);
+      setErro("Sem conexão agora. Tente de novo.");
     }
   }
 
-  function receberTela(nova: TelaDoAtendente) {
-    setTela(nova);
-    // Ligou pelo teste: volta para o painel dele.
-    if (nova.ligado && !tela?.ligado) setAjustando(false);
+  function mudarNome(novo: string) {
+    setNome(novo);
+    clearTimeout(esperaDoNome.current);
+    esperaDoNome.current = setTimeout(() => void ajustar({ nome: novo }), ESPERA_DO_NOME_MS);
+  }
+
+  function mudarJeito(novo: Jeito) {
+    setJeito(novo);
+    void ajustar({ jeito: novo });
   }
 
   if (!tela) {
     return (
-      <div className="max-w-3xl">
+      <div>
         <h1 className="font-display text-2xl text-panel-ink">Atendente Virtual</h1>
         {erro ? (
-          <p role="alert" className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <p role="alert" className="mt-4 text-sm text-red-700">
             {erro}
           </p>
         ) : (
@@ -103,104 +112,59 @@ export default function PaginaDoAtendente() {
     );
   }
 
-  const mostrarPassos = !tela.ligado || ajustando;
+  const pilula = PILULA[tela.estado.tom];
+  const ajustes = (
+    <Ajustes
+      tela={tela}
+      nome={nome}
+      jeito={jeito}
+      aoMudarNome={mudarNome}
+      aoMudarJeito={mudarJeito}
+      aoAjustar={(dados) => void ajustar(dados)}
+    />
+  );
 
   return (
     <div className="space-y-6">
-      <header className="max-w-3xl">
-        <h1 className="font-display text-2xl text-panel-ink">Atendente Virtual</h1>
-        <p className="mt-1 text-sm leading-relaxed text-panel-sub">
-          Ele responde os seus clientes no WhatsApp quando você não pode — de noite, no fim de semana e quando a loja
-          está cheia — e marca na sua agenda. Nunca finge ser gente, e preço e horário ele só diz o que está no seu
-          cadastro.
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl text-panel-ink">Atendente Virtual</h1>
+          <p className="mt-1 text-sm text-panel-sub">Responde seus clientes no WhatsApp quando você não pode.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {salvo && <span className="text-xs text-panel-sub">Salvo</span>}
+          <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold ${pilula.classe}`}>
+            <span className={`h-2 w-2 rounded-full ${pilula.ponto}`} aria-hidden="true" />
+            {pilula.texto}
+          </span>
+        </div>
       </header>
 
       {erro && (
-        <p role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <p role="alert" className="text-sm text-red-700">
           {erro}
         </p>
       )}
 
-      {mostrarPassos ? (
-        <>
-          <nav aria-label="Passos para ligar o Atendente" className="flex flex-wrap gap-2">
-            {PASSOS.map((p) => {
-              const atual = p.n === passo;
-              const feito = p.n < passo;
-              return (
-                <button
-                  key={p.n}
-                  type="button"
-                  onClick={() => setPasso(p.n)}
-                  aria-current={atual ? "step" : undefined}
-                  className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition ${
-                    atual
-                      ? "border-amber bg-amber font-bold text-night"
-                      : feito
-                        ? "border-amber/50 bg-amber/10 text-panel-ink"
-                        : "border-panel-line bg-panel-card text-panel-sub hover:text-panel-ink"
-                  }`}
-                >
-                  <span
-                    className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold ${
-                      atual ? "bg-night text-amber" : feito ? "bg-amber text-night" : "bg-panel-bg text-panel-sub"
-                    }`}
-                    aria-hidden="true"
-                  >
-                    {feito ? "✓" : p.n}
-                  </span>
-                  {p.titulo}
-                </button>
-              );
-            })}
-            {tela.ligado && (
-              <button
-                type="button"
-                onClick={() => setAjustando(false)}
-                className="ml-auto rounded-full px-4 py-2 text-sm font-semibold text-panel-sub hover:text-panel-ink"
-              >
-                Voltar para o painel dele
-              </button>
-            )}
-          </nav>
+      <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+        <Celular tela={tela} nome={nome} jeito={jeito} aoTestar={() => setTestado(true)} />
 
-          {passo === 1 && (
-            <PassoJeito
-              tela={tela}
-              nome={nome}
-              jeito={jeito}
-              salvando={salvando}
-              aoMudarNome={setNome}
-              aoMudarJeito={setJeito}
-              aoContinuar={async () => {
-                if (await ajustar({ nome, jeito })) setPasso(2);
-              }}
-            />
+        <div className="space-y-4">
+          {tela.ligado ? <Situacao tela={tela} aoMudarTela={setTela} /> : ajustes}
+          {(!tela.ligado || tela.acesso === "SEMANA_ACABOU") && (
+            <Ligar tela={tela} testado={testado} aoMudarTela={setTela} />
           )}
-          {passo === 2 && (
-            <PassoSabe
-              tela={tela}
-              salvando={salvando}
-              aoAjustar={(ajuste) => void ajustar(ajuste)}
-              aoVoltar={() => setPasso(1)}
-              aoContinuar={() => setPasso(3)}
-            />
+          {tela.ligado && (
+            <details className="group rounded-2xl border border-panel-line bg-panel-card">
+              <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-panel-ink">
+                <span className="mr-2 inline-block text-panel-sub transition group-open:rotate-90">›</span>
+                Ajustar nome, jeito e dados
+              </summary>
+              <div className="border-t border-panel-line p-4">{ajustes}</div>
+            </details>
           )}
-          {passo === 3 && <Simulador tela={tela} nome={nome} jeito={jeito} aoMudarTela={receberTela} />}
-        </>
-      ) : (
-        <PainelLigado
-          tela={tela}
-          aoMudarTela={setTela}
-          aoAjustar={() => {
-            setNome(tela.nome);
-            setJeito(tela.jeito);
-            setPasso(1);
-            setAjustando(true);
-          }}
-        />
-      )}
+        </div>
+      </div>
     </div>
   );
 }

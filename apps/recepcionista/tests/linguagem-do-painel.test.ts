@@ -36,13 +36,12 @@ const TELAS = [
   // que o dono vê ao entrar, e o cartão de retorno é o número que o faz renovar.
   "components/painel/checklist-ativacao.tsx",
   "components/painel/cartao-retorno.tsx",
-  // O Atendente Virtual: a tela e as cinco partes dela.
+  // O Atendente Virtual: a tela e as quatro partes dela.
   "app/painel/atendente/page.tsx",
-  "components/atendente/passo-jeito.tsx",
-  "components/atendente/passo-sabe.tsx",
-  "components/atendente/simulador.tsx",
-  "components/atendente/semana.tsx",
-  "components/atendente/painel-ligado.tsx",
+  "components/atendente/celular.tsx",
+  "components/atendente/ajustes.tsx",
+  "components/atendente/ligar.tsx",
+  "components/atendente/situacao.tsx",
 ];
 
 // O `[^:]` antes do `//` existe para não engolir `https://…` como se fosse

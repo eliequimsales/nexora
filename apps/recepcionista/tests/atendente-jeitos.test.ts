@@ -7,6 +7,7 @@ import {
   JEITOS,
   lerJeito,
   NOME_DO_JEITO,
+  nomeProprio,
   primeiroNomeDoCliente,
   textosDoJeito,
   URGENCIA,
@@ -37,6 +38,8 @@ function amostras(jeito: Jeito): string[] {
     t.convite,
     t.ofertaLead({ servico: "Corte", detalhe: "R$ 45,00 · 40 min", quando: "amanhã" }),
     t.ofertaLead({ servico: "Corte", detalhe: null, quando: null }),
+    t.ofertaLead({ servico: null, detalhe: null, quando: "amanhã" }),
+    t.confirmacao({ quando: "quarta, 23/09, às 11h", servico: null, profissional: "Léo" }),
     t.respondaComNumero,
     t.respondaParaAnotar,
     t.anoteiHorario({ quando: "quarta, 23/09, às 11h", volta: "amanhã às 9h" }),
@@ -161,6 +164,48 @@ describe("os três jeitos", () => {
     const texto = URGENCIA_CVV("Clínica Sorriso");
     expect(texto).toContain("188");
     expect(texto.match(EMOJI)).toBeNull();
+  });
+});
+
+describe("sem serviço cadastrado, nenhum texto inventa um", () => {
+  it("a oferta fala só dos horários", () => {
+    const ofertas = JEITOS.map((j) => textosDoJeito(j).ofertaLead({ servico: null, detalhe: null, quando: "amanhã" }));
+    expect(ofertas).toEqual(["Tenho estes horários amanhã:", "Horários livres amanhã:", "Olha o que tenho amanhã:"]);
+  });
+
+  it("a confirmação diz o dia, a hora e com quem", () => {
+    const t = textosDoJeito("ACOLHEDOR");
+    expect(t.confirmacao({ quando: "quarta, 23/09, às 11h", servico: null, profissional: "Léo" })).toMatch(
+      /^Prontinho! Quarta, 23\/09, às 11h com Léo\. Já está na agenda/,
+    );
+    expect(textosDoJeito("DIRETO").confirmacao({ quando: "quarta, 23/09, às 11h", servico: null, profissional: null })).toMatch(
+      /^Confirmado: quarta, 23\/09, às 11h\. Está na agenda/,
+    );
+  });
+
+  it("a conversa de exemplo pergunta só por horário", () => {
+    const bolhas = conversaDeExemplo("ACOLHEDOR", {
+      empresa: "Studio X",
+      nome: "",
+      cliente: "Marina",
+      servico: null,
+      detalhe: null,
+      opcoes: ["1 · qua 23/09, 9h30", "2 · qua 23/09, 11h"],
+      escolhida: { quando: "quarta, 23/09, às 11h", profissional: null },
+      volta: "amanhã às 9h",
+      cumprimento: "Boa noite",
+    });
+    expect(bolhas[0].texto).toBe("Boa noite! Tem horário amanhã?");
+    expect(bolhas.map((b) => b.texto).join(" ")).not.toMatch(/atendimento\b(?! virtual)/i);
+  });
+});
+
+describe("nomeProprio — o nome do profissional como o cliente lê", () => {
+  it("maiúscula em cada nome, minúscula nas partículas", () => {
+    expect(nomeProprio("cleber")).toBe("Cleber");
+    expect(nomeProprio("maria da silva")).toBe("Maria da Silva");
+    expect(nomeProprio("  joão  dos santos ")).toBe("João dos Santos");
+    expect(nomeProprio("Léo")).toBe("Léo");
   });
 });
 

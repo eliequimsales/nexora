@@ -15,7 +15,7 @@ import {
 } from "./datas";
 import { duracaoFalada, precoFalado, textoDosFatos, type Fatos, type ServicoDoAtendente } from "./fatos";
 import { detectarIntencao } from "./intencao";
-import { apresentacao, cumprimento, textosDoJeito, URGENCIA, URGENCIA_CVV } from "./jeitos";
+import { apresentacao, cumprimento, nomeProprio, textosDoJeito, URGENCIA, URGENCIA_CVV } from "./jeitos";
 import { escolherTres, formatarOpcao, opcoesParaEscolha, type EstadoDaConversa } from "./oferta";
 import { montarPrompt } from "./prompt";
 import { numerosSemFonte } from "./verificador";
@@ -161,7 +161,13 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
       aviso ??
       (pedido.dia && !noDiaPedido
         ? t.semHorario(diaFalado(pedido.dia, agora))
-        : t.ofertaLead({ servico: servico.nome, detalhe, quando: pedido.dia ? diaFalado(pedido.dia, agora) : null }));
+        : t.ofertaLead({
+            // Sem serviço cadastrado, o horário é de 30 minutos, mas o cliente não
+            // lê um serviço que o dono nunca cadastrou.
+            servico: servico.id ? servico.nome : null,
+            detalhe: servico.id ? detalhe : null,
+            quando: pedido.dia ? diaFalado(pedido.dia, agora) : null,
+          }));
     const fechamento = fatos.marcaDireto
       ? t.respondaComNumero
       : fatos.linkAgenda
@@ -232,11 +238,13 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
     if (estado?.tipo === "HORARIO" && opcao) {
       const inicio = new Date(opcao.inicio);
       const quando = quandoFalado(inicio);
+      const servicoFalado = estado.servicoId ? estado.servicoNome : null;
+      const profissionalFalado = opcao.profissional ? nomeProprio(opcao.profissional) : null;
 
       if (!fatos.marcaDireto) {
         return saida({
           mensagens: comAbertura(fatos.linkAgenda ? t.linkAgenda(fatos.linkAgenda) : t.anoteiHorario({ quando, volta })),
-          anotar: { motivo: `Quer marcar ${estado.servicoNome}: ${quando}` },
+          anotar: { motivo: `Quer marcar ${servicoFalado ?? "um horário"}: ${quando}` },
           fontes: ["Horários livres da sua agenda", "Anotado para você confirmar"],
         });
       }
@@ -252,7 +260,7 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
         const valorCents = fatos.servicos.find((s) => s.id === estado.servicoId)?.precoCents ?? 0;
         return saida({
           mensagens: comAbertura(
-            t.confirmacao({ quando, servico: estado.servicoNome, profissional: opcao.profissional }),
+            t.confirmacao({ quando, servico: servicoFalado, profissional: profissionalFalado }),
           ),
           marcou: {
             inicio,

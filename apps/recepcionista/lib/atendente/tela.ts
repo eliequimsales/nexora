@@ -17,10 +17,10 @@ import {
   ultimoFechamento,
 } from "./datas";
 import { duracaoFalada, fatosDaEmpresa, precoFalado, type Fatos, type ServicoDoAtendente } from "./fatos";
-import type { conversaDeExemplo, Jeito } from "./jeitos";
+import { nomeProprio, type conversaDeExemplo, type Jeito } from "./jeitos";
 import { escolherTres, formatarOpcao } from "./oferta";
 import { acessoDoAtendente, fimDaSemanaGratis, lojaFechada, podeLigar, type Acesso } from "./portao";
-import { quandoAtendeTexto, semanaDoAtendente, type DiaDesenhado } from "./semana";
+import { quandoAtendeTexto } from "./semana";
 import { usoDoAtendente } from "./uso";
 
 /**
@@ -62,7 +62,8 @@ export type TelaDoAtendente = {
     pagamento: string;
     linkAgenda: string | null;
   };
-  semana: { dias: DiaDesenhado[]; texto: string[] };
+  /** Quando a loja está fechada — e ele responde na hora: "seg a sáb: antes das 8h e depois das 18h · dom: o dia todo". */
+  foraDoHorario: string;
   enquantoFechado: Contagem;
   precisaDeVoce: {
     id: string;
@@ -99,7 +100,7 @@ export function estadoDoAtendente(p: {
 
   if (!p.ligado) return { texto: "Desligado: nenhuma mensagem sai sozinha.", tom: "DESLIGADO" };
   if (p.acesso === "SEMANA_ACABOU") {
-    return { texto: `A semana por nossa conta terminou: ${quem} parou de responder.`, tom: "PARADO" };
+    return { texto: `A semana grátis acabou: ${quem} parou de responder.`, tom: "PARADO" };
   }
   if (!p.whatsappLigado) {
     return { texto: `O WhatsApp está desligado: ${quem} não tem por onde responder.`, tom: "PARADO" };
@@ -134,13 +135,13 @@ export function textoDoUso(p: {
   if (p.acesso === "INCLUIDO" || p.acesso === "TETO") {
     return `${p.uso.conversasNoMes} de ${TETO_CONVERSAS_MES} conversas neste mês`;
   }
-  if (p.acesso === "SEMANA_ACABOU") return "A semana por nossa conta terminou.";
+  if (p.acesso === "SEMANA_ACABOU") return "A semana grátis acabou.";
   if (!p.uso.primeiraVezEm) {
-    return `Primeira semana por nossa conta: ${SEMANA_GRATIS_DIAS} dias ou ${SEMANA_GRATIS_CONVERSAS} conversas, a partir de quando você ligar.`;
+    return `Primeira semana grátis: ${SEMANA_GRATIS_DIAS} dias ou ${SEMANA_GRATIS_CONVERSAS} conversas.`;
   }
   const dias = Math.max(1, Math.ceil((fimDaSemanaGratis(p.uso.primeiraVezEm).getTime() - p.agora.getTime()) / DIA_MS));
   const conversas = Math.max(0, SEMANA_GRATIS_CONVERSAS - p.uso.conversasNaSemana);
-  return `Semana por nossa conta: ${dias === 1 ? "falta" : "faltam"} ${plural(dias, "dia", "dias")} ou ${plural(conversas, "conversa", "conversas")}.`;
+  return `Semana grátis: ${dias === 1 ? "falta" : "faltam"} ${plural(dias, "dia", "dias")} ou ${plural(conversas, "conversa", "conversas")}.`;
 }
 
 function contar(linhas: { respostas: number; marcados: number; valorMarcadoCents: number }[]): Contagem {
@@ -188,7 +189,10 @@ async function exemploDaConversa(companyId: string, fatos: Fatos, agora: Date): 
           servico: servico.nome,
           detalhe: detalheDaOferta(servico),
           opcoes: opcoes.map((o, i) => formatarOpcao(i + 1, o)),
-          escolhida: { quando: quandoFalado(opcoes[1].inicio), profissional: opcoes[1].profissional },
+          escolhida: {
+            quando: quandoFalado(opcoes[1].inicio),
+            profissional: opcoes[1].profissional ? nomeProprio(opcoes[1].profissional) : null,
+          },
         },
       };
     }
@@ -199,7 +203,8 @@ async function exemploDaConversa(companyId: string, fatos: Fatos, agora: Date): 
     ehExemplo: true,
     dados: {
       ...base,
-      servico: servico?.nome ?? "Atendimento",
+      // Sem serviço cadastrado, a conversa fala só de horário.
+      servico: servico?.nome ?? null,
       detalhe: servico ? detalheDaOferta(servico) : null,
       opcoes: inicios.map((inicio, i) => formatarOpcao(i + 1, { inicio, fim: inicio, profissional: null })),
       escolhida: { quando: quandoFalado(inicios[1]), profissional: null },
@@ -300,7 +305,7 @@ export async function telaDoAtendente(companyId: string, agora: Date = new Date(
       pagamento: fatos.pagamento,
       linkAgenda: fatos.linkAgenda,
     },
-    semana: { dias: semanaDoAtendente(fatos.horarios), texto: quandoAtendeTexto(fatos.horarios) },
+    foraDoHorario: quandoAtendeTexto(fatos.horarios).join(" · "),
     enquantoFechado: contar(doFechamento),
     precisaDeVoce: pendentes.map((p) => ({
       id: p.id,

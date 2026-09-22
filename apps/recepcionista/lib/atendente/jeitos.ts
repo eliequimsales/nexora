@@ -32,6 +32,25 @@ export const DESCRICAO_DO_JEITO: Record<Jeito, string> = {
   DESCONTRAIDO: "Leve, do jeito de quem já é cliente.",
 };
 
+const PARTICULAS = new Set(["da", "de", "do", "das", "dos", "e"]);
+
+/**
+ * O nome do profissional como o cliente lê: "cleber" → "Cleber", "maria da
+ * silva" → "Maria da Silva". Só a exibição muda; a agenda guarda como o dono
+ * escreveu.
+ */
+export function nomeProprio(nome: string): string {
+  return nome
+    .trim()
+    .split(/\s+/)
+    .map((parte, i) => {
+      const minuscula = parte.toLocaleLowerCase("pt-BR");
+      if (i > 0 && PARTICULAS.has(minuscula)) return minuscula;
+      return parte.charAt(0).toLocaleUpperCase("pt-BR") + parte.slice(1);
+    })
+    .join(" ");
+}
+
 /** "quarta, 23/09, às 11h" → "Quarta, 23/09, às 11h", para quando o dia começa a frase. */
 function comMaiuscula(texto: string): string {
   return texto.charAt(0).toLocaleUpperCase("pt-BR") + texto.slice(1);
@@ -75,13 +94,14 @@ export interface Textos {
   contextoFechado(volta: string | null): string;
   contextoExpediente: string;
   convite: string;
-  ofertaLead(p: { servico: string; detalhe: string | null; quando: string | null }): string;
+  /** `servico` null: não há serviço cadastrado, e o texto fala só dos horários. */
+  ofertaLead(p: { servico: string | null; detalhe: string | null; quando: string | null }): string;
   respondaComNumero: string;
   /** "Marcar direto" desligado e sem link: a escolha vira anotação para a equipe confirmar. */
   respondaParaAnotar: string;
   anoteiHorario(p: { quando: string; volta: string | null }): string;
   escolherServico: string;
-  confirmacao(p: { quando: string; servico: string; profissional: string | null }): string;
+  confirmacao(p: { quando: string; servico: string | null; profissional: string | null }): string;
   ocupado: string;
   semHorario(quando: string | null): string;
   semAgenda: string;
@@ -99,6 +119,12 @@ export interface Textos {
 const comNome = (cliente: string | null) => (cliente ? `, ${cliente}` : "");
 const entreParenteses = (detalhe: string | null) => (detalhe ? ` (${detalhe})` : "");
 const espacoAntes = (quando: string | null) => (quando ? ` ${quando}` : "");
+/** " para Corte (R$ 45,00, 40 min)" — ou nada, quando não há serviço cadastrado. */
+const doServico = (prefixo: string, servico: string | null, detalhe: string | null) =>
+  servico ? ` ${prefixo} ${servico}${entreParenteses(detalhe)}` : "";
+/** "Quarta, 23/09, às 11h — Corte com Léo", sem serviço ou sem profissional quando faltam. */
+const oQueEComQuem = (p: { servico: string | null; profissional: string | null }, separador: string) =>
+  `${p.servico ? `${separador}${p.servico}` : ""}${p.profissional ? ` com ${p.profissional}` : ""}`;
 
 const ACOLHEDOR: Textos = {
   saudacao: (p) => `${p.cumprimento}${comNome(p.cliente)}! ${p.apresentacao} 💛`,
@@ -109,14 +135,13 @@ const ACOLHEDOR: Textos = {
   contextoExpediente:
     "A equipe está no atendimento agora e já te responde; enquanto isso, eu te ajudo por aqui.",
   convite: "Quer que eu te mostre os horários livres?",
-  ofertaLead: (p) =>
-    `Tenho estes horários para ${p.servico}${entreParenteses(p.detalhe)}${espacoAntes(p.quando)}:`,
+  ofertaLead: (p) => `Tenho estes horários${doServico("para", p.servico, p.detalhe)}${espacoAntes(p.quando)}:`,
   respondaComNumero: "É só responder com o número que eu já deixo marcado.",
   respondaParaAnotar: "É só responder com o número que eu deixo anotado para a equipe confirmar.",
   anoteiHorario: (p) => `Anotei: ${p.quando}. A equipe confirma com você ${p.volta ?? "assim que puder"} 💛`,
   escolherServico: "Qual desses você quer? É só responder com o número:",
   confirmacao: (p) =>
-    `Prontinho! ${comMaiuscula(p.quando)} — ${p.servico}${p.profissional ? ` com ${p.profissional}` : ""}. ` +
+    `Prontinho! ${comMaiuscula(p.quando)}${oQueEComQuem(p, " — ")}. ` +
     "Já está na agenda. Se precisar desmarcar, é só avisar por aqui 💛",
   ocupado: "Ih, esse horário acabou de ser ocupado. Olha os próximos:",
   semHorario: (quando) =>
@@ -149,14 +174,13 @@ const DIRETO: Textos = {
       : "Estamos fechados agora, mas já consigo ver a agenda.",
   contextoExpediente: "A equipe está atendendo e já responde; enquanto isso, posso adiantar por aqui.",
   convite: "Quer ver os horários livres?",
-  ofertaLead: (p) => `Horários para ${p.servico}${entreParenteses(p.detalhe)}${espacoAntes(p.quando)}:`,
+  ofertaLead: (p) => `Horários${p.servico ? doServico("para", p.servico, p.detalhe) : " livres"}${espacoAntes(p.quando)}:`,
   respondaComNumero: "Responda com o número para marcar.",
   respondaParaAnotar: "Responda com o número para a equipe confirmar.",
   anoteiHorario: (p) => `Anotado: ${p.quando}. A equipe confirma ${p.volta ?? "em breve"}.`,
   escolherServico: "Qual serviço? Responda com o número:",
   confirmacao: (p) =>
-    `Confirmado: ${p.quando}, ${p.servico}${p.profissional ? ` com ${p.profissional}` : ""}. ` +
-    "Está na agenda. Para desmarcar, avise por aqui.",
+    `Confirmado: ${p.quando}${oQueEComQuem(p, ", ")}. ` + "Está na agenda. Para desmarcar, avise por aqui.",
   ocupado: "Esse horário acabou de ser ocupado. Próximos:",
   semHorario: (quando) => (quando ? `Sem horário livre para ${quando}. Próximos:` : "Próximos horários livres:"),
   semAgenda: "Não há horário livre nos próximos dias. Anotei para a equipe entrar em contato.",
@@ -181,13 +205,13 @@ const DESCONTRAIDO: Textos = {
     volta ? `O pessoal volta ${volta}, mas a agenda eu já te mostro.` : "O pessoal não está agora, mas a agenda eu já te mostro.",
   contextoExpediente: "O pessoal está na correria aqui e já te responde; enquanto isso, deixa comigo.",
   convite: "Bora ver um horário?",
-  ofertaLead: (p) => `Olha o que tenho pra ${p.servico}${entreParenteses(p.detalhe)}${espacoAntes(p.quando)}:`,
+  ofertaLead: (p) => `Olha o que tenho${doServico("pra", p.servico, p.detalhe)}${espacoAntes(p.quando)}:`,
   respondaComNumero: "Manda o número que eu já marco pra você.",
   respondaParaAnotar: "Manda o número que eu deixo anotado pro pessoal confirmar.",
   anoteiHorario: (p) => `Anotado: ${p.quando}! O pessoal confirma com você ${p.volta ?? "assim que der"}.`,
   escolherServico: "Qual deles vai ser? Manda o número:",
   confirmacao: (p) =>
-    `Fechado! ${comMaiuscula(p.quando)} — ${p.servico}${p.profissional ? ` com ${p.profissional}` : ""}. ` +
+    `Fechado! ${comMaiuscula(p.quando)}${oQueEComQuem(p, " — ")}. ` +
     "Já tá na agenda. Se precisar desmarcar, é só avisar aqui.",
   ocupado: "Eita, esse acabou de ser pego. Olha os próximos:",
   semHorario: (quando) => (quando ? `Pra ${quando} lotou. Os próximos são:` : "Os próximos livres são:"),
@@ -251,7 +275,8 @@ export function conversaDeExemplo(
     empresa: string;
     nome: string;
     cliente: string | null;
-    servico: string;
+    /** null: o negócio ainda não tem serviço cadastrado. */
+    servico: string | null;
     detalhe: string | null;
     opcoes: string[];
     escolhida: { quando: string; profissional: string | null };
@@ -263,7 +288,10 @@ export function conversaDeExemplo(
   const ap = apresentacao({ nome: d.nome, empresa: d.empresa });
   const numeroEscolhido = String(Math.min(2, d.opcoes.length) || 1);
   return [
-    { de: "cliente", texto: `${d.cumprimento}! Tem horário amanhã pra ${d.servico.toLocaleLowerCase("pt-BR")}?` },
+    {
+      de: "cliente",
+      texto: `${d.cumprimento}! Tem horário amanhã${d.servico ? ` pra ${d.servico.toLocaleLowerCase("pt-BR")}` : ""}?`,
+    },
     {
       de: "atendente",
       texto: `${t.saudacao({ cumprimento: d.cumprimento, cliente: d.cliente, apresentacao: ap })} ${t.contextoFechado(d.volta)}`,

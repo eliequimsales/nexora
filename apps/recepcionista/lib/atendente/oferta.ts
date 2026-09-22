@@ -1,6 +1,7 @@
 import type { Livre } from "@/lib/agenda/livres";
 import { VALIDADE_DA_OFERTA_MS } from "./constantes";
 import { diaCurto, horaFalada, localDe, type PedidoDeDia } from "./datas";
+import { nomeProprio } from "./jeitos";
 
 export type { Livre };
 
@@ -75,7 +76,7 @@ export function escolherTres(livres: Livre[], pedido: PedidoDeDia): { opcoes: Li
 /** "1 · qua 23/09, 9h30 com Léo". */
 export function formatarOpcao(n: number, livre: Livre): string {
   const local = localDe(livre.inicio);
-  const quem = livre.profissional ? ` com ${livre.profissional}` : "";
+  const quem = livre.profissional ? ` com ${nomeProprio(livre.profissional)}` : "";
   return `${n} · ${diaCurto(local.data)}, ${horaFalada(local.minutos)}${quem}`;
 }
 

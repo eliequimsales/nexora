@@ -87,7 +87,7 @@ describe("estadoDoAtendente — o estado em uma frase", () => {
   it("desligado, sem WhatsApp ou depois da semana grátis: diz por que parou", () => {
     expect(estadoDoAtendente({ ...base, ligado: false }).tom).toBe("DESLIGADO");
     expect(estadoDoAtendente({ ...base, whatsappLigado: false }).texto).toMatch(/WhatsApp está desligado/);
-    expect(estadoDoAtendente({ ...base, acesso: "SEMANA_ACABOU" }).texto).toMatch(/semana por nossa conta terminou/);
+    expect(estadoDoAtendente({ ...base, acesso: "SEMANA_ACABOU" }).texto).toMatch(/semana grátis acabou/);
   });
 
   it("sem nome, fala do Atendente", () => {
@@ -115,9 +115,7 @@ describe("textoDoUso — contado como o dono entende", () => {
 
   it("antes de ligar, a semana grátis inteira", () => {
     const t = textoDoUso({ acesso: "SEMANA_GRATIS", agora, uso: { conversasNoMes: 0, conversasNaSemana: 0, primeiraVezEm: null } });
-    expect(t).toBe(
-      `Primeira semana por nossa conta: ${SEMANA_GRATIS_DIAS} dias ou ${SEMANA_GRATIS_CONVERSAS} conversas, a partir de quando você ligar.`,
-    );
+    expect(t).toBe(`Primeira semana grátis: ${SEMANA_GRATIS_DIAS} dias ou ${SEMANA_GRATIS_CONVERSAS} conversas.`);
   });
 
   it("durante a semana, o que falta", () => {
@@ -126,7 +124,7 @@ describe("textoDoUso — contado como o dono entende", () => {
       agora,
       uso: { conversasNoMes: 19, conversasNaSemana: 19, primeiraVezEm: new Date(agora.getTime() - 3 * DIA) },
     });
-    expect(t).toBe(`Semana por nossa conta: faltam ${SEMANA_GRATIS_DIAS - 3} dias ou ${SEMANA_GRATIS_CONVERSAS - 19} conversas.`);
+    expect(t).toBe(`Semana grátis: faltam ${SEMANA_GRATIS_DIAS - 3} dias ou ${SEMANA_GRATIS_CONVERSAS - 19} conversas.`);
   });
 
   it("no último dia e na última conversa, no singular", () => {
@@ -139,7 +137,7 @@ describe("textoDoUso — contado como o dono entende", () => {
         primeiraVezEm: new Date(agora.getTime() - (SEMANA_GRATIS_DIAS - 1) * DIA),
       },
     });
-    expect(t).toBe("Semana por nossa conta: falta 1 dia ou 1 conversa.");
+    expect(t).toBe("Semana grátis: falta 1 dia ou 1 conversa.");
   });
 });
 
@@ -148,11 +146,10 @@ describe("textoDoUso — contado como o dono entende", () => {
 const RAIZ = join(__dirname, "..");
 const TELAS_DO_ATENDENTE = [
   "app/painel/atendente/page.tsx",
-  "components/atendente/passo-jeito.tsx",
-  "components/atendente/passo-sabe.tsx",
-  "components/atendente/simulador.tsx",
-  "components/atendente/semana.tsx",
-  "components/atendente/painel-ligado.tsx",
+  "components/atendente/celular.tsx",
+  "components/atendente/ajustes.tsx",
+  "components/atendente/ligar.tsx",
+  "components/atendente/situacao.tsx",
   "lib/atendente/tela.ts",
 ];
 const fonte = (rel: string) => readFileSync(join(RAIZ, rel), "utf8");
@@ -168,7 +165,10 @@ function visivel(codigo: string): string[] {
     ...[...limpo.matchAll(/"([^"\n]{2,})"/g)].map((m) => m[1]),
     ...[...limpo.matchAll(/`([^`]{2,})`/g)].map((m) => m[1]),
     ...[...limpo.matchAll(/>([^<>{}]{2,})</g)].map((m) => m[1]),
-  ].filter((t) => !/^[A-Za-z_][A-Za-z0-9_./-]*$/.test(t.trim()));
+  ]
+    .filter((t) => !/^[A-Za-z_][A-Za-z0-9_./-]*$/.test(t.trim()))
+    // O `>` de um genérico (useState<Jeito>) abre uma captura falsa de código.
+    .filter((t) => !/[;=]|\bconst\b/.test(t));
 }
 
 describe("a tela do Atendente mostra um funcionário, não uma tecnologia", () => {
@@ -184,42 +184,73 @@ describe("a tela do Atendente mostra um funcionário, não uma tecnologia", () =
   }
 });
 
-describe("o \"Ligar no meu WhatsApp\"", () => {
-  // Sem os comentários: o cabeçalho do arquivo também fala do botão.
-  const simulador = fonte("components/atendente/simulador.tsx")
-    .replace(/\/\*[\s\S]*?\*\//g, " ")
-    .replace(/(^|[^:])\/\/.*$/gm, "$1");
-  const botao = simulador.indexOf("Ligar no meu WhatsApp");
+/**
+ * A TELA SE EXPLICA SOZINHA (22/09/2026).
+ *
+ * A primeira versão tinha três passos, três conversas lado a lado, o mesmo
+ * horário dito três vezes e um parágrafo em cada cartão. O fundador chamou de
+ * "contaminada", e o objetivo virou um só: um produto tão claro que se explica
+ * sozinho. Esta trava impede o parágrafo de voltar.
+ */
+describe("a tela do Atendente não explica a si mesma", () => {
+  const MAX_FRASE = 130;
 
-  it("só aparece depois do primeiro teste", () => {
-    expect(botao).toBeGreaterThan(-1);
-    expect(simulador.slice(Math.max(0, botao - 1500), botao)).toMatch(/\btestado\b/);
-  });
+  for (const tela of TELAS_DO_ATENDENTE) {
+    it(`${tela}: nenhuma frase na tela passa de ${MAX_FRASE} caracteres`, () => {
+      const longas = visivel(fonte(tela))
+        .map((t) => t.replace(/\$\{[^}]*\}/g, "…").replace(/\s+/g, " ").trim())
+        .filter((t) => t.length > MAX_FRASE);
+      expect(longas, longas.join("\n")).toEqual([]);
+    });
+  }
 
-  it("vem com a frase honesta sobre a conexão por QR Code, perto do botão", () => {
-    const perto = simulador.slice(Math.max(0, botao - 2500), botao + 2500);
-    expect(perto).toContain("não é a oficial do WhatsApp");
-    expect(perto).toMatch(/reduz o risco, mas não zera/);
-  });
-
-  it("sem WhatsApp, abre a conexão em vez de recusar", () => {
-    expect(simulador).toContain("ModalConectarWhatsApp");
-  });
-
-  it("a recusa da cobrança vira botão, com o caminho que resolve", () => {
-    expect(simulador).toMatch(/recusa\.acao\.href/);
+  it("é uma tela só: sem passo a passo e sem botão de continuar", () => {
+    const pagina = fonte("app/painel/atendente/page.tsx");
+    expect(pagina).not.toMatch(/Passo \d|PASSOS|Continuar para/);
   });
 });
 
-describe("o passo 1 mostra a mesma conversa nos três jeitos", () => {
-  const passo = fonte("components/atendente/passo-jeito.tsx");
+describe("o celular é a explicação", () => {
+  const celular = fonte("components/atendente/celular.tsx");
 
-  it("usa a conversa de exemplo do motor, e diz quando os horários são de exemplo", () => {
-    expect(passo).toContain("conversaDeExemplo(");
-    expect(passo).toMatch(/ehExemplo/);
+  it("abre com a conversa de exemplo do motor, com os dados do negócio, e se declara exemplo", () => {
+    expect(celular).toContain("conversaDeExemplo(");
+    expect(celular).toMatch(/: "exemplo"/);
+  });
+
+  it("e o dono testa ali mesmo, com o motor de verdade", () => {
+    expect(celular).toContain("/api/atendente/simular");
   });
 
   it("oferece ouvir em voz alta quando o navegador tem voz", () => {
-    expect(passo).toContain("speechSynthesis");
+    expect(celular).toContain("speechSynthesis");
+  });
+});
+
+describe("o \"Ligar no meu WhatsApp\"", () => {
+  // Sem os comentários: o cabeçalho do arquivo também fala do botão.
+  const ligar = fonte("components/atendente/ligar.tsx")
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/(^|[^:])\/\/.*$/gm, "$1");
+
+  it("só liga depois do primeiro teste", () => {
+    expect(ligar).toContain("Ligar no meu WhatsApp");
+    expect(ligar).toMatch(/disabled=\{!testado/);
+  });
+
+  it("a frase honesta sobre o QR Code aparece na hora de decidir, antes de confirmar", () => {
+    const aviso = ligar.indexOf("não é a oficial do WhatsApp");
+    const confirmar = ligar.indexOf("Ligar agora");
+    expect(aviso).toBeGreaterThan(-1);
+    expect(ligar).toMatch(/reduz o risco, mas não zera/);
+    expect(confirmar).toBeGreaterThan(aviso);
+  });
+
+  it("sem WhatsApp, abre a conexão em vez de recusar", () => {
+    expect(ligar).toContain("ModalConectarWhatsApp");
+  });
+
+  it("a recusa da cobrança vira botão, com o caminho que resolve", () => {
+    expect(ligar).toMatch(/recusa\.acao\.href/);
   });
 });

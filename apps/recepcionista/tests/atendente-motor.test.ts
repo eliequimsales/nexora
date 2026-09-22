@@ -213,9 +213,18 @@ describe("pedido de horário", () => {
     expect(s.estado).toBeNull();
   });
 
-  it("sem serviço cadastrado, oferece o atendimento de 30 minutos, sem preço", async () => {
-    const s = await responder(entrada("tem horário amanhã?", { fatos: { ...FATOS, servicos: [] } }), deps);
-    expect(s.mensagens[0]).toContain("Tenho estes horários para Atendimento (30 min) amanhã:");
+  // Sem serviço, o horário é de 30 minutos — mas o cliente não lê um serviço
+  // que o dono nunca cadastrou ("horários para Atendimento").
+  it("sem serviço cadastrado, oferece horários sem inventar nome de serviço", async () => {
+    const fatos = { ...FATOS, servicos: [] };
+    const oferta = await responder(entrada("tem horário amanhã?", { fatos }), deps);
+    expect(oferta.mensagens[0]).toContain("Tenho estes horários amanhã:");
+    expect(oferta.mensagens[0]).not.toMatch(/Atendimento|30 min/);
+    expect(deps.livres.mock.calls[0][0].servico.duracaoMin).toBe(30);
+
+    const s = await responder(entrada("2", { estado: oferta.estado, fatos }), deps);
+    expect(s.mensagens[0]).toContain("Prontinho! Quarta, 23/09, às 10h30 com Léo.");
+    expect(s.mensagens[0]).not.toContain("Atendimento");
   });
 
   it("o \"sim\" depois do convite mostra os horários", async () => {
