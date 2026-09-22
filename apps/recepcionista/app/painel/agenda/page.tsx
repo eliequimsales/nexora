@@ -194,32 +194,25 @@ export default function PaginaAgenda() {
 
   // Lista consolidada de profissionais para exibição em colunas
   const profissionaisExibidos = useMemo(() => {
+    if (profissionais.length === 0) {
+      return [{ nome: "Atendimento Geral", cargo: "Profissional" }];
+    }
+
     const list: { nome: string; cargo: string }[] = [];
     const nomesAdicionados = new Set<string>();
 
     for (const p of profissionais) {
-      if (!nomesAdicionados.has(p.nome)) {
-        nomesAdicionados.add(p.nome);
-        list.push({ nome: p.nome, cargo: p.cargo || "Profissional" });
+      const nomeTrim = p.nome.trim();
+      if (nomeTrim && !nomesAdicionados.has(nomeTrim)) {
+        nomesAdicionados.add(nomeTrim);
+        list.push({ nome: nomeTrim, cargo: p.cargo || "Profissional" });
       }
     }
 
-    // Se houver algum agendamento com profissional que não esteja cadastrado na lista
-    for (const ag of agendamentos) {
-      if (ag.profissional && !nomesAdicionados.has(ag.profissional)) {
-        nomesAdicionados.add(ag.profissional);
-        list.push({ nome: ag.profissional, cargo: "Profissional" });
-      }
-    }
-
-    if (list.length === 0) {
-      return [
-        { nome: "Atendimento Geral", cargo: "Profissional" },
-      ];
-    }
-
-    return list;
-  }, [profissionais, agendamentos]);
+    return list.length > 0
+      ? list
+      : [{ nome: "Atendimento Geral", cargo: "Profissional" }];
+  }, [profissionais]);
 
   // Abrir modal de novo agendamento para um slot específico
   const abrirNovoParaSlot = (horario: string, profissionalNome: string) => {
@@ -465,14 +458,17 @@ export default function PaginaAgenda() {
   // Mapa rápido de agendamentos: [horario][profissional]
   const mapaGrade = useMemo(() => {
     const mapa: Record<string, Record<string, AgendamentoItem>> = {};
+    const nomesValidos = new Set(profissionaisExibidos.map((p) => p.nome));
+    const padraoNome = profissionaisExibidos[0]?.nome || "Atendimento Geral";
+
     for (const ag of agendamentos) {
       if (ag.status === "CANCELADO") continue;
       if (!mapa[ag.horaInicio]) mapa[ag.horaInicio] = {};
-      const prof = ag.profissional || "Profissional";
+      const prof = nomesValidos.has(ag.profissional) ? ag.profissional : padraoNome;
       mapa[ag.horaInicio][prof] = ag;
     }
     return mapa;
-  }, [agendamentos]);
+  }, [agendamentos, profissionaisExibidos]);
 
   // Contagem de atendimentos pendentes de lembrete
   const pendentesLembrete = useMemo(() => {
@@ -854,9 +850,11 @@ export default function PaginaAgenda() {
                           {ag.nome}
                         </span>
 
-                        <span className="rounded-md border border-panel-line bg-panel-bg px-2 py-0.5 text-[10px] text-panel-sub">
-                          {ag.profissional}
-                        </span>
+                        {profissionais.length > 0 && (
+                          <span className="rounded-md border border-panel-line bg-panel-bg px-2 py-0.5 text-[10px] text-panel-sub">
+                            {ag.profissional}
+                          </span>
+                        )}
 
                         {isConcluido ? (
                           <span className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
@@ -977,8 +975,7 @@ export default function PaginaAgenda() {
               </button>
             </div>
 
-            <div className="mt-4 space-y-3">
-              <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className={`grid gap-3 text-xs ${profissionais.length > 0 ? "grid-cols-2" : "grid-cols-1"}`}>
                 <div className="rounded-xl border border-panel-line bg-panel-card p-3">
                   <span className="text-panel-sub block text-[10px] uppercase">Horário</span>
                   <strong className="text-panel-ink font-mono text-sm">
@@ -986,12 +983,14 @@ export default function PaginaAgenda() {
                   </strong>
                 </div>
 
-                <div className="rounded-xl border border-panel-line bg-panel-card p-3">
-                  <span className="text-panel-sub block text-[10px] uppercase">Profissional</span>
-                  <strong className="text-panel-ink text-sm">
-                    {agendamentoSelecionado.profissional}
-                  </strong>
-                </div>
+                {profissionais.length > 0 && (
+                  <div className="rounded-xl border border-panel-line bg-panel-card p-3">
+                    <span className="text-panel-sub block text-[10px] uppercase">Profissional</span>
+                    <strong className="text-panel-ink text-sm">
+                      {agendamentoSelecionado.profissional}
+                    </strong>
+                  </div>
+                )}
               </div>
 
               <div className="rounded-xl border border-panel-line bg-panel-card p-3 space-y-2 text-xs">
@@ -1139,22 +1138,24 @@ export default function PaginaAgenda() {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-panel-sub">
-                  Profissional da equipe *
-                </label>
-                <select
-                  value={formProfissional}
-                  onChange={(e) => setFormProfissional(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-panel-line bg-panel-bg px-3 py-2 text-xs text-panel-ink focus:border-amber focus:outline-none"
-                >
-                  {profissionaisExibidos.map((p) => (
-                    <option key={p.nome} value={p.nome}>
-                      {p.nome} {p.cargo && p.cargo !== "Profissional" ? `(${p.cargo})` : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {profissionais.length > 1 && (
+                <div>
+                  <label className="block text-xs font-medium text-panel-sub">
+                    Profissional da equipe *
+                  </label>
+                  <select
+                    value={formProfissional}
+                    onChange={(e) => setFormProfissional(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-panel-line bg-panel-bg px-3 py-2 text-xs text-panel-ink focus:border-amber focus:outline-none"
+                  >
+                    {profissionaisExibidos.map((p) => (
+                      <option key={p.nome} value={p.nome}>
+                        {p.nome} {p.cargo && p.cargo !== "Profissional" ? `(${p.cargo})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-medium text-panel-sub">
