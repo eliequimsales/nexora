@@ -183,6 +183,9 @@ export default function PaginaImportar() {
   const [recusa, setRecusa] = useState<Recusa | null>(null);
   const [previa, setPrevia] = useState<Resultado | null>(null);
   const [salvo, setSalvo] = useState<Resultado | null>(null);
+  const [clienteParaRemover, setClienteParaRemover] = useState<string | null>(null);
+  const [removendoId, setRemovendoId] = useState<string | null>(null);
+  const [erroRemocao, setErroRemocao] = useState<string | null>(null);
 
   const carregarCadastrados = async () => {
     try {
@@ -202,6 +205,29 @@ export default function PaginaImportar() {
       // silencioso
     } finally {
       setCarregandoCadastrados(false);
+    }
+  };
+
+  const removerCliente = async (id: string, telefone: string) => {
+    setRemovendoId(id);
+    setErroRemocao(null);
+    try {
+      const res = await fetch("/api/clientes/excluir", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customerId: id, telefone, confirmo: true }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setErroRemocao(json.error ?? "Não consegui remover esse cliente.");
+        return;
+      }
+      setCadastrados((prev) => prev.filter((item) => item.id !== id));
+      setClienteParaRemover(null);
+    } catch {
+      setErroRemocao("Não consegui falar com a internet agora. Tente novamente.");
+    } finally {
+      setRemovendoId(null);
     }
   };
 
@@ -1093,25 +1119,73 @@ export default function PaginaImportar() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 self-start sm:self-center">
-                    {!c.optOut && !c.mensagemReativacao && travaMensagem && (
-                      <Link
-                        href={travaMensagem.acao.href}
-                        className="rounded-lg border border-amber/60 bg-amber/15 px-3 py-1.5 text-xs font-semibold text-panel-ink transition hover:bg-amber/25"
-                      >
-                        Liberar mensagem pronta
-                      </Link>
-                    )}
-                    {!c.optOut && zapLink && (
-                      <a
-                        href={zapLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => trackFirstRecoverySent()}
-                        className="rounded-lg bg-[#25D366] hover:bg-[#20ba59] px-3 py-1.5 text-xs font-semibold text-white transition flex items-center gap-1.5 shadow-sm"
-                      >
-                        <span>💬</span> Chamar no WhatsApp
-                      </a>
+                  <div className="flex items-center gap-2 self-start sm:self-center flex-wrap">
+                    {clienteParaRemover === c.id ? (
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-red-50 border border-red-200 rounded-xl p-2">
+                        <span className="text-xs text-red-700 font-medium">
+                          Remover este cliente?
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => void removerCliente(c.id, c.telefone)}
+                            disabled={removendoId === c.id}
+                            className="rounded-lg bg-red-600 hover:bg-red-700 px-2.5 py-1 text-xs font-semibold text-white transition disabled:opacity-50"
+                          >
+                            {removendoId === c.id ? "Removendo…" : "Sim, remover"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setClienteParaRemover(null);
+                              setErroRemocao(null);
+                            }}
+                            disabled={removendoId === c.id}
+                            className="rounded-lg border border-panel-line bg-white hover:bg-panel-bg px-2.5 py-1 text-xs font-medium text-panel-sub transition"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                        {erroRemocao && (
+                          <span className="text-xs text-red-600 font-medium w-full">
+                            {erroRemocao}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        {!c.optOut && !c.mensagemReativacao && travaMensagem && (
+                          <Link
+                            href={travaMensagem.acao.href}
+                            className="rounded-lg border border-amber/60 bg-amber/15 px-3 py-1.5 text-xs font-semibold text-panel-ink transition hover:bg-amber/25"
+                          >
+                            Liberar mensagem pronta
+                          </Link>
+                        )}
+                        {!c.optOut && zapLink && (
+                          <a
+                            href={zapLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() => trackFirstRecoverySent()}
+                            className="rounded-lg bg-[#25D366] hover:bg-[#20ba59] px-3 py-1.5 text-xs font-semibold text-white transition flex items-center gap-1.5 shadow-sm"
+                          >
+                            <span>💬</span> Chamar no WhatsApp
+                          </a>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setClienteParaRemover(c.id);
+                            setErroRemocao(null);
+                          }}
+                          className="rounded-lg border border-panel-line bg-white hover:border-red-300 hover:text-red-600 hover:bg-red-50/40 px-2.5 py-1.5 text-xs font-medium text-panel-sub transition flex items-center gap-1"
+                          title="Remover cliente"
+                        >
+                          <span>🗑️</span>
+                          <span>Remover</span>
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>

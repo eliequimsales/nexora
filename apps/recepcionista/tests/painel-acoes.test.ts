@@ -142,6 +142,12 @@ describe("o botão de exemplo não suja a lista de verdade", () => {
     expect(fonte).toContain("Meus clientes cadastrados");
     expect(fonte).toContain("RISCO_CRITICO");
   });
+
+  it("permite remover um cliente diretamente na lista de clientes cadastrados com confirmação", () => {
+    expect(fonte).toContain("removerCliente");
+    expect(fonte).toContain("Remover este cliente?");
+    expect(fonte).toContain("Sim, remover");
+  });
 });
 
 describe("a Onda entrega o gesto em um clique e avisa o que é definitivo", () => {
