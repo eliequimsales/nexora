@@ -102,3 +102,23 @@ describe("isolamento de horários por profissional", () => {
   });
 });
 
+describe("serviço opcional no agendamento público", () => {
+  const fonteRota = readFileSync(join(__dirname, "../app/api/agendar/[slug]/route.ts"), "utf8");
+  const fontePagina = readFileSync(join(__dirname, "../app/agendar/[slug]/page.tsx"), "utf8");
+
+  it("o schema aceita agendamento sem serviceId ou com serviço customizado", () => {
+    expect(fonteRota).toContain("serviceId: z.string().trim().optional().nullable()");
+    expect(fonteRota).toContain("servicoNome: z.string().trim().max(100).optional().nullable()");
+  });
+
+  it("quando nenhum serviço é escolhido, assume atendimento geral com 30 minutos", () => {
+    expect(fonteRota).toContain("Atendimento Geral");
+    expect(fonteRota).toContain("durationMin: 30");
+  });
+
+  it("a página de agendamento não bloqueia confirmação pela falta de serviço", () => {
+    expect(fontePagina).not.toContain("servicoId &&\n    dia &&");
+    expect(fontePagina).toContain("podeConfirmar =");
+  });
+});
+

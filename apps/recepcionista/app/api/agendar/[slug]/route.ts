@@ -42,7 +42,8 @@ const agendarSchema = z.object({
     .trim()
     .transform((t) => t.replace(/\D/g, ""))
     .refine((t) => t.length >= 10 && t.length <= 13, "Telefone inválido"),
-  serviceId: z.string().trim().min(1),
+  serviceId: z.string().trim().optional().nullable(),
+  servicoNome: z.string().trim().max(100).optional().nullable(),
   // "2026-06-01"
   dia: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida"),
   // "09:30"
@@ -238,7 +239,7 @@ export async function POST(
         { status: 400 },
       );
     }
-    const { nome, telefone, serviceId, dia, hora } = parsed.data;
+    const { nome, telefone, serviceId, servicoNome, dia, hora } = parsed.data;
 
     // 3. Teto por telefone: impede disparos em massa fingindo ser o mesmo cliente
     const politicaTel = { limit: 5, windowMs: 15 * 60_000 };
@@ -255,10 +256,13 @@ export async function POST(
       ? negocio.services
       : [{ id: "atendimento", name: "Atendimento Geral", durationMin: 30, priceCents: 0 }];
 
-    const servico = servicosDisponiveis.find((s) => s.id === serviceId);
-    if (!servico) {
-      return NextResponse.json({ error: "Serviço indisponível" }, { status: 400 });
-    }
+    const servicoNomeInformado = servicoNome?.trim();
+    const servico = (serviceId ? servicosDisponiveis.find((s) => s.id === serviceId) : null) ?? {
+      id: "atendimento",
+      name: servicoNomeInformado || "Atendimento Geral",
+      durationMin: 30,
+      priceCents: 0,
+    };
 
     const diaData = new Date(`${dia}T00:00:00.000Z`);
     const agora = new Date();
