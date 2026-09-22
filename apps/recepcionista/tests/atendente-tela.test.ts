@@ -208,6 +208,13 @@ describe("a tela do Atendente não explica a si mesma", () => {
     const pagina = fonte("app/painel/atendente/page.tsx");
     expect(pagina).not.toMatch(/Passo \d|PASSOS|Continuar para/);
   });
+
+  // A coluna "auto" de uma grade cresce até o item mais largo: no celular, o
+  // celular e os cartões passavam da borda da tela.
+  it("cabe no celular: a coluna única encolhe até a tela", () => {
+    const pagina = fonte("app/painel/atendente/page.tsx");
+    expect(pagina).toMatch(/className="grid grid-cols-1 /);
+  });
 });
 
 describe("o celular é a explicação", () => {

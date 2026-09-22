@@ -18,14 +18,32 @@ type Ajuste = Partial<{ marcaDireto: boolean; expediente: boolean; endereco: str
 
 const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
 
-function Linha({ rotulo, detalhe, children }: { rotulo: string; detalhe?: string; children: React.ReactNode }) {
+function Linha({
+  rotulo,
+  detalhe,
+  empilhar = false,
+  children,
+}: {
+  rotulo: string;
+  /** Embaixo da linha inteira: espremido ao lado do controle, virava quatro linhas no celular. */
+  detalhe?: string;
+  /** No celular, o controle desce para baixo do rótulo — para o que não cabe ao lado dele. */
+  empilhar?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex items-center justify-between gap-4 px-5 py-3.5">
-      <div className="min-w-0">
-        <p className="text-sm font-medium text-panel-ink">{rotulo}</p>
-        {detalhe && <p className="mt-0.5 text-xs text-panel-sub">{detalhe}</p>}
+    <div className="px-5 py-3.5">
+      <div
+        className={
+          empilhar
+            ? "flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+            : "flex items-center justify-between gap-4"
+        }
+      >
+        <p className="min-w-0 text-sm font-medium text-panel-ink">{rotulo}</p>
+        <div className="shrink-0">{children}</div>
       </div>
-      <div className="shrink-0">{children}</div>
+      {detalhe && <p className="mt-1 text-xs text-panel-sub">{detalhe}</p>}
     </div>
   );
 }
@@ -58,6 +76,32 @@ function Marca({ ok }: { ok: boolean }) {
   );
 }
 
+/** Uma linha do "O que ele sabe". No celular, o valor desce para baixo do rótulo em vez de sumir cortado. */
+function LinhaDoDado({
+  ok,
+  rotulo,
+  valor,
+  children,
+}: {
+  ok: boolean;
+  rotulo: string;
+  valor: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-3 px-5 py-3">
+      <Marca ok={ok} />
+      <div className="min-w-0 flex-1 sm:flex sm:items-center sm:gap-3">
+        <p className="text-sm font-medium text-panel-ink sm:w-20 sm:shrink-0">{rotulo}</p>
+        <p className={`break-words text-sm sm:min-w-0 sm:flex-1 sm:truncate ${ok ? "text-panel-sub" : "text-amber-deep"}`}>
+          {valor}
+        </p>
+      </div>
+      <div className="shrink-0">{children}</div>
+    </div>
+  );
+}
+
 function Dado({
   ok,
   rotulo,
@@ -72,14 +116,11 @@ function Dado({
   acao: string;
 }) {
   return (
-    <div className="flex items-center gap-3 px-5 py-3">
-      <Marca ok={ok} />
-      <p className="w-20 shrink-0 text-sm font-medium text-panel-ink">{rotulo}</p>
-      <p className={`min-w-0 flex-1 truncate text-sm ${ok ? "text-panel-sub" : "text-amber-deep"}`}>{valor}</p>
-      <Link href={href} className="shrink-0 text-xs font-semibold text-amber-deep hover:underline">
+    <LinhaDoDado ok={ok} rotulo={rotulo} valor={valor}>
+      <Link href={href} className="text-xs font-semibold text-amber-deep hover:underline">
         {acao}
       </Link>
-    </div>
+    </LinhaDoDado>
   );
 }
 
@@ -129,21 +170,18 @@ function DadoDoCadastro({
   }
 
   return (
-    <div className="flex items-center gap-3 px-5 py-3">
-      <Marca ok={Boolean(valor)} />
-      <p className="w-20 shrink-0 text-sm font-medium text-panel-ink">{rotulo}</p>
-      <p className={`min-w-0 flex-1 truncate text-sm ${valor ? "text-panel-sub" : "text-amber-deep"}`}>{valor || "falta"}</p>
+    <LinhaDoDado ok={Boolean(valor)} rotulo={rotulo} valor={valor || "falta"}>
       <button
         type="button"
         onClick={() => {
           setTexto(valor);
           setEditando(true);
         }}
-        className="shrink-0 text-xs font-semibold text-amber-deep hover:underline"
+        className="text-xs font-semibold text-amber-deep hover:underline"
       >
         {valor ? "Mudar" : "Adicionar"}
       </button>
-    </div>
+    </LinhaDoDado>
   );
 }
 
@@ -180,8 +218,8 @@ export function Ajustes({
             className="w-40 rounded-lg border border-panel-line bg-white px-3 py-1.5 text-right text-sm text-panel-ink placeholder:text-panel-sub/60 focus:border-amber focus:outline-none"
           />
         </Linha>
-        <Linha rotulo="Jeito">
-          <div role="radiogroup" aria-label="Jeito de falar" className="inline-flex rounded-xl bg-panel-bg p-1">
+        <Linha rotulo="Jeito" empilhar>
+          <div role="radiogroup" aria-label="Jeito de falar" className="flex rounded-xl bg-panel-bg p-1 sm:inline-flex">
             {JEITOS.map((j) => (
               <button
                 key={j}
@@ -189,7 +227,7 @@ export function Ajustes({
                 role="radio"
                 aria-checked={jeito === j}
                 onClick={() => aoMudarJeito(j)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                className={`flex-auto rounded-lg px-2 py-1.5 text-xs font-semibold transition sm:flex-none sm:px-3 ${
                   jeito === j ? "bg-white text-panel-ink shadow-sm" : "text-panel-sub hover:text-panel-ink"
                 }`}
               >

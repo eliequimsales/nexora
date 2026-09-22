@@ -146,7 +146,8 @@ export default function PaginaDoAtendente() {
         </p>
       )}
 
-      <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+      {/* grid-cols-1 é minmax(0, 1fr): no celular a coluna encolhe até a tela, em vez de crescer até o item mais largo. */}
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
         <Celular tela={tela} nome={nome} jeito={jeito} aoTestar={() => setTestado(true)} />
 
         <div className="space-y-4">
