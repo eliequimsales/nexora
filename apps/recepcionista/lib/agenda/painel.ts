@@ -147,6 +147,25 @@ export type AtualizarStatusInput = {
  * Cadastra um agendamento na agenda.
  * Se o cliente ainda não existir na empresa, cadastra automaticamente (source: "PAINEL").
  * Se já foi atendido (ou marcado para o passado), registra imediatamente a visita com valor.
+/**
+ * Extrai com segurança o nome do profissional salvo no campo notes do agendamento.
+ */
+export function extrairProfissional(notes: string | null | undefined): string {
+  if (notes && notes.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(notes);
+      if (parsed.profissional && typeof parsed.profissional === "string") {
+        return parsed.profissional.trim();
+      }
+    } catch {
+      // mantém padrão
+    }
+  }
+  return "Profissional";
+}
+
+/**
+ * Cria um novo agendamento com validação de conflito de horário por profissional.
  */
 export async function criarAgendamento(companyId: string, input: CriarAgendamentoInput) {
   const telefoneLimpo = input.telefone.replace(/\D/g, "");
@@ -165,6 +184,45 @@ export async function criarAgendamento(companyId: string, input: CriarAgendament
   });
 
   return prisma.$transaction(async (tx) => {
+    // 0. Validação de conflito: impede agendar o mesmo profissional no mesmo horário
+    const agendamentosNoHorario =
+      (await tx.appointment.findMany({
+        where: {
+          companyId,
+          status: { in: ["MARCADO", "CONFIRMADO"] },
+          startsAt: { lt: endsAt },
+          endsAt: { gt: startsAt },
+        },
+        select: {
+          id: true,
+          notes: true,
+          customer: { select: { name: true } },
+        },
+      })) || [];
+
+    const listaProfissionais = (await listarProfissionais(companyId)) || [];
+
+    if (listaProfissionais.length === 0) {
+      if (agendamentosNoHorario.length > 0) {
+        const clienteConflito = agendamentosNoHorario[0].customer?.name || "outro cliente";
+        throw new Error(
+          `Já existe um agendamento com ${clienteConflito} nesse horário (${input.hora}). Escolha outro horário.`,
+        );
+      }
+    } else {
+      const conflito = agendamentosNoHorario.find((ag) => {
+        const profAg = extrairProfissional(ag.notes);
+        return profAg.toLowerCase() === profissional.toLowerCase();
+      });
+
+      if (conflito) {
+        const clienteConflito = conflito.customer?.name || "outro cliente";
+        throw new Error(
+          `O profissional ${profissional} já possui um agendamento com ${clienteConflito} nesse horário (${input.hora}). Escolha outro horário ou outro profissional.`,
+        );
+      }
+    }
+
     // 1. Busca cliente por qualquer variante de telefone
     const variantes = variantesDeTelefone(telefoneLimpo);
     let cliente = await tx.customer.findFirst({
