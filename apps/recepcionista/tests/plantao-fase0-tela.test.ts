@@ -46,9 +46,13 @@ describe("a tela de configurações depois do Atendente Virtual", () => {
     expect(semComentarios).not.toMatch(/Plantão/);
   });
 
-  it("o estado das respostas automáticas vem do banco, não de um texto fixo", () => {
-    expect(semComentarios).toMatch(/setAtendenteLigado\(Boolean\(profile\.plantaoAtivo\)\)/);
-    expect(readFileSync(join(RAIZ, "app/api/company/profile/route.ts"), "utf8")).toMatch(/plantaoAtivo:\s*true/);
+  it("o estado das respostas automáticas vem do banco, pela mesma regra do Atendente", () => {
+    expect(semComentarios).toMatch(
+      /setAtendenteLigado\(Boolean\(profile\.plantaoAtivo && profile\.atendenteLigadoPrimeiraVezEm\)\)/,
+    );
+    const rota = readFileSync(join(RAIZ, "app/api/company/profile/route.ts"), "utf8");
+    expect(rota).toMatch(/plantaoAtivo:\s*true/);
+    expect(rota).toMatch(/atendenteLigadoPrimeiraVezEm:\s*true/);
   });
 
   it("os campos que o Atendente substituiu saíram da tela, mas não do formulário", () => {

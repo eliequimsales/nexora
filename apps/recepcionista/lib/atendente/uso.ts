@@ -25,12 +25,18 @@ export async function usoDoAtendente(
   });
   const primeiraVezEm = perfil?.atendenteLigadoPrimeiraVezEm ?? null;
 
+  // Só linha com resposta é conversa atendida: o aviso de teto grava zero
+  // respostas, para marcar o dia sem entrar na conta.
   const conversasNoMes = await prisma.atendenteAtendimento.count({
-    where: { companyId, dia: { startsWith: mesDoDia(localDe(agora).data) } },
+    where: { companyId, respostas: { gt: 0 }, dia: { startsWith: mesDoDia(localDe(agora).data) } },
   });
   const conversasNaSemana = primeiraVezEm
     ? await prisma.atendenteAtendimento.count({
-        where: { companyId, criadoEm: { gte: primeiraVezEm, lt: fimDaSemanaGratis(primeiraVezEm) } },
+        where: {
+          companyId,
+          respostas: { gt: 0 },
+          criadoEm: { gte: primeiraVezEm, lt: fimDaSemanaGratis(primeiraVezEm) },
+        },
       })
     : 0;
 

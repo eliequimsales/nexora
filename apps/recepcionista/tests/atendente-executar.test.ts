@@ -262,6 +262,7 @@ const db = prisma as unknown as {
 
 const PERFIL = {
   plantaoAtivo: true,
+  atendenteLigadoPrimeiraVezEm: new Date("2026-09-20T12:00:00.000Z"),
   atendenteExpediente: true,
   businessHours: HORARIOS,
   diasFechados: [],
@@ -369,6 +370,15 @@ describe("atender — loja fechada, pedido de horário", () => {
       .mockResolvedValueOnce({ id: "h1", role: "HUMAN" });
     const r = await rodar();
     expect(r).toEqual({ acao: "SILENCIO", motivo: "JA_RESPONDIDA" });
+    expect(enviarWhatsApp).not.toHaveBeenCalled();
+  });
+
+  // A chave ligada por fora do fluxo (sem teste e sem o começo da semana
+  // registrado) responderia de graça para sempre: a semana nunca começaria.
+  it("chave ligada sem passar pelo \"Ligar\": silêncio", async () => {
+    db.companyProfile.findUnique.mockResolvedValue({ ...PERFIL, atendenteLigadoPrimeiraVezEm: null });
+    conversaCom(msg("m1", "CUSTOMER", "tem horário amanhã?", new Date(AGORA.getTime() - MIN)));
+    expect(await rodar()).toEqual({ acao: "SILENCIO", motivo: "DESLIGADO" });
     expect(enviarWhatsApp).not.toHaveBeenCalled();
   });
 

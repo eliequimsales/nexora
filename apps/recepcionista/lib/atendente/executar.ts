@@ -212,6 +212,7 @@ export async function atender(
       where: { companyId: p.companyId },
       select: {
         plantaoAtivo: true,
+        atendenteLigadoPrimeiraVezEm: true,
         atendenteExpediente: true,
         businessHours: true,
         diasFechados: true,
@@ -239,8 +240,10 @@ export async function atender(
     }),
   ]);
   if (!perfil || !conversa) return silencio("SEM_CONVERSA");
-  // Desligado: nem conta nem uso precisam ser lidos.
-  if (!perfil.plantaoAtivo) return silencio("DESLIGADO");
+  // Ligado é o que passou pelo "Ligar": ele exige o teste e grava o começo da
+  // semana grátis. A chave ligada por fora dele responderia de graça para
+  // sempre, porque a semana nunca começaria. Desligado, nem conta nem uso são lidos.
+  if (!perfil.plantaoAtivo || !perfil.atendenteLigadoPrimeiraVezEm) return silencio("DESLIGADO");
 
   const mensagens: MensagemDaConversa[] = [...recentes].reverse();
   const [estadoDaConta, uso, hoje] = await Promise.all([

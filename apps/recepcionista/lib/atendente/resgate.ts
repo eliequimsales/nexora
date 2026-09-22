@@ -211,7 +211,13 @@ async function rodar(agora: Date, estado: EstadoDoResgate): Promise<{ respondida
   const hoje = localDe(agora).data;
 
   const perfis = await prisma.companyProfile.findMany({
-    where: { plantaoAtivo: true, whatsappInstance: { not: null }, whatsappStatus: "CONNECTED" },
+    // Ligado pelo "Ligar" (a mesma regra do executor) e com o WhatsApp de pé.
+    where: {
+      plantaoAtivo: true,
+      atendenteLigadoPrimeiraVezEm: { not: null },
+      whatsappInstance: { not: null },
+      whatsappStatus: "CONNECTED",
+    },
     select: {
       companyId: true,
       atendenteExpediente: true,

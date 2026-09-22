@@ -292,7 +292,7 @@ export default function ConfiguracoesPage() {
         followUpMessage: profile.followUpMessage ?? "",
         maxFollowUps: profile.maxFollowUps ?? 2,
       });
-      setAtendenteLigado(Boolean(profile.plantaoAtivo));
+      setAtendenteLigado(Boolean(profile.plantaoAtivo && profile.atendenteLigadoPrimeiraVezEm));
       setLoading(false);
     })();
   }, []);

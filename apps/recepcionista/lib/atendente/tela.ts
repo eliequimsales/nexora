@@ -222,7 +222,8 @@ export async function telaDoAtendente(companyId: string, agora: Date = new Date(
 
   const acesso = acessoDoAtendente({ estado: estadoDaConta, ...uso, agora });
   const whatsappLigado = Boolean(perfil?.whatsappInstance) && perfil?.whatsappStatus === "CONNECTED";
-  const ligado = perfil?.plantaoAtivo ?? false;
+  // A mesma regra do executor: ligado é o que passou pelo "Ligar".
+  const ligado = Boolean(perfil?.plantaoAtivo && uso.primeiraVezEm);
   const desde = ultimoFechamento(fatos.horarios, fatos.diasFechados, agora);
   const naSemanaGratis = (acesso === "SEMANA_GRATIS" || acesso === "SEMANA_ACABOU") && uso.primeiraVezEm;
 

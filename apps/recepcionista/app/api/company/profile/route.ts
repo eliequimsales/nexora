@@ -47,8 +47,10 @@ export async function GET() {
           followUpDelayHours: true,
           followUpMessage: true,
           maxFollowUps: true,
-          // A tela diz a verdade sobre as respostas automáticas: ligadas ou não.
+          // A tela diz a verdade sobre as respostas automáticas: ligadas ou não,
+          // pela mesma regra do Atendente (lib/atendente/executar.ts).
           plantaoAtivo: true,
+          atendenteLigadoPrimeiraVezEm: true,
         },
       },
     },

@@ -239,10 +239,11 @@ afterEach(() => {
 });
 
 describe("rodadaDoResgate", () => {
-  it("só olha empresas com o Atendente e o WhatsApp ligados", async () => {
+  it("só olha empresas com o Atendente ligado pelo \"Ligar\" e o WhatsApp ligado", async () => {
     await rodadaDoResgate(TERCA_10H06);
     expect(db.companyProfile.findMany.mock.calls[0][0].where).toEqual({
       plantaoAtivo: true,
+      atendenteLigadoPrimeiraVezEm: { not: null },
       whatsappInstance: { not: null },
       whatsappStatus: "CONNECTED",
     });

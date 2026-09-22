@@ -154,6 +154,18 @@ describe("uso do Atendente", () => {
     });
   });
 
+  // O aviso de teto grava a linha do dia com zero respostas: marca "já avisei
+  // hoje", mas não é conversa atendida — nem no mês, nem na semana grátis.
+  it("o aviso de teto não conta como conversa", async () => {
+    const primeira = new Date("2026-09-20T12:00:00.000Z");
+    db.companyProfile.findUnique.mockResolvedValue({ atendenteLigadoPrimeiraVezEm: primeira });
+    db.atendenteAtendimento.count.mockResolvedValueOnce(200).mockResolvedValueOnce(12);
+    await usoDoAtendente("c1", new Date("2026-09-23T01:00:00.000Z"));
+    for (const chamada of db.atendenteAtendimento.count.mock.calls) {
+      expect(chamada[0].where.respostas).toEqual({ gt: 0 });
+    }
+  });
+
   it("nunca ligado: nada na semana grátis", async () => {
     db.companyProfile.findUnique.mockResolvedValue({ atendenteLigadoPrimeiraVezEm: null });
     db.atendenteAtendimento.count.mockResolvedValueOnce(0);
