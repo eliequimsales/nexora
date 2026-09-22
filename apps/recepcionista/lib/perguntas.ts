@@ -18,10 +18,43 @@ import { TAMANHO_DA_ONDA } from "@/lib/recuperacao/onda";
  * ninguém voltar?" não pode dizer uma coisa na home e outra na página da
  * barbearia, e cada número vem da constante que o código aplica — resposta de
  * FAQ escrita à mão é a primeira a ficar para trás quando a regra muda.
+ *
+ * A home mostra só quatro (PERGUNTAS_DA_HOME), as dúvidas que ainda seguram
+ * quem já leu a página inteira. São os MESMOS objetos da lista completa: mudar
+ * a resposta aqui muda nos dois lugares.
  */
 
 export type Pergunta = { pergunta: string; resposta: string };
 export type NaoE = { titulo: string; explicacao: string };
+
+const CARTAO: Pergunta = {
+  pergunta: "Preciso de cartão de crédito para começar?",
+  resposta: `Não. O diagnóstico, a primeira Onda e a primeira semana do Atendente não pedem cartão. Para continuar depois, dá para pagar ${emReais(PLANOS.pix_30_dias.valorCents)} por ${PLANOS.pix_30_dias.dias} dias no Pix, sem renovação automática, ou ${emReais(PRECO_ANUAL_CENTS)} por 12 meses à vista. No cartão, a assinatura é de ${emReais(PRECO_MENSAL_CENTS)} por mês.`,
+};
+
+// A conexão do Atendente é por QR Code, que não é a oficial. Prometer que o
+// número nunca será restringido seria vender o que não temos como cumprir.
+const RISCO: Pergunta = {
+  pergunta: "Meu WhatsApp corre risco de ser banido?",
+  resposta: `Na reativação, quem manda é você, do seu próprio WhatsApp: ${TAMANHO_DA_ONDA} mensagens por semana, para quem já foi seu cliente — o ritmo de uma pessoa, não o de uma ferramenta de disparo. O Atendente Virtual usa uma conexão por QR Code que não é a oficial do WhatsApp, e números podem ser restringidos. Como ele só responde quem escreveu primeiro, no máximo ${MAX_RESPOSTAS_POR_DIA} respostas por conversa por dia, e nunca manda mensagem sozinho, o risco diminui — mas não zera.`,
+};
+
+// O importador lê texto: planilha, lista colada, caderno digitado. Foto de
+// caderno só vira lista com alguém digitando, então a página não promete isso.
+const SEM_PLANILHA: Pergunta = {
+  pergunta: "E se eu não tiver planilha nem computador?",
+  resposta:
+    "Funciona pelo celular. Você digita a lista do caderno do jeito que der: um cliente por linha, nome e telefone, com a data da última visita e o valor se você lembrar. A Nexora organiza e diz em português o que não conseguiu ler.",
+};
+
+const BESTEIRA: Pergunta = {
+  pergunta: "O Atendente Virtual responde besteira para os meus clientes?",
+  resposta:
+    "Preço, horário e serviço saem só do seu cadastro e da sua agenda, e os números são conferidos antes de a mensagem sair. O que ele não sabe, ele não inventa: diz que vai confirmar, anota a pergunta para você e avisa quando a equipe volta.",
+};
+
+/** As quatro dúvidas que a home responde, na ordem em que elas aparecem na cabeça de quem vai começar. */
+export const PERGUNTAS_DA_HOME: Pergunta[] = [CARTAO, RISCO, SEM_PLANILHA, BESTEIRA];
 
 export const PERGUNTAS_FREQUENTES: Pergunta[] = [
   {
@@ -29,11 +62,13 @@ export const PERGUNTAS_FREQUENTES: Pergunta[] = [
     resposta:
       "Para quem sumiu, não: na reativação, ela escreve a mensagem, e você lê e manda do seu próprio WhatsApp. É de propósito — número que manda muita mensagem não pedida pode ser limitado ou bloqueado pelo WhatsApp, e o número do seu negócio é a sua agenda. O Atendente Virtual, se você ligar, só responde quem escreveu primeiro: nunca começa conversa e nunca insiste.",
   },
+  RISCO,
   {
     pergunta: "O Atendente Virtual finge ser uma pessoa?",
     resposta:
       "Não. Na primeira resposta do dia, ele se apresenta como atendente virtual do seu negócio, com o nome que você escolher. Preço, horário e endereço ele só diz o que está no seu cadastro, e horário livre ele tira da sua agenda de verdade.",
   },
+  BESTEIRA,
   {
     pergunta: "Ele atende também com a loja aberta?",
     resposta: `Só se ninguém responder em ${MINUTOS_SEM_RESPOSTA} minutos — e só se você deixar essa opção ligada. Com a loja aberta, a mensagem é sua. Se você responder pelo celular, ele sai daquela conversa.`,
@@ -44,21 +79,15 @@ export const PERGUNTAS_FREQUENTES: Pergunta[] = [
       "Ele diz que não tem aquela informação confirmada, anota a pergunta para você e avisa quando a equipe volta. Nunca inventa preço, prazo ou desconto. O que você ensinar, ele passa a responder.",
   },
   {
-    pergunta: "Meu número corre risco com o Atendente?",
-    resposta: `A conexão por QR Code não é a oficial do WhatsApp, e números podem ser restringidos. O Atendente só responde quem escreveu primeiro, no máximo ${MAX_RESPOSTAS_POR_DIA} respostas por conversa por dia, e nunca manda mensagem sozinho — isso reduz o risco, mas não zera.`,
-  },
-  {
     pergunta: "O que acontece depois da semana grátis do Atendente?",
     resposta: `A primeira semana é por nossa conta, sem cartão: ${SEMANA_GRATIS_DIAS} dias ou ${SEMANA_GRATIS_CONVERSAS} conversas, o que vier primeiro, a partir de quando você ligar. Depois, ele para de responder até você escolher um plano — e você vê o que ele fez na semana antes de decidir. No plano de ${emReais(PRECO_MENSAL_CENTS)} por mês, ele atende até ${TETO_CONVERSAS_MES} conversas por mês.`,
   },
-  {
-    pergunta: "Preciso de cartão de crédito?",
-    resposta: `Não para começar: o diagnóstico e a primeira Onda são grátis e não pedem cartão. Para as próximas Ondas, dá para pagar ${emReais(PLANOS.pix_30_dias.valorCents)} por ${PLANOS.pix_30_dias.dias} dias no Pix, sem renovação automática, ou ${emReais(PRECO_ANUAL_CENTS)} por 12 meses à vista. No cartão, a assinatura é de ${emReais(PRECO_MENSAL_CENTS)} por mês.`,
-  },
+  CARTAO,
   {
     pergunta: "E se ninguém voltar?",
     resposta: `Aí o dinheiro volta para você. Com a Garantia Dinheiro Recuperado, se em ${GARANTIA_DIAS} dias você mandar as mensagens de ${ONDAS_MINIMAS} ondas, marcar quem voltou e o dinheiro que voltou não chegar a ${emReais(PRECO_MENSAL_CENTS)}, devolvemos tudo o que você pagou. Vale uma vez por negócio, para lista com pelo menos ${MIN_SUMIDOS} clientes sumidos e ${emReais(MIN_RECUPERAVEL_CENTS)} para recuperar.`,
   },
+  SEM_PLANILHA,
   {
     pergunta: "Como eu cancelo?",
     resposta:
@@ -79,34 +108,27 @@ export const PERGUNTAS_FREQUENTES: Pergunta[] = [
   },
 ];
 
+/**
+ * OS TRÊS NÃOS QUE SEPARAM A NEXORA DO RESTO.
+ *
+ * São os três medos de quem já foi queimado: o disparo que derruba o número, o
+ * robô de menu que afasta cliente, e a ferramenta que exige um mês de
+ * configuração. A honestidade da estimativa não está aqui: ela está na
+ * calculadora, que diz, nela mesma, que não é receita garantida.
+ */
 export const O_QUE_A_NEXORA_NAO_E: NaoE[] = [
   {
     titulo: "Não é disparo em massa",
-    explicacao: `São ${TAMANHO_DA_ONDA} mensagens por semana, escolhidas pelo ritmo de cada cliente, e cada uma sai do seu WhatsApp depois que você lê.`,
+    explicacao: `São ${TAMANHO_DA_ONDA} mensagens por semana, escolhidas pelo ritmo de cada cliente, e cada uma sai do seu WhatsApp depois que você lê. O ritmo de uma pessoa, não o de um robô.`,
   },
   {
-    titulo: "Não começa conversa pelo seu número",
+    titulo: "Não é chatbot burro de menu",
     explicacao:
-      "Na reativação, a Nexora escreve a mensagem e quem manda é você. O Atendente Virtual, se você ligar, só responde quem escreveu primeiro — nunca puxa conversa nem insiste.",
+      "Nada de “digite 1 para horários”. O Atendente Virtual entende o que o cliente escreveu e responde com os dados do seu negócio — e só responde quem escreveu primeiro, nunca puxa conversa.",
   },
   {
-    titulo: "Não é robô fingindo ser gente",
+    titulo: "Não é CRM para você configurar",
     explicacao:
-      "O Atendente se apresenta como atendente virtual, e preço e horário ele só diz o que está no seu cadastro. O que ele não sabe, ele anota para você.",
-  },
-  {
-    titulo: "Não é CRM",
-    explicacao:
-      "Não pede para você cadastrar cliente por cliente nem mudar o seu jeito de trabalhar. A agenda que vem junto é simples: o seu link para o cliente marcar sozinho, e é nela que o Atendente marca.",
-  },
-  {
-    titulo: "Não é promessa de faturamento",
-    explicacao:
-      "A calculadora mostra estimativa, e o Dinheiro recuperado só soma o retorno que dá para ligar a uma mensagem enviada. O que não dá para provar não entra no número.",
-  },
-  {
-    titulo: "Não guarda a lista do diagnóstico",
-    explicacao:
-      "A lista colada para ver quem sumiu é lida e descartada. Só fica gravada a base que você importa depois de criar a conta.",
+      "Nada de cadastrar cliente por cliente nem de treinamento demorado. Você manda a lista do jeito que ela está, e o Atendente aprende com a agenda e o cadastro que você já tem.",
   },
 ];

@@ -158,12 +158,14 @@ export function Calculadora({ ramo }: { ramo?: string }) {
           <p className="text-[11px] font-semibold uppercase tracking-widest text-nx-error">
             Parado na sua base agora
           </p>
-          <p className="mt-2 text-4xl font-bold leading-none tracking-tight">
-            {conta.parados.toLocaleString("pt-BR")} {plural(conta.parados, "cliente")}{" "}
-            {plural(conta.parados, "parado")}
+          {/* O dinheiro primeiro: é o que o dono sente. A contagem de clientes
+              explica de onde ele vem, logo abaixo. */}
+          <p className="mt-2 text-4xl font-bold leading-none tracking-tight sm:text-5xl">
+            {reais(conta.umaVisitaCents)}
           </p>
           <p className="mt-2 text-sm text-nx-muted">
-            {reais(conta.umaVisitaCents)} é uma visita de cada um.
+            em {conta.parados.toLocaleString("pt-BR")} {plural(conta.parados, "cliente")}{" "}
+            {conta.parados === 1 ? "que parou" : "que pararam"} de vir — uma visita de cada um.
           </p>
 
           <div className="mt-6 border-t border-nx-border pt-5">
@@ -195,10 +197,12 @@ export function Calculadora({ ramo }: { ramo?: string }) {
             onClick={aoIrParaODiagnostico}
             className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-nx-gold px-5 py-3.5 font-semibold text-nx-bg shadow-nx-glow-sm transition-all hover:bg-nx-gold/90 active:scale-[0.98]"
           >
-            Ver quais clientes são esses <span aria-hidden="true">→</span>
+            Trazer esses clientes de volta agora <span aria-hidden="true">→</span>
           </Link>
+          {/* O botão convida a trazer de volta, mas o próximo passo é o
+              diagnóstico: a frase diz isso, para o clique não virar surpresa. */}
           <p className="mt-2 text-center text-xs text-nx-muted">
-            Grátis. Sem cartão. Você vê a lista antes de decidir qualquer coisa.
+            Grátis e sem cartão. Primeiro você vê quem são, antes de decidir qualquer coisa.
           </p>
         </div>
       </div>

@@ -8,7 +8,7 @@ import {
 import { GARANTIA_DIAS, ONDAS_MINIMAS } from "@/lib/billing/garantia";
 import { PLANOS } from "@/lib/billing/planos";
 import { emReais, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
-import { O_QUE_A_NEXORA_NAO_E, PERGUNTAS_FREQUENTES } from "@/lib/perguntas";
+import { O_QUE_A_NEXORA_NAO_E, PERGUNTAS_DA_HOME, PERGUNTAS_FREQUENTES } from "@/lib/perguntas";
 import { MIN_RECUPERAVEL_CENTS, MIN_SUMIDOS } from "@/lib/recuperacao/estimativa";
 
 /**
@@ -72,12 +72,15 @@ describe("as perguntas frequentes", () => {
 });
 
 describe("o que a Nexora não é", () => {
+  // Desde 22/09/2026 são três nãos, os que separam a Nexora da concorrência:
+  // disparo, chatbot de menu e configuração. O "não é promessa de faturamento"
+  // saiu da lista; a calculadora continua dizendo que é estimativa.
   it("diz com todas as letras, e sem inventar", () => {
-    expect(O_QUE_A_NEXORA_NAO_E.length).toBeGreaterThanOrEqual(4);
+    expect(O_QUE_A_NEXORA_NAO_E).toHaveLength(3);
     const tudo = O_QUE_A_NEXORA_NAO_E.map((i) => `${i.titulo} ${i.explicacao}`).join(" ");
     expect(tudo.toLowerCase()).toContain("disparo em massa");
+    expect(tudo.toLowerCase()).toContain("chatbot");
     expect(tudo).toContain("CRM");
-    expect(tudo.toLowerCase()).toContain("faturamento");
     expect(tudo).not.toMatch(PROIBIDAS);
   });
 
@@ -121,5 +124,37 @@ describe("as perguntas sobre o Atendente Virtual", () => {
     const r = resposta("sozinha");
     expect(r).toMatch(/Atendente Virtual/);
     expect(r).toMatch(/só responde quem escreveu primeiro/);
+  });
+});
+
+describe("as quatro perguntas da home", () => {
+  it("são as dúvidas que sobram antes de começar", () => {
+    expect(PERGUNTAS_DA_HOME.map((p) => p.pergunta)).toEqual([
+      "Preciso de cartão de crédito para começar?",
+      "Meu WhatsApp corre risco de ser banido?",
+      "E se eu não tiver planilha nem computador?",
+      "O Atendente Virtual responde besteira para os meus clientes?",
+    ]);
+  });
+
+  it("o risco do número é dito como é, dos dois lados", () => {
+    const r = resposta("banido");
+    expect(r).toContain("quem manda é você");
+    expect(r).toContain("não é a oficial do WhatsApp");
+    expect(r).toContain("não zera");
+  });
+
+  // O importador lê texto. Foto de caderno só vira lista pela mão do fundador,
+  // e a home não promete o que o produto não faz sozinho.
+  it("sem planilha: o mesmo caminho que o diagnóstico ensina, sem prometer foto", () => {
+    const r = resposta("planilha");
+    expect(r).toContain("um cliente por linha");
+    expect(r).not.toMatch(/foto|print/i);
+  });
+
+  it("o que ele não sabe, ele não inventa", () => {
+    const r = resposta("besteira");
+    expect(r).toMatch(/cadastro/);
+    expect(r).toMatch(/anota/);
   });
 });
