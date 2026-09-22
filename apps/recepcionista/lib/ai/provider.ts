@@ -62,6 +62,24 @@ function aiTimeoutMs(): number {
 
 const PROVIDERS = ["groq", "openai", "anthropic", "ollama"] as const;
 
+const CHAVE_DO_PROVEDOR: Record<(typeof PROVIDERS)[number], string | null> = {
+  groq: "GROQ_API_KEY",
+  openai: "OPENAI_API_KEY",
+  anthropic: "ANTHROPIC_API_KEY",
+  ollama: null,
+};
+
+/**
+ * O nome da variável que falta para a IA do provedor atual responder, ou null
+ * quando está tudo lá. Só o nome — o valor nunca sai daqui.
+ */
+export function configuracaoDaIaFaltando(): string | null {
+  const provider = (process.env.AI_PROVIDER || "groq").trim().toLowerCase();
+  if (!(PROVIDERS as readonly string[]).includes(provider)) return "AI_PROVIDER";
+  const chave = CHAVE_DO_PROVEDOR[provider as (typeof PROVIDERS)[number]];
+  return chave && !process.env[chave] ? chave : null;
+}
+
 function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value) throw new Error(`${name} não configurada para o AI_PROVIDER atual`);

@@ -99,6 +99,11 @@ export async function fatosDaEmpresa(companyId: string, sobrescrever: Sobrescrit
   };
 }
 
+/** As palavras que o dono cadastrou para ser chamado ("gerente", "orçamento"). */
+export function lerPalavrasDoDono(valor: unknown): string[] {
+  return Array.isArray(valor) ? valor.filter((p): p is string => typeof p === "string" && p.trim() !== "") : [];
+}
+
 /** "R$ 45,00", com espaço comum: a mensagem vai para o WhatsApp do cliente. */
 export function precoFalado(cents: number): string {
   return emReais(cents).replace(/ /g, " ");

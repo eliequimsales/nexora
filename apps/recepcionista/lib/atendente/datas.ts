@@ -227,6 +227,27 @@ export function ultimoFechamento(horarios: BusinessHour[], diasFechados: string[
   return ultimo;
 }
 
+/**
+ * A próxima vez que a loja fecha depois de agora — o "Bia volta hoje às 19h,
+ * quando você fechar" da tela. Dia fechado pelo botão não conta.
+ */
+export function proximoFechamento(horarios: BusinessHour[], diasFechados: string[], agora: Date): Date | null {
+  const hoje = localDe(agora).data;
+  let proximo: Date | null = null;
+  // Começa ontem: o expediente de ontem que vira a madrugada fecha hoje.
+  for (let i = -1; i <= 8; i++) {
+    const data = somarDias(hoje, i);
+    if (diasFechados.includes(data)) continue;
+    const config = horarios.find((h) => h.day === diaDaSemanaDe(data));
+    if (!config || config.closed || config.open === config.close) continue;
+    const abre = minutosDe(config.open);
+    const fecha = minutosDe(config.close);
+    const fecharia = fecha > abre ? instanteLocal(data, fecha) : instanteLocal(somarDias(data, 1), fecha);
+    if (fecharia.getTime() > agora.getTime() && (!proximo || fecharia.getTime() < proximo.getTime())) proximo = fecharia;
+  }
+  return proximo;
+}
+
 /** "hoje às 14h", "amanhã às 9h", "segunda às 9h" ou "12/10 às 9h". */
 export function textoDaVolta(abertura: Date | null, agora: Date): string | null {
   if (!abertura) return null;

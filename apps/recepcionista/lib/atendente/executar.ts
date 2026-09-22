@@ -15,7 +15,7 @@ import type { BusinessHour } from "@/lib/validation";
 import { atrasoDeDigitacao, enviarWhatsApp } from "@/lib/whatsapp/envio";
 import { ESPERA_DA_RAJADA_MS, JANELA_DO_DONO_MS, MAX_RESPOSTAS_POR_DIA, TETO_CONVERSAS_MES } from "./constantes";
 import { localDe, proximaAbertura, textoDaVolta } from "./datas";
-import { fatosDaEmpresa } from "./fatos";
+import { fatosDaEmpresa, lerPalavrasDoDono } from "./fatos";
 import { apresentacao, primeiroNomeDoCliente, textosDoJeito } from "./jeitos";
 import { responder, type Contexto } from "./motor";
 import { lerEstado } from "./oferta";
@@ -186,10 +186,6 @@ export function avisoDeUrgencia(p: { cliente: string | null; telefone: string; t
     "O Atendente orientou a procurar o 192 (ou o 188, se for risco à própria vida) e saiu da conversa. " +
     "Fale com a pessoa assim que puder."
   );
-}
-
-function lerPalavras(valor: unknown): string[] {
-  return Array.isArray(valor) ? valor.filter((p): p is string => typeof p === "string" && p.trim() !== "") : [];
 }
 
 /** O nome do WhatsApp inteiro, para a agenda — só quando o primeiro nome parece nome. */
@@ -363,7 +359,7 @@ export async function atender(
       fatos,
       agora,
       contexto: plano.contexto,
-      palavrasDoDono: lerPalavras(perfil.handoffKeywords),
+      palavrasDoDono: lerPalavrasDoDono(perfil.handoffKeywords),
     },
     {
       livres: (q) =>
