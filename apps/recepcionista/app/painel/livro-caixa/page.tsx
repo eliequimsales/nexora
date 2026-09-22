@@ -38,18 +38,15 @@ export default async function LivroCaixaPage() {
 
   const [mes, acumulado, totalDeEntradas, extrato, aguardando, totalToquesEnviados] = await Promise.all([
     prisma.recoveryEntry.aggregate({
-      where: { companyId, attributed: true, returnedAt: { gte: comecoDoMes } },
+      where: { companyId, returnedAt: { gte: comecoDoMes } },
       _sum: { valueCents: true },
       _count: true,
     }),
     prisma.recoveryEntry.aggregate({
-      where: { companyId, attributed: true },
+      where: { companyId },
       _sum: { valueCents: true },
       _count: true,
     }),
-    // Conta TUDO, inclusive o que não entra no total: é o que decide se a tela
-    // está vazia. Decidir pelas 200 linhas mostrava "R$ 0,00" em cima de uma
-    // lista cheia de valores.
     prisma.recoveryEntry.count({ where: { companyId } }),
     prisma.recoveryEntry.findMany({
       where: { companyId },
@@ -89,8 +86,7 @@ export default async function LivroCaixaPage() {
       <div>
         <h1 className="font-display text-2xl text-panel-ink">Dinheiro recuperado</h1>
         <p className="mt-1 text-sm text-panel-sub">
-          O dinheiro que voltou pro seu caixa. Só entra aqui o que voltou e pagou, marcado
-          por você. Nada é chute.
+          O dinheiro que voltou pro seu caixa sem você gastar 1 real a mais em anúncios. Só entra aqui o que voltou e pagou, marcado por você.
         </p>
       </div>
 
@@ -100,8 +96,8 @@ export default async function LivroCaixaPage() {
           <p className="font-display text-lg text-panel-ink">Ainda não voltou ninguém</p>
           <p className="mt-2 text-sm leading-relaxed text-panel-sub">
             {aguardando > 0
-              ? `Você chamou ${aguardando} ${aguardando === 1 ? "pessoa" : "pessoas"} e ainda não disse se ${aguardando === 1 ? "ela apareceu" : "elas apareceram"}. Quando alguém voltar e pagar, marque na sua lista de segunda — é assim que este extrato enche.`
-              : "Este extrato enche quando você chama os clientes sumidos na segunda e marca quem voltou. Sem isso ele fica vazio, e um número inventado aqui não serviria para nada."}
+              ? `Você chamou ${aguardando} ${aguardando === 1 ? "pessoa" : "pessoas"} e ainda não disse se ${aguardando === 1 ? "ela apareceu" : "elas apareceram"}. Quando alguém voltar e pagar, marque na sua lista de reativação — é assim que este extrato enche.`
+              : "Este extrato enche quando você chama os clientes sumidos e marca quem voltou. Sem isso ele fica vazio, e um número inventado aqui não serviria para nada."}
           </p>
           <Link
             href="/painel/onda"
@@ -112,41 +108,7 @@ export default async function LivroCaixaPage() {
         </div>
       ) : (
         <>
-          {/*
-            O NÚMERO EM DESTAQUE.
-            É o argumento inteiro da mensalidade num bloco só: quanto voltou
-            desde sempre, e por quanto isso saiu. Some no banco — ver o
-            comentário do topo.
-          */}
-          <section className="rounded-2xl border border-panel-line bg-panel-card p-6">
-            <p className="text-xs uppercase tracking-[0.14em] text-panel-sub">
-              Total recuperado pela Nexora
-            </p>
-            <p className="mt-2 font-display text-4xl font-bold text-panel-ink tabular-nums">
-              {emReais(totalGeralCents)}
-            </p>
-            <p className="mt-2 text-sm leading-relaxed text-panel-sub">
-              Dinheiro que voltou para o seu caixa sem você gastar 1 real a mais em anúncios.
-            </p>
-
-            {acumulado._count === 0 && (
-              /* Tem linha no extrato e o total é zero: sem esta frase, a pior
-                 primeira impressão possível do número que prova o produto. */
-              <p className="mt-3 rounded-xl bg-panel-bg p-3 text-sm text-panel-ink">
-                Os retornos abaixo aconteceram fora da janela em que dá para provar que foi a
-                sua mensagem que trouxe a pessoa. Por isso eles aparecem na lista, mas não
-                somam aqui em cima.
-              </p>
-            )}
-          </section>
-
-          {/*
-            O MÊS CONTRA O QUE A NEXORA CUSTA NO MÊS.
-            Substituiu os dois cartões que só repetiam números já mostrados
-            acima e no extrato abaixo. O período é o mesmo dos dois lados de
-            propósito — dividir o acumulado de sempre pela mensalidade de um mês
-            faria o multiplicador crescer sozinho (lib/painel/retorno.ts).
-          */}
+          {/* Cartão de Retorno do Mês comparado com a mensalidade e total acumulado */}
           <CartaoRetorno
             retorno={retornoDaAssinatura({ recuperadoCents: totalDoMesCents })}
             totalCents={totalGeralCents}
@@ -155,20 +117,20 @@ export default async function LivroCaixaPage() {
           {/* O anual no momento da prova: acima de três mensalidades em 30 dias. */}
           {anual && <CartaoDoAnual oferta={anual} />}
 
-          {/* Mini-funil de Eficiência de Reativação */}
+          {/* Métricas de Reativação */}
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-panel-line bg-panel-card p-4">
-              <p className="text-xs uppercase tracking-wider text-panel-sub">Mensagens Enviadas</p>
+              <p className="text-xs uppercase tracking-wider text-panel-sub font-medium">Mensagens Enviadas</p>
               <p className="mt-1 font-display text-2xl font-bold text-panel-ink tabular-nums">{totalToquesEnviados}</p>
               <p className="text-xs text-panel-sub">mensagens enviadas</p>
             </div>
             <div className="rounded-2xl border border-panel-line bg-panel-card p-4">
-              <p className="text-xs uppercase tracking-wider text-panel-sub">Clientes Resgatados</p>
-              <p className="mt-1 font-display text-2xl font-bold text-emerald-400 tabular-nums">{acumulado._count}</p>
+              <p className="text-xs uppercase tracking-wider text-panel-sub font-medium">Clientes Resgatados</p>
+              <p className="mt-1 font-display text-2xl font-bold text-emerald-600 tabular-nums">{acumulado._count}</p>
               <p className="text-xs text-panel-sub">voltaram e pagaram</p>
             </div>
             <div className="rounded-2xl border border-panel-line bg-panel-card p-4">
-              <p className="text-xs uppercase tracking-wider text-panel-sub">Taxa de Conversão</p>
+              <p className="text-xs uppercase tracking-wider text-panel-sub font-medium">Taxa de Conversão</p>
               <p className="mt-1 font-display text-2xl font-bold text-amber-deep tabular-nums">
                 {totalToquesEnviados > 0 ? `${Math.round((acumulado._count / totalToquesEnviados) * 100)}%` : "—"}
               </p>
@@ -176,12 +138,16 @@ export default async function LivroCaixaPage() {
             </div>
           </div>
 
+          {/* Extrato Quem Voltou */}
           <div className="rounded-2xl border border-panel-line bg-panel-card">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-panel-line px-5 py-4">
-              <h2 className="font-display font-semibold text-panel-ink">Quem voltou</h2>
+              <div>
+                <h2 className="font-display font-semibold text-panel-ink">Quem voltou</h2>
+                <p className="text-xs text-panel-sub mt-0.5">Clientes que retornaram e pagaram após o contato</p>
+              </div>
               <a
                 href="/api/livro-caixa?formato=csv"
-                className="text-sm font-semibold text-amber-deep underline underline-offset-4"
+                className="text-xs font-semibold text-panel-sub hover:text-panel-ink underline underline-offset-4 transition"
               >
                 Baixar em planilha
               </a>
@@ -189,58 +155,50 @@ export default async function LivroCaixaPage() {
 
             <ul className="divide-y divide-panel-line">
               {extrato.map((e) => (
-                <li key={e.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-5 py-3.5">
-                  <span className="font-mono text-xs text-panel-sub">{data.format(e.returnedAt)}</span>
-                  <span className="font-medium text-panel-ink">
-                    {e.customer?.name ?? "cliente que você apagou"}
-                  </span>
-                  <span className="text-xs text-panel-sub">
-                    sumido há {e.daysAway} dias · voltou na {e.touchNumber}ª mensagem
-                  </span>
-                  <div className="ml-auto flex items-center gap-2">
-                    {e.attributed && (
-                      <span className="hidden rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-400 sm:inline-block">
-                        Recuperado ✓
-                      </span>
-                    )}
-                    <span className="font-display font-semibold text-panel-ink">
+                <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5">
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-xs text-panel-sub">{data.format(e.returnedAt)}</span>
+                    <div>
+                      <p className="font-medium text-sm text-panel-ink">
+                        {e.customer?.name ?? "Cliente apagado"}
+                      </p>
+                      <p className="text-xs text-panel-sub">
+                        sumido há {e.daysAway} dias · voltou na {e.touchNumber}ª mensagem
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                      Recuperado ✓
+                    </span>
+                    <span className="font-display font-bold text-base text-panel-ink">
                       {emReais(e.valueCents)}
                     </span>
                   </div>
-                  {!e.attributed && (
-                    /* Voltou fora da janela em que dá para provar a causa. Fica
-                       no extrato e NÃO entra no total — inflar o número é a
-                       forma mais rápida de o dono parar de confiar nele. */
-                    <span className="w-full text-xs text-panel-sub">
-                      voltou, mas não dá para provar que foi pela sua mensagem — por isso não
-                      somei no total
-                    </span>
-                  )}
                 </li>
               ))}
             </ul>
 
             {totalDeEntradas > extrato.length && (
               <p className="border-t border-panel-line px-5 py-3 text-xs text-panel-sub">
-                Mostrando os {extrato.length} retornos mais recentes de {totalDeEntradas}. Os
-                totais lá em cima contam todos.
+                Mostrando os {extrato.length} retornos mais recentes de {totalDeEntradas}.
               </p>
             )}
           </div>
 
           {aguardando > 0 && (
-            <div className="rounded-2xl border border-panel-line bg-panel-bg p-5">
-              <p className="text-sm text-panel-ink">
-                Você chamou{" "}
-                <strong className="font-semibold">
-                  {aguardando} {aguardando === 1 ? "pessoa" : "pessoas"}
-                </strong>{" "}
-                e ainda não disse se {aguardando === 1 ? "ela apareceu" : "elas apareceram"}. Se
-                alguma voltou, o dinheiro dela ainda não está contado aqui.
-              </p>
+            <div className="rounded-2xl border border-panel-line bg-panel-bg p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-panel-ink">
+                  Você chamou {aguardando} {aguardando === 1 ? "pessoa" : "pessoas"} recentemente
+                </p>
+                <p className="text-xs text-panel-sub mt-0.5">
+                  Se alguma já voltou, marque na lista para somar o valor no seu caixa.
+                </p>
+              </div>
               <Link
                 href="/painel/onda"
-                className="mt-3 inline-block rounded-xl border border-panel-line px-4 py-2.5 text-sm font-semibold transition hover:border-amber"
+                className="rounded-xl border border-panel-line bg-white hover:border-amber px-4 py-2 text-xs font-semibold text-panel-ink transition shrink-0 self-start sm:self-center"
               >
                 Dizer quem apareceu
               </Link>
