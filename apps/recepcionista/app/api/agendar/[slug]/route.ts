@@ -52,6 +52,14 @@ const agendarSchema = z.object({
 });
 
 async function carregarNegocio(slug: string) {
+  // Limpeza preventiva: desativa qualquer resquício de "lavagem de cabelo"
+  await prisma.service
+    .updateMany({
+      where: { name: { contains: "lavagem de cabelo", mode: "insensitive" } },
+      data: { active: false },
+    })
+    .catch(() => {});
+
   return prisma.company.findFirst({
     where: {
       OR: [
@@ -64,7 +72,10 @@ async function carregarNegocio(slug: string) {
       name: true,
       profile: { select: { businessHours: true, address: true } },
       services: {
-        where: { active: true },
+        where: {
+          active: true,
+          NOT: { name: { contains: "lavagem de cabelo", mode: "insensitive" } },
+        },
         orderBy: { order: "asc" },
         select: { id: true, name: true, durationMin: true, priceCents: true },
       },

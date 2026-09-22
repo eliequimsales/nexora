@@ -7,7 +7,9 @@ import { LIMITES, limitar } from "@/lib/limites";
 import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 import {
   criarAgendamento,
+  extrairProfissional,
   formatarDataLocal,
+  formatarHoraLocal,
   listarServicos,
   obterGradeDoDia,
   obterResumoDaAgenda,
@@ -99,11 +101,46 @@ export async function GET(request: Request) {
       }
     }
 
-    const [grade, resumo, servicos] = await Promise.all([
+    const agora = new Date();
+    const inicioJanela = new Date(agora.getTime() - 24 * 60 * 60 * 1000);
+    const fimJanela = new Date(agora.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    const [grade, resumo, servicos, agendamentosProximos] = await Promise.all([
       obterGradeDoDia(companyId, dataSelecionada),
       obterResumoDaAgenda(companyId, dataSelecionada),
       listarServicos(companyId),
+      prisma.appointment.findMany({
+        where: {
+          companyId,
+          status: { in: ["MARCADO", "CONFIRMADO", "ATENDIDO"] },
+          startsAt: { gte: inicioJanela, lte: fimJanela },
+        },
+        select: {
+          id: true,
+          startsAt: true,
+          status: true,
+          notes: true,
+          customer: { select: { name: true } },
+          service: { select: { name: true } },
+        },
+        orderBy: { startsAt: "asc" },
+      }),
     ]);
+
+    const diasComAgendamentos = Array.from(
+      new Set(agendamentosProximos.map((a) => formatarDataLocal(a.startsAt))),
+    );
+
+    const proximo = agendamentosProximos.find((a) => a.startsAt.getTime() >= agora.getTime());
+    const proximoAgendamento = proximo
+      ? {
+          data: formatarDataLocal(proximo.startsAt),
+          hora: formatarHoraLocal(proximo.startsAt),
+          clienteNome: proximo.customer?.name || "Cliente",
+          servicoNome: proximo.service?.name || "Atendimento",
+          profissional: extrairProfissional(proximo.notes),
+        }
+      : null;
 
     const appUrl = process.env.APP_URL || "https://www.meunexora.com.br";
     const linkPublico = slug ? `${appUrl}/agendar/${slug}` : `${appUrl}/agendar/${companyId}`;
@@ -116,6 +153,8 @@ export async function GET(request: Request) {
       agendamentos: grade.agendamentos,
       resumo,
       servicos,
+      diasComAgendamentos,
+      proximoAgendamento,
       empresaNome: empresa?.name,
       slug: slug || empresa?.slug,
       linkPublico,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionCompanyId } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
 import { LIMITES, limitar } from "@/lib/limites";
 import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
@@ -61,3 +62,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Não consegui salvar o serviço" }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  const companyId = await getSessionCompanyId();
+  if (!companyId) {
+    return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  }
+
+  try {
+    const url = new URL(request.url);
+    const id = url.searchParams.get("id");
+    if (!id) {
+      return NextResponse.json({ error: "ID do serviço não informado" }, { status: 400 });
+    }
+
+    await prisma.service.updateMany({
+      where: { id, companyId },
+      data: { active: false },
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    await logError("agenda-servicos-delete", error, companyId);
+    return NextResponse.json({ error: "Não consegui remover o serviço" }, { status: 500 });
+  }
+}
+

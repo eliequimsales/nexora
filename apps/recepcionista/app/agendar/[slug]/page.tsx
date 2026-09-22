@@ -93,6 +93,11 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
         const res = await fetch(`/api/agendar/${params.slug}${qs}`);
         if (!res.ok) throw new Error("nao-encontrado");
         const json: Dados = await res.json();
+        if (json.servicos) {
+          json.servicos = json.servicos.filter(
+            (s) => !s.name.toLowerCase().includes("lavagem de cabelo"),
+          );
+        }
         setDados(json);
 
         if (json.dias.length > 0 && !dia) {
@@ -469,31 +474,33 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
               ) : null}
             </button>
 
-            {dados.servicos.map((s) => {
-              const selecionado = servicoId === s.id;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => selecionarServico(s.id)}
-                  className={`flex items-center justify-between rounded-2xl border p-3.5 text-left transition ${
-                    selecionado
-                      ? "border-amber-400 bg-amber-400/10 shadow-md ring-1 ring-amber-400/40"
-                      : "border-neutral-800 bg-[#131926] hover:border-neutral-700 hover:bg-[#182030]"
-                  }`}
-                >
-                  <div className="flex-1 pr-2">
-                    <span className="font-semibold text-sm text-white block truncate">{s.name}</span>
-                    <span className="text-[11px] text-neutral-400 font-mono">
-                      {s.durationMin} min {s.priceCents > 0 ? `· ${reais(s.priceCents)}` : ""}
-                    </span>
-                  </div>
-                  {selecionado ? (
-                    <span className="text-xs font-bold text-amber-400 shrink-0">Selecionado ✓</span>
-                  ) : null}
-                </button>
-              );
-            })}
+            {dados.servicos
+              .filter((s) => !s.name.toLowerCase().includes("lavagem de cabelo"))
+              .map((s) => {
+                const selecionado = servicoId === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => selecionarServico(s.id)}
+                    className={`flex items-center justify-between rounded-2xl border p-3.5 text-left transition ${
+                      selecionado
+                        ? "border-amber-400 bg-amber-400/10 shadow-md ring-1 ring-amber-400/40"
+                        : "border-neutral-800 bg-[#131926] hover:border-neutral-700 hover:bg-[#182030]"
+                    }`}
+                  >
+                    <div className="flex-1 pr-2">
+                      <span className="font-semibold text-sm text-white block truncate">{s.name}</span>
+                      <span className="text-[11px] text-neutral-400 font-mono">
+                        {s.durationMin} min {s.priceCents > 0 ? `· ${reais(s.priceCents)}` : ""}
+                      </span>
+                    </div>
+                    {selecionado ? (
+                      <span className="text-xs font-bold text-amber-400 shrink-0">Selecionado ✓</span>
+                    ) : null}
+                  </button>
+                );
+              })}
           </div>
 
           {/* Opção para escrever o serviço se quiser */}
