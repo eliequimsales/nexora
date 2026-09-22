@@ -126,7 +126,50 @@ function ajustarHorario(horaAtual: string, deltaMinutos: number): string {
   return `${novoH}:${novoM}`;
 }
 
+function obterDiasDaSemana(dataIso: string) {
+  const [ano, mes, dia] = dataIso.split("-").map(Number);
+  const d = new Date(ano, mes - 1, dia);
+  const hojeStr = dataHojeIso();
+
+  // getDay(): 0 = Domingo, 1 = Segunda, ..., 6 = Sábado
+  // Ajuste para semana começar na Segunda-feira (índice 1)
+  const diaDaSemana = d.getDay();
+  const diferencaParaSegunda = diaDaSemana === 0 ? -6 : 1 - diaDaSemana;
+
+  const segunda = new Date(ano, mes - 1, dia);
+  segunda.setDate(d.getDate() + diferencaParaSegunda);
+
+  const dias: {
+    dataIso: string;
+    diaSemana: string;
+    diaNumero: number;
+    isPassado: boolean;
+    isHoje: boolean;
+  }[] = [];
+  const nomes = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+
+  for (let i = 0; i < 7; i++) {
+    const cur = new Date(segunda);
+    cur.setDate(segunda.getDate() + i);
+    const anoCur = cur.getFullYear();
+    const mesCur = String(cur.getMonth() + 1).padStart(2, "0");
+    const diaCur = String(cur.getDate()).padStart(2, "0");
+    const iso = `${anoCur}-${mesCur}-${diaCur}`;
+
+    dias.push({
+      dataIso: iso,
+      diaSemana: nomes[i],
+      diaNumero: cur.getDate(),
+      isPassado: iso < hojeStr,
+      isHoje: iso === hojeStr,
+    });
+  }
+
+  return dias;
+}
+
 export default function PaginaAgenda() {
+  const hoje = dataHojeIso();
   const [dataSelecionada, setDataSelecionada] = useState<string>(dataHojeIso());
   const [grade, setGrade] = useState<GradeDoDia | null>(null);
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
@@ -140,6 +183,26 @@ export default function PaginaAgenda() {
   const [modoVisualizacao, setModoVisualizacao] = useState<"grade" | "lista">("grade");
   const [enviandoLembreteId, setEnviandoLembreteId] = useState<string | null>(null);
   const [disparandoLote, setDisparandoLote] = useState<boolean>(false);
+
+  const diasDaSemana = useMemo(() => obterDiasDaSemana(dataSelecionada), [dataSelecionada]);
+
+  // Não permite navegar para semanas anteriores se todos os dias da semana anterior estiverem no passado
+  const podeVoltarSemana = useMemo(() => {
+    const primeiroDia = diasDaSemana[0]?.dataIso;
+    if (!primeiroDia) return false;
+    const domingoAnteriorIso = somarDiasIso(primeiroDia, -1);
+    return domingoAnteriorIso >= hoje;
+  }, [diasDaSemana, hoje]);
+
+  const voltarSemana = () => {
+    if (!podeVoltarSemana) return;
+    const nova = somarDiasIso(dataSelecionada, -7);
+    setDataSelecionada(nova < hoje ? hoje : nova);
+  };
+
+  const avancarSemana = () => {
+    setDataSelecionada(somarDiasIso(dataSelecionada, 7));
+  };
 
   // Modal Novo Agendamento
   const [modalAberto, setModalAberto] = useState<boolean>(false);
@@ -216,6 +279,10 @@ export default function PaginaAgenda() {
 
   // Abrir modal de novo agendamento para um slot específico
   const abrirNovoParaSlot = (horario: string, profissionalNome: string) => {
+    if (dataSelecionada < hoje) {
+      alert("Não é possível agendar para um dia que já passou.");
+      return;
+    }
     setFormHora(horario);
     setFormProfissional(profissionalNome);
     setFormNome("");
@@ -318,6 +385,10 @@ export default function PaginaAgenda() {
 
   const handleSalvarAgendamento = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (dataSelecionada < hoje) {
+      alert("Não é possível agendar para um dia que já passou.");
+      return;
+    }
     if (!formNome.trim() || !formTelefone.trim() || !formHora.trim()) {
       alert("Preencha nome, WhatsApp e horário.");
       return;
@@ -436,8 +507,6 @@ export default function PaginaAgenda() {
     setTimeout(() => setLinkCopiado(false), 3000);
   };
 
-  const hoje = dataHojeIso();
-
   // Slots de horário para a grade (das 08:00 às 20:00 de 15 em 15 min)
   const slotsHorario = useMemo(() => {
     if (grade?.slotsHorario && grade.slotsHorario.length > 0) {
@@ -501,40 +570,84 @@ export default function PaginaAgenda() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Navegação de Data: < Hoje > */}
-          <div className="flex items-center rounded-xl border border-panel-line bg-panel-card p-1 shadow-sm">
+          {/* Seletor dos Dias da Semana com bloqueio do passado */}
+          <div className="flex items-center gap-0.5 rounded-2xl border border-panel-line bg-panel-card p-1 shadow-sm">
             <button
-              onClick={() => setDataSelecionada(somarDiasIso(dataSelecionada, -1))}
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-panel-sub transition hover:bg-panel-bg hover:text-panel-ink"
-              title="Dia anterior"
+              onClick={voltarSemana}
+              disabled={!podeVoltarSemana}
+              className="flex h-8 w-8 items-center justify-center rounded-xl text-panel-sub transition hover:bg-panel-bg hover:text-panel-ink disabled:opacity-20 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+              title="Semana anterior"
             >
               ‹
             </button>
+
+            <div className="flex items-center gap-0.5">
+              {diasDaSemana.map((d) => {
+                const isSelecionado = d.dataIso === dataSelecionada;
+
+                if (d.isPassado) {
+                  return (
+                    <div
+                      key={d.dataIso}
+                      className="flex flex-col items-center justify-center rounded-xl px-2 py-0.5 text-center opacity-25 cursor-not-allowed select-none min-w-[34px]"
+                      title="Dia no passado (indisponível)"
+                    >
+                      <span className="text-[10px] font-medium text-panel-sub uppercase">
+                        {d.diaSemana}
+                      </span>
+                      <span className="font-display text-xs font-bold text-panel-sub">
+                        {d.diaNumero}
+                      </span>
+                    </div>
+                  );
+                }
+
+                return (
+                  <button
+                    key={d.dataIso}
+                    type="button"
+                    onClick={() => setDataSelecionada(d.dataIso)}
+                    className={`relative flex flex-col items-center justify-center rounded-xl px-2 py-0.5 text-center transition min-w-[34px] ${
+                      isSelecionado
+                        ? "bg-amber text-night font-bold shadow-sm"
+                        : "text-panel-sub hover:bg-panel-bg hover:text-panel-ink"
+                    }`}
+                  >
+                    <span
+                      className={`text-[10px] font-semibold uppercase ${
+                        isSelecionado ? "text-night/90" : "text-panel-sub"
+                      }`}
+                    >
+                      {d.diaSemana}
+                    </span>
+                    <span className="font-display text-xs font-bold">
+                      {d.diaNumero}
+                    </span>
+                    {d.isHoje && !isSelecionado && (
+                      <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-amber" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
             <button
-              onClick={() => setDataSelecionada(hoje)}
-              className={`px-3 py-1 text-xs font-semibold rounded-lg transition ${
-                dataSelecionada === hoje
-                  ? "bg-amber text-night font-bold"
-                  : "text-panel-sub hover:text-panel-ink"
-              }`}
-            >
-              Hoje
-            </button>
-            <button
-              onClick={() => setDataSelecionada(somarDiasIso(dataSelecionada, 1))}
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-panel-sub transition hover:bg-panel-bg hover:text-panel-ink"
-              title="Próximo dia"
+              onClick={avancarSemana}
+              className="flex h-8 w-8 items-center justify-center rounded-xl text-panel-sub transition hover:bg-panel-bg hover:text-panel-ink"
+              title="Próxima semana"
             >
               ›
             </button>
           </div>
 
-          {/* Seletor de Data Direto */}
+          {/* Seletor de Data Direto (Bloqueado para o passado com min={hoje}) */}
           <input
             type="date"
+            min={hoje}
             value={dataSelecionada}
-            onChange={(e) => e.target.value && setDataSelecionada(e.target.value)}
+            onChange={(e) => e.target.value && e.target.value >= hoje && setDataSelecionada(e.target.value)}
             className="rounded-xl border border-panel-line bg-panel-card px-2.5 py-1.5 text-xs font-medium text-panel-ink shadow-sm focus:border-amber focus:outline-none"
+            title="Escolher data futura no calendário"
           />
 
           {/* Botão de Equipe */}
@@ -771,6 +884,12 @@ export default function PaginaAgenda() {
                                   )}
                                 </div>
                               </div>
+                            ) : dataSelecionada < hoje ? (
+                              /* SLOT NO PASSADO: DESATIVADO */
+                              <div
+                                className="h-[40px] w-full cursor-not-allowed rounded-xl select-none"
+                                title="Data no passado (indisponível para agendamento)"
+                              />
                             ) : (
                               /* SLOT LIVRE: VAZIO POR PADRÃO (SEM POLUIÇÃO VISUAL DE + PERMANENTE) */
                               <div
