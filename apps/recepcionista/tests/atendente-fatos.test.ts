@@ -134,7 +134,9 @@ describe("textoDosFatos — o que a IA recebe e o verificador confere", () => {
 });
 
 describe("uso do Atendente", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it("o mês de um dia", () => {
     expect(mesDoDia("2026-09-22")).toBe("2026-09");
