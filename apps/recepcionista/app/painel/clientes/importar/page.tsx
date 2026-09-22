@@ -232,14 +232,6 @@ export default function PaginaImportar() {
     setPrevia(null);
   };
 
-  const preencherExemplo = () => {
-    setLinhas([
-      { id: "1", nome: "João Silva", telefone: "(11) 98888-7777", data: "12/03/2026", valor: "R$ 50,00" },
-      { id: "2", nome: "Maria Souza", telefone: "11 97777-6666", data: "28/02/2026", valor: "R$ 120,00" },
-    ]);
-    setTexto(EXEMPLO);
-    setPrevia(null);
-  };
 
   const ordenarLinhasPorRisco = () => {
     const parseData = (str: string): number => {
@@ -604,13 +596,6 @@ export default function PaginaImportar() {
                   title="Coloca quem está há mais tempo sem vir no topo para você priorizar e reativar primeiro"
                 >
                   <span>🔥</span> Subir clientes em risco ao topo
-                </button>
-                <button
-                  type="button"
-                  onClick={preencherExemplo}
-                  className="rounded-lg border border-panel-line px-3 py-1.5 text-xs text-panel-sub transition hover:border-amber hover:text-amber-deep"
-                >
-                  Preencher com exemplo de teste
                 </button>
               </div>
             </div>

@@ -116,9 +116,8 @@ describe("o Livro-Caixa soma no banco, não na memória", () => {
 describe("o botão de exemplo não suja a lista de verdade", () => {
   const fonte = leia("app/painel/clientes/importar/page.tsx");
 
-  it("existe o atalho que preenche com o exemplo", () => {
+  it("a constante de exemplo é mantida para validação", () => {
     expect(fonte).toContain("EXEMPLO");
-    expect(fonte).toMatch(/Preencher com exemplo|Ver um exemplo|exemplo de teste/i);
   });
 
   it("a tela sabe quando o conteúdo ainda é o exemplo", () => {
