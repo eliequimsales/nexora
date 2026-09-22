@@ -660,17 +660,15 @@ export default function PaginaAgenda() {
             <span>Equipe</span>
           </button>
 
-          {/* Botão Link Público */}
-          {linkPublico && (
-            <button
-              onClick={() => setModalLinkAberto(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-panel-line bg-panel-card px-3 py-1.5 text-xs font-medium text-panel-ink shadow-sm transition hover:border-amber/40 hover:text-amber"
-              title="Copiar link para clientes agendarem"
-            >
-              <span>🔗</span>
-              <span className="hidden sm:inline">Link de agendamento</span>
-            </button>
-          )}
+          {/* Botão Link do Cliente */}
+          <button
+            onClick={() => setModalLinkAberto(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-amber/30 bg-amber/10 px-3 py-1.5 text-xs font-bold text-amber shadow-sm transition hover:bg-amber/20"
+            title="Copiar ou abrir link de agendamento do cliente"
+          >
+            <span>🔗</span>
+            <span>Link do cliente</span>
+          </button>
 
           {/* Botão Novo Agendamento */}
           <button
@@ -684,6 +682,69 @@ export default function PaginaAgenda() {
             <span>+</span>
             <span>Novo agendamento</span>
           </button>
+        </div>
+      </div>
+
+      {/* Faixa / Card do Link de Agendamento do Cliente */}
+      <div className="rounded-2xl border border-amber/20 bg-amber/5 p-4 sm:p-5 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber text-night text-xs font-bold">
+                🔗
+              </span>
+              <h2 className="font-display text-sm font-bold text-panel-ink">
+                Link de Agendamento do seu Cliente
+              </h2>
+              <span className="rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                Página Exclusiva do Cliente
+              </span>
+            </div>
+            <p className="text-xs text-panel-sub max-w-2xl leading-relaxed">
+              Envie este link para seus clientes no WhatsApp ou Instagram. O cliente vê apenas os serviços e horários vagos para marcar sozinho — ele <strong className="text-panel-ink font-semibold">não</strong> tem acesso ao seu painel nem aos seus outros atendimentos.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center rounded-xl border border-panel-line bg-panel-card px-3 py-1.5 text-xs font-mono text-panel-ink max-w-xs truncate">
+              {linkPublico || "Gerando link..."}
+            </div>
+
+            <button
+              type="button"
+              onClick={copiarLinkPublico}
+              disabled={!linkPublico}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-amber px-3.5 py-1.5 text-xs font-bold text-night shadow-sm transition hover:bg-amber-hover disabled:opacity-50"
+            >
+              <span>{linkCopiado ? "✓ Copiado!" : "Copiar link"}</span>
+            </button>
+
+            {linkPublico && (
+              <a
+                href={linkPublico}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-panel-line bg-panel-card px-3 py-1.5 text-xs font-semibold text-panel-ink shadow-sm transition hover:border-amber/40 hover:text-amber"
+                title="Abrir a página como o cliente enxerga"
+              >
+                <span>Ver página ↗</span>
+              </a>
+            )}
+
+            {linkPublico && (
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(
+                  `Olá! Você pode agendar seu horário online com facilidade pelo nosso link: ${linkPublico}`,
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-400 shadow-sm transition hover:bg-emerald-500/20"
+                title="Compartilhar no WhatsApp"
+              >
+                <span>💬 WhatsApp</span>
+              </a>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1472,13 +1533,23 @@ export default function PaginaAgenda() {
       )}
 
       {/* Modal: Link Público de Agendamento */}
-      {modalLinkAberto && linkPublico && (
+      {modalLinkAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-md rounded-2xl border border-panel-line bg-night p-6 shadow-2xl">
+          <div className="w-full max-w-lg rounded-2xl border border-panel-line bg-night p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-panel-line pb-4">
-              <h3 className="font-display text-lg font-bold text-panel-ink">
-                Link de Agendamento
-              </h3>
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber text-night text-xs font-bold">
+                  🔗
+                </span>
+                <div>
+                  <h3 className="font-display text-lg font-bold text-panel-ink">
+                    Link de Agendamento do Cliente
+                  </h3>
+                  <span className="text-[11px] text-emerald-400 font-semibold">
+                    Página exclusiva para seus clientes
+                  </span>
+                </div>
+              </div>
               <button
                 onClick={() => setModalLinkAberto(false)}
                 className="rounded-lg p-1 text-panel-sub hover:bg-panel-bg hover:text-panel-ink"
@@ -1488,35 +1559,62 @@ export default function PaginaAgenda() {
             </div>
 
             <div className="mt-4 space-y-4">
-              <p className="text-xs text-panel-sub leading-relaxed">
-                Envie este link para seus clientes no WhatsApp ou cole no perfil do Instagram.
-                O cliente escolhe o serviço e o horário, e entra automaticamente na sua agenda.
-              </p>
-
-              <div className="flex items-center gap-2 rounded-xl border border-panel-line bg-panel-bg p-2">
-                <input
-                  type="text"
-                  readOnly
-                  value={linkPublico}
-                  className="w-full bg-transparent px-2 text-xs font-mono text-panel-ink focus:outline-none"
-                />
-                <button
-                  onClick={copiarLinkPublico}
-                  className="whitespace-nowrap rounded-lg bg-amber px-3 py-1.5 text-xs font-bold text-night hover:bg-amber-hover"
-                >
-                  {linkCopiado ? "Copiado! ✓" : "Copiar"}
-                </button>
+              <div className="rounded-xl border border-panel-line bg-panel-card p-3.5 space-y-1.5">
+                <span className="block text-xs font-semibold text-panel-ink">
+                  Como funciona para o seu cliente?
+                </span>
+                <p className="text-xs text-panel-sub leading-relaxed">
+                  Ao abrir este link, seu cliente acessa uma página moderna e exclusiva com o nome do seu negócio. Ele escolhe o serviço, profissional e horário vago, e informa o nome e WhatsApp.
+                </p>
+                <p className="text-[11px] text-amber/90 font-medium">
+                  ✓ O cliente <strong>nunca</strong> vê seu painel, seus valores de faturamento ou outros clientes agendados.
+                </p>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
-                <a
-                  href={linkPublico}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-xl border border-panel-line px-4 py-2 text-xs font-semibold text-panel-ink hover:border-amber/40 hover:text-amber transition"
-                >
-                  Abrir página como cliente ↗
-                </a>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-panel-ink">
+                  Endereço do seu link:
+                </label>
+                <div className="flex items-center gap-2 rounded-xl border border-panel-line bg-panel-bg p-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={linkPublico || "Carregando..."}
+                    className="w-full bg-transparent px-2 text-xs font-mono text-panel-ink focus:outline-none"
+                  />
+                  <button
+                    onClick={copiarLinkPublico}
+                    disabled={!linkPublico}
+                    className="whitespace-nowrap rounded-lg bg-amber px-3.5 py-1.5 text-xs font-bold text-night hover:bg-amber-hover transition disabled:opacity-50"
+                  >
+                    {linkCopiado ? "✓ Copiado!" : "Copiar"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-panel-line">
+                {linkPublico && (
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(
+                      `Olá! Você pode agendar seu horário online com facilidade pelo nosso link: ${linkPublico}`,
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition"
+                  >
+                    <span>💬 Enviar no WhatsApp</span>
+                  </a>
+                )}
+                {linkPublico && (
+                  <a
+                    href={linkPublico}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-xl border border-panel-line px-4 py-2 text-xs font-semibold text-panel-ink hover:border-amber/40 hover:text-amber transition"
+                  >
+                    Ver página como cliente ↗
+                  </a>
+                )}
               </div>
             </div>
           </div>

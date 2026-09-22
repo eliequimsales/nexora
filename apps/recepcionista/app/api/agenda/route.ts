@@ -72,6 +72,33 @@ export async function GET(request: Request) {
       select: { slug: true, name: true },
     });
 
+    let slug = empresa?.slug;
+    if (!slug && empresa?.name) {
+      const baseSlug = empresa.name
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 30) || "agendamento";
+
+      const outroComSlug = await prisma.company.findUnique({ where: { slug: baseSlug } });
+      slug = outroComSlug ? `${baseSlug}-${companyId.slice(-4)}` : baseSlug;
+
+      try {
+        await prisma.company.update({
+          where: { id: companyId },
+          data: { slug },
+        });
+      } catch {
+        slug = `${baseSlug}-${companyId.slice(-4)}`;
+        await prisma.company.update({
+          where: { id: companyId },
+          data: { slug },
+        }).catch(() => {});
+      }
+    }
+
     const [grade, resumo, servicos] = await Promise.all([
       obterGradeDoDia(companyId, dataSelecionada),
       obterResumoDaAgenda(companyId, dataSelecionada),
@@ -79,7 +106,7 @@ export async function GET(request: Request) {
     ]);
 
     const appUrl = process.env.APP_URL || "https://www.meunexora.com.br";
-    const linkPublico = empresa?.slug ? `${appUrl}/agendar/${empresa.slug}` : null;
+    const linkPublico = slug ? `${appUrl}/agendar/${slug}` : `${appUrl}/agendar/${companyId}`;
 
     return NextResponse.json({
       ok: true,
@@ -90,7 +117,7 @@ export async function GET(request: Request) {
       resumo,
       servicos,
       empresaNome: empresa?.name,
-      slug: empresa?.slug,
+      slug: slug || empresa?.slug,
       linkPublico,
     });
   } catch (error) {

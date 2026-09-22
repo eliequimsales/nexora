@@ -51,8 +51,13 @@ const agendarSchema = z.object({
 });
 
 async function carregarNegocio(slug: string) {
-  return prisma.company.findUnique({
-    where: { slug },
+  return prisma.company.findFirst({
+    where: {
+      OR: [
+        { slug },
+        { id: slug },
+      ],
+    },
     select: {
       id: true,
       name: true,
@@ -100,17 +105,14 @@ export async function GET(
     const url = new URL(request.url);
     const serviceId = url.searchParams.get("serviceId");
     const profissionalFiltro = url.searchParams.get("profissional")?.trim();
-    const servico = serviceId
-      ? negocio.services.find((s) => s.id === serviceId)
-      : negocio.services[0];
 
-    if (!servico) {
-      return NextResponse.json({
-        negocio: { nome: negocio.name, endereco: negocio.profile?.address ?? "" },
-        servicos: negocio.services,
-        dias: [],
-      });
-    }
+    const servicosDisponiveis = negocio.services.length > 0
+      ? negocio.services
+      : [{ id: "atendimento", name: "Atendimento Geral", durationMin: 30, priceCents: 0 }];
+
+    const servico = serviceId
+      ? servicosDisponiveis.find((s) => s.id === serviceId) || servicosDisponiveis[0]
+      : servicosDisponiveis[0];
 
     const agora = new Date();
     const dias = proximosDias(agora, DIAS_VISIVEIS);
@@ -164,7 +166,7 @@ export async function GET(
 
     return NextResponse.json({
       negocio: { nome: negocio.name, endereco: negocio.profile?.address ?? "" },
-      servicos: negocio.services,
+      servicos: servicosDisponiveis,
       servicoSelecionado: servico.id,
       profissionais,
       dias: agenda,
@@ -215,7 +217,11 @@ export async function POST(
       return NextResponse.json({ error: "Página não encontrada" }, { status: 404 });
     }
 
-    const servico = negocio.services.find((s) => s.id === serviceId);
+    const servicosDisponiveis = negocio.services.length > 0
+      ? negocio.services
+      : [{ id: "atendimento", name: "Atendimento Geral", durationMin: 30, priceCents: 0 }];
+
+    const servico = servicosDisponiveis.find((s) => s.id === serviceId);
     if (!servico) {
       return NextResponse.json({ error: "Serviço indisponível" }, { status: 400 });
     }
@@ -318,12 +324,13 @@ export async function POST(
             data: {
               companyId: negocio.id,
               customerId: cliente.id,
-              serviceId: servico.id,
+              serviceId: servico.id === "atendimento" ? null : servico.id,
               startsAt,
               endsAt,
               source: "LINK",
               notes: JSON.stringify({
                 profissional: profissionalEscolhido,
+                servicoNome: servico.name,
               }),
             },
           });
