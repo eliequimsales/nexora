@@ -576,10 +576,13 @@ export default function PaginaOnda() {
       </div>
 
       {onda.totalEmJogoCents > 0 && (
-        <p className="text-sm text-panel-sub">
-          Juntas, essas pessoas costumam gastar{" "}
-          <strong className="text-panel-ink">{reais(onda.totalEmJogoCents)}</strong> por visita.
-        </p>
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-50/40 p-3 text-xs text-emerald-950">
+          <span className="text-base">💰</span>
+          <span>
+            Juntas, essas pessoas costumam gastar{" "}
+            <strong className="font-bold text-emerald-900">{reais(onda.totalEmJogoCents)}</strong> por visita.
+          </span>
+        </div>
       )}
 
       {/* PENDENTES DE SEMANAS ANTERIORES */}
@@ -597,60 +600,60 @@ export default function PaginaOnda() {
           return (
             <article
               key={card.id}
-              className={`rounded-2xl border bg-panel-card p-4 transition ${
+              className={`rounded-2xl border bg-panel-card p-5 transition ${
                 feito ? "border-emerald-500/40 opacity-75" : "border-panel-line"
               }`}
             >
-              <div className="mb-2 flex items-start justify-between gap-3">
-                <div>
-                  <h2 className="font-semibold text-panel-ink">{card.nome}</h2>
-                  <p className="text-xs tabular-nums text-panel-sub">{card.telefone}</p>
+              {/* Topo do cartão: Identificação e Status */}
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-panel-line/50 pb-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="font-semibold text-base text-panel-ink">{card.nome}</h2>
+                  <span className="text-xs text-panel-sub">{card.telefone}</span>
                 </div>
-                <div className="flex flex-col items-end gap-1">
+                <div className="flex items-center gap-2">
                   {rotulo ? (
-                    <span className={`rounded-full px-2 py-0.5 text-[11px] ${rotulo.classe}`}>
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${rotulo.classe}`}>
                       {rotulo.texto}
                     </span>
                   ) : null}
-                  <span className="text-[11px] tabular-nums text-panel-sub">
-                    {card.toque}ª de 4 mensagens
+                  <span className="rounded-full bg-panel-bg border border-panel-line px-2.5 py-0.5 text-xs text-panel-sub">
+                    {card.toque}ª mensagem
                   </span>
                 </div>
               </div>
 
-              <p className="text-sm leading-relaxed text-panel-sub">
-                Última visita há{" "}
-                <span className="tabular-nums text-panel-ink">{card.diasDesdeUltima} dias</span>.{" "}
-                {card.porque}
-              </p>
-
-              {card.confianca === "baixa" ? (
-                <p className="mt-2 rounded-lg bg-amber/15 px-2.5 py-1.5 text-xs text-[#7A5A10]">
-                  Isso aqui é um palpite — tenho pouca informação sobre esse cliente. Estou te
-                  avisando porque é verdade, não porque atrapalha. Mesmo assim vale mandar: o
-                  custo de tentar é uma mensagem.
-                </p>
-              ) : null}
+              {/* Informação direta sobre a ausência */}
+              <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-panel-sub">
+                <span className="font-medium text-panel-ink">
+                  Última visita há {card.diasDesdeUltima} dias
+                </span>
+                {card.cicloDias > 0 && card.confianca === "alta" && (
+                  <span>• Costuma voltar a cada {card.cicloDias} dias</span>
+                )}
+                {card.valorCents > 0 && (
+                  <span>• Gasto médio: {reais(card.valorCents)}</span>
+                )}
+              </div>
 
               {feito ? (
-                <div className="mt-3 flex items-center gap-2 rounded-xl bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-400">
+                <div className="mt-4 flex items-center gap-2 rounded-xl bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-700">
                   <span>✓</span>
                   <span>{feito}</span>
                 </div>
               ) : pulando === card.id ? (
-                <div className="mt-3">
+                <div className="mt-4 rounded-xl border border-panel-line bg-panel-bg p-4">
                   <p className="text-xs leading-relaxed text-panel-sub">
                     Por que não quer chamar? Menos o último, todos estes motivos tiram essa
                     pessoa da sua lista <strong className="font-semibold">para sempre</strong> —
                     ela nunca mais vai aparecer aqui, e não tem como desfazer.
                   </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
+                  <div className="mt-3 flex flex-wrap gap-2">
                     {MOTIVOS_PULO.map((valor) => (
                       <button
                         key={valor}
                         type="button"
                         onClick={() => marcar(card, "PULADO", { motivoPulo: valor })}
-                        className="rounded-lg border border-panel-line px-2.5 py-1.5 text-xs text-panel-sub hover:border-panel-sub"
+                        className="rounded-lg border border-panel-line bg-white px-3 py-1.5 text-xs text-panel-sub hover:border-red-300 hover:text-red-600 transition"
                       >
                         {rotuloDoMotivo(valor)}
                         {deveSilenciar(valor) && (
@@ -662,137 +665,152 @@ export default function PaginaOnda() {
                   <button
                     type="button"
                     onClick={() => setPulando("")}
-                    className="mt-2 text-xs text-panel-sub underline"
+                    className="mt-3 text-xs text-panel-sub hover:text-panel-ink underline"
                   >
                     Voltar
                   </button>
                 </div>
               ) : (
                 <>
-                  {/* Seletor de Mensagens */}
-                  <div className="mt-3">
-                    <div className="flex items-center justify-between text-xs text-panel-sub">
-                      <span>Opções de mensagem para esse cliente:</span>
-                      <span className="font-medium text-panel-ink">
-                        {ROTULOS_MENSAGEM[toqueAtivo]?.titulo} ({ROTULOS_MENSAGEM[toqueAtivo]?.desc})
+                  {/* Mensagem pronta estilo WhatsApp */}
+                  <div className="mt-4 space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <span className="font-semibold text-panel-ink flex items-center gap-1.5">
+                        <span className="text-emerald-600">💬</span> Mensagem pronta:
                       </span>
+                      {card.mensagens && Object.keys(card.mensagens).length > 1 && (
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4].map((num) => {
+                            if (!card.mensagens?.[num]) return null;
+                            const isSelecionado = toqueAtivo === num;
+                            return (
+                              <button
+                                key={num}
+                                type="button"
+                                onClick={() => setToquesSelecionados((ts) => ({ ...ts, [card.id]: num }))}
+                                className={`rounded-lg px-2.5 py-1 text-xs transition ${
+                                  isSelecionado
+                                    ? "bg-amber text-night font-bold shadow-xs"
+                                    : "bg-panel-bg text-panel-sub hover:text-panel-ink border border-panel-line"
+                                }`}
+                              >
+                                {ROTULOS_MENSAGEM[num]?.desc ?? `${num}ª`}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                    <div className="mt-1.5 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-                      {[1, 2, 3, 4].map((num) => {
-                        const isRecomendado = card.toque === num;
-                        const isSelecionado = toqueAtivo === num;
-                        return (
-                          <button
-                            key={num}
-                            type="button"
-                            onClick={() => setToquesSelecionados((ts) => ({ ...ts, [card.id]: num }))}
-                            className={`flex flex-col items-center justify-center rounded-lg border px-2 py-1 text-xs transition ${
-                              isSelecionado
-                                ? "border-amber bg-amber/20 font-semibold text-amber-deep shadow-sm"
-                                : "border-panel-line bg-panel-bg text-panel-sub hover:text-panel-ink"
-                            }`}
-                          >
-                            <span className="flex items-center gap-1 font-medium">
-                              {ROTULOS_MENSAGEM[num]?.titulo}
-                              {isRecomendado && (
-                                <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-deep" title="Recomendada pela Nexora" />
-                              )}
-                            </span>
-                            <span className="text-[10px] opacity-75">{ROTULOS_MENSAGEM[num]?.desc}</span>
-                          </button>
-                        );
-                      })}
+
+                    <div className="rounded-2xl border border-emerald-500/30 bg-emerald-50/25 p-4 text-sm leading-relaxed text-panel-ink shadow-xs">
+                      <p className="whitespace-pre-wrap">{texto}</p>
                     </div>
                   </div>
 
-                  <pre className="mt-3 whitespace-pre-wrap rounded-xl border border-panel-line bg-panel-bg p-3 font-sans text-sm text-panel-ink">
-                    {texto}
-                  </pre>
+                  {/* Barra de Ações: Clara, sem conflito visual */}
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-panel-line/60 pt-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* Ação Primária: Enviar */}
+                      {whatsappLigado ? (
+                        <button
+                          type="button"
+                          disabled={enviandoEste || enviandoLote}
+                          onClick={() => enviarDireto(card)}
+                          className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-4 py-2.5 text-sm font-bold text-night transition shadow-sm disabled:opacity-50"
+                        >
+                          {enviandoEste ? (
+                            <>
+                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-night border-t-transparent" />
+                              <span>Enviando pelo seu WhatsApp...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>⚡</span>
+                              <span>Enviar mensagem de recuperação</span>
+                            </>
+                          )}
+                        </button>
+                      ) : (
+                        <>
+                          {zap ? (
+                            <a
+                              href={zap}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={() => marcar(card, "AGUARDANDO")}
+                              className="inline-flex items-center gap-2 rounded-xl bg-[#25D366] hover:bg-[#20ba59] px-4 py-2.5 text-sm font-bold text-white transition shadow-sm"
+                            >
+                              <span>💬</span>
+                              <span>Chamar no WhatsApp</span>
+                            </a>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setModalWhatsAppAberto(true)}
+                              className="inline-flex items-center gap-2 rounded-xl bg-amber hover:brightness-110 px-4 py-2.5 text-sm font-bold text-night transition shadow-sm"
+                            >
+                              <span>⚡</span>
+                              <span>Enviar mensagem de recuperação</span>
+                            </button>
+                          )}
+                        </>
+                      )}
 
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    {/* Botão de Envio de 1 Clique */}
-                    {whatsappLigado ? (
+                      {/* Botão Copiar */}
                       <button
                         type="button"
-                        disabled={enviandoEste || enviandoLote}
-                        onClick={() => enviarDireto(card)}
-                        className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-bold text-night transition hover:bg-emerald-400 disabled:opacity-50"
+                        onClick={() => copiar(card, texto)}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-panel-line bg-white px-3 py-2 text-xs font-semibold text-panel-sub hover:text-panel-ink hover:border-panel-sub transition"
+                        title="Copiar texto da mensagem"
                       >
-                        {enviandoEste ? (
-                          <>
-                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-night border-t-transparent" />
-                            <span>Enviando pelo seu WhatsApp...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>⚡</span>
-                            <span>Enviar mensagem de recuperação</span>
-                          </>
-                        )}
+                        <span>📋</span>
+                        <span>{copiado === card.id ? "Copiado ✓" : "Copiar mensagem"}</span>
                       </button>
-                    ) : (
+
+                      {/* Se WhatsApp conectado, também permite abrir a conversa manualmente se quiser */}
+                      {whatsappLigado && zap && (
+                        <a
+                          href={zap}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => marcar(card, "AGUARDANDO")}
+                          className="inline-flex items-center gap-1 rounded-xl border border-panel-line bg-white px-3 py-2 text-xs font-semibold text-panel-sub hover:text-panel-ink hover:border-panel-sub transition"
+                          title="Abrir no aplicativo do WhatsApp"
+                        >
+                          <span>💬</span>
+                          <span>Abrir conversa no WhatsApp</span>
+                        </a>
+                      )}
+                    </div>
+
+                    {/* Ações Secundárias / Exceções */}
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-panel-sub">
                       <button
                         type="button"
-                        onClick={() => setModalWhatsAppAberto(true)}
-                        className="inline-flex items-center gap-2 rounded-lg bg-amber px-4 py-2 text-sm font-bold text-night transition hover:brightness-110"
-                      >
-                        <span>⚡</span>
-                        <span>Enviar mensagem de recuperação</span>
-                      </button>
-                    )}
-
-                    {/* Atalho alternativo: abrir direto no WhatsApp */}
-                    {zap && (
-                      <a
-                        href={zap}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         onClick={() => marcar(card, "AGUARDANDO")}
-                        className="rounded-lg border border-panel-line px-3 py-2 text-sm text-panel-ink hover:border-panel-sub"
+                        className="hover:text-panel-ink hover:underline transition"
+                        title="Marcar como enviada manualmente"
                       >
-                        Abrir conversa no WhatsApp
-                      </a>
-                    )}
+                        Já mandei
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => copiar(card, texto)}
-                      className="rounded-lg border border-panel-line px-3 py-2 text-sm text-panel-ink hover:border-panel-sub"
-                    >
-                      {copiado === card.id ? "Copiado ✓" : "Copiar mensagem"}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => marcar(card, "VOLTOU", { valorCents: card.ticketMedioCents })}
+                        className="hover:text-amber-deep hover:underline transition"
+                        title="Marcar que o cliente já retornou"
+                      >
+                        Voltou ({reais(card.ticketMedioCents)})
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => marcar(card, "AGUARDANDO")}
-                      className="rounded-lg border border-panel-line px-3 py-2 text-sm text-panel-ink hover:border-panel-sub"
-                    >
-                      Já mandei
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => marcar(card, "VOLTOU", { valorCents: card.ticketMedioCents })}
-                      className="rounded-lg border border-amber/40 px-3 py-2 text-sm text-amber-deep hover:bg-amber/10"
-                    >
-                      Voltou e pagou {reais(card.ticketMedioCents)}
-                    </button>
-
-                    <Link
-                      href="/painel/agenda"
-                      className="rounded-lg border border-panel-line px-3 py-2 text-sm text-panel-ink hover:border-amber/40 hover:text-amber"
-                      title="Abrir a Agenda Inteligente"
-                    >
-                      🗓️ Agendar na agenda
-                    </Link>
-
-                    <button
-                      type="button"
-                      onClick={() => setPulando(card.id)}
-                      className="rounded-lg px-3 py-2 text-sm text-panel-sub hover:text-panel-ink"
-                    >
-                      Não quero chamar
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => setPulando(card.id)}
+                        className="text-panel-sub hover:text-red-600 transition"
+                      >
+                        Não quero chamar
+                      </button>
+                    </div>
                   </div>
                 </>
               )}
@@ -806,11 +824,7 @@ export default function PaginaOnda() {
           Por que só {total} e não a minha lista inteira?
         </h3>
         <p className="text-sm leading-relaxed text-panel-sub">
-          Dois motivos práticos: o WhatsApp bloqueia número que dispara em massa, e você não
-          teria mão para atender 100 pessoas respondendo hoje à tarde. Quem não entrar hoje
-          entra na semana que vem — e quem não responder aparece aqui de novo daqui a 4 dias,
-          para você mandar a segunda mensagem. Insistir 4 ou 5 vezes recupera cerca de 81%
-          mais gente do que tentar uma vez só.
+          O WhatsApp protege números que não disparam em massa, e você atende com calma quem responder hoje. Quem não entrar hoje volta nas próximas semanas.
         </p>
       </footer>
     </main>
