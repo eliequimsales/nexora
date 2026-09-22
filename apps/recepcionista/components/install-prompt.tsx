@@ -129,10 +129,10 @@ export function InstallPrompt() {
             N
           </div>
           <div className="text-left">
-            <span className="block text-xs font-bold text-panel-ink group-hover:text-amber transition">
+            <span className="block text-xs font-bold text-white group-hover:text-amber transition">
               Baixar Aplicativo
             </span>
-            <span className="block text-[10px] text-panel-sub">
+            <span className="block text-[10px] text-zinc-300 font-medium">
               {isMobile ? "Instalar no celular" : "Celular ou PC"}
             </span>
           </div>
@@ -143,7 +143,7 @@ export function InstallPrompt() {
       {/* Modal Explícito de Download / Instalação */}
       {modalAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-fade-in">
-          <div className="relative w-full max-w-md rounded-2xl border border-panel-line bg-night p-6 shadow-2xl">
+          <div className="relative w-full max-w-md rounded-2xl border border-panel-line bg-white p-6 shadow-2xl">
             {/* Botão Fechar */}
             <button
               onClick={() => setModalAberto(false)}
