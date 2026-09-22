@@ -975,6 +975,7 @@ export default function PaginaAgenda() {
               </button>
             </div>
 
+            <div className="mt-4 space-y-3">
               <div className={`grid gap-3 text-xs ${profissionais.length > 0 ? "grid-cols-2" : "grid-cols-1"}`}>
                 <div className="rounded-xl border border-panel-line bg-panel-card p-3">
                   <span className="text-panel-sub block text-[10px] uppercase">Horário</span>
