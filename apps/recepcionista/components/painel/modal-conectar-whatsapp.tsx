@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 interface ModalConectarWhatsAppProps {
   aberto: boolean;
@@ -30,6 +30,12 @@ export function ModalConectarWhatsApp({
     return `(${nums.slice(0, 2)}) ${nums.slice(2, 7)}-${nums.slice(7)}`;
   };
 
+  // Quem abre o modal costuma passar uma função nova a cada render. Com ela nas
+  // dependências, a aba do QR Code pedia uma conexão nova a cada render até o
+  // código chegar. Lida por referência, a conexão só é pedida quando precisa.
+  const aoConectarAgora = useRef(aoConectar);
+  aoConectarAgora.current = aoConectar;
+
   const buscarStatus = useCallback(async () => {
     try {
       const res = await fetch("/api/whatsapp/status");
@@ -37,7 +43,7 @@ export function ModalConectarWhatsApp({
       const data = await res.json();
       if (data.state?.status === "CONNECTED") {
         setStatus("CONECTADO");
-        if (aoConectar) aoConectar();
+        aoConectarAgora.current?.();
       } else if (data.state?.qrCode) {
         setQrCode(data.state.qrCode);
         if (!pairingCode) {
@@ -47,7 +53,7 @@ export function ModalConectarWhatsApp({
     } catch {
       // Ignora falhas de polling temporárias
     }
-  }, [aoConectar, pairingCode]);
+  }, [pairingCode]);
 
   const iniciarConexao = useCallback(async (phoneParam?: string) => {
     setCarregando(true);
@@ -67,7 +73,7 @@ export function ModalConectarWhatsApp({
       }
       if (data.state?.status === "CONNECTED") {
         setStatus("CONECTADO");
-        if (aoConectar) aoConectar();
+        aoConectarAgora.current?.();
       } else {
         if (data.state?.pairingCode) {
           setPairingCode(data.state.pairingCode);
@@ -83,7 +89,7 @@ export function ModalConectarWhatsApp({
     } finally {
       setCarregando(false);
     }
-  }, [aoConectar]);
+  }, []);
 
   const handleGerarCodigo = (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,7 +146,8 @@ export function ModalConectarWhatsApp({
             Ligar meu WhatsApp na Nexora
           </h2>
           <p className="mt-1 text-xs text-panel-sub max-w-md mx-auto">
-            Envie mensagens de recuperação com 1 clique direto pelo sistema, sem precisar de janelas extras.
+            As mensagens da Onda saem pelo seu número — e, se você ligar o Atendente Virtual, é por ele que ele
+            responde quando você não pode.
           </p>
         </div>
 
@@ -184,14 +191,14 @@ export function ModalConectarWhatsApp({
                 WhatsApp conectado com sucesso!
               </h3>
               <p className="mt-1 text-xs text-panel-sub">
-                Seu número está pronto para disparar as mensagens em 1 toque.
+                Pronto: as mensagens já saem pelo seu número.
               </p>
               <button
                 type="button"
                 onClick={aoFechar}
                 className="mt-5 inline-flex items-center justify-center rounded-xl bg-emerald-500 px-6 py-2.5 font-display text-xs font-bold text-night transition hover:bg-emerald-400"
               >
-                Continuar para os disparos
+                Continuar
               </button>
             </div>
           ) : erro ? (

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MINUTOS_SEM_RESPOSTA } from "@/lib/atendente/constantes";
 import type { Jeito } from "@/lib/atendente/jeitos";
 import type { TelaDoAtendente } from "@/lib/atendente/tela";
@@ -141,6 +141,16 @@ export function Simulador({
       setLigando(false);
     }
   }
+
+  // O modal refaz a conexão quando o callback muda: por isso os dois são
+  // estáveis, e o "ligar" mais recente é lido por referência.
+  const ligarAgora = useRef(ligar);
+  ligarAgora.current = ligar;
+  const fecharConexao = useCallback(() => setConectando(false), []);
+  const conectou = useCallback(() => {
+    setConectando(false);
+    void ligarAgora.current();
+  }, []);
 
   // Depois de uma oferta, a sugestão é responder com o número — é assim que ele marca.
   const sugestoes =
@@ -317,14 +327,7 @@ export function Simulador({
         )}
       </div>
 
-      <ModalConectarWhatsApp
-        aberto={conectando}
-        aoFechar={() => setConectando(false)}
-        aoConectar={() => {
-          setConectando(false);
-          void ligar();
-        }}
-      />
+      <ModalConectarWhatsApp aberto={conectando} aoFechar={fecharConexao} aoConectar={conectou} />
     </section>
   );
 }

@@ -47,6 +47,8 @@ export async function GET() {
           followUpDelayHours: true,
           followUpMessage: true,
           maxFollowUps: true,
+          // A tela diz a verdade sobre as respostas automáticas: ligadas ou não.
+          plantaoAtivo: true,
         },
       },
     },

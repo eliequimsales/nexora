@@ -1,19 +1,21 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { HORARIO_PADRAO, horarioDaEmpresa, semanaCompleta } from "@/lib/agenda/horario";
 
 /**
- * MEU ATENDENTE NO WHATSAPP — a tela de ativação do produto.
+ * WHATSAPP E O CADASTRO DO NEGÓCIO.
  *
- * Não é "configurações": é a PRIMEIRA tela que um dono novo vê (o cadastro e o
- * login com Google empurram para cá). Ela era um formulão de oito blocos e ~25
- * campos vazios, com o bloco que liga o WhatsApp lá embaixo, no fim de tudo.
+ * Ligar o WhatsApp primeiro (é por ele que a Onda sai e que o Atendente Virtual
+ * responde), depois o que o cadastro precisa ter — endereço, pagamento, horário
+ * — e o resto recolhido.
  *
- * Agora é um passo a passo: ligar o WhatsApp primeiro (é o que faz o produto
- * existir), depois o mínimo que a atendente precisa saber para responder, e o
- * resto recolhido. Quem só quer ligar o bot em dois minutos consegue; quem quer
- * afinar abre o bloco de baixo.
+ * O jeito de falar, o nome, a primeira mensagem e a mensagem de fechado saíram
+ * daqui: quem decide isso agora é a tela do Atendente Virtual, com textos
+ * prontos por jeito. O lembrete automático saiu do produto — o Atendente nunca
+ * começa conversa. Os campos antigos continuam no formulário para o PUT não
+ * apagá-los (ver abaixo).
  *
  * OS NOMES DOS CAMPOS NÃO MUDAM. `followUpEnabled`, `handoffKeywords` e
  * companhia são contrato com o Zod em lib/validation.ts, e o schema tem
@@ -190,6 +192,7 @@ export default function ConfiguracoesPage() {
   const [hypotheses, setHypotheses] = useState<{ area: string; confidence: number }[]>([]);
   const [wa, setWa] = useState<WhatsAppState | null>(null);
   const [waBusy, setWaBusy] = useState(false);
+  const [atendenteLigado, setAtendenteLigado] = useState(false);
 
   function addSegment(area: string) {
     const value = area.trim();
@@ -289,6 +292,7 @@ export default function ConfiguracoesPage() {
         followUpMessage: profile.followUpMessage ?? "",
         maxFollowUps: profile.maxFollowUps ?? 2,
       });
+      setAtendenteLigado(Boolean(profile.plantaoAtivo));
       setLoading(false);
     })();
   }, []);
@@ -318,7 +322,10 @@ export default function ConfiguracoesPage() {
         setFeedback({ type: "error", text: data.error ?? "Não consegui salvar agora." });
         return;
       }
-      setFeedback({ type: "ok", text: "Salvo — sua atendente já responde assim." });
+      setFeedback({
+        type: "ok",
+        text: atendenteLigado ? "Salvo — o Atendente Virtual já responde assim." : "Salvo.",
+      });
       setTimeout(() => setFeedback(null), 6000);
     } catch {
       setFeedback({ type: "error", text: "Não consegui falar com a internet agora." });
@@ -358,8 +365,13 @@ export default function ConfiguracoesPage() {
         <h1 className="font-display text-2xl font-bold">WhatsApp</h1>
         <p className="mt-1 text-sm text-panel-sub">
           Ligue o WhatsApp do seu negócio para as mensagens da Onda e os lembretes da agenda
-          saírem pelo seu número. Respostas automáticas estão desligadas: nada responde sozinho
-          aos seus clientes até você ligar o Plantão.
+          saírem pelo seu número.{" "}
+          {atendenteLigado
+            ? "O Atendente Virtual está ligado: ele responde por este número quando você não pode."
+            : "Respostas automáticas estão desligadas: nada responde sozinho aos seus clientes até você ligar o Atendente Virtual."}{" "}
+          <Link href="/painel/atendente" className="font-semibold text-amber-deep hover:underline">
+            {atendenteLigado ? "Ver o Atendente" : "Conhecer o Atendente"}
+          </Link>
         </p>
       </div>
 
@@ -438,8 +450,10 @@ export default function ConfiguracoesPage() {
         {status === "CONNECTED" && (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
             <strong>Pronto.</strong> As mensagens da Onda e os lembretes da agenda já saem pelo
-            seu número. Nada responde sozinho aos seus clientes: isso só muda quando você ligar
-            o Plantão.
+            seu número.{" "}
+            {atendenteLigado
+              ? "E o Atendente Virtual responde por ele quando você não pode."
+              : "Nada responde sozinho aos seus clientes: isso só muda quando você ligar o Atendente Virtual."}
           </div>
         )}
 
@@ -451,7 +465,7 @@ export default function ConfiguracoesPage() {
       <Passo
         numero={2}
         title="O que o seu atendimento precisa saber sobre o seu negócio"
-        hint="Guarde aqui o que um cliente costuma perguntar. Nada disto é enviado sozinho por enquanto: é o que o Plantão vai usar, e o que não estiver aqui ele não inventa."
+        hint="O Atendente Virtual usa daqui o endereço, as formas de pagamento e o horário — serviços e preços, ele pega da sua Agenda. O que não estiver cadastrado, ele não inventa."
       >
         <Field label="Nome do seu negócio">
           <input className={inputClass} value={form.name} onChange={(e) => set("name", e.target.value)} />
@@ -475,6 +489,13 @@ export default function ConfiguracoesPage() {
             value={form.pricingInfo}
             onChange={(e) => set("pricingInfo", e.target.value)}
           />
+          <span className="mt-1 block text-xs text-panel-sub">
+            O preço que o Atendente Virtual diz ao cliente vem dos serviços da sua{" "}
+            <Link href="/painel/agenda" className="font-semibold text-amber-deep hover:underline">
+              Agenda
+            </Link>
+            .
+          </span>
         </Field>
 
         <Field label="Como o cliente pode pagar">
@@ -498,8 +519,8 @@ export default function ConfiguracoesPage() {
         <div>
           <span className="mb-1 block text-sm font-medium">Horário de funcionamento</span>
           <p className="mb-2 text-xs text-panel-sub">
-            Escolha um atalho e ajuste os dias se precisar. Fora do horário, a atendente avisa
-            o cliente e usa a mensagem de quando você está fechado.
+            Escolha um atalho e ajuste os dias se precisar. É este horário que diz quando a loja
+            está aberta: fora dele, quem responde é o Atendente Virtual, se estiver ligado.
           </p>
           <div className="mb-3 flex flex-wrap gap-2">
             {HOUR_PRESETS.map((preset) => (
@@ -562,7 +583,11 @@ export default function ConfiguracoesPage() {
           Configurações adicionais (opcional)
         </summary>
         <p className="mt-1 text-sm text-panel-sub">
-          Sua atendente já funciona sem nada disto. Abra quando quiser afinar o jeito dela.
+          O Atendente Virtual já funciona sem nada disto. O nome e o jeito de falar dele ficam{" "}
+          <Link href="/painel/atendente" className="font-semibold text-amber-deep hover:underline">
+            na tela dele
+          </Link>
+          .
         </p>
 
         <div className="mt-6 space-y-6">
@@ -580,7 +605,7 @@ export default function ConfiguracoesPage() {
           <div>
             <span className="mb-1 block text-sm font-medium">O que seu negócio faz (até 3)</span>
             <p className="mb-2 text-xs text-panel-sub">
-              Com isto preenchido, sua atendente já chega conhecendo as palavras do seu ramo. A
+              Com isto preenchido, a Nexora já chega conhecendo as palavras do seu ramo. A
               decisão é sempre sua — a sugestão é só um atalho.
             </p>
             <div className="mb-2 flex flex-wrap gap-2">
@@ -675,33 +700,14 @@ export default function ConfiguracoesPage() {
             )}
           </div>
 
-          <Field label="Como a atendente deve falar com o cliente">
-            <input
-              className={inputClass}
-              placeholder="Ex.: acolhedor e informal, como alguém da casa"
-              value={form.aiTone}
-              onChange={(e) => set("aiTone", e.target.value)}
-            />
-          </Field>
-
-          <Field label="O que ela pode e não pode falar">
-            <textarea
-              className={inputClass}
-              rows={3}
-              placeholder="Ex.: Nunca prometer prazo como garantido — quem confirma sou eu. Sempre perguntar o nome antes de anotar."
-              value={form.serviceRules}
-              onChange={(e) => set("serviceRules", e.target.value)}
-            />
-          </Field>
-
           <div>
             <span className="mb-1 block text-sm font-medium">
               Quando o cliente escrever isso, me chame
             </span>
             <p className="mb-2 text-xs text-panel-sub">
-              Se a mensagem do cliente tiver uma destas palavras, a atendente para e chama
-              você. Algumas já funcionam sozinhas, sem você escrever nada: atendente, humano,
-              suporte, responsável.
+              Se a mensagem do cliente tiver uma destas palavras, o Atendente Virtual anota para
+              você e deixa a conversa com você. Algumas já funcionam sozinhas, sem você escrever
+              nada: atendente, humano, suporte, responsável.
             </p>
             <div className="mb-2 flex flex-wrap gap-2">
               {form.handoffKeywords.map((keyword) => (
@@ -756,86 +762,10 @@ export default function ConfiguracoesPage() {
             </div>
           </div>
 
-          <Field label="Primeira mensagem que o cliente recebe">
-            <textarea
-              className={inputClass}
-              rows={2}
-              placeholder="Ex.: Olá! 👋 Aqui é a atendente da [seu negócio]. Como posso ajudar?"
-              value={form.greetingMessage}
-              onChange={(e) => set("greetingMessage", e.target.value)}
-            />
-          </Field>
-
-          <Field label="Mensagem de quando você está fechado">
-            <textarea
-              className={inputClass}
-              rows={2}
-              placeholder="Ex.: Estamos fechados agora, mas já anotei sua mensagem — retorno amanhã a partir das 8h."
-              value={form.awayMessage}
-              onChange={(e) => set("awayMessage", e.target.value)}
-            />
-          </Field>
-
-          <div className="rounded-xl border border-panel-line p-4">
-            <label className="flex items-center gap-2 text-sm font-medium">
-              <input
-                type="checkbox"
-                checked={form.followUpEnabled}
-                onChange={(e) => set("followUpEnabled", e.target.checked)}
-              />
-              Mandar um lembrete quando o cliente parar de responder
-            </label>
-            <p className="mt-1 text-xs text-panel-sub">
-              Muita gente pergunta o preço e some. O lembrete traz parte dessa gente de volta.
-            </p>
-
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <Field label="Esperar quantas horas antes de lembrar?">
-                <input
-                  type="number"
-                  min={1}
-                  max={72}
-                  className={inputClass}
-                  value={form.followUpDelayHours}
-                  onChange={(e) => set("followUpDelayHours", parseInt(e.target.value, 10) || 1)}
-                />
-              </Field>
-              <Field label="No máximo quantos lembretes por cliente?">
-                <input
-                  type="number"
-                  min={0}
-                  max={5}
-                  className={inputClass}
-                  value={form.maxFollowUps}
-                  onChange={(e) => set("maxFollowUps", parseInt(e.target.value, 10) || 0)}
-                />
-              </Field>
-            </div>
-
-            <div className="mt-4">
-              <Field label="O que o lembrete vai dizer">
-                <textarea
-                  className={inputClass}
-                  rows={2}
-                  placeholder="Ex.: Oi! Ficou alguma dúvida? Estou por aqui se precisar 😊"
-                  value={form.followUpMessage}
-                  onChange={(e) => set("followUpMessage", e.target.value)}
-                />
-              </Field>
-              {form.followUpEnabled && !form.followUpMessage.trim() && (
-                /* Ligado com a mensagem vazia, o envio não acontece — e antes a
-                   tela deixava o dono acreditar que estava funcionando. */
-                <p className="mt-2 rounded-lg bg-amber/20 p-2.5 text-xs text-[#7A5A10]">
-                  Escreva a mensagem acima, senão o lembrete não é enviado.
-                </p>
-              )}
-            </div>
-          </div>
-
           <div>
             <span className="mb-1 block text-sm font-medium">Perguntas que os clientes sempre fazem</span>
             <p className="mb-3 text-xs text-panel-sub">
-              A pergunta e a resposta certa. É daqui que ela tira o que responder.
+              A pergunta e a resposta certa. É daqui que o Atendente Virtual tira o que responder.
             </p>
             <div className="space-y-4">
               {form.faqs.map((faq, index) => (
@@ -864,7 +794,7 @@ export default function ConfiguracoesPage() {
                   <textarea
                     className={inputClass}
                     rows={2}
-                    placeholder="O que ela deve responder"
+                    placeholder="O que responder"
                     value={faq.answer}
                     onChange={(e) =>
                       set(
@@ -895,7 +825,7 @@ export default function ConfiguracoesPage() {
             </p>
           ) : (
             <span className="text-sm text-panel-sub">
-              Depois de salvar, sua atendente já responde assim.
+              Depois de salvar, o Atendente Virtual passa a responder assim.
             </span>
           )}
           <button

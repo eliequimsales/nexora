@@ -27,3 +27,39 @@ describe("a tela de configurações", () => {
     expect(tela).toMatch(/CONNECTED:\s*\{\s*label:\s*"WhatsApp ligado"/);
   });
 });
+
+/**
+ * O ATENDENTE VIRTUAL ASSUMIU O QUE O PLANTÃO PROMETIA.
+ *
+ * A tela diz se as respostas automáticas estão ligadas ou não — de verdade, pelo
+ * estado do banco — e aponta para a tela do Atendente. O jeito livre, as regras
+ * em texto livre, a primeira mensagem, a mensagem de fechado e o lembrete
+ * saíram da tela, mas continuam no formulário: o schema tem default em tudo, e
+ * um campo que some do PUT é apagado sem aviso.
+ */
+describe("a tela de configurações depois do Atendente Virtual", () => {
+  const semComentarios = tela.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+
+  it("fala do Atendente Virtual e leva até ele, sem o nome antigo", () => {
+    expect(semComentarios).toContain("Atendente Virtual");
+    expect(semComentarios).toContain('href="/painel/atendente"');
+    expect(semComentarios).not.toMatch(/Plantão/);
+  });
+
+  it("o estado das respostas automáticas vem do banco, não de um texto fixo", () => {
+    expect(semComentarios).toMatch(/setAtendenteLigado\(Boolean\(profile\.plantaoAtivo\)\)/);
+    expect(readFileSync(join(RAIZ, "app/api/company/profile/route.ts"), "utf8")).toMatch(/plantaoAtivo:\s*true/);
+  });
+
+  it("os campos que o Atendente substituiu saíram da tela, mas não do formulário", () => {
+    for (const campo of ["aiTone", "serviceRules", "greetingMessage", "awayMessage", "followUpEnabled", "followUpMessage"]) {
+      expect(semComentarios, campo).not.toContain(`set("${campo}"`);
+      expect(semComentarios, campo).toMatch(new RegExp(`${campo}:\\s*profile\\.${campo}`));
+    }
+  });
+
+  it("a conexão do WhatsApp não promete clique mágico nem disparo", () => {
+    const modal = readFileSync(join(RAIZ, "components/painel/modal-conectar-whatsapp.tsx"), "utf8");
+    expect(modal).not.toMatch(/1 clique|um clique|1 toque|dispar/i);
+  });
+});

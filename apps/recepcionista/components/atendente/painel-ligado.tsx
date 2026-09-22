@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { emReais, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
 import type { TelaDoAtendente, Tom } from "@/lib/atendente/tela";
 import { ModalConectarWhatsApp } from "@/components/painel/modal-conectar-whatsapp";
@@ -73,6 +73,16 @@ export function PainelLigado({
       setOcupado(false);
     }
   }
+
+  // O modal refaz a conexão quando o callback muda: os dois precisam ser estáveis.
+  const fecharConexao = useCallback(() => setConectando(false), []);
+  const conectou = useCallback(async () => {
+    setConectando(false);
+    // Religado o WhatsApp, a tela volta a dizer que ele está atendendo.
+    const r = await fetch("/api/atendente").catch(() => null);
+    const j = r?.ok ? await r.json().catch(() => null) : null;
+    if (j) aoMudarTela(j);
+  }, [aoMudarTela]);
 
   const { enquantoFechado: fechado, resultadoDaSemana: semana } = tela;
 
@@ -241,17 +251,7 @@ export function PainelLigado({
         </div>
       </details>
 
-      <ModalConectarWhatsApp
-        aberto={conectando}
-        aoFechar={() => setConectando(false)}
-        aoConectar={async () => {
-          setConectando(false);
-          // Religado o WhatsApp, a tela volta a dizer que ele está atendendo.
-          const r = await fetch("/api/atendente").catch(() => null);
-          const j = r?.ok ? await r.json().catch(() => null) : null;
-          if (j) aoMudarTela(j);
-        }}
-      />
+      <ModalConectarWhatsApp aberto={conectando} aoFechar={fecharConexao} aoConectar={conectou} />
     </div>
   );
 }
