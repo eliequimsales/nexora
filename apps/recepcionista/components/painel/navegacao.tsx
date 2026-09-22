@@ -9,24 +9,6 @@ export interface NavItem {
 }
 
 function iconeParaRota(href: string) {
-  if (href.includes("remover")) {
-    return (
-      <svg
-        className="h-4 w-4 shrink-0"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a7 7 0 00-7 7h14a7 7 0 00-7-7zM21 12h-6"
-        />
-      </svg>
-    );
-  }
   if (href.includes("clientes")) {
     return (
       <svg
@@ -102,10 +84,7 @@ function iconeParaRota(href: string) {
 
 function estaAtivo(href: string, pathname: string): boolean {
   if (href === "/painel/clientes/importar") {
-    return pathname === "/painel/clientes/importar" || pathname === "/painel/clientes";
-  }
-  if (href === "/painel/clientes/remover") {
-    return pathname.startsWith("/painel/clientes/remover");
+    return pathname.startsWith("/painel/clientes");
   }
   return pathname.startsWith(href);
 }
@@ -149,7 +128,7 @@ export function PainelNavMobile({ items }: { items: NavItem[] }) {
       aria-label="Menu principal para celular"
       className="border-b border-panel-line bg-panel-card px-3 py-2 sm:hidden"
     >
-      <div className="grid grid-cols-4 gap-1.5 rounded-2xl border border-panel-line/80 bg-panel-bg p-1 shadow-inner">
+      <div className="grid grid-cols-3 gap-1.5 rounded-2xl border border-panel-line/80 bg-panel-bg p-1 shadow-inner">
         {items.map((item) => {
           const ativo = estaAtivo(item.href, pathname);
           return (

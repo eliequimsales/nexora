@@ -448,39 +448,14 @@ export default function PaginaImportar() {
         para mostrar — antes disso ele repetiria, com outras palavras, o passo
         que está logo acima dele.
       */}
-      {/* Abas de navegação interna entre Meus clientes e Remover cliente */}
-      <div className="flex items-center gap-2 border-b border-panel-line pb-3">
-        <Link
-          href="/painel/clientes/importar"
-          className="rounded-xl bg-amber px-4 py-2 text-sm font-bold text-night shadow-sm"
-        >
-          Meus clientes
-        </Link>
-        <Link
-          href="/painel/clientes/remover"
-          className="rounded-xl px-4 py-2 text-sm font-semibold text-panel-sub hover:bg-white hover:text-panel-ink transition"
-        >
-          Remover cliente
-        </Link>
-      </div>
-
       {painel && <ChecklistAtivacao sinais={painel.ativacao} />}
       {anual && <CartaoDoAnual oferta={anual} />}
 
-      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl text-panel-ink">Meus clientes</h1>
-          <p className="mt-1 text-sm text-panel-sub">
-            Adicione os dados dos seus clientes pelos campos abaixo ou, se preferir, cole sua planilha.
-          </p>
-        </div>
-        <Link
-          href="/painel/clientes/remover"
-          className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50/60 px-4 py-2 text-xs font-bold text-red-700 hover:bg-red-100 transition shadow-sm"
-        >
-          <span>🗑️</span>
-          <span>Remover cliente</span>
-        </Link>
+      <header>
+        <h1 className="font-display text-2xl text-panel-ink">Meus clientes</h1>
+        <p className="mt-1 text-sm text-panel-sub">
+          Adicione os dados dos seus clientes pelos campos abaixo ou, se preferir, cole sua planilha.
+        </p>
       </header>
 
       {/* Opção sem planilhas: Agenda Inteligente */}
@@ -1161,137 +1136,6 @@ export default function PaginaImportar() {
         </section>
       )}
 
-      <SeusDados />
     </main>
-  );
-}
-
-/**
- * OS DOIS DIREITOS QUE VIRAM BOTÃO.
- *
- * Os documentos jurídicos prometem exportação (art. 18, V) e eliminação
- * (art. 18, VI). Enquanto isso dependesse de mandar e-mail e alguém rodar SQL,
- * era intenção. Aqui é ação executável — Regra Zero: a tela termina em fazer,
- * não em saber.
- */
-function SeusDados() {
-  const [telefone, setTelefone] = useState("");
-  const [confirmando, setConfirmando] = useState(false);
-  const [apagando, setApagando] = useState(false);
-  const [erro, setErro] = useState("");
-  const [feito, setFeito] = useState<null | {
-    visitasApagadas: number;
-    entradasAnonimizadas: number;
-    naoSeraRecontatado: boolean;
-  }>(null);
-
-  const excluir = async () => {
-    setApagando(true);
-    setErro("");
-    try {
-      const res = await fetch("/api/clientes/excluir", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ telefone, confirmo: true }),
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        setErro(json.error ?? "Não consegui apagar esse cliente.");
-        return;
-      }
-      setFeito(json);
-      setTelefone("");
-      setConfirmando(false);
-    } catch {
-      setErro("Não consegui falar com a internet agora. Tenta de novo?");
-    } finally {
-      setApagando(false);
-    }
-  };
-
-  return (
-    <section className="mt-12 rounded-2xl border border-panel-line bg-panel-card p-6">
-      <h2 className="font-display text-lg font-semibold">Seus dados</h2>
-      <p className="mt-1 text-sm text-panel-sub">
-        A lista é sua. Levar embora e apagar são direitos seus e dos seus clientes — não
-        precisa pedir para ninguém.
-      </p>
-
-      <div className="mt-6 border-t border-panel-line pt-5">
-        <h3 className="text-sm font-semibold">Baixar tudo</h3>
-        <p className="mt-1 text-sm text-panel-sub">
-          Uma planilha com todos os clientes, quantas vezes vieram, quanto gastaram e quem
-          pediu para não receber mensagem. Abre direto no Excel.
-        </p>
-        <a
-          href="/api/dados/exportar"
-          className="mt-3 inline-block rounded-xl border border-panel-line px-4 py-2.5 text-sm font-semibold transition hover:border-amber"
-        >
-          Baixar minha lista em planilha
-        </a>
-      </div>
-
-      <div className="mt-6 border-t border-panel-line pt-5">
-        <h3 className="text-sm font-semibold">Um cliente pediu para ser apagado</h3>
-        <p className="mt-1 text-sm text-panel-sub">
-          Digite o telefone dele. Apagamos o cadastro, as visitas e os horários futuros. O que
-          ele já gastou continua em Dinheiro recuperado, sem o nome — é o seu faturamento, não o
-          dado dele. Se ele já tinha pedido para parar, ele não volta nem se você mandar a
-          mesma planilha de novo.
-        </p>
-
-        <div className="mt-3 flex flex-wrap gap-2">
-          <label className="sr-only" htmlFor="telefone-para-apagar">
-            Telefone do cliente que pediu para ser apagado
-          </label>
-          <input
-            id="telefone-para-apagar"
-            value={telefone}
-            onChange={(e) => {
-              setTelefone(e.target.value);
-              setConfirmando(false);
-              setFeito(null);
-            }}
-            placeholder="(11) 98888-7777"
-            className="w-56 rounded-xl border border-panel-line bg-white px-3 py-2.5 text-sm outline-none focus:border-amber"
-          />
-          {!confirmando ? (
-            <button
-              onClick={() => setConfirmando(true)}
-              disabled={telefone.trim().length < 8}
-              className="rounded-xl border border-panel-line px-4 py-2.5 text-sm font-semibold transition hover:border-red-400 disabled:opacity-40"
-            >
-              Apagar esse cliente
-            </button>
-          ) : (
-            // Dois cliques de propósito: apagar não tem desfazer, e o botão de
-            // confirmar diz o que vai acontecer em vez de dizer "OK".
-            <button
-              onClick={excluir}
-              disabled={apagando}
-              className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-40"
-            >
-              {apagando ? "Apagando…" : "Confirmo, apagar para sempre"}
-            </button>
-          )}
-        </div>
-
-        {erro && <p className="mt-3 text-sm text-red-600">{erro}</p>}
-
-        {feito && (
-          <div className="mt-4 rounded-xl border border-panel-line bg-panel-bg p-4 text-sm">
-            <p className="font-semibold">Apagado.</p>
-            <p className="mt-1 text-panel-sub">
-              {feito.visitasApagadas} visitas removidas.{" "}
-              {feito.entradasAnonimizadas > 0 &&
-                "O que ele gastou continua somando no seu caixa, só que agora sem o nome dele. "}
-              {feito.naoSeraRecontatado
-                ? "Ele não será chamado de novo, mesmo que apareça numa lista que você mandar depois."
-                : "Se ele aparecer numa lista que você mandar depois, entra como cliente novo."}
-            </p>
-          </div>
-        )}
-      </div>
-    </section>
   );
 }
