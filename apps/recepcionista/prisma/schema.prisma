@@ -121,6 +121,7 @@ model Company {
   passes         PassePago[]
   garantia       Garantia?
   implantacao    Implantacao?
+  atendimentos   AtendenteAtendimento[]
 }
 
 // IMPLANTAÇÃO — item opcional do checkout, uma por negócio (lib/billing/implantacao.ts).
@@ -298,9 +299,27 @@ model CompanyProfile {
   followUpMessage    String  @default("")
   maxFollowUps       Int     @default(2)
 
-  // O Plantão: atendimento automático só com a loja fechada. Nasce DESLIGADO —
-  // conectar o WhatsApp para mandar a Onda não liga resposta automática nenhuma.
-  plantaoAtivo Boolean @default(false)
+  // O ATENDENTE VIRTUAL (lib/atendente/). `plantaoAtivo` é o "ligado" — o nome
+  // do campo ficou da Fase 0. Nasce DESLIGADO: conectar o WhatsApp para mandar a
+  // Onda não liga resposta automática nenhuma.
+  plantaoAtivo                 Boolean   @default(false)
+  // O nome que o dono deu ("Bia"). Vazio: "o atendimento virtual da empresa".
+  atendenteNome                String    @default("")
+  // ACOLHEDOR | DIRETO | DESCONTRAIDO (lib/atendente/jeitos.ts)
+  atendenteJeito               String    @default("ACOLHEDOR")
+  // Marcar direto na agenda; desligado, só mostra os horários com o link.
+  atendenteMarca               Boolean   @default(true)
+  // No expediente, entra quando ninguém responde em 5 minutos.
+  atendenteExpediente          Boolean   @default(true)
+  // O "Ligar" só aparece depois do primeiro teste no simulador.
+  atendenteTestadoEm           DateTime?
+  // Começo da primeira semana por nossa conta (lib/atendente/portao.ts).
+  atendenteLigadoPrimeiraVezEm DateTime?
+  // Último dia ("AAAA-MM-DD") com resumo da manhã enviado: é a reivindicação.
+  atendenteResumoDia           String    @default("")
+  // Dias fechados pelo botão "Fechar hoje": ["2026-10-12"]. Agenda e Atendente
+  // leem o mesmo campo (lib/agenda/horario.ts).
+  diasFechados                 Json      @default("[]")
 
   // Conexão WhatsApp (Evolution API) — uma instância por empresa (nexora-{companyId})
   whatsappInstance    String?   @unique
@@ -340,11 +359,17 @@ model Conversation {
   // em silêncio depois disso (lib/plantao/portao.ts). Só a hora: nunca o texto.
   donoAssumiuEm DateTime?
 
+  // A escolha pendente do Atendente: serviços ou três horários numerados, com a
+  // hora em que foi oferecida (vale 2 horas). É o que faz um "2" virar marcação
+  // sem passar pela IA. lib/atendente/oferta.ts valida.
+  atendenteEstado Json?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  messages Message[]
-  lead     Lead?
+  messages     Message[]
+  lead         Lead?
+  atendimentos AtendenteAtendimento[]
 
   @@unique([companyId, customerPhone])
   @@index([companyId, status])
@@ -362,6 +387,42 @@ model Message {
   createdAt      DateTime @default(now())
 
   @@index([conversationId, createdAt])
+}
+
+// UM ATENDIMENTO DO ATENDENTE VIRTUAL: uma conversa atendida num dia de
+// Brasília. É o que conta para o teto do plano e para a semana grátis, e o que a
+// tela mostra no resumo — inclusive o que precisa do dono.
+model AtendenteAtendimento {
+  id             String       @id @default(cuid())
+  companyId      String
+  company        Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  // "AAAA-MM-DD" em Brasília
+  dia           String
+  // Começou com a loja fechada (e não no resgate do expediente).
+  foraDoHorario Boolean @default(true)
+
+  respostas         Int @default(0)
+  marcados          Int @default(0)
+  valorMarcadoCents Int @default(0)
+
+  // O que o Atendente anotou para o dono: pergunta que não sabia, pedido de
+  // pessoa, reclamação, urgência. `resolvidoEm` é o dono tirando da fila.
+  precisaDoDono Boolean   @default(false)
+  motivo        String    @default("")
+  urgente       Boolean   @default(false)
+  resolvidoEm   DateTime?
+
+  clienteNome     String?
+  clienteTelefone String
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([conversationId, dia])
+  @@index([companyId, criadoEm])
 }
 
 // Mensagem que a PRÓPRIA Nexora enviou pelo WhatsApp do dono. O webhook devolve

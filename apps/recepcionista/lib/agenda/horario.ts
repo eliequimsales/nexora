@@ -52,6 +52,18 @@ export function horarioDaEmpresa(valor: unknown): BusinessHour[] {
   return HORARIO_PADRAO.map((h) => ({ ...h }));
 }
 
+const DATA = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+
+/**
+ * Os dias fechados pelo botão "Fechar hoje" (feriado, imprevisto). O campo é
+ * Json: só entra o que for data "AAAA-MM-DD". A página pública não oferece
+ * horário nesses dias, e o Atendente trata o dia inteiro como loja fechada.
+ */
+export function lerDiasFechados(valor: unknown): string[] {
+  if (!Array.isArray(valor)) return [];
+  return valor.filter((d): d is string => typeof d === "string" && DATA.test(d));
+}
+
 /**
  * A semana inteira, dia por dia, para a tela de configurações: o dia que não
  * aparece no horário da empresa entra como fechado, em vez de sumir da tela.

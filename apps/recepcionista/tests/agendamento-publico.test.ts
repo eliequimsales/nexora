@@ -85,7 +85,10 @@ describe("a rota pública de agendamento (/api/agendar/[slug]) é protegida cont
 });
 
 describe("isolamento de horários por profissional", () => {
-  const fonte = readFileSync(join(__dirname, "../app/api/agendar/[slug]/route.ts"), "utf8");
+  // Desde 22/09/2026 a marcação mora em lib/agenda/marcacao.ts, usada pela rota
+  // pública e pelo Atendente Virtual. O comportamento está testado com banco
+  // falso em tests/atendente-marcacao.test.ts; aqui fica a trava de onde ele mora.
+  const fonte = readFileSync(join(__dirname, "../lib/agenda/marcacao.ts"), "utf8");
 
   it("extrai o profissional correto das anotações do agendamento", async () => {
     const { extrairProfissional } = await import("@/lib/agenda/painel");
@@ -95,10 +98,10 @@ describe("isolamento de horários por profissional", () => {
     expect(extrairProfissional("texto simples")).toBe("Profissional");
   });
 
-  it("garante que a rota pública isola conflitos por profissional e permite profissionais diferentes no mesmo horário", () => {
-    expect(fonte).toContain("extrairProfissional(ag.notes)");
-    expect(fonte).toContain("profAlvo");
-    expect(fonte).toContain("ConflitoDeHorario");
+  it("garante que a marcação isola conflitos por profissional e permite profissionais diferentes no mesmo horário", () => {
+    expect(fonte).toContain("extrairProfissional(a.notes)");
+    expect(fonte).toContain("p.profissional");
+    expect(fonte).toContain("HorarioOcupado");
   });
 });
 

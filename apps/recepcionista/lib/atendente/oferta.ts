@@ -1,5 +1,8 @@
+import type { Livre } from "@/lib/agenda/livres";
 import { VALIDADE_DA_OFERTA_MS } from "./constantes";
 import { diaCurto, horaFalada, localDe, type PedidoDeDia } from "./datas";
+
+export type { Livre };
 
 /**
  * A OFERTA DE HORÁRIOS — TRÊS OPÇÕES DE VERDADE, MONTADAS POR CÓDIGO.
@@ -12,8 +15,6 @@ import { diaCurto, horaFalada, localDe, type PedidoDeDia } from "./datas";
  * A oferta fica guardada na conversa (`Conversation.atendenteEstado`) por duas
  * horas. É ela que faz um "2" virar marcação.
  */
-
-export type Livre = { inicio: Date; fim: Date; profissional: string | null };
 
 const FOLGA_MS = 90 * 60_000;
 

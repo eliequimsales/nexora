@@ -5,18 +5,14 @@ import {
   gerarGoogleCalendarLink,
   separarSlotsPorTurno,
 } from "@/lib/agenda/disponibilidade";
-import { horarioDaEmpresa } from "@/lib/agenda/horario";
+import { horarioDaEmpresa, lerDiasFechados } from "@/lib/agenda/horario";
+import { ANTECEDENCIA_MINUTOS } from "@/lib/agenda/livres";
+import { marcarNaAgenda } from "@/lib/agenda/marcacao";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { respostaDeLimite } from "@/lib/limites";
-import { entradaPorLink } from "@/lib/agenda/entrada-publica";
-import { hashTelefone } from "@/lib/dados/excluir";
-import { ehConflitoDeConcorrencia } from "@/lib/agenda/concorrencia";
 import { extrairProfissional, gerarTextoLembrete, listarProfissionais } from "@/lib/agenda/painel";
-
-/** Sinaliza, de dentro da transação, que o horário foi ocupado no caminho. */
-class ConflitoDeHorario extends Error {}
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +28,7 @@ export const dynamic = "force-dynamic";
  * de recuperação não precisa de mais nada.
  */
 
-const ANTECEDENCIA_MIN = 60;
+const ANTECEDENCIA_MIN = ANTECEDENCIA_MINUTOS;
 const DIAS_VISIVEIS = 21;
 
 const agendarSchema = z.object({
@@ -70,7 +66,7 @@ async function carregarNegocio(slug: string) {
     select: {
       id: true,
       name: true,
-      profile: { select: { businessHours: true, address: true } },
+      profile: { select: { businessHours: true, address: true, diasFechados: true } },
       services: {
         where: {
           active: true,
@@ -127,7 +123,20 @@ export async function GET(
       : servicosDisponiveis[0];
 
     const agora = new Date();
-    const dias = proximosDias(agora, DIAS_VISIVEIS);
+    // Dia fechado pelo botão "Fechar hoje" não oferece horário nenhum.
+    const fechados = lerDiasFechados(negocio.profile?.diasFechados);
+    const dias = proximosDias(agora, DIAS_VISIVEIS).filter(
+      (d) => !fechados.includes(d.toISOString().slice(0, 10)),
+    );
+    if (dias.length === 0) {
+      return NextResponse.json({
+        negocio: { nome: negocio.name, endereco: negocio.profile?.address ?? "" },
+        servicos: servicosDisponiveis,
+        servicoSelecionado: servico.id,
+        profissionais: await listarProfissionais(negocio.id),
+        dias: [],
+      });
+    }
 
     const todosAgendamentos = await prisma.appointment.findMany({
       where: {
@@ -276,217 +285,35 @@ export async function POST(
     };
 
     const diaData = new Date(`${dia}T00:00:00.000Z`);
-    const agora = new Date();
-
-    // A MARCAÇÃO INTEIRA NUMA TRANSAÇÃO SERIALIZÁVEL.
-    //
-    // Antes, a rota checava `livres.includes(hora)` e só depois criava o
-    // agendamento. Entre as duas coisas havia uma janela em que outra
-    // requisição pegava o mesmo horário — e não existe constraint no banco
-    // para impedir, só um índice. O comentário logo abaixo já dizia que dupla
-    // marcação é o pior defeito possível numa agenda; a corrida produzia
-    // exatamente isso, por um endpoint PÚBLICO, e dava para provocá-la de
-    // propósito para sabotar a agenda de um negócio.
-    //
-    // Constraint única em (companyId, startsAt) não serviria: agendamento
-    // CANCELADO ou FALTOU libera o horário, e a constraint bloquearia a
-    // remarcação legítima. Serializável resolve sem mentir sobre o domínio —
-    // o Postgres aborta a transação perdedora, que vira o mesmo 409 de sempre.
-    let ocupou = false;
-    let profissionalFinal = "Profissional";
-
-    try {
-      await prisma.$transaction(
-        async (tx) => {
-          const ocupadosDia = await tx.appointment.findMany({
-            where: {
-              companyId: negocio.id,
-              status: { in: ["MARCADO", "CONFIRMADO"] },
-              startsAt: {
-                gte: diaData,
-                lt: new Date(diaData.getTime() + 48 * 60 * 60 * 1000),
-              },
-            },
-            select: { startsAt: true, endsAt: true, notes: true },
-          });
-
-          const listaProfs = await listarProfissionais(negocio.id);
-          const [h, m] = hora.split(":").map(Number);
-          const startsAt = new Date(diaData.getTime() + (h * 60 + m + 180) * 60 * 1000);
-          const endsAt = new Date(startsAt.getTime() + servico.durationMin * 60 * 1000);
-
-          let profissionalEscolhido: string;
-
-          if (parsed.data.profissional && parsed.data.profissional !== "Primeiro disponível") {
-            const profAlvo = parsed.data.profissional.trim();
-
-            // 1. Checa se o profissional escolhido já tem agendamento que sobreponha esse horário
-            const conflito = ocupadosDia.some((ag) => {
-              if (extrairProfissional(ag.notes).toLowerCase() !== profAlvo.toLowerCase()) {
-                return false;
-              }
-              return startsAt.getTime() < ag.endsAt.getTime() && endsAt.getTime() > ag.startsAt.getTime();
-            });
-
-            if (conflito) {
-              ocupou = true;
-              throw new ConflitoDeHorario();
-            }
-
-            // 2. Valida contra o expediente da empresa
-            const ocupadosProf = ocupadosDia
-              .filter((ag) => extrairProfissional(ag.notes).toLowerCase() === profAlvo.toLowerCase())
-              .map((ag) => ({ startsAt: ag.startsAt, endsAt: ag.endsAt }));
-
-            const livres = calcularSlots({
-              dia: diaData,
-              horarios: horarioDaEmpresa(negocio.profile?.businessHours),
-              duracaoMin: servico.durationMin,
-              ocupados: ocupadosProf,
-              agora,
-              antecedenciaMinutos: ANTECEDENCIA_MIN,
-            });
-
-            if (!livres.includes(hora)) {
-              ocupou = true;
-              throw new ConflitoDeHorario();
-            }
-
-            profissionalEscolhido = profAlvo;
-          } else if (listaProfs.length > 0) {
-            // "Primeiro disponível": encontra o primeiro profissional da equipe livre no horário
-            const profLivre = listaProfs.find((p) => {
-              const temSobreposicao = ocupadosDia.some((ag) => {
-                if (extrairProfissional(ag.notes).toLowerCase() !== p.nome.toLowerCase()) {
-                  return false;
-                }
-                return startsAt.getTime() < ag.endsAt.getTime() && endsAt.getTime() > ag.startsAt.getTime();
-              });
-              if (temSobreposicao) return false;
-
-              const ocupadosP = ocupadosDia
-                .filter((ag) => extrairProfissional(ag.notes).toLowerCase() === p.nome.toLowerCase())
-                .map((ag) => ({ startsAt: ag.startsAt, endsAt: ag.endsAt }));
-
-              const livresP = calcularSlots({
-                dia: diaData,
-                horarios: horarioDaEmpresa(negocio.profile?.businessHours),
-                duracaoMin: servico.durationMin,
-                ocupados: ocupadosP,
-                agora,
-                antecedenciaMinutos: ANTECEDENCIA_MIN,
-              });
-
-              return livresP.includes(hora);
-            });
-
-            if (!profLivre) {
-              ocupou = true;
-              throw new ConflitoDeHorario();
-            }
-
-            profissionalEscolhido = profLivre.nome;
-          } else {
-            // Sem equipe cadastrada: agenda única
-            const conflito = ocupadosDia.some((ag) => {
-              return startsAt.getTime() < ag.endsAt.getTime() && endsAt.getTime() > ag.startsAt.getTime();
-            });
-
-            if (conflito) {
-              ocupou = true;
-              throw new ConflitoDeHorario();
-            }
-
-            const ocupadosGeral = ocupadosDia.map((ag) => ({
-              startsAt: ag.startsAt,
-              endsAt: ag.endsAt,
-            }));
-
-            const livres = calcularSlots({
-              dia: diaData,
-              horarios: horarioDaEmpresa(negocio.profile?.businessHours),
-              duracaoMin: servico.durationMin,
-              ocupados: ocupadosGeral,
-              agora,
-              antecedenciaMinutos: ANTECEDENCIA_MIN,
-            });
-
-            if (!livres.includes(hora)) {
-              ocupou = true;
-              throw new ConflitoDeHorario();
-            }
-
-            profissionalEscolhido = "Atendimento Geral";
-          }
-
-          profissionalFinal = profissionalEscolhido;
-
-          // Esta rota é PÚBLICA e escreve na base do assinante. O que ela pode
-          // gravar está em entradaPorLink, com o porquê de cada regra: agendar
-          // não revoga o PARAR, e formulário público não reescreve a caderneta.
-          const existente = await tx.customer.findUnique({
-            where: { companyId_phone: { companyId: negocio.id, phone: telefone } },
-            select: { id: true },
-          });
-
-          const hash = hashTelefone(telefone);
-          const suprimido = hash
-            ? (await tx.supressao.count({
-                where: { companyId: negocio.id, telefoneHash: hash },
-              })) > 0
-            : false;
-
-          const entrada = entradaPorLink({
-            existe: Boolean(existente),
-            nomeInformado: nome,
-            suprimido,
-          });
-
-          const cliente =
-            existente ??
-            (await tx.customer.create({
-              data: {
-                companyId: negocio.id,
-                phone: telefone,
-                source: "LINK",
-                ...entrada.criar!,
-                ...(entrada.criar!.optOut ? { optOutAt: new Date() } : {}),
-              },
-              select: { id: true },
-            }));
-
-          await tx.appointment.create({
-            data: {
-              companyId: negocio.id,
-              customerId: cliente.id,
-              serviceId: servico.id === "atendimento" ? null : servico.id,
-              startsAt,
-              endsAt,
-              source: "LINK",
-              notes: JSON.stringify({
-                profissional: profissionalEscolhido,
-                servicoNome: servico.name,
-              }),
-            },
-          });
-        },
-        { isolationLevel: "Serializable" },
-      );
-    } catch (erro) {
-      // Perder a corrida não é falha do sistema: é o horário ter acabado de ser
-      // ocupado — que é o que a pessoa precisa ler, e não um 500.
-      if (ocupou || ehConflitoDeConcorrencia(erro)) {
-        return NextResponse.json(
-          { error: "Esse horário acabou de ser ocupado. Escolhe outro?" },
-          { status: 409 },
-        );
-      }
-      throw erro;
-    }
-
     const [h, m] = hora.split(":").map(Number);
     const startsAt = new Date(diaData.getTime() + (h * 60 + m + 180) * 60 * 1000);
-    const endsAt = new Date(startsAt.getTime() + servico.durationMin * 60 * 1000);
+
+    // A marcação mora em lib/agenda/marcacao.ts — a mesma que o Atendente
+    // Virtual usa pelo WhatsApp: transação serializável, regras de entrada do
+    // cliente (entradaPorLink) e lista de supressão. Perder a corrida para outra
+    // requisição vira o mesmo 409 de sempre, e não um 500.
+    const pedidoDeProfissional = parsed.data.profissional?.trim();
+    const marcacao = await marcarNaAgenda({
+      companyId: negocio.id,
+      servico: {
+        id: servico.id === "atendimento" ? null : servico.id,
+        nome: servico.name,
+        duracaoMin: servico.durationMin,
+      },
+      inicio: startsAt,
+      profissional:
+        pedidoDeProfissional && pedidoDeProfissional !== "Primeiro disponível" ? pedidoDeProfissional : null,
+      cliente: { nome, telefone },
+      origem: "LINK",
+    });
+    if (!marcacao.ok) {
+      return NextResponse.json(
+        { error: "Esse horário acabou de ser ocupado. Escolhe outro?" },
+        { status: 409 },
+      );
+    }
+    const profissionalFinal = marcacao.profissional;
+    const endsAt = marcacao.fim;
 
     const googleCalendarUrl = gerarGoogleCalendarLink({
       titulo: `${servico.name} - ${negocio.name}`,
