@@ -1,13 +1,12 @@
 import type { BusinessHour } from "@/lib/validation";
 
 /**
- * Respostas diretas sem IA — latência de milissegundos para as perguntas mais
- * comuns (saudação, horário, endereço, pagamento) quando a resposta está
- * claramente no cadastro. Em qualquer ambiguidade, retorna null e a conversa
- * segue para o modelo.
+ * Peças de texto sem IA que o Atendente Virtual usa: os termos de pedido de
+ * pessoa, o reconhecimento de cumprimento puro e o horário compacto que vai
+ * nos fatos da empresa. As respostas saem de lib/atendente/motor.ts.
  */
 
-/** Termos que SEMPRE encaminham para a equipe, sem chamar IA (além dos da empresa). */
+/** Termos que SEMPRE viram pedido de pessoa, sem chamar IA (além dos da empresa). */
 export const DEFAULT_HANDOFF_TERMS = [
   "falar com atendente",
   "falar com um atendente",
@@ -65,56 +64,4 @@ export function formatBusinessHoursCompact(hours: BusinessHour[]): string {
         : `${label} das ${g.entry.open} às ${g.entry.close}`;
     })
     .join("; ");
-}
-
-export interface QuickReplyContext {
-  companyName: string;
-  greetingMessage: string;
-  businessHours: BusinessHour[];
-  address: string;
-  paymentMethods: string;
-  isFirstMessage: boolean;
-}
-
-const MAX_QUICK_LENGTH = 120; // mensagens longas são complexas demais para atalho
-
-/**
- * Retorna a resposta pronta (sem IA) ou null para seguir ao modelo.
- * Regra: só responde direto quando a mensagem tem UMA intenção clara e o
- * cadastro tem o dado. Nunca arrisca.
- */
-export function matchQuickReply(text: string, ctx: QuickReplyContext): string | null {
-  const t = normalize(text);
-  if (!t || text.length > MAX_QUICK_LENGTH) return null;
-
-  if (ctx.isFirstMessage && isPureGreeting(text)) {
-    return (
-      ctx.greetingMessage.trim() ||
-      `Olá! Aqui é o atendimento da ${ctx.companyName}. Como posso ajudar? 😊`
-    );
-  }
-
-  const wantsHours =
-    /\b(horario|horarios|funcionamento|que horas|abre|abrem|fecha|fecham|aberto|abertos|aberta|abertas)\b/.test(t);
-  const wantsAddress =
-    /\b(endereco|localizacao|como chegar)\b/.test(t) || /\bonde (fica|ficam|estao|voces ficam|e a loja)\b/.test(t);
-  const wantsPayment =
-    /formas? de pagamento/.test(t) ||
-    /\b(como pagar|posso pagar|parcela|parcelam|parcelamento)\b/.test(t) ||
-    /\baceitam?\b.*\b(cartao|pix|dinheiro|boleto|credito|debito)\b/.test(t);
-
-  const intents = [wantsHours, wantsAddress, wantsPayment].filter(Boolean).length;
-  if (intents !== 1) return null; // zero ou várias intenções → deixa para o modelo
-
-  if (wantsHours && ctx.businessHours.length > 0) {
-    return `Nosso horário de atendimento é ${formatBusinessHoursCompact(ctx.businessHours)}. Posso ajudar em mais alguma coisa?`;
-  }
-  if (wantsAddress && ctx.address.trim()) {
-    return `Estamos em ${ctx.address.trim()}. Posso ajudar em mais alguma coisa?`;
-  }
-  if (wantsPayment && ctx.paymentMethods.trim()) {
-    return `Sobre pagamento: ${ctx.paymentMethods.trim()}. Posso ajudar em mais alguma coisa?`;
-  }
-
-  return null; // intenção clara mas cadastro vazio → o modelo trata (e encaminha se preciso)
 }

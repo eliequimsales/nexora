@@ -1,22 +1,10 @@
-import type { CompanyProfile, Conversation } from "@nexora/recepcionista-prisma";
 import { prisma } from "./db";
 import { logError } from "./errors";
-import { matchesHandoffKeyword } from "./ai/handoff";
-import { buildSystemPrompt, getLocalTime, isOpenNow } from "./ai/prompt";
-import { generateReceptionistReply, type HistoryMessage } from "./ai/provider";
-import { DEFAULT_HANDOFF_TERMS, matchQuickReply } from "./ai/quick-reply";
-import { asSegments, getApprovedKnowledge, recordKnowledgeGap } from "./training";
-import { slugifySegment, type SegmentTopic } from "./segments";
+import { atender } from "./atendente/executar";
 import { pediuParaParar } from "./recuperacao/optout";
 import { variantesDeTelefone } from "./recuperacao/telefone";
 import type { IncomingWhatsAppMessage } from "./whatsapp/evolution";
 import { enviarWhatsApp } from "./whatsapp/envio";
-import type { Faq } from "./validation";
-import { horarioDaEmpresa } from "./agenda/horario";
-import { portaoDoPlantao } from "./plantao/portao";
-
-const TRANSFER_MESSAGE = "Claro, vou chamar nossa equipe para continuar seu atendimento.";
-const FALLBACK_MESSAGE = "Vou encaminhar para nossa equipe te ajudar melhor. 🙏";
 
 /** Log simples de latência (debug): caminho + marcos + total até a resposta sair. */
 function logTiming(path: string, startedAt: number, marks: Record<string, number> = {}) {
@@ -26,24 +14,10 @@ function logTiming(path: string, startedAt: number, marks: Record<string, number
   console.log(`[timing] caminho=${path} ${parts} total=${Date.now() - startedAt}ms`.replace("  ", " "));
 }
 
-function asFaqs(value: unknown): Faq[] {
-  return Array.isArray(value) ? (value as Faq[]) : [];
+async function saveOutgoing(conversationId: string, content: string) {
+  await prisma.message.create({ data: { conversationId, role: "AI", content } });
 }
 
-function asKeywords(value: unknown): string[] {
-  return Array.isArray(value) ? (value as string[]).filter((k) => typeof k === "string") : [];
-}
-
-async function saveOutgoing(conversationId: string, content: string, role: "AI" | "SYSTEM" = "AI") {
-  await prisma.message.create({ data: { conversationId, role, content } });
-}
-
-/**
- * Fluxo principal (item 12 da spec):
- * webhook → identifica empresa pela instância → salva mensagem → decide
- * (humano atendendo? gatilho de handoff?) → IA gera resposta com base no
- * cadastro → envia pelo WhatsApp → salva tudo → atualiza status/lead.
- */
 /**
  * Resposta ao pedido de parar. Curta e sem tentativa de retenção: quem pediu
  * para sair não quer negociar, e insistir aqui é o comportamento que faz o
@@ -53,13 +27,19 @@ const CONFIRMACAO_DESCADASTRO =
   "Pronto, não te mando mais mensagem de retorno. " +
   "Se um dia quiser marcar um horário, é só chamar aqui que eu te atendo normalmente.";
 
+/**
+ * Fluxo principal:
+ * webhook → identifica a empresa pela conexão → salva a mensagem → honra o
+ * pedido de parar → o Atendente Virtual decide se e quando responde
+ * (lib/atendente/executar.ts).
+ */
 export async function handleIncomingMessage(incoming: IncomingWhatsAppMessage): Promise<void> {
   const startedAt = Date.now();
 
   // 1. Identifica a empresa dona do número
   const profile = await prisma.companyProfile.findUnique({
     where: { whatsappInstance: incoming.instance },
-    include: { company: true },
+    select: { companyId: true },
   });
   if (!profile) {
     await logError("webhook", new Error(`Instância desconhecida: ${incoming.instance}`));
@@ -85,7 +65,6 @@ export async function handleIncomingMessage(incoming: IncomingWhatsAppMessage): 
       where: { companyId_customerPhone: { companyId, customerPhone: incoming.phone } },
     });
 
-    const isFirstMessage = !conversation;
     const wasFinished = conversation?.status === "FINISHED";
 
     if (!conversation) {
@@ -103,7 +82,7 @@ export async function handleIncomingMessage(incoming: IncomingWhatsAppMessage): 
         data: {
           lastCustomerMessageAt: now,
           customerName: conversation.customerName ?? incoming.senderName,
-          // Cliente voltou depois de finalizada: reabre um novo ciclo com a IA
+          // Cliente voltou depois de finalizada: reabre um novo ciclo com o Atendente
           ...(wasFinished ? { status: "AI" as const, followUpCount: 0 } : {}),
         },
       });
@@ -157,173 +136,19 @@ export async function handleIncomingMessage(incoming: IncomingWhatsAppMessage): 
       return;
     }
 
-    // 4.6 O PORTÃO DO PLANTÃO.
+    // 5. O ATENDENTE VIRTUAL.
     //
-    // Nada responde sozinho sem o dono ligar o Plantão, e o Plantão só fala com
-    // a agenda fechada e com o dono fora da conversa. A mensagem do cliente já
-    // foi salva acima: silêncio não é perder o que ele escreveu.
-    const portao = portaoDoPlantao({
-      plantaoAtivo: profile.plantaoAtivo,
-      horarios: horarioDaEmpresa(profile.businessHours),
-      donoAssumiuEm: conversation.donoAssumiuEm,
-      agora: now,
-    });
-    if (!portao.responde) {
-      logTiming(`silencio-${portao.motivo.toLowerCase()}`, startedAt);
-      return;
-    }
-
-    // 5. Equipe atendendo (ou aguardando equipe): o Atendente fica em silêncio
-    if (conversation.status === "HUMAN" || conversation.status === "WAITING_HUMAN") return;
-
-    // 6. Handoff sem IA: termos padrão (atendente, humano, suporte...) + os da empresa
-    const handoffTerms = [...DEFAULT_HANDOFF_TERMS, ...asKeywords(profile.handoffKeywords)];
-    if (matchesHandoffKeyword(incoming.text, handoffTerms)) {
-      await enviarWhatsApp(incoming.instance, incoming.phone, TRANSFER_MESSAGE);
-      await saveOutgoing(conversation.id, TRANSFER_MESSAGE);
-      await requestHuman(conversation.id, "Cliente pediu atendimento da equipe");
-      logTiming("handoff", startedAt);
-      return;
-    }
-
-    // 7. Resposta direta do cadastro, sem IA (saudação, horário, endereço, pagamento)
-    const quickReply = matchQuickReply(incoming.text, {
-      companyName: profile.company.name,
-      greetingMessage: profile.greetingMessage,
-      businessHours: horarioDaEmpresa(profile.businessHours),
-      address: profile.address,
-      paymentMethods: profile.paymentMethods,
-      isFirstMessage: isFirstMessage || wasFinished,
-    });
-    if (quickReply) {
-      await enviarWhatsApp(incoming.instance, incoming.phone, quickReply);
-      await saveOutgoing(conversation.id, quickReply);
-      logTiming("cadastro", startedAt);
-      return;
-    }
-
-    // 8. O Atendente gera e envia a resposta via IA
-    await respondWithAi(profile, conversation, incoming, isFirstMessage || wasFinished, startedAt);
+    // Nada responde sozinho sem o dono ligar o Atendente. Ligado, ele responde
+    // na hora com a loja fechada; no expediente, só depois de 5 minutos sem
+    // resposta (quem responde então é o resgate de cada minuto). Resposta do
+    // dono pelo celular o cala na conversa. A mensagem do cliente já foi salva
+    // acima: silêncio não é perder o que ele escreveu.
+    const resultado = await atender({ companyId, conversationId: conversation.id, origem: "WEBHOOK" });
+    logTiming(
+      resultado.acao === "SILENCIO" ? `silencio-${resultado.motivo.toLowerCase()}` : resultado.acao.toLowerCase(),
+      startedAt,
+    );
   } catch (error) {
     await logError("conversation-service", error, companyId);
   }
-}
-
-async function respondWithAi(
-  profile: CompanyProfile & { company: { name: string } },
-  conversation: Conversation,
-  incoming: IncomingWhatsAppMessage,
-  isFirstMessage: boolean,
-  startedAt: number,
-): Promise<void> {
-  try {
-    const [history, approvedKnowledge, segmentTemplate] = await Promise.all([
-      prisma.message.findMany({
-        where: { conversationId: conversation.id },
-        orderBy: { createdAt: "asc" },
-        take: 60,
-        select: { role: true, content: true },
-      }),
-      // NALS: só conhecimento APROVADO pela empresa entra no contexto
-      getApprovedKnowledge(conversation.companyId),
-      // KUS: vocabulário das áreas escolhidas pela empresa (só templates JÁ
-      // existentes — nunca gerar nada durante uma conversa de cliente)
-      prisma.segmentTemplate.findMany({
-        where: { slug: { in: asSegments(profile.segments).map(slugifySegment) } },
-      }),
-    ]);
-
-    const businessHours = horarioDaEmpresa(profile.businessHours);
-    const systemPrompt = buildSystemPrompt({
-      companyName: profile.company.name,
-      description: profile.description,
-      address: profile.address,
-      productsServices: profile.productsServices,
-      pricingInfo: profile.pricingInfo,
-      paymentMethods: profile.paymentMethods,
-      serviceRules: profile.serviceRules,
-      aiTone: profile.aiTone,
-      greetingMessage: profile.greetingMessage,
-      awayMessage: profile.awayMessage,
-      businessHours,
-      faqs: asFaqs(profile.faqs),
-      approvedKnowledge,
-      segments: asSegments(profile.segments),
-      segmentTopics: segmentTemplate.length
-        ? segmentTemplate
-            .flatMap((t) => (t.topics as unknown as SegmentTopic[]).map((topic) => topic.topic))
-            .slice(0, 20)
-        : undefined,
-      isOpen: isOpenNow(businessHours),
-      isFirstMessage,
-      localTimeFormatted: getLocalTime().formatted,
-    });
-
-    const preAiAt = Date.now();
-    const result = await generateReceptionistReply({
-      systemPrompt,
-      history: history as HistoryMessage[],
-    });
-    const aiDoneAt = Date.now();
-
-    // NALS: se o Atendente decidiu encaminhar, registra a lacuna JÁ —
-    // o sinal de conhecimento não pode depender de o envio funcionar
-    if (result.transferir_humano) {
-      await recordKnowledgeGap(conversation.companyId, incoming.text, result.motivo_transferencia);
-    }
-
-    await enviarWhatsApp(incoming.instance, incoming.phone, result.resposta);
-    await saveOutgoing(conversation.id, result.resposta);
-    logTiming("ia", startedAt, {
-      pre: preAiAt - startedAt,
-      ia: aiDoneAt - preAiAt,
-      envio: Date.now() - aiDoneAt,
-    });
-
-    if (result.nome_cliente) {
-      await prisma.conversation.update({
-        where: { id: conversation.id },
-        data: { customerName: result.nome_cliente },
-      });
-      await prisma.lead.upsert({
-        where: { conversationId: conversation.id },
-        create: {
-          companyId: conversation.companyId,
-          conversationId: conversation.id,
-          name: result.nome_cliente,
-          phone: conversation.customerPhone,
-          interest: result.interesse || null,
-        },
-        update: {
-          name: result.nome_cliente,
-          ...(result.interesse ? { interest: result.interesse } : {}),
-        },
-      });
-    }
-
-    if (result.transferir_humano) {
-      await requestHuman(
-        conversation.id,
-        result.motivo_transferencia || "Atendente encaminhou para a equipe",
-      );
-    }
-  } catch (error) {
-    await logError("ai-reply", error, conversation.companyId);
-    // Degradação honesta: avisa o cliente e chama a equipe em vez de deixar no vácuo
-    try {
-      await enviarWhatsApp(incoming.instance, incoming.phone, FALLBACK_MESSAGE);
-      await saveOutgoing(conversation.id, FALLBACK_MESSAGE);
-    } catch (sendError) {
-      await logError("ai-reply-fallback", sendError, conversation.companyId);
-    }
-    await requestHuman(conversation.id, "Falha ao gerar resposta da IA");
-  }
-}
-
-async function requestHuman(conversationId: string, reason: string): Promise<void> {
-  await prisma.conversation.update({
-    where: { id: conversationId },
-    data: { status: "WAITING_HUMAN" },
-  });
-  await saveOutgoing(conversationId, `Transferido para atendimento humano — ${reason}`, "SYSTEM");
 }

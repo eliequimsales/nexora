@@ -245,17 +245,22 @@ describe("dupla marcação na agenda pública", () => {
    * é transação serializável — o Postgres aborta a segunda, e ela vira o mesmo
    * 409 que o usuário já veria.
    */
+  // A marcação saiu da rota para lib/agenda/marcacao.ts, que o Atendente
+  // Virtual também usa: a trava vale para os dois caminhos.
   const rota = readFileSync(
     join(__dirname, "..", "app/api/agendar/[slug]/route.ts"),
     "utf8",
   );
+  const marcacao = readFileSync(join(__dirname, "..", "lib/agenda/marcacao.ts"), "utf8");
 
   it("a checagem de horário livre e a criação acontecem na mesma transação", () => {
-    expect(rota).toContain("$transaction");
-    expect(rota).toContain("Serializable");
+    expect(rota).toContain("marcarNaAgenda(");
+    expect(marcacao).toContain("$transaction");
+    expect(marcacao).toContain("Serializable");
   });
 
   it("conflito de concorrência vira 409, não 500", () => {
-    expect(rota).toContain("ehConflitoDeConcorrencia");
+    expect(marcacao).toContain("ehConflitoDeConcorrencia");
+    expect(rota).toMatch(/if \(!marcacao\.ok\)[\s\S]{0,200}status: 409/);
   });
 });

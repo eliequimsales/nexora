@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { AVISO_CONEXAO_PERDIDA, instanciaInexistente } from "@/lib/whatsapp/envio";
+import { atrasoDeDigitacao, AVISO_CONEXAO_PERDIDA, instanciaInexistente } from "@/lib/whatsapp/envio";
 
 /**
  * TODO ENVIO DA NEXORA PASSA PELO REGISTRO.
@@ -50,6 +50,25 @@ describe("todo envio passa pelo registro", () => {
       .filter((l) => /^\s+\w+\s+\w/.test(l))
       .map((l) => l.trim().split(/\s+/)[0]);
     expect(campos.sort()).toEqual(["criadoEm", "id", "instance", "messageId"]);
+  });
+});
+
+describe("\"digitando…\" antes da resposta do Atendente", () => {
+  // Resposta instantânea denuncia máquina e assusta; demorada perde o cliente.
+  it("o atraso cresce com o tamanho do texto, entre 1 e 3 segundos", () => {
+    expect(atrasoDeDigitacao("Oi!")).toBe(1000);
+    expect(atrasoDeDigitacao("x".repeat(100))).toBe(2000);
+    expect(atrasoDeDigitacao("x".repeat(2000))).toBe(3000);
+    const curto = atrasoDeDigitacao("x".repeat(60));
+    const medio = atrasoDeDigitacao("x".repeat(120));
+    expect(medio).toBeGreaterThan(curto);
+  });
+
+  it("o atraso vai até o servidor do WhatsApp, que mostra o \"digitando…\"", () => {
+    const envio = leia("lib/whatsapp/envio.ts");
+    expect(envio).toMatch(/sendWhatsAppText\(instance, phone, text, opcoes\)/);
+    const evolution = leia("lib/whatsapp/evolution.ts");
+    expect(evolution).toMatch(/body: \{ number: phone, text, \.\.\.\(opcoes\?\.atrasoMs \? \{ delay: opcoes\.atrasoMs \} : \{\}\) \}/);
   });
 });
 

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
-import { sendWhatsAppText } from "./evolution";
+import { sendWhatsAppText, type OpcoesDeEnvio } from "./evolution";
 
 /**
  * TODO ENVIO DA NEXORA PASSA POR AQUI.
@@ -15,9 +15,10 @@ export async function enviarWhatsApp(
   instance: string,
   phone: string,
   text: string,
+  opcoes?: OpcoesDeEnvio,
 ): Promise<{ messageId: string | null }> {
   try {
-    const { messageId } = await sendWhatsAppText(instance, phone, text);
+    const { messageId } = await sendWhatsAppText(instance, phone, text, opcoes);
     if (messageId) {
       await prisma.envioWhatsApp.create({ data: { instance, messageId } }).catch(async (erro) => {
         // Id repetido é o mesmo envio registrado duas vezes: não é problema.
@@ -29,6 +30,14 @@ export async function enviarWhatsApp(
     if (instanciaInexistente(erro)) await marcarConexaoPerdida(instance);
     throw erro;
   }
+}
+
+/**
+ * "Digitando…" antes da resposta do Atendente: 1 segundo nas curtas, até 3 nas
+ * longas. Resposta instantânea denuncia a máquina; demorada perde o cliente.
+ */
+export function atrasoDeDigitacao(texto: string): number {
+  return Math.min(3000, Math.max(1000, Math.round(texto.length * 20)));
 }
 
 /** O envio que chegou pelo webhook com este id saiu da própria Nexora? */

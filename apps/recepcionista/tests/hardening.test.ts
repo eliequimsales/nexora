@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { respostaDeLimite } from "@/lib/limites";
-import { buildSystemPrompt } from "@/lib/ai/prompt";
 import { toChatMessages } from "@/lib/ai/provider";
+import { montarPrompt } from "@/lib/atendente/prompt";
 
 /**
  * AUDITORIA DE 13/09/2026 — o que foi fechado e o que não pode voltar.
@@ -87,26 +87,17 @@ describe("o teto por IP não é o único: ataque distribuído é visto pela cont
 // PROMPT INJECTION
 // ---------------------------------------------------------------------------
 
-const CONTEXTO = {
-  companyName: "Barbearia do Zé",
-  description: "Barbearia de bairro",
-  address: "Rua A, 100",
-  productsServices: "Corte",
-  pricingInfo: "Corte: R$ 50",
-  paymentMethods: "Dinheiro",
-  serviceRules: "",
-  aiTone: "simpático",
-  greetingMessage: "",
-  awayMessage: "",
-  businessHours: [],
-  faqs: [],
-  isOpen: true,
-  isFirstMessage: true,
-  localTimeFormatted: "segunda, 10:00",
-};
-
 describe("mensagem de cliente é conversa, nunca ordem", () => {
-  const prompt = buildSystemPrompt(CONTEXTO);
+  // O prompt que vai para a IA hoje: o do Atendente Virtual.
+  const prompt = montarPrompt({
+    textoDosFatos: "Empresa: Barbearia do Zé.\nServiços: Corte — R$ 50,00, 30 min.",
+    jeito: "ACOLHEDOR",
+    nome: "Bia",
+    empresa: "Barbearia do Zé",
+    contexto: "FECHADO",
+    volta: "amanhã às 9h",
+    agoraTexto: "segunda, 22:00",
+  });
 
   it("o prompt declara o limite de confiança", () => {
     expect(prompt).toMatch(/Limite de confiança/i);

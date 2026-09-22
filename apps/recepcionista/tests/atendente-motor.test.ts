@@ -257,17 +257,19 @@ describe("preço, horário, endereço e pagamento — do cadastro, sem IA", () =
   });
 });
 
-describe("pessoa, reclamação e urgência — texto fixo e anotação", () => {
+describe("pessoa, reclamação e urgência — texto fixo, anotação e a conversa passa para a equipe", () => {
   it("pedido de pessoa diz quando a equipe volta", async () => {
     const s = await responder(entrada("quero falar com um atendente"), deps);
     expect(s.mensagens[0]).toContain("A equipe volta amanhã às 9h");
     expect(s.anotar?.motivo).toMatch(/falar com alguém/i);
+    expect(s.equipe).toBe(true);
   });
 
   it("reclamação é acolhida e anotada", async () => {
     const s = await responder(entrada("péssimo atendimento, quero reclamar"), deps);
     expect(s.mensagens[0]).toContain("Sinto muito");
     expect(s.anotar?.motivo).toMatch(/Reclamação/);
+    expect(s.equipe).toBe(true);
   });
 
   it("urgência vem antes de tudo, mesmo na primeira do dia", async () => {
@@ -276,11 +278,19 @@ describe("pessoa, reclamação e urgência — texto fixo e anotação", () => {
     expect(s.mensagens[0]).toContain("192");
     expect(s.urgente).toBe(true);
     expect(s.anotar).toBeDefined();
+    expect(s.equipe).toBe(true);
   });
 
-  it("desmarcar é anotado para a equipe", async () => {
+  // Quem quer remarcar ainda pode pedir horário novo: o Atendente continua ajudando.
+  it("desmarcar é anotado, e o Atendente segue na conversa", async () => {
     const s = await responder(entrada("quero desmarcar meu horário de amanhã"), deps);
     expect(s.anotar?.motivo).toMatch(/desmarcar/i);
+    expect(s.equipe).toBeUndefined();
+  });
+
+  it("dúvida sem resposta é anotada sem tirar o Atendente da conversa", async () => {
+    const s = await responder(entrada("onde fica?", { fatos: { ...FATOS, endereco: "" } }), deps);
+    expect(s.equipe).toBeUndefined();
   });
 });
 

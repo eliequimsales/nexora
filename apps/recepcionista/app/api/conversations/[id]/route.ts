@@ -57,7 +57,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const { status, note } = ACTION_MAP[parsed.data.action];
   const conversation = await prisma.conversation.update({
     where: { id: existing.id },
-    data: { status },
+    // Reativar devolve a conversa ao Atendente na hora — inclusive depois de o
+    // dono responder pelo celular ou de o cliente pedir uma pessoa.
+    data: { status, ...(status === "AI" ? { donoAssumiuEm: null } : {}) },
   });
   await prisma.message.create({
     data: { conversationId: existing.id, role: "SYSTEM", content: note },

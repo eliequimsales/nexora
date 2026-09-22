@@ -94,10 +94,12 @@ describe("ninguém inventa o próprio padrão", () => {
     expect(rota).not.toContain("HORARIOS_PADRAO");
   });
 
-  it("o atendimento lê o horário daqui", () => {
-    const servico = leia("lib/conversation-service.ts");
-    expect(servico).toContain("horarioDaEmpresa(");
-    expect(servico).not.toMatch(/function asBusinessHours/);
+  it("o Atendente lê o horário daqui", () => {
+    for (const arquivo of ["lib/atendente/executar.ts", "lib/atendente/fatos.ts"]) {
+      const fonte = leia(arquivo);
+      expect(fonte, arquivo).toContain("horarioDaEmpresa(");
+      expect(fonte, arquivo).not.toMatch(/function asBusinessHours/);
+    }
   });
 
   it("a tela de configurações mostra o horário que vale de verdade", () => {

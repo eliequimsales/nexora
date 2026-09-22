@@ -28,6 +28,12 @@ export const JANELA_DO_DONO_MS = 12 * HORA_MS;
 /** Uma oferta (serviços ou horários) vale por este tempo; depois, oferece de novo. */
 export const VALIDADE_DA_OFERTA_MS = 2 * HORA_MS;
 
+/**
+ * Quem escreve "oi", "tudo bem?" e "tem horário amanhã?" em três mensagens
+ * recebe uma resposta só, para as três: a mais nova espera este tanto e responde.
+ */
+export const ESPERA_DA_RAJADA_MS = 2_000;
+
 /** Mensagem pendente mais velha que isto não é respondida pelo resgate: já esfriou. */
 export const IDADE_MAXIMA_DO_RESGATE_MS = 60 * MINUTO_MS;
 

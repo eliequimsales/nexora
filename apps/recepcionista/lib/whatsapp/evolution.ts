@@ -167,6 +167,9 @@ export function idDoEnvio(resposta: unknown): string | null {
   return typeof id === "string" && id.trim() ? id.trim() : null;
 }
 
+/** `atrasoMs`: a Evolution mostra "digitando…" por esse tempo antes de enviar. */
+export type OpcoesDeEnvio = { atrasoMs?: number };
+
 /**
  * Envia mensagem de texto pelo WhatsApp via Evolution API.
  *
@@ -177,10 +180,11 @@ export async function sendWhatsAppText(
   instance: string,
   phone: string,
   text: string,
+  opcoes?: OpcoesDeEnvio,
 ): Promise<{ messageId: string | null }> {
   const resposta = await evoFetch(`/message/sendText/${encodeURIComponent(instance)}`, {
     method: "POST",
-    body: { number: phone, text },
+    body: { number: phone, text, ...(opcoes?.atrasoMs ? { delay: opcoes.atrasoMs } : {}) },
   });
   return { messageId: idDoEnvio(resposta) };
 }

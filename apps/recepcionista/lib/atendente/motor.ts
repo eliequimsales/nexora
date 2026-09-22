@@ -86,6 +86,8 @@ export type SaidaDoMotor = {
   marcou?: Marcacao;
   anotar?: { motivo: string; pergunta?: string };
   urgente?: boolean;
+  /** A conversa passa para a equipe: o Atendente sai dela (pessoa, reclamação, urgência). */
+  equipe?: true;
   /** De onde veio cada fato — o simulador mostra isso embaixo da resposta. */
   fontes: string[];
   usouIa: boolean;
@@ -336,6 +338,7 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
       return saida({
         mensagens: [intencao.emocional ? URGENCIA_CVV(fatos.empresa) : URGENCIA(fatos.empresa)],
         urgente: true,
+        equipe: true,
         anotar: { motivo: `Urgência: ${trecho(e.texto)}` },
         fontes: ["Texto fixo de urgência, com aviso para você"],
       });
@@ -350,6 +353,7 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
     case "PESSOA":
       return saida({
         mensagens: comAbertura(t.pessoa(volta)),
+        equipe: true,
         anotar: { motivo: "Pediu para falar com alguém da equipe" },
         fontes: ["Anotado para você responder"],
       });
@@ -357,6 +361,7 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
     case "RECLAMACAO":
       return saida({
         mensagens: comAbertura(t.reclamacao(volta)),
+        equipe: true,
         anotar: { motivo: `Reclamação: ${trecho(e.texto)}` },
         fontes: ["Anotado para você responder"],
       });
