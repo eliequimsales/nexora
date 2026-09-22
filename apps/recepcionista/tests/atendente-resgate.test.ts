@@ -347,6 +347,8 @@ describe("o resumo da manhã na rodada", () => {
     expect(enviarEmail).toHaveBeenCalledWith(
       "dono@exemplo.com",
       expect.objectContaining({ assunto: "Enquanto você estava fechado: 1 conversa, 1 horário marcado" }),
+      // É e-mail de relacionamento: leva o descadastro assinado, como a régua.
+      expect.stringMatching(/\/descadastro\?e=c1&t=[0-9a-f]{32}$/),
     );
   });
 

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
 import { telefoneFalado } from "@/lib/recuperacao/telefone";
 import { enviarEmail, type Mensagem } from "@/lib/reengajamento/email";
+import { tokenDescadastro } from "@/lib/reengajamento/servico";
 import type { BusinessHour } from "@/lib/validation";
 import { problemaNoGateway } from "@/lib/whatsapp/endereco";
 import { instanciaInexistente, servidorFora } from "@/lib/whatsapp/envio";
@@ -153,7 +154,12 @@ async function resumirAManha(p: {
   });
 
   const mensagem = resumoDaManha({ nome: p.nome, atendimentos, agora: p.agora });
-  if (mensagem) await enviarEmail(empresa.email, mensagem);
+  if (!mensagem) return;
+  // É e-mail de relacionamento: leva o mesmo descadastro assinado da régua, e
+  // quem clica deixa de receber também este resumo (semEmail, acima).
+  const appUrl = (process.env.APP_URL ?? "").replace(/\/+$/, "");
+  const descadastro = `${appUrl}/descadastro?e=${p.companyId}&t=${tokenDescadastro(p.companyId)}`;
+  await enviarEmail(empresa.email, mensagem, descadastro);
 }
 
 /** Tetos de uma rodada: o que passar fica para a próxima, um minuto depois. */

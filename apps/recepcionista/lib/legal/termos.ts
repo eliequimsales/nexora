@@ -15,6 +15,13 @@ import {
 } from "@/lib/billing/garantia";
 import { PLANOS } from "@/lib/billing/planos";
 import { DIAS_DA_PRIMEIRA_ONDA } from "@/lib/billing/primeira-onda";
+import {
+  MAX_RESPOSTAS_POR_DIA,
+  MINUTOS_SEM_RESPOSTA,
+  SEMANA_GRATIS_CONVERSAS,
+  SEMANA_GRATIS_DIAS,
+  TETO_CONVERSAS_MES,
+} from "@/lib/atendente/constantes";
 import { MIN_RECUPERAVEL_CENTS, MIN_SUMIDOS } from "@/lib/recuperacao/estimativa";
 import { TAMANHO_DA_ONDA } from "@/lib/recuperacao/onda";
 
@@ -64,10 +71,19 @@ export const TERMOS: { atualizadoEm: string; secoes: Secao[] } = {
         "A mensagem é escrita por regra de programação, com o nome e os dados daquele cliente. Não há inteligência artificial envolvida nessa parte, e nada do que você sobe é usado para treinar modelo de ninguém.",
       ],
       itens: [
-        "A Nexora NÃO envia mensagem no seu lugar. Você lê, edita se quiser e manda do seu próprio WhatsApp.",
+        "Na recuperação de clientes, a Nexora NÃO envia mensagem no seu lugar. Você lê, edita se quiser e manda do seu próprio WhatsApp.",
         "A Nexora NÃO garante que algum cliente vá voltar. Ninguém pode garantir isso.",
         "A Nexora NÃO é ferramenta de disparo em massa, e usá-la como se fosse viola estes Termos.",
-        "Existe um recurso opcional de atendimento automático que conecta seu WhatsApp. Ele só funciona se você o ativar, e enquanto não ativar, nada do seu WhatsApp é acessado. As condições específicas dele estão na Política de Privacidade.",
+      ],
+    },
+    {
+      titulo: "2.1. O Atendente Virtual",
+      paragrafos: [
+        `O Atendente Virtual é um recurso opcional: vem desligado e só funciona depois que você testa uma conversa no simulador e o liga. Ligado, ele responde no seu WhatsApp as mensagens de quem escreveu primeiro — na hora, quando a loja está fechada pelo horário do seu cadastro, e, se você deixar essa opção ligada, no expediente depois de ${MINUTOS_SEM_RESPOSTA} minutos sem resposta. Ele nunca começa conversa, nunca manda lembrete e manda no máximo ${MAX_RESPOSTAS_POR_DIA} respostas por conversa por dia. Se você responder pelo celular, ele sai daquela conversa.`,
+        "Ele se apresenta como atendente virtual do seu negócio, com o nome que você escolher, e nunca diz ser uma pessoa.",
+        "Horário livre, preço, duração, endereço e formas de pagamento vêm da sua agenda e do seu cadastro, por regra de programação, e a marcação segue a mesma regra do seu link de agendamento. Só nas respostas livres — a dúvida que não tem resposta pronta — um provedor de inteligência artificial escreve a frase, com os fatos do seu cadastro, e um verificador confere cada número antes de a resposta sair. O que ele não sabe, ele diz que não tem confirmado e anota para você.",
+        "Mensagem que parece emergência de saúde ou segurança recebe na hora a orientação de ligar para o 192 (ou o 188), e você é avisado no seu WhatsApp e por e-mail. O Atendente não é serviço de emergência.",
+        "Você desliga o Atendente quando quiser, pela tela dele. As condições sobre os dados das conversas estão na Política de Privacidade.",
       ],
     },
     {
@@ -77,6 +93,7 @@ export const TERMOS: { atualizadoEm: string; secoes: Secao[] } = {
         `Toda conta nova ganha a primeira Onda por nossa conta, sem cartão: você gera a Onda da semana e manda até ${TAMANHO_DA_ONDA} mensagens dela em até ${DIAS_DA_PRIMEIRA_ONDA} dias, contados de quando ela é gerada. Depois disso, as próximas Ondas pedem um plano — nada é cobrado sozinho e nada é apagado. Contas criadas com versões anteriores destes Termos mantêm o período gratuito que aceitaram.`,
         `São três planos, todos com a Nexora completa e impostos inclusos, sem taxa de adesão, sem taxa de instalação obrigatória e sem cobrança por cliente cadastrado: ${PRECO} por mês no cartão, com renovação automática; ${emReais(PLANOS.pix_30_dias.valorCents)} por ${DIAS_DO_PASSE} dias, pagos uma vez no Pix ou no cartão; e ${emReais(PRECO_ANUAL_CENTS)} por 12 meses, pagos uma vez no Pix ou no cartão.`,
         `Nos planos de ${DIAS_DO_PASSE} dias e anual não há cobrança automática: quando o período termina, o envio de novas ondas para até você pagar de novo, e nada é apagado. Pagando antes do fim, os dias novos começam depois dos que você já tinha.`,
+        `O Atendente Virtual está incluído em todos os planos, até ${TETO_CONVERSAS_MES} conversas por mês — uma conversa é uma pessoa atendida num dia. Passando disso, ele responde a quem escrever, uma vez por dia, só com um aviso de que você responde, sem cobrança extra. Sem plano, a primeira semana do Atendente é por nossa conta, sem cartão: ${SEMANA_GRATIS_DIAS} dias ou ${SEMANA_GRATIS_CONVERSAS} conversas, o que vier primeiro, contados da primeira vez que você o liga, uma vez por negócio. Depois dela, ele para de responder até você escolher um plano; nada é cobrado sozinho.`,
         `Implantação, opcional. No pagamento de um plano você pode acrescentar a implantação, por ${emReais(PRECO_IMPLANTACAO_CENTS)} uma vez: uma chamada de até ${MINUTOS_DA_CHAMADA} minutos, marcada pelo WhatsApp depois do pagamento, em que conferimos a sua lista com você, completamos o que faltar para a Nexora ler certo, ligamos o seu WhatsApp e mandamos juntos as primeiras mensagens da Onda da semana. As vagas são limitadas por semana e, quando acabam, a implantação sai da tela de pagamento até a semana seguinte. Se a chamada não acontecer em até ${PRAZO_DA_IMPLANTACAO_DIAS} dias da compra por falta de horário da Nexora, devolvemos o valor da implantação. O arrependimento da seção 4 vale também para ela.`,
         "Para contratar é preciso confirmar o e-mail antes. Mandamos um link no cadastro e você pode pedir outro pelo painel. A exigência não é burocracia: a lei nos obriga a mandar o comprovante da contratação para o seu e-mail, e não dá para cumprir isso sem ter certeza de que o endereço é seu. Quem entra com o Google já vem confirmado.",
         `No plano mensal, a cobrança é recorrente e processada pela Stripe. Se um pagamento falhar, você continua com acesso normal por ${TOLERANCIA_DIAS} dias enquanto resolve; depois desse prazo o envio de novas ondas para de funcionar, mas seus dados continuam acessíveis para leitura e exportação.`,
@@ -104,7 +121,8 @@ export const TERMOS: { atualizadoEm: string; secoes: Secao[] } = {
         "Você não sobe lista comprada, alugada, raspada de site, nem lista de clientes de outra pessoa.",
         "Você respeita quem pede para parar de receber mensagens, e marca isso no sistema quando o pedido chegar por fora dele.",
         "Você não usa a Nexora para propaganda em massa, corrente, golpe, cobrança abusiva ou qualquer mensagem que você não mandaria olhando a pessoa na cara.",
-        "Você é quem aperta o botão de enviar no seu WhatsApp, e portanto é quem responde pelo conteúdo enviado.",
+        "Na recuperação de clientes, você é quem aperta o botão de enviar no seu WhatsApp, e portanto é quem responde pelo conteúdo enviado.",
+        "Com o Atendente Virtual ligado, as respostas saem do seu número com os fatos que você cadastrou: manter preços, horários, serviços e respostas certos é responsabilidade sua.",
       ],
     },
     {
@@ -112,6 +130,7 @@ export const TERMOS: { atualizadoEm: string; secoes: Secao[] } = {
       paragrafos: [
         "O WhatsApp é da Meta e tem regras próprias. Números que enviam muitas mensagens não solicitadas podem ser limitados ou banidos, e o número da sua empresa costuma ser a sua agenda inteira.",
         "A Nexora foi desenhada para reduzir esse risco: ela sugere um número pequeno de mensagens por semana, escolhidas pelo ritmo de cada cliente, e quem tem horário marcado não entra na lista. Mas a decisão de enviar é sua, o número é seu, e a relação com a Meta é sua.",
+        "Para o Atendente Virtual responder, o seu WhatsApp é ligado à Nexora por QR Code ou código de pareamento. Essa conexão não é a oficial do WhatsApp, e números ligados assim podem ser restringidos. O Atendente só responde quem escreveu primeiro e nunca manda mensagem sozinho, o que reduz o risco, mas não o zera. A decisão de ligar é sua.",
         "Não temos como garantir que a Meta não vá agir contra o seu número, e não respondemos por bloqueio, limitação ou banimento aplicado por ela.",
       ],
     },

@@ -25,8 +25,10 @@
  * 2026-09-18: período de teste gratuito de 7 dias com acesso total liberado.
  * 2026-09-21: a primeira Onda por nossa conta no lugar do teste de 7 dias, e a
  * implantação opcional no pagamento.
+ * 2026-09-22: o Atendente Virtual — incluído no plano até o teto de conversas,
+ * a primeira semana por nossa conta, a identidade honesta e o risco do número.
  */
-export const VERSAO_DOCUMENTOS = "2026-09-21";
+export const VERSAO_DOCUMENTOS = "2026-09-22";
 
 /**
  * Preencher antes da primeira cobrança. Desde 15/09/2026 quem presta o serviço é a

@@ -72,15 +72,15 @@ export const PRIVACIDADE: { atualizadoEm: string; secoes: Secao[] } = {
       ],
     },
     {
-      titulo: "6. Se você ativar o atendimento automático no WhatsApp",
+      titulo: "6. Se você ligar o seu WhatsApp à Nexora, e o Atendente Virtual",
       paragrafos: [
-        "Este recurso é opcional, vem desligado, e enquanto você não o ativar nada abaixo acontece. Se você ativar, a lista da seção anterior aumenta, e é importante que você saiba exatamente como:",
+        "Ligar o WhatsApp e ligar o Atendente Virtual são opcionais e vêm desligados; enquanto você não ligar, nada abaixo acontece. Se você ligar, a lista da seção anterior aumenta, e é importante que você saiba exatamente como:",
       ],
       itens: [
-        "As mensagens que seus clientes enviam passam a chegar ao sistema e ficam gravadas, para o histórico do atendimento.",
-        "Para gerar a resposta automática, o conteúdo da conversa é enviado a um provedor de inteligência artificial fora do Brasil (hoje pode ser Groq, OpenAI ou Anthropic, conforme a configuração). Isso significa que a mensagem do seu cliente sai do país.",
+        "Com o WhatsApp ligado, as mensagens que seus clientes enviam chegam ao sistema e ficam gravadas, para o histórico do atendimento e para honrar na hora quem pede para parar de receber mensagem.",
+        "Com o Atendente Virtual ligado, as respostas dele também ficam gravadas. Horário, preço e marcação saem do seu cadastro e da sua agenda, sem sair do sistema. Só quando a pergunta não tem resposta pronta, o conteúdo da conversa e os fatos do seu cadastro vão a um provedor de inteligência artificial fora do Brasil (hoje pode ser Groq, OpenAI ou Anthropic, conforme a configuração), para escrever a resposta — nesses casos, a mensagem do seu cliente sai do país. A lista de clientes que você importou não vai junto.",
         "A conexão com o WhatsApp é feita por integração não oficial, lendo QR code. Isso não é um canal homologado pela Meta e implica o risco de bloqueio descrito nos Termos de Uso.",
-        "Se essa transferência internacional não for aceitável para o seu caso, não ative o recurso. A recuperação de clientes — que é o serviço principal — funciona inteira sem ele, e sem enviar nada dos seus clientes para fora.",
+        "Se essa transferência internacional não for aceitável para o seu caso, não ligue o Atendente. A recuperação de clientes — que é o serviço principal — funciona inteira sem ele, e sem enviar nada dos seus clientes para fora.",
       ],
     },
     {
@@ -106,8 +106,8 @@ export const PRIVACIDADE: { atualizadoEm: string; secoes: Secao[] } = {
         "Dois tipos, e eles funcionam de forma diferente.",
       ],
       itens: [
-        "TRANSACIONAL: confirmação da contratação, comprovante da devolução pela garantia, aviso de cobrança que não passou, link de redefinir senha, confirmação de e-mail. Não têm link de descadastro porque ninguém pode optar por não receber o comprovante daquilo que contratou nem o aviso de que a assinatura vai parar.",
-        "RELACIONAMENTO: a chamada semanal da sua Onda de segunda, avisos de que o período gratuito ou os dias pagos estão acabando, e lembretes se você parar de usar. Esses todos trazem link de descadastro, e clicar nele desliga de uma vez todos os e-mails desse tipo.",
+        "TRANSACIONAL: confirmação da contratação, comprovante da devolução pela garantia, aviso de cobrança que não passou, link de redefinir senha, confirmação de e-mail e o aviso de urgência do Atendente Virtual, quando um cliente escreve uma emergência. Não têm link de descadastro porque ninguém pode optar por não receber o comprovante daquilo que contratou, o aviso de que a assinatura vai parar nem o de que um cliente precisa de você com urgência.",
+        "RELACIONAMENTO: a chamada semanal da sua Onda de segunda, o resumo da manhã do Atendente Virtual (o que ele fez enquanto você estava fechado), avisos de que o período gratuito ou os dias pagos estão acabando, e lembretes se você parar de usar. Esses todos trazem link de descadastro, e clicar nele desliga de uma vez todos os e-mails desse tipo.",
         "Nunca mandamos e-mail para os SEUS clientes. A Nexora escreve a mensagem e quem manda é você, do seu WhatsApp.",
       ],
     },

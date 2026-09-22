@@ -57,7 +57,7 @@ export const OPERADOR: { atualizadoEm: string; secoes: Secao[] } = {
       titulo: "4. Subprocessadores autorizados",
       paragrafos: [
         "Você autoriza, ao aceitar este contrato, que os dados fiquem hospedados na infraestrutura listada na seção 5 da Política de Privacidade — hoje, essencialmente, a hospedagem e o banco de dados.",
-        "Se você ativar o atendimento automático de WhatsApp, autoriza também os provedores descritos na seção 6 da mesma política, incluindo o envio do conteúdo das conversas para provedor de inteligência artificial fora do Brasil. Esse recurso vem desligado justamente porque a autorização é sua, e específica.",
+        "Se você ligar o Atendente Virtual no seu WhatsApp, autoriza também os provedores descritos na seção 6 da mesma política, incluindo o envio do conteúdo das conversas para provedor de inteligência artificial fora do Brasil quando a pergunta do cliente não tem resposta pronta. Esse recurso vem desligado justamente porque a autorização é sua, e específica.",
       ],
     },
     {
