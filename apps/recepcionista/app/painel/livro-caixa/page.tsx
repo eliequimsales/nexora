@@ -38,12 +38,12 @@ export default async function LivroCaixaPage() {
 
   const [mes, acumulado, totalDeEntradas, extrato, aguardando, totalToquesEnviados] = await Promise.all([
     prisma.recoveryEntry.aggregate({
-      where: { companyId, returnedAt: { gte: comecoDoMes } },
+      where: { companyId, returnedAt: { gte: comecoDoMes }, attributed: true },
       _sum: { valueCents: true },
       _count: true,
     }),
     prisma.recoveryEntry.aggregate({
-      where: { companyId },
+      where: { companyId, attributed: true },
       _sum: { valueCents: true },
       _count: true,
     }),
@@ -168,13 +168,20 @@ export default async function LivroCaixaPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2.5">
-                    <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-                      Recuperado ✓
-                    </span>
+                    {e.attributed && (
+                      <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                        Recuperado ✓
+                      </span>
+                    )}
                     <span className="font-display font-bold text-base text-panel-ink">
                       {emReais(e.valueCents)}
                     </span>
                   </div>
+                  {!e.attributed && (
+                    <span className="w-full text-xs text-panel-sub">
+                      voltou, mas não dá para provar que foi pela sua mensagem — por isso não somei no total
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>
