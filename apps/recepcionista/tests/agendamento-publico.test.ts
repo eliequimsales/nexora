@@ -83,3 +83,22 @@ describe("a rota pública de agendamento (/api/agendar/[slug]) é protegida cont
     expect(fonte).not.toMatch(/TOO_MANY_ATTEMPTS[\s\S]*status:\s*429/);
   });
 });
+
+describe("isolamento de horários por profissional", () => {
+  const fonte = readFileSync(join(__dirname, "../app/api/agendar/[slug]/route.ts"), "utf8");
+
+  it("extrai o profissional correto das anotações do agendamento", async () => {
+    const { extrairProfissional } = await import("@/lib/agenda/painel");
+    expect(extrairProfissional(JSON.stringify({ profissional: "Lucas", observacoes: "" }))).toBe("Lucas");
+    expect(extrairProfissional(JSON.stringify({ profissional: "Pedro" }))).toBe("Pedro");
+    expect(extrairProfissional(null)).toBe("Profissional");
+    expect(extrairProfissional("texto simples")).toBe("Profissional");
+  });
+
+  it("garante que a rota pública isola conflitos por profissional e permite profissionais diferentes no mesmo horário", () => {
+    expect(fonte).toContain("extrairProfissional(ag.notes)");
+    expect(fonte).toContain("profAlvo");
+    expect(fonte).toContain("ConflitoDeHorario");
+  });
+});
+

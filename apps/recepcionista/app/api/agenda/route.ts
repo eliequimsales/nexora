@@ -175,6 +175,7 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     await logError("agenda-post", error, companyId);
-    return NextResponse.json({ error: "Não consegui agendar o cliente agora" }, { status: 500 });
+    const msg = error instanceof Error ? error.message : "Não consegui agendar o cliente agora";
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 }

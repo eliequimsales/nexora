@@ -13,7 +13,7 @@ import { respostaDeLimite } from "@/lib/limites";
 import { entradaPorLink } from "@/lib/agenda/entrada-publica";
 import { hashTelefone } from "@/lib/dados/excluir";
 import { ehConflitoDeConcorrencia } from "@/lib/agenda/concorrencia";
-import { gerarTextoLembrete, listarProfissionais } from "@/lib/agenda/painel";
+import { extrairProfissional, gerarTextoLembrete, listarProfissionais } from "@/lib/agenda/painel";
 
 /** Sinaliza, de dentro da transação, que o horário foi ocupado no caminho. */
 class ConflitoDeHorario extends Error {}
@@ -126,34 +126,70 @@ export async function GET(
       select: { startsAt: true, endsAt: true, notes: true },
     });
 
-    const ocupados = profissionalFiltro
-      ? todosAgendamentos
-          .filter((a) => {
-            try {
-              if (a.notes && a.notes.startsWith("{")) {
-                const parsed = JSON.parse(a.notes);
-                return parsed.profissional === profissionalFiltro;
-              }
-            } catch {
-              // fallback
-            }
-            return true;
-          })
-          .map((a) => ({ startsAt: a.startsAt, endsAt: a.endsAt }))
-      : todosAgendamentos.map((a) => ({ startsAt: a.startsAt, endsAt: a.endsAt }));
-
     const horarios = horarioDaEmpresa(negocio.profile?.businessHours);
+    const profissionais = await listarProfissionais(negocio.id);
 
     const agenda = dias
       .map((dia) => {
-        const horas = calcularSlots({
-          dia,
-          horarios,
-          duracaoMin: servico.durationMin,
-          ocupados,
-          agora,
-          antecedenciaMinutos: ANTECEDENCIA_MIN,
-        });
+        let horas: string[] = [];
+
+        if (profissionalFiltro && profissionalFiltro !== "Primeiro disponível") {
+          // Filtro por profissional específico: apenas agendamentos deste profissional ocupam o horário
+          const ocupadosProf = todosAgendamentos
+            .filter((a) => extrairProfissional(a.notes).toLowerCase() === profissionalFiltro.toLowerCase())
+            .map((a) => ({ startsAt: a.startsAt, endsAt: a.endsAt }));
+
+          horas = calcularSlots({
+            dia,
+            horarios,
+            duracaoMin: servico.durationMin,
+            ocupados: ocupadosProf,
+            agora,
+            antecedenciaMinutos: ANTECEDENCIA_MIN,
+          });
+        } else if (profissionais.length > 0) {
+          // "Primeiro disponível" com múltiplos profissionais:
+          // Um horário está livre se pelo menos UM profissional estiver livre.
+          // Só fica indisponível se TODOS os profissionais estiverem ocupados.
+          const slotsDisponiveis = new Set<string>();
+
+          for (const p of profissionais) {
+            const ocupadosP = todosAgendamentos
+              .filter((a) => extrairProfissional(a.notes).toLowerCase() === p.nome.toLowerCase())
+              .map((a) => ({ startsAt: a.startsAt, endsAt: a.endsAt }));
+
+            const slotsP = calcularSlots({
+              dia,
+              horarios,
+              duracaoMin: servico.durationMin,
+              ocupados: ocupadosP,
+              agora,
+              antecedenciaMinutos: ANTECEDENCIA_MIN,
+            });
+
+            for (const s of slotsP) {
+              slotsDisponiveis.add(s);
+            }
+          }
+
+          horas = Array.from(slotsDisponiveis).sort();
+        } else {
+          // Sem profissionais cadastrados (atendimento geral / 1 vaga por horário)
+          const ocupadosGeral = todosAgendamentos.map((a) => ({
+            startsAt: a.startsAt,
+            endsAt: a.endsAt,
+          }));
+
+          horas = calcularSlots({
+            dia,
+            horarios,
+            duracaoMin: servico.durationMin,
+            ocupados: ocupadosGeral,
+            agora,
+            antecedenciaMinutos: ANTECEDENCIA_MIN,
+          });
+        }
+
         return {
           dia: dia.toISOString().slice(0, 10),
           horas,
@@ -161,8 +197,6 @@ export async function GET(
         };
       })
       .filter((d) => d.horas.length > 0);
-
-    const profissionais = await listarProfissionais(negocio.id);
 
     return NextResponse.json({
       negocio: { nome: negocio.name, endereco: negocio.profile?.address ?? "" },
@@ -244,11 +278,12 @@ export async function POST(
     // remarcação legítima. Serializável resolve sem mentir sobre o domínio —
     // o Postgres aborta a transação perdedora, que vira o mesmo 409 de sempre.
     let ocupou = false;
+    let profissionalFinal = "Profissional";
 
     try {
       await prisma.$transaction(
         async (tx) => {
-          const ocupados = await tx.appointment.findMany({
+          const ocupadosDia = await tx.appointment.findMany({
             where: {
               companyId: negocio.id,
               status: { in: ["MARCADO", "CONFIRMADO"] },
@@ -257,30 +292,119 @@ export async function POST(
                 lt: new Date(diaData.getTime() + 48 * 60 * 60 * 1000),
               },
             },
-            select: { startsAt: true, endsAt: true },
+            select: { startsAt: true, endsAt: true, notes: true },
           });
 
-          // Recalcula no servidor: a lista que o navegador viu pode estar
-          // velha, e dupla marcação é o pior defeito possível numa agenda — o
-          // cliente aparece e não tem cadeira.
-          const livres = calcularSlots({
-            dia: diaData,
-            horarios: horarioDaEmpresa(negocio.profile?.businessHours),
-            duracaoMin: servico.durationMin,
-            ocupados,
-            agora,
-            antecedenciaMinutos: ANTECEDENCIA_MIN,
-          });
-
-          if (!livres.includes(hora)) {
-            ocupou = true;
-            throw new ConflitoDeHorario();
-          }
-
+          const listaProfs = await listarProfissionais(negocio.id);
           const [h, m] = hora.split(":").map(Number);
-          // Horário local de Brasília convertido para o instante UTC.
           const startsAt = new Date(diaData.getTime() + (h * 60 + m + 180) * 60 * 1000);
           const endsAt = new Date(startsAt.getTime() + servico.durationMin * 60 * 1000);
+
+          let profissionalEscolhido: string;
+
+          if (parsed.data.profissional && parsed.data.profissional !== "Primeiro disponível") {
+            const profAlvo = parsed.data.profissional.trim();
+
+            // 1. Checa se o profissional escolhido já tem agendamento que sobreponha esse horário
+            const conflito = ocupadosDia.some((ag) => {
+              if (extrairProfissional(ag.notes).toLowerCase() !== profAlvo.toLowerCase()) {
+                return false;
+              }
+              return startsAt.getTime() < ag.endsAt.getTime() && endsAt.getTime() > ag.startsAt.getTime();
+            });
+
+            if (conflito) {
+              ocupou = true;
+              throw new ConflitoDeHorario();
+            }
+
+            // 2. Valida contra o expediente da empresa
+            const ocupadosProf = ocupadosDia
+              .filter((ag) => extrairProfissional(ag.notes).toLowerCase() === profAlvo.toLowerCase())
+              .map((ag) => ({ startsAt: ag.startsAt, endsAt: ag.endsAt }));
+
+            const livres = calcularSlots({
+              dia: diaData,
+              horarios: horarioDaEmpresa(negocio.profile?.businessHours),
+              duracaoMin: servico.durationMin,
+              ocupados: ocupadosProf,
+              agora,
+              antecedenciaMinutos: ANTECEDENCIA_MIN,
+            });
+
+            if (!livres.includes(hora)) {
+              ocupou = true;
+              throw new ConflitoDeHorario();
+            }
+
+            profissionalEscolhido = profAlvo;
+          } else if (listaProfs.length > 0) {
+            // "Primeiro disponível": encontra o primeiro profissional da equipe livre no horário
+            const profLivre = listaProfs.find((p) => {
+              const temSobreposicao = ocupadosDia.some((ag) => {
+                if (extrairProfissional(ag.notes).toLowerCase() !== p.nome.toLowerCase()) {
+                  return false;
+                }
+                return startsAt.getTime() < ag.endsAt.getTime() && endsAt.getTime() > ag.startsAt.getTime();
+              });
+              if (temSobreposicao) return false;
+
+              const ocupadosP = ocupadosDia
+                .filter((ag) => extrairProfissional(ag.notes).toLowerCase() === p.nome.toLowerCase())
+                .map((ag) => ({ startsAt: ag.startsAt, endsAt: ag.endsAt }));
+
+              const livresP = calcularSlots({
+                dia: diaData,
+                horarios: horarioDaEmpresa(negocio.profile?.businessHours),
+                duracaoMin: servico.durationMin,
+                ocupados: ocupadosP,
+                agora,
+                antecedenciaMinutos: ANTECEDENCIA_MIN,
+              });
+
+              return livresP.includes(hora);
+            });
+
+            if (!profLivre) {
+              ocupou = true;
+              throw new ConflitoDeHorario();
+            }
+
+            profissionalEscolhido = profLivre.nome;
+          } else {
+            // Sem equipe cadastrada: agenda única
+            const conflito = ocupadosDia.some((ag) => {
+              return startsAt.getTime() < ag.endsAt.getTime() && endsAt.getTime() > ag.startsAt.getTime();
+            });
+
+            if (conflito) {
+              ocupou = true;
+              throw new ConflitoDeHorario();
+            }
+
+            const ocupadosGeral = ocupadosDia.map((ag) => ({
+              startsAt: ag.startsAt,
+              endsAt: ag.endsAt,
+            }));
+
+            const livres = calcularSlots({
+              dia: diaData,
+              horarios: horarioDaEmpresa(negocio.profile?.businessHours),
+              duracaoMin: servico.durationMin,
+              ocupados: ocupadosGeral,
+              agora,
+              antecedenciaMinutos: ANTECEDENCIA_MIN,
+            });
+
+            if (!livres.includes(hora)) {
+              ocupou = true;
+              throw new ConflitoDeHorario();
+            }
+
+            profissionalEscolhido = "Atendimento Geral";
+          }
+
+          profissionalFinal = profissionalEscolhido;
 
           // Esta rota é PÚBLICA e escreve na base do assinante. O que ela pode
           // gravar está em entradaPorLink, com o porquê de cada regra: agendar
@@ -316,10 +440,6 @@ export async function POST(
               select: { id: true },
             }));
 
-          const listaProfs = await listarProfissionais(negocio.id);
-          const profissionalEscolhido =
-            parsed.data.profissional || listaProfs[0]?.nome || "Profissional";
-
           await tx.appointment.create({
             data: {
               companyId: negocio.id,
@@ -348,10 +468,6 @@ export async function POST(
       }
       throw erro;
     }
-
-    const listaProfs = await listarProfissionais(negocio.id);
-    const profissionalFinal =
-      parsed.data.profissional || listaProfs[0]?.nome || "Atendimento Principal";
 
     const [h, m] = hora.split(":").map(Number);
     const startsAt = new Date(diaData.getTime() + (h * 60 + m + 180) * 60 * 1000);
