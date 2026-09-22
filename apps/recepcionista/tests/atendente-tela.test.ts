@@ -261,3 +261,13 @@ describe("o \"Ligar no meu WhatsApp\"", () => {
     expect(ligar).toMatch(/recusa\.acao\.href/);
   });
 });
+
+describe("serviços na tela do Atendente", () => {
+  const ajustes = fonte("components/atendente/ajustes.tsx");
+
+  it("não redireciona para a agenda: gerencia serviços direto em modal próprio", () => {
+    expect(ajustes).not.toContain('href="/painel/agenda"');
+    expect(ajustes).toContain("ModalServicos");
+    expect(ajustes).toContain("/api/agenda/servicos");
+  });
+});

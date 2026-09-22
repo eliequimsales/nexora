@@ -97,6 +97,18 @@ export default function PaginaDoAtendente() {
     void ajustar({ jeito: novo });
   }
 
+  async function recarregar() {
+    try {
+      const r = await fetch("/api/atendente");
+      const j = await r.json().catch(() => null);
+      if (r.ok && j) {
+        setTela(j);
+      }
+    } catch {
+      // silencioso
+    }
+  }
+
   if (!tela) {
     return (
       <div>
@@ -121,6 +133,7 @@ export default function PaginaDoAtendente() {
       aoMudarNome={mudarNome}
       aoMudarJeito={mudarJeito}
       aoAjustar={(dados) => void ajustar(dados)}
+      aoAtualizarTela={recarregar}
     />
   );
 

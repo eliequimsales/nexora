@@ -63,6 +63,50 @@ export async function POST(request: Request) {
   }
 }
 
+const servicoEdicaoSchema = z.object({
+  id: z.string().min(1, "ID do serviço é obrigatório"),
+  nome: z.string().trim().min(2, "Nome do serviço é obrigatório").max(80).optional(),
+  duracaoMin: z.number().int().positive().max(720).optional(),
+  precoCents: z.number().int().nonnegative().optional(),
+});
+
+export async function PUT(request: Request) {
+  const companyId = await getSessionCompanyId();
+  if (!companyId) {
+    return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  }
+
+  if (!limitar("agenda-servicos-atualizar", companyId, LIMITES.escrita)) {
+    return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
+  }
+
+  try {
+    const json = await request.json();
+    const parsed = servicoEdicaoSchema.safeParse(json);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Dados inválidos" },
+        { status: 400 },
+      );
+    }
+
+    const { id, nome, duracaoMin, precoCents } = parsed.data;
+    await prisma.service.updateMany({
+      where: { id, companyId, active: true },
+      data: {
+        ...(nome ? { name: nome } : {}),
+        ...(duracaoMin !== undefined ? { durationMin: duracaoMin } : {}),
+        ...(precoCents !== undefined ? { priceCents: precoCents } : {}),
+      },
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    await logError("agenda-servicos-put", error, companyId);
+    return NextResponse.json({ error: "Não consegui salvar o serviço" }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: Request) {
   const companyId = await getSessionCompanyId();
   if (!companyId) {
