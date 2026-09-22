@@ -120,6 +120,12 @@ export default async function PainelLayout({ children }: { children: React.React
               <span>🗓️</span>
               <span>Agenda</span>
             </Link>
+            <Link
+              href="/painel/assinatura"
+              className="text-xs font-medium text-panel-sub hover:text-panel-ink transition"
+            >
+              Minha conta
+            </Link>
             <span className="hidden text-sm text-panel-sub md:inline">{company.name}</span>
             <LogoutButton />
           </div>
