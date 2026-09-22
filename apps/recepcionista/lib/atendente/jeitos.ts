@@ -32,6 +32,11 @@ export const DESCRICAO_DO_JEITO: Record<Jeito, string> = {
   DESCONTRAIDO: "Leve, do jeito de quem já é cliente.",
 };
 
+/** "quarta, 23/09, às 11h" → "Quarta, 23/09, às 11h", para quando o dia começa a frase. */
+function comMaiuscula(texto: string): string {
+  return texto.charAt(0).toLocaleUpperCase("pt-BR") + texto.slice(1);
+}
+
 export function lerJeito(valor: unknown): Jeito {
   return JEITOS.includes(valor as Jeito) ? (valor as Jeito) : "ACOLHEDOR";
 }
@@ -111,7 +116,7 @@ const ACOLHEDOR: Textos = {
   anoteiHorario: (p) => `Anotei: ${p.quando}. A equipe confirma com você ${p.volta ?? "assim que puder"} 💛`,
   escolherServico: "Qual desses você quer? É só responder com o número:",
   confirmacao: (p) =>
-    `Prontinho! ${p.quando} — ${p.servico}${p.profissional ? ` com ${p.profissional}` : ""}. ` +
+    `Prontinho! ${comMaiuscula(p.quando)} — ${p.servico}${p.profissional ? ` com ${p.profissional}` : ""}. ` +
     "Já está na agenda. Se precisar desmarcar, é só avisar por aqui 💛",
   ocupado: "Ih, esse horário acabou de ser ocupado. Olha os próximos:",
   semHorario: (quando) =>
@@ -182,7 +187,7 @@ const DESCONTRAIDO: Textos = {
   anoteiHorario: (p) => `Anotado: ${p.quando}! O pessoal confirma com você ${p.volta ?? "assim que der"}.`,
   escolherServico: "Qual deles vai ser? Manda o número:",
   confirmacao: (p) =>
-    `Fechado! ${p.quando} — ${p.servico}${p.profissional ? ` com ${p.profissional}` : ""}. ` +
+    `Fechado! ${comMaiuscula(p.quando)} — ${p.servico}${p.profissional ? ` com ${p.profissional}` : ""}. ` +
     "Já tá na agenda. Se precisar desmarcar, é só avisar aqui.",
   ocupado: "Eita, esse acabou de ser pego. Olha os próximos:",
   semHorario: (quando) => (quando ? `Pra ${quando} lotou. Os próximos são:` : "Os próximos livres são:"),

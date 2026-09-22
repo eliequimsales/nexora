@@ -427,7 +427,7 @@ describe("atender — a escolha vira marcação", () => {
         cliente: { nome: "Rafael Souza", telefone: "5511988887777" },
       }),
     );
-    expect((enviarWhatsApp as Fn).mock.calls[0][2]).toContain("quarta, 23/09, às 10h30");
+    expect((enviarWhatsApp as Fn).mock.calls[0][2]).toMatch(/quarta, 23\/09, às 10h30/i);
     expect(db.conversation.update.mock.calls[0][0].data.atendenteEstado).toBe(Prisma.DbNull);
     expect(registrarAtendimento).toHaveBeenCalledWith(
       expect.objectContaining({ respostas: 1, marcados: 1, valorMarcadoCents: 4500 }),

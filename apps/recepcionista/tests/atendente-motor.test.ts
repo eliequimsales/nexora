@@ -167,7 +167,7 @@ describe("pedido de horário", () => {
     expect(pedido.inicio).toEqual(emBrasilia("2026-09-23", 10, 30));
     expect(pedido.profissional).toBe("Léo");
     expect(pedido.cliente).toEqual({ nome: "Rafael", telefone: "5511988887777" });
-    expect(s.mensagens[0]).toContain("quarta, 23/09, às 10h30");
+    expect(s.mensagens[0]).toContain("Quarta, 23/09, às 10h30");
     expect(s.mensagens[0]).toContain("Já está na agenda");
     expect(s.marcou).toMatchObject({ valorCents: 4500, appointmentId: "ag1" });
     expect(s.estado).toBeNull();

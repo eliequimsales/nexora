@@ -110,6 +110,13 @@ describe("os três jeitos", () => {
       }
     });
 
+    // "Prontinho! quarta, 23/09" era o que o cliente lia em toda marcação.
+    it(`${NOME_DO_JEITO[jeito]}: depois de exclamação, a frase começa com maiúscula`, () => {
+      for (const texto of amostras(jeito)) {
+        expect(texto, texto).not.toMatch(/[!?] [a-zà-ÿ]/);
+      }
+    });
+
     it(`${NOME_DO_JEITO[jeito]}: no máximo um emoji por texto`, () => {
       for (const texto of amostras(jeito)) {
         expect((texto.match(EMOJI) ?? []).length, texto).toBeLessThanOrEqual(1);
@@ -128,7 +135,7 @@ describe("os três jeitos", () => {
       const t = textosDoJeito(jeito);
       expect(t.pessoa("amanhã às 9h")).toContain("amanhã às 9h");
       expect(t.confirmacao({ quando: "quarta, 23/09, às 11h", servico: "Corte", profissional: "Léo" })).toMatch(
-        /quarta, 23\/09, às 11h[\s\S]*Corte[\s\S]*Léo/,
+        /quarta, 23\/09, às 11h[\s\S]*Corte[\s\S]*Léo/i,
       );
       expect(t.semPreco("Luzes")).toContain("Luzes");
     });
@@ -200,7 +207,7 @@ describe("conversaDeExemplo — a mesma conversa nos três jeitos", () => {
       expect(bolhas[0].de).toBe("cliente");
       expect(bolhas.some((b) => b.de === "atendente" && b.texto.includes("Eu sou Bia"))).toBe(true);
       expect(bolhas.some((b) => b.texto.includes("2 · qua 23/09, 11h com Léo"))).toBe(true);
-      expect(bolhas.at(-1)?.texto).toContain("quarta, 23/09, às 11h");
+      expect(bolhas.at(-1)?.texto).toMatch(/quarta, 23\/09, às 11h/i);
     }
   });
 });
