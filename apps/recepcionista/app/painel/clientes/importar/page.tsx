@@ -1060,7 +1060,7 @@ export default function PaginaImportar() {
                       : "border-panel-line bg-panel-bg"
                   }`}
                 >
-                  <div className="space-y-1">
+                  <div className="space-y-1 min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-sm text-panel-ink">{c.nome}</span>
                       <span className="text-xs text-panel-sub">{c.telefone}</span>
@@ -1119,10 +1119,10 @@ export default function PaginaImportar() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 self-start sm:self-center flex-wrap">
+                  <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
                     {clienteParaRemover === c.id ? (
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-red-50 border border-red-200 rounded-xl p-2">
-                        <span className="text-xs text-red-700 font-medium">
+                      <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-2.5 py-1.5 shrink-0">
+                        <span className="text-xs text-red-700 font-medium whitespace-nowrap">
                           Remover este cliente?
                         </span>
                         <div className="flex items-center gap-1.5">
@@ -1130,7 +1130,7 @@ export default function PaginaImportar() {
                             type="button"
                             onClick={() => void removerCliente(c.id, c.telefone)}
                             disabled={removendoId === c.id}
-                            className="rounded-lg bg-red-600 hover:bg-red-700 px-2.5 py-1 text-xs font-semibold text-white transition disabled:opacity-50"
+                            className="rounded-lg bg-red-600 hover:bg-red-700 px-2.5 py-1 text-xs font-semibold text-white transition disabled:opacity-50 whitespace-nowrap"
                           >
                             {removendoId === c.id ? "Removendo…" : "Sim, remover"}
                           </button>
@@ -1141,13 +1141,13 @@ export default function PaginaImportar() {
                               setErroRemocao(null);
                             }}
                             disabled={removendoId === c.id}
-                            className="rounded-lg border border-panel-line bg-white hover:bg-panel-bg px-2.5 py-1 text-xs font-medium text-panel-sub transition"
+                            className="rounded-lg border border-panel-line bg-white hover:bg-panel-bg px-2.5 py-1 text-xs font-medium text-panel-sub transition whitespace-nowrap"
                           >
                             Cancelar
                           </button>
                         </div>
                         {erroRemocao && (
-                          <span className="text-xs text-red-600 font-medium w-full">
+                          <span className="text-xs text-red-600 font-medium">
                             {erroRemocao}
                           </span>
                         )}
@@ -1157,7 +1157,7 @@ export default function PaginaImportar() {
                         {!c.optOut && !c.mensagemReativacao && travaMensagem && (
                           <Link
                             href={travaMensagem.acao.href}
-                            className="rounded-lg border border-amber/60 bg-amber/15 px-3 py-1.5 text-xs font-semibold text-panel-ink transition hover:bg-amber/25"
+                            className="rounded-lg border border-amber/60 bg-amber/15 px-3 py-1.5 text-xs font-semibold text-panel-ink transition hover:bg-amber/25 whitespace-nowrap shrink-0"
                           >
                             Liberar mensagem pronta
                           </Link>
@@ -1168,7 +1168,7 @@ export default function PaginaImportar() {
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={() => trackFirstRecoverySent()}
-                            className="rounded-lg bg-[#25D366] hover:bg-[#20ba59] px-3 py-1.5 text-xs font-semibold text-white transition flex items-center gap-1.5 shadow-sm"
+                            className="rounded-lg bg-[#25D366] hover:bg-[#20ba59] px-3 py-1.5 text-xs font-semibold text-white transition flex items-center gap-1.5 shadow-sm whitespace-nowrap shrink-0"
                           >
                             <span>💬</span> Chamar no WhatsApp
                           </a>
@@ -1179,7 +1179,7 @@ export default function PaginaImportar() {
                             setClienteParaRemover(c.id);
                             setErroRemocao(null);
                           }}
-                          className="rounded-lg border border-panel-line bg-white hover:border-red-300 hover:text-red-600 hover:bg-red-50/40 px-2.5 py-1.5 text-xs font-medium text-panel-sub transition flex items-center gap-1"
+                          className="rounded-lg border border-panel-line bg-white hover:border-red-300 hover:text-red-600 hover:bg-red-50/40 px-2.5 py-1.5 text-xs font-medium text-panel-sub transition flex items-center gap-1 whitespace-nowrap shrink-0"
                           title="Remover cliente"
                         >
                           <span>🗑️</span>
