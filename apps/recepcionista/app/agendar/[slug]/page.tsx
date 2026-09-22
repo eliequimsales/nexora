@@ -55,7 +55,11 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(true);
 
-  const [servicoId, setServicoId] = useState("");
+  // Serviço é opcional: pode ser vazio (atendimento geral), um serviço específico, ou um nome customizado
+  const [servicoId, setServicoId] = useState<string>("");
+  const [servicoPersonalizado, setServicoPersonalizado] = useState("");
+  const [mostrarCampoCustomizado, setMostrarCampoCustomizado] = useState(false);
+
   const [profissionalNome, setProfissionalNome] = useState("Primeiro disponível");
   const [dia, setDia] = useState("");
   const [hora, setHora] = useState("");
@@ -91,9 +95,6 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
         const json: Dados = await res.json();
         setDados(json);
 
-        const selServico = json.servicoSelecionado ?? json.servicos[0]?.id ?? "";
-        setServicoId(selServico);
-
         if (json.dias.length > 0 && !dia) {
           setDia(json.dias[0].dia);
         }
@@ -110,21 +111,32 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
     void carregar();
   }, [carregar]);
 
-  const trocarServico = (id: string) => {
-    setServicoId(id);
-    setHora("");
-    void carregar(id, profissionalNome);
+  const selecionarServico = (id: string) => {
+    if (servicoId === id) {
+      // Clicar no mesmo serviço desmarca (volta para atendimento geral opcional)
+      setServicoId("");
+      setHora("");
+      void carregar(undefined, profissionalNome);
+    } else {
+      setServicoId(id);
+      setHora("");
+      void carregar(id, profissionalNome);
+    }
   };
 
   const trocarProfissional = (nomeProf: string) => {
     setProfissionalNome(nomeProf);
     setHora("");
-    void carregar(servicoId, nomeProf);
+    void carregar(servicoId || undefined, nomeProf);
   };
 
   const marcar = async () => {
     if (!nome.trim() || telefone.replace(/\D/g, "").length < 10) {
       setErro("Informe seu nome completo e WhatsApp.");
+      return;
+    }
+    if (!dia || !hora) {
+      setErro("Por favor, escolha uma data e um horário disponível.");
       return;
     }
 
@@ -137,7 +149,8 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
         body: JSON.stringify({
           nome: nome.trim(),
           telefone,
-          serviceId: servicoId,
+          serviceId: servicoId || undefined,
+          servicoNome: servicoPersonalizado.trim() || undefined,
           dia,
           hora,
           profissional: profissionalNome === "Primeiro disponível" ? undefined : profissionalNome,
@@ -149,7 +162,7 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
         setErro(json.error ?? "Não consegui marcar o horário agora.");
         if (res.status === 409) {
           setHora("");
-          void carregar(servicoId, profissionalNome);
+          void carregar(servicoId || undefined, profissionalNome);
         }
         return;
       }
@@ -157,7 +170,7 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
       setConfirmado({
         nomeNegocio: json.confirmacao?.negocio || dados?.negocio.nome || "Estabelecimento",
         endereco: dados?.negocio.endereco ?? "",
-        servico: json.confirmacao?.servico || "Atendimento",
+        servico: json.confirmacao?.servico || (servicoId ? dados?.servicos.find((s) => s.id === servicoId)?.name : null) || servicoPersonalizado.trim() || "Atendimento Geral",
         profissional: json.confirmacao?.profissional || profissionalNome,
         dia: json.confirmacao?.dia || dia,
         hora: json.confirmacao?.hora || hora,
@@ -173,10 +186,18 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
 
   if (carregando) {
     return (
-      <main className="min-h-screen bg-[#0d1117] flex items-center justify-center p-6 text-white">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-3 border-amber-400 border-t-transparent" />
-          <p className="text-sm text-neutral-400">Carregando horários em tempo real...</p>
+      <main className="min-h-screen bg-[#07090E] flex items-center justify-center p-6 text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(245,158,11,0.08),transparent_70%)] pointer-events-none" />
+        <div className="flex flex-col items-center gap-4 relative z-10">
+          <div className="relative">
+            <div className="h-12 w-12 rounded-full border-2 border-amber-400/20 border-t-amber-400 animate-spin" />
+            <div className="absolute inset-0 flex items-center justify-center text-xs text-amber-400 font-mono">
+              ✦
+            </div>
+          </div>
+          <p className="text-sm font-medium text-neutral-400 tracking-wide">
+            Carregando horários em tempo real...
+          </p>
         </div>
       </main>
     );
@@ -184,11 +205,14 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
 
   if (!dados) {
     return (
-      <main className="min-h-screen bg-[#0d1117] flex items-center justify-center p-6 text-white">
-        <div className="max-w-md text-center">
+      <main className="min-h-screen bg-[#07090E] flex items-center justify-center p-6 text-white relative">
+        <div className="max-w-md w-full rounded-3xl border border-neutral-800 bg-[#0E131E] p-8 text-center shadow-2xl">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-500/10 text-2xl text-red-400 border border-red-500/20">
+            ✕
+          </div>
           <h1 className="text-xl font-bold text-white mb-2">Página não encontrada</h1>
           <p className="text-sm text-neutral-400">
-            Este link de agendamento não existe ou foi modificado.
+            Este link de agendamento não existe ou foi modificado pelo estabelecimento.
           </p>
         </div>
       </main>
@@ -237,41 +261,43 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
           )}`;
 
     return (
-      <main className="min-h-screen bg-[#0B0F17] flex items-center justify-center p-4 text-white">
-        <div className="w-full max-w-lg rounded-3xl border border-neutral-800 bg-[#161C26] p-6 sm:p-8 text-center shadow-2xl animate-fade-in">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/20 text-3xl text-emerald-400 border border-emerald-500/30">
+      <main className="min-h-screen bg-[#07090E] flex items-center justify-center p-4 text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(245,158,11,0.12),transparent_60%)] pointer-events-none" />
+        
+        <div className="w-full max-w-lg rounded-3xl border border-neutral-800/80 bg-[#0E131E]/95 backdrop-blur-xl p-6 sm:p-8 text-center shadow-2xl relative z-10 animate-fade-in">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/15 text-3xl text-emerald-400 border border-emerald-500/30 shadow-lg shadow-emerald-500/10">
             ✓
           </div>
 
-          <h1 className="text-2xl font-bold text-white mb-1">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-2">
             Horário Agendado com Sucesso!
           </h1>
           <p className="text-sm text-neutral-400 mb-6">
             Te esperamos no horário marcado. Seu agendamento já está confirmado.
           </p>
 
-          <div className="rounded-2xl border border-neutral-800 bg-[#0E131D] p-5 text-left space-y-3 mb-6">
-            <div className="flex justify-between items-start border-b border-neutral-800/80 pb-3">
+          <div className="rounded-2xl border border-neutral-800 bg-[#141A26] p-5 text-left space-y-3 mb-6 shadow-inner">
+            <div className="flex justify-between items-start border-b border-neutral-800 pb-3">
               <div>
-                <span className="text-xs text-neutral-400 uppercase tracking-wider">Atendimento</span>
+                <span className="text-[11px] font-medium text-neutral-400 uppercase tracking-wider">Atendimento</span>
                 <p className="text-base font-bold text-white">{confirmado.servico}</p>
               </div>
               <div className="text-right">
-                <span className="text-xs text-neutral-400 uppercase tracking-wider">Profissional</span>
+                <span className="text-[11px] font-medium text-neutral-400 uppercase tracking-wider">Profissional</span>
                 <p className="text-sm font-semibold text-amber-400">{confirmado.profissional}</p>
               </div>
             </div>
 
             <div className="flex justify-between items-center pt-1">
               <div>
-                <span className="text-xs text-neutral-400 uppercase tracking-wider">Data e Horário</span>
+                <span className="text-[11px] font-medium text-neutral-400 uppercase tracking-wider">Data e Horário</span>
                 <p className="text-sm font-semibold text-white">
                   {rotuloDiaCompleto(confirmado.dia).textoCurto} às {confirmado.hora}
                 </p>
               </div>
               <div className="text-right">
-                <span className="text-xs text-neutral-400 uppercase tracking-wider">Local</span>
-                <p className="text-xs text-neutral-300 max-w-[180px] truncate">
+                <span className="text-[11px] font-medium text-neutral-400 uppercase tracking-wider">Local</span>
+                <p className="text-xs text-neutral-300 max-w-[180px] truncate" title={confirmado.nomeNegocio}>
                   {confirmado.nomeNegocio}
                 </p>
               </div>
@@ -294,7 +320,7 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
               href={googleCalendarUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-400 px-5 py-3 text-sm font-bold text-neutral-950 transition hover:bg-amber-300 shadow-md"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 px-5 py-3.5 text-sm font-bold text-neutral-950 transition hover:from-amber-300 hover:to-amber-400 shadow-lg shadow-amber-500/20 active:scale-[0.99]"
             >
               <span>📅</span>
               <span>Adicionar ao Google Agenda</span>
@@ -328,8 +354,10 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
                 setNome("");
                 setTelefone("");
                 setHora("");
+                setServicoId("");
+                setServicoPersonalizado("");
               }}
-              className="rounded-xl border border-neutral-800 px-4 py-2 text-xs font-semibold text-neutral-400 hover:bg-neutral-800 hover:text-white transition mt-1"
+              className="rounded-xl border border-neutral-800 px-4 py-2 text-xs font-semibold text-neutral-400 hover:bg-neutral-800 hover:text-white transition mt-2"
             >
               Fazer outro agendamento
             </button>
@@ -343,143 +371,231 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
   const periodos = diaSelecionado ? agruparPorPeriodo(diaSelecionado.horas) : { manha: [], tarde: [], noite: [] };
 
   const profissionaisDisponiveis = [
-    { id: "qualquer", nome: "Primeiro disponível", cargo: "Qualquer profissional" },
+    { id: "qualquer", nome: "Primeiro disponível", cargo: "Atendimento mais rápido" },
     ...(dados.profissionais && dados.profissionais.length > 0
       ? dados.profissionais
-      : [{ id: "prof_1", nome: "Profissional", cargo: "Profissional" }]),
+      : []),
   ];
 
+  // A escolha do serviço NÃO é obrigatória para poder confirmar!
   const podeConfirmar =
     nome.trim().length >= 2 &&
     telefone.replace(/\D/g, "").length >= 10 &&
-    servicoId &&
     dia &&
     hora;
 
   const inicialNegocio = dados.negocio.nome ? dados.negocio.nome.charAt(0).toUpperCase() : "N";
 
+  const servicoSelecionadoObj = dados.servicos.find((s) => s.id === servicoId);
+
   return (
-    <main className="min-h-screen bg-[#0B0F17] text-white py-8 px-4 sm:px-6">
-      <div className="mx-auto max-w-xl space-y-6">
-        {/* Header Universal do Estabelecimento */}
-        <header className="rounded-3xl border border-neutral-800 bg-[#161C26] p-6 shadow-xl text-center sm:text-left">
-          <div className="flex flex-col sm:flex-row items-center gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-amber-400/10 border border-amber-400/30 text-2xl font-bold text-amber-400">
+    <main className="min-h-screen bg-[#07090E] text-white py-10 px-4 sm:px-6 relative overflow-hidden">
+      {/* Luz ambiente de fundo sutil e luxuosa */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] bg-[radial-gradient(ellipse_at_top,rgba(245,158,11,0.08),transparent_70%)] pointer-events-none" />
+
+      <div className="mx-auto max-w-2xl space-y-6 relative z-10">
+        {/* Cabeçalho do Estabelecimento */}
+        <header className="rounded-3xl border border-neutral-800/80 bg-[#0E131E]/90 backdrop-blur-xl p-6 sm:p-7 shadow-2xl">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-5 text-center sm:text-left">
+            <div className="flex h-16 w-16 sm:h-18 sm:w-18 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400/20 to-amber-600/10 border border-amber-400/30 text-2xl sm:text-3xl font-bold text-amber-300 shadow-inner">
               {inicialNegocio}
             </div>
-            <div className="flex-1">
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold text-white">
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white truncate">
                   {dados.negocio.nome}
                 </h1>
-                <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-400">
-                  ● Aberto para agendamento
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-400 shadow-sm">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Aberto para agendamento
                 </span>
               </div>
-              <p className="text-xs text-neutral-400 mt-1">
-                {dados.negocio.endereco || "Agendamento online em tempo real"}
+              
+              <p className="text-xs text-neutral-400 mt-1.5 leading-relaxed flex items-center justify-center sm:justify-start gap-1.5">
+                <span>📍</span>
+                <span>{dados.negocio.endereco || "Atendimento presencial no estabelecimento"}</span>
               </p>
-              <div className="flex items-center justify-center sm:justify-start gap-1 text-xs text-amber-400 mt-2">
-                <span>★★★★★</span>
-                <span className="text-neutral-400 text-[11px] ml-1">(5.0 · Atendimento de excelência)</span>
+
+              <div className="flex items-center justify-center sm:justify-start gap-2 text-xs mt-2.5">
+                <div className="flex text-amber-400 text-sm">★★★★★</div>
+                <span className="text-neutral-400 text-xs font-medium">5.0 · Atendimento com horário reservado</span>
               </div>
             </div>
           </div>
         </header>
 
-        {/* Passo 1: Escolha o Serviço */}
-        <section className="rounded-3xl border border-neutral-800 bg-[#161C26] p-5 sm:p-6 shadow-lg">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-300 flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-neutral-950">
+        {/* PASSO 1: Escolha o Serviço (OPCIONAL) */}
+        <section className="rounded-3xl border border-neutral-800/80 bg-[#0E131E]/90 backdrop-blur-xl p-5 sm:p-6 shadow-xl space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-neutral-950">
                 1
               </span>
-              <span>Escolha o Serviço</span>
-            </h2>
+              <h2 className="text-sm sm:text-base font-bold text-white tracking-tight">
+                Qual serviço você gostaria?
+              </h2>
+            </div>
+            <span className="rounded-full bg-neutral-800/80 border border-neutral-700/60 px-2.5 py-0.5 text-[11px] font-medium text-neutral-400">
+              Opcional
+            </span>
           </div>
 
+          <p className="text-xs text-neutral-400 leading-relaxed">
+            Selecione um dos serviços abaixo se desejar, ou apenas escolha o horário para um atendimento geral.
+          </p>
+
+          {/* Opção Rápida: Atendimento Geral / Apenas Agendar Horário */}
           <div className="grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => {
+                setServicoId("");
+                setServicoPersonalizado("");
+                setHora("");
+                void carregar(undefined, profissionalNome);
+              }}
+              className={`flex items-center justify-between rounded-2xl border p-3.5 text-left transition ${
+                !servicoId && !servicoPersonalizado
+                  ? "border-amber-400 bg-amber-400/10 shadow-md ring-1 ring-amber-400/40"
+                  : "border-neutral-800 bg-[#131926] hover:border-neutral-700 hover:bg-[#182030]"
+              }`}
+            >
+              <div>
+                <span className="font-semibold text-sm text-white block">Apenas agendar horário</span>
+                <span className="text-[11px] text-neutral-400">Atendimento geral · 30 min</span>
+              </div>
+              {!servicoId && !servicoPersonalizado ? (
+                <span className="text-xs font-bold text-amber-400">Selecionado ✓</span>
+              ) : null}
+            </button>
+
             {dados.servicos.map((s) => {
               const selecionado = servicoId === s.id;
               return (
                 <button
                   key={s.id}
                   type="button"
-                  onClick={() => trocarServico(s.id)}
-                  className={`flex flex-col items-start justify-between rounded-2xl border p-3.5 text-left transition ${
+                  onClick={() => selecionarServico(s.id)}
+                  className={`flex items-center justify-between rounded-2xl border p-3.5 text-left transition ${
                     selecionado
-                      ? "border-amber-400 bg-amber-400/10 shadow-md ring-1 ring-amber-400/50"
-                      : "border-neutral-800 bg-[#0E131D] hover:border-neutral-700 hover:bg-[#131924]"
+                      ? "border-amber-400 bg-amber-400/10 shadow-md ring-1 ring-amber-400/40"
+                      : "border-neutral-800 bg-[#131926] hover:border-neutral-700 hover:bg-[#182030]"
                   }`}
                 >
-                  <div className="w-full flex items-center justify-between">
-                    <span className="font-semibold text-sm text-white">{s.name}</span>
-                    {selecionado ? (
-                      <span className="text-[11px] font-bold text-amber-400">
-                        Selecionado ✓
-                      </span>
-                    ) : null}
-                  </div>
-                  {s.priceCents > 0 && (
-                    <span className="text-xs font-mono font-semibold text-amber-400/90 mt-1.5">
-                      {reais(s.priceCents)}
+                  <div className="flex-1 pr-2">
+                    <span className="font-semibold text-sm text-white block truncate">{s.name}</span>
+                    <span className="text-[11px] text-neutral-400 font-mono">
+                      {s.durationMin} min {s.priceCents > 0 ? `· ${reais(s.priceCents)}` : ""}
                     </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Passo 2: Escolha o Profissional */}
-        <section className="rounded-3xl border border-neutral-800 bg-[#161C26] p-5 sm:p-6 shadow-lg">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-300 flex items-center gap-2 mb-3">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-neutral-950">
-              2
-            </span>
-            <span>Com quem você quer agendar?</span>
-          </h2>
-
-          <div className="flex flex-wrap gap-2">
-            {profissionaisDisponiveis.map((prof) => {
-              const isAtivo = profissionalNome === prof.nome;
-              return (
-                <button
-                  key={prof.id}
-                  type="button"
-                  onClick={() => trocarProfissional(prof.nome)}
-                  className={`flex items-center gap-2.5 rounded-2xl border px-3.5 py-2.5 text-left text-xs transition ${
-                    isAtivo
-                      ? "border-amber-400 bg-amber-400/15 font-semibold text-white shadow"
-                      : "border-neutral-800 bg-[#0E131D] text-neutral-400 hover:border-neutral-700 hover:text-white"
-                  }`}
-                >
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-neutral-800 text-[11px] font-bold text-amber-400">
-                    {prof.nome.charAt(0)}
-                  </span>
-                  <div>
-                    <span className="block font-medium text-white">{prof.nome}</span>
-                    <span className="text-[10px] text-neutral-400">{prof.cargo}</span>
                   </div>
+                  {selecionado ? (
+                    <span className="text-xs font-bold text-amber-400 shrink-0">Selecionado ✓</span>
+                  ) : null}
                 </button>
               );
             })}
           </div>
+
+          {/* Opção para escrever o serviço se quiser */}
+          <div className="pt-1">
+            {!mostrarCampoCustomizado && !servicoPersonalizado ? (
+              <button
+                type="button"
+                onClick={() => setMostrarCampoCustomizado(true)}
+                className="text-xs text-amber-400/90 hover:text-amber-300 underline font-medium transition"
+              >
+                + Deseja escrever o que você precisa fazer?
+              </button>
+            ) : (
+              <div className="space-y-1.5 animate-fade-in">
+                <label className="block text-xs font-medium text-neutral-300">
+                  Descreva o que você precisa (opcional):
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Ex: Manutenção, corte degradê, avaliação..."
+                    value={servicoPersonalizado}
+                    onChange={(e) => setServicoPersonalizado(e.target.value)}
+                    className="flex-1 rounded-xl border border-neutral-800 bg-[#131926] px-3.5 py-2 text-xs text-white placeholder:text-neutral-500 focus:border-amber-400 focus:outline-none"
+                  />
+                  {servicoPersonalizado && (
+                    <button
+                      type="button"
+                      onClick={() => setServicoPersonalizado("")}
+                      className="text-xs text-neutral-400 hover:text-white px-2"
+                    >
+                      Limpar
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </section>
 
-        {/* Passo 3: Escolha a Data */}
-        <section className="rounded-3xl border border-neutral-800 bg-[#161C26] p-5 sm:p-6 shadow-lg">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-300 flex items-center gap-2 mb-3">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-neutral-950">
-              3
+        {/* PASSO 2: Escolha o Profissional */}
+        {profissionaisDisponiveis.length > 1 && (
+          <section className="rounded-3xl border border-neutral-800/80 bg-[#0E131E]/90 backdrop-blur-xl p-5 sm:p-6 shadow-xl space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-neutral-950">
+                  2
+                </span>
+                <h2 className="text-sm sm:text-base font-bold text-white tracking-tight">
+                  Com quem você quer agendar?
+                </h2>
+              </div>
+              <span className="rounded-full bg-neutral-800/80 border border-neutral-700/60 px-2.5 py-0.5 text-[11px] font-medium text-neutral-400">
+                Opcional
+              </span>
+            </div>
+
+            <div className="flex flex-wrap gap-2.5 pt-1">
+              {profissionaisDisponiveis.map((prof) => {
+                const isAtivo = profissionalNome === prof.nome;
+                return (
+                  <button
+                    key={prof.id}
+                    type="button"
+                    onClick={() => trocarProfissional(prof.nome)}
+                    className={`flex items-center gap-3 rounded-2xl border px-4 py-2.5 text-left transition ${
+                      isAtivo
+                        ? "border-amber-400 bg-amber-400/15 font-semibold text-white shadow-md ring-1 ring-amber-400/40"
+                        : "border-neutral-800 bg-[#131926] text-neutral-300 hover:border-neutral-700 hover:text-white"
+                    }`}
+                  >
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-800 border border-neutral-700 text-xs font-bold text-amber-400">
+                      {prof.nome.charAt(0)}
+                    </span>
+                    <div>
+                      <span className="block font-medium text-xs text-white">{prof.nome}</span>
+                      <span className="text-[10px] text-neutral-400">{prof.cargo}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* PASSO 3: Escolha a Data */}
+        <section className="rounded-3xl border border-neutral-800/80 bg-[#0E131E]/90 backdrop-blur-xl p-5 sm:p-6 shadow-xl space-y-4">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-neutral-950">
+              {profissionaisDisponiveis.length > 1 ? "3" : "2"}
             </span>
-            <span>Escolha a Data</span>
-          </h2>
+            <h2 className="text-sm sm:text-base font-bold text-white tracking-tight">
+              Escolha a data
+            </h2>
+          </div>
 
           {dados.dias.length === 0 ? (
-            <p className="text-sm text-neutral-400">Sem horários livres nos próximos dias.</p>
+            <p className="text-sm text-neutral-400 py-4 text-center">
+              Sem horários livres nos próximos dias para este serviço ou profissional.
+            </p>
           ) : (
-            <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-none">
+            <div className="flex gap-2.5 overflow-x-auto pb-2 pt-1 scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {dados.dias.map((d) => {
                 const info = rotuloDiaCompleto(d.dia);
                 const isSelected = dia === d.dia;
@@ -491,19 +607,19 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
                       setDia(d.dia);
                       setHora("");
                     }}
-                    className={`flex flex-col items-center justify-center min-w-[70px] rounded-2xl border p-2.5 text-center transition shrink-0 ${
+                    className={`flex flex-col items-center justify-center min-w-[76px] sm:min-w-[84px] py-3.5 px-2 rounded-2xl border text-center transition shrink-0 ${
                       isSelected
-                        ? "border-amber-400 bg-amber-400 text-neutral-950 font-bold shadow-lg"
-                        : "border-neutral-800 bg-[#0E131D] text-neutral-300 hover:border-neutral-700 hover:bg-[#131924]"
+                        ? "border-amber-400 bg-amber-400 text-neutral-950 font-bold shadow-lg shadow-amber-400/20 scale-[1.02]"
+                        : "border-neutral-800 bg-[#131926] text-neutral-300 hover:border-neutral-700 hover:bg-[#182030]"
                     }`}
                   >
-                    <span className="text-[10px] uppercase font-semibold opacity-80">
+                    <span className={`text-[11px] uppercase tracking-wider font-semibold ${isSelected ? "text-neutral-900" : "text-neutral-400"}`}>
                       {info.semana.slice(0, 3)}
                     </span>
-                    <span className="text-lg font-bold leading-tight my-0.5">
+                    <span className="text-xl sm:text-2xl font-bold leading-tight my-1">
                       {info.dia}
                     </span>
-                    <span className="text-[10px] opacity-75">
+                    <span className={`text-[11px] capitalize ${isSelected ? "text-neutral-900" : "text-neutral-400"}`}>
                       {info.mes}
                     </span>
                   </button>
@@ -513,25 +629,27 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
           )}
         </section>
 
-        {/* Passo 4: Escolha o Horário Disponível com Divisão por Turnos */}
+        {/* PASSO 4: Escolha o Horário Disponível com Divisão por Turnos */}
         {diaSelecionado && (
-          <section className="rounded-3xl border border-neutral-800 bg-[#161C26] p-5 sm:p-6 shadow-lg animate-fade-in">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-300 flex items-center gap-2 mb-4">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-neutral-950">
-                4
+          <section className="rounded-3xl border border-neutral-800/80 bg-[#0E131E]/90 backdrop-blur-xl p-5 sm:p-6 shadow-xl space-y-4 animate-fade-in">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-neutral-950">
+                {profissionaisDisponiveis.length > 1 ? "4" : "3"}
               </span>
-              <span>Horários Disponíveis</span>
-            </h2>
+              <h2 className="text-sm sm:text-base font-bold text-white tracking-tight">
+                Horários disponíveis ({rotuloDiaCompleto(diaSelecionado.dia).textoCurto})
+              </h2>
+            </div>
 
             {diaSelecionado.horas.length === 0 ? (
-              <p className="text-sm text-neutral-400 py-4 text-center">
-                Todos os horários deste dia foram ocupados. Escolha outra data.
+              <p className="text-sm text-neutral-400 py-6 text-center">
+                Todos os horários deste dia foram ocupados. Por favor, escolha outra data acima.
               </p>
             ) : (
               <div className="space-y-4">
                 {periodos.manha.length > 0 && (
                   <div>
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 flex items-center gap-1 mb-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5 mb-2.5">
                       <span>☀️</span>
                       <span>Manhã</span>
                     </span>
@@ -543,10 +661,10 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
                             key={h}
                             type="button"
                             onClick={() => setHora(h)}
-                            className={`rounded-xl border py-2.5 text-xs font-mono font-semibold transition ${
+                            className={`rounded-xl border py-2.5 text-xs sm:text-sm font-mono font-semibold transition ${
                               isAtivo
-                                ? "border-amber-400 bg-amber-400 text-neutral-950 shadow-md font-bold"
-                                : "border-neutral-800 bg-[#0E131D] text-neutral-200 hover:border-amber-400/40 hover:bg-[#131924]"
+                                ? "border-amber-400 bg-amber-400 text-neutral-950 shadow-md font-bold scale-105"
+                                : "border-neutral-800 bg-[#131926] text-neutral-200 hover:border-amber-400/40 hover:bg-[#182030]"
                             }`}
                           >
                             {h}
@@ -559,7 +677,7 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
 
                 {periodos.tarde.length > 0 && (
                   <div>
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 flex items-center gap-1 mb-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5 mb-2.5">
                       <span>🌤️</span>
                       <span>Tarde</span>
                     </span>
@@ -571,10 +689,10 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
                             key={h}
                             type="button"
                             onClick={() => setHora(h)}
-                            className={`rounded-xl border py-2.5 text-xs font-mono font-semibold transition ${
+                            className={`rounded-xl border py-2.5 text-xs sm:text-sm font-mono font-semibold transition ${
                               isAtivo
-                                ? "border-amber-400 bg-amber-400 text-neutral-950 shadow-md font-bold"
-                                : "border-neutral-800 bg-[#0E131D] text-neutral-200 hover:border-amber-400/40 hover:bg-[#131924]"
+                                ? "border-amber-400 bg-amber-400 text-neutral-950 shadow-md font-bold scale-105"
+                                : "border-neutral-800 bg-[#131926] text-neutral-200 hover:border-amber-400/40 hover:bg-[#182030]"
                             }`}
                           >
                             {h}
@@ -587,7 +705,7 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
 
                 {periodos.noite.length > 0 && (
                   <div>
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 flex items-center gap-1 mb-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5 mb-2.5">
                       <span>🌙</span>
                       <span>Noite</span>
                     </span>
@@ -599,10 +717,10 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
                             key={h}
                             type="button"
                             onClick={() => setHora(h)}
-                            className={`rounded-xl border py-2.5 text-xs font-mono font-semibold transition ${
+                            className={`rounded-xl border py-2.5 text-xs sm:text-sm font-mono font-semibold transition ${
                               isAtivo
-                                ? "border-amber-400 bg-amber-400 text-neutral-950 shadow-md font-bold"
-                                : "border-neutral-800 bg-[#0E131D] text-neutral-200 hover:border-amber-400/40 hover:bg-[#131924]"
+                                ? "border-amber-400 bg-amber-400 text-neutral-950 shadow-md font-bold scale-105"
+                                : "border-neutral-800 bg-[#131926] text-neutral-200 hover:border-amber-400/40 hover:bg-[#182030]"
                             }`}
                           >
                             {h}
@@ -617,45 +735,60 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
           </section>
         )}
 
-        {/* Passo 5: Seus Dados */}
+        {/* PASSO 5: Seus Dados de Contato e Botão de Confirmação */}
         {hora && (
-          <section className="rounded-3xl border border-neutral-800 bg-[#161C26] p-5 sm:p-6 shadow-lg animate-fade-in space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-300 flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-neutral-950">
-                5
+          <section className="rounded-3xl border border-neutral-800/80 bg-[#0E131E]/90 backdrop-blur-xl p-5 sm:p-7 shadow-2xl animate-fade-in space-y-4">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-neutral-950">
+                {profissionaisDisponiveis.length > 1 ? "5" : "4"}
               </span>
-              <span>Seus Dados de Contato</span>
-            </h2>
-
-            <div>
-              <label className="block text-xs font-medium text-neutral-400 mb-1">
-                Seu Nome Completo *
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="Ex: Carlos Eduardo"
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                className="w-full rounded-2xl border border-neutral-800 bg-[#0E131D] px-4 py-3 text-sm text-white placeholder:text-neutral-500 focus:border-amber-400 focus:outline-none"
-              />
+              <h2 className="text-sm sm:text-base font-bold text-white tracking-tight">
+                Seus dados de contato
+              </h2>
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-neutral-400 mb-1">
-                Seu WhatsApp / Celular *
-              </label>
-              <input
-                type="tel"
-                required
-                placeholder="(11) 98888-7777"
-                value={telefone}
-                onChange={(e) => setTelefone(mascararTelefone(e.target.value))}
-                className="w-full rounded-2xl border border-neutral-800 bg-[#0E131D] px-4 py-3 text-sm text-white placeholder:text-neutral-500 focus:border-amber-400 focus:outline-none"
-              />
-              <span className="block text-[11px] text-neutral-500 mt-1">
-                Usamos seu WhatsApp para enviar a confirmação do agendamento.
-              </span>
+            <p className="text-xs text-neutral-400">
+              Informe seu nome e WhatsApp para garantirmos a reserva do seu horário e enviarmos o lembrete.
+            </p>
+
+            <div className="space-y-3.5 pt-1">
+              <div>
+                <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
+                  Seu Nome Completo *
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-neutral-500 text-sm">
+                    👤
+                  </span>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: Carlos Eduardo"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    className="w-full rounded-2xl border border-neutral-800 bg-[#131926] pl-10 pr-4 py-3 text-sm text-white placeholder:text-neutral-500 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400/50 transition"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
+                  Seu WhatsApp / Celular *
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-neutral-500 text-sm">
+                    📱
+                  </span>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="(11) 98888-7777"
+                    value={telefone}
+                    onChange={(e) => setTelefone(mascararTelefone(e.target.value))}
+                    className="w-full rounded-2xl border border-neutral-800 bg-[#131926] pl-10 pr-4 py-3 text-sm text-white placeholder:text-neutral-500 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400/50 transition"
+                  />
+                </div>
+              </div>
             </div>
 
             {erro && (
@@ -664,14 +797,16 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
               </p>
             )}
 
-            <button
-              type="button"
-              disabled={!podeConfirmar || enviando}
-              onClick={marcar}
-              className="w-full rounded-2xl bg-amber-400 py-3.5 text-sm font-bold text-neutral-950 shadow-xl transition hover:bg-amber-300 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {enviando ? "Confirmando seu horário..." : "Confirmar Agendamento"}
-            </button>
+            <div className="pt-2">
+              <button
+                type="button"
+                disabled={!podeConfirmar || enviando}
+                onClick={marcar}
+                className="w-full rounded-2xl bg-gradient-to-r from-amber-400 via-amber-400 to-amber-500 py-4 text-sm sm:text-base font-bold text-neutral-950 shadow-xl shadow-amber-500/20 transition hover:from-amber-300 hover:to-amber-400 active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:from-amber-400 disabled:hover:to-amber-500"
+              >
+                {enviando ? "Confirmando seu horário..." : "Confirmar Agendamento"}
+              </button>
+            </div>
           </section>
         )}
 
