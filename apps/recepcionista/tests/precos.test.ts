@@ -112,6 +112,57 @@ describe("a página de preços", () => {
   });
 });
 
+/**
+ * A ESTEIRA INTEIRA, COMO O DOCUMENTO PEDE (21/09/2026).
+ *
+ * Os seis passos do caminho do dinheiro, os dois planos lado a lado, o que
+ * separa um do outro — e o que nunca vai separar.
+ */
+describe("a página conta a esteira, não uma tabela", () => {
+  it("os seis passos, do anúncio ao degrau", () => {
+    const p = pagina();
+    for (const passo of [
+      "Você traz sua lista",
+      "Vê quem parou de voltar",
+      "Manda a primeira Onda",
+      "A parede",
+      "No pagamento, a implantação",
+      "Os degraus",
+    ]) {
+      expect(p, passo).toContain(passo);
+    }
+  });
+
+  it("os dois planos lado a lado, com o rótulo de cada um", () => {
+    const p = pagina();
+    expect(p).toContain("a entrada");
+    expect(p).toContain("chega junto com o Plantão");
+  });
+
+  it("a tabela diz o que separa os planos e o que nunca separa", () => {
+    const p = pagina();
+    for (const eixo of ["Profissionais", "Clientes na lista", "Mensagens", "dinheiro recuperado"]) {
+      expect(p, eixo).toContain(eixo);
+    }
+  });
+
+  // O limite de 3 profissionais nasce junto com o Completo. Anunciar hoje uma
+  // trava que o produto não aplica afastaria cliente grande à toa.
+  it("o limite de profissionais é dito como ele está hoje", () => {
+    const p = pagina();
+    expect(p).toMatch(/hoje a Nexora não limita/i);
+    expect(p).toContain("quando o Completo existir");
+  });
+
+  it("não anuncia o que o documento mandou ficar de fora", () => {
+    const p = pagina();
+    // "Várias unidades: não entra na página de preços até existir o primeiro
+    // cliente assim." E preço de concorrente envelhece sem ninguém avisar.
+    expect(p).not.toMatch(/v[áa]rias unidades|multiunidade/i);
+    expect(p).not.toMatch(/AppBarber|Trinks|GENDA|\d+,90/);
+  });
+});
+
 describe("quem procura, acha", () => {
   it("o rodapé de todas as páginas leva a /precos", () => {
     expect(LINKS_DO_RODAPE.map((l) => l.href)).toContain("/precos");
