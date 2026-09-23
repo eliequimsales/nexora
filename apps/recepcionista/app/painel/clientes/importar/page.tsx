@@ -6,6 +6,7 @@ import { DECLARACAO_BASE } from "@/lib/legal/identidade";
 import { variantesDeTelefone } from "@/lib/recuperacao/telefone";
 import { CartaoDaOferta } from "@/components/cobranca/cartao-da-oferta";
 import { CartaoDoAnual } from "@/components/cobranca/cartao-do-anual";
+import { CartaoDaNoite } from "@/components/painel/cartao-da-noite";
 import type { OfertaDoAnual } from "@/lib/billing/anual-na-prova";
 import { ChecklistAtivacao } from "@/components/painel/checklist-ativacao";
 import { progressoDaAtivacao, type SinaisDaAtivacao } from "@/lib/painel/ativacao";
@@ -468,6 +469,7 @@ export default function PaginaImportar() {
       */}
       {painel && <ChecklistAtivacao sinais={painel.ativacao} />}
       {anual && <CartaoDoAnual oferta={anual} />}
+      <CartaoDaNoite />
 
       <header>
         <h1 className="font-display text-2xl text-panel-ink">Meus clientes</h1>

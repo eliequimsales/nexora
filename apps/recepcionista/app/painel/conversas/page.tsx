@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { StatusBadge, STATUS_LABEL } from "@/components/status";
+import { CartaoDaNoite } from "@/components/painel/cartao-da-noite";
 
 interface ConversationRow {
   id: string;
@@ -61,6 +62,10 @@ export default function ConversasPage() {
             {waiting} conversa{waiting > 1 ? "s" : ""} aguardando sua equipe
           </span>
         )}
+      </div>
+
+      <div className="mb-6">
+        <CartaoDaNoite />
       </div>
 
       <div className="mb-5 flex flex-wrap gap-2">

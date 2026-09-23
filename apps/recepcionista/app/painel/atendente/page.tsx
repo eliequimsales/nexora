@@ -7,6 +7,8 @@ import { Ajustes } from "@/components/atendente/ajustes";
 import { Celular } from "@/components/atendente/celular";
 import { Ligar } from "@/components/atendente/ligar";
 import { Situacao } from "@/components/atendente/situacao";
+import { CartaoDaNoite } from "@/components/painel/cartao-da-noite";
+import { ListaDeEsperaPlantao } from "@/components/painel/lista-espera-plantao";
 
 /**
  * ATENDENTE VIRTUAL — UMA TELA SÓ, QUE SE EXPLICA SOZINHA.
@@ -164,6 +166,7 @@ export default function PaginaDoAtendente() {
         <Celular tela={tela} nome={nome} jeito={jeito} aoTestar={() => setTestado(true)} />
 
         <div className="space-y-4">
+          <CartaoDaNoite />
           {tela.ligado ? <Situacao tela={tela} aoMudarTela={setTela} /> : ajustes}
           {(!tela.ligado || tela.acesso === "SEMANA_ACABOU") && (
             <Ligar tela={tela} testado={testado} aoMudarTela={setTela} />
@@ -177,6 +180,22 @@ export default function PaginaDoAtendente() {
               <div className="border-t border-panel-line p-4">{ajustes}</div>
             </details>
           )}
+
+          {/* O Degrau futuro: O Plantão com equipe sem limite */}
+          <div className="rounded-2xl border border-dashed border-panel-line bg-panel-bg p-5 text-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-semibold text-panel-ink">O Plantão · Chega junto com o Nexora Completo</p>
+                <p className="mt-1 text-xs leading-relaxed text-panel-sub">
+                  Atende de madrugada e traz profissionais ilimitados.
+                </p>
+                <p className="text-[11px] text-panel-sub">
+                  Aparece aqui quando o Plantão sem teto nascer.
+                </p>
+              </div>
+              <ListaDeEsperaPlantao />
+            </div>
+          </div>
         </div>
       </div>
     </div>

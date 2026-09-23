@@ -87,16 +87,28 @@ export function CartaoDaOferta({
           </Link>
         </div>
       ) : (
-        <Link
-          href={acao.href}
-          className="mt-5 inline-flex rounded-xl bg-amber px-5 py-3 text-sm font-semibold text-night transition hover:brightness-110"
-        >
-          {acao.texto}
-        </Link>
+        <div className="mt-5 flex flex-wrap items-center gap-4">
+          <Link
+            href={acao.href}
+            className="inline-flex rounded-xl bg-amber px-5 py-3 text-sm font-semibold text-night transition hover:brightness-110"
+          >
+            {acao.texto}
+          </Link>
+          {oferta.primeiraOnda && oferta.primeiraOnda.enviadas > 0 && (
+            <Link
+              href="/painel/assinatura?plano=pix_30_dias"
+              className="text-sm font-medium text-panel-sub underline underline-offset-4 hover:text-panel-ink"
+            >
+              Pagar 30 dias no Pix
+            </Link>
+          )}
+        </div>
       )}
 
       <p className="mt-4 text-xs text-panel-sub">
-        Sua lista continua sua: ver e exportar é sempre grátis, com ou sem plano.
+        {oferta.primeiraOnda && oferta.primeiraOnda.enviadas > 0
+          ? "números da primeira Onda do próprio negócio · Sua lista continua sua: ver e exportar é sempre grátis."
+          : "Sua lista continua sua: ver e exportar é sempre grátis, com ou sem plano."}
       </p>
     </section>
   );
