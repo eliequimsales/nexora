@@ -113,15 +113,32 @@ function esteira(comImplantacao: boolean): Passo[] {
   ];
 }
 
+const PLANO_GRATIS = {
+  rotulo: "Grátis",
+  nome: "Experimente a Nexora",
+  descricao: "Veja quem parou de voltar na sua lista e mande a primeira Onda sem colocar cartão de crédito.",
+  valor: "R$ 0",
+  itens: [
+    `Primeira Onda: até ${TAMANHO_DA_ONDA} mensagens prontas em até ${DIAS_DA_PRIMEIRA_ONDA} dias`,
+    "Diagnóstico automático do dinheiro parado na sua lista",
+    "Primeira semana do Atendente Virtual de teste",
+    "Importação de planilha, lista colada ou caderno digitado",
+    "Sem pedir cartão de crédito",
+  ],
+};
+
 const PLANO_DA_ENTRADA = {
   rotulo: "a entrada",
+  badge: "RECOMENDADO",
   nome: "Nexora",
   valor: emReais(PRECO_MENSAL_CENTS),
+  descricao: "Recuperação contínua toda semana, agenda inteligente anti-falta e Atendente Virtual 24 horas no WhatsApp.",
   itens: [
-    `Recuperador: a Onda da semana com ${TAMANHO_DA_ONDA} mensagens prontas e o porquê de cada cliente`,
-    "Dinheiro recuperado, com a prova de cada retorno",
-    "Agenda com link próprio, grade da equipe e lembrete de confirmação",
-    "WhatsApp conectado",
+    `Recuperador: ${TAMANHO_DA_ONDA} mensagens novas toda semana no ritmo dos clientes`,
+    "Dinheiro recuperado, com a prova de cada retorno em reais",
+    "Agenda com link próprio, grade da equipe e lembretes anti-falta",
+    `Atendente Virtual no WhatsApp, até ${TETO_CONVERSAS_MES} conversas por mês`,
+    "WhatsApp conectado via QR Code",
     "Até 3 profissionais · clientes ilimitados",
     `Garantia Dinheiro Recuperado de ${GARANTIA_DIAS} dias na primeira contratação`,
   ],
@@ -132,6 +149,7 @@ const PLANO_DO_DEGRAU = {
   rotulo: "chega junto com o Plantão",
   nome: "Nexora Completo",
   valor: emReais(PRECO_COMPLETO_CENTS),
+  descricao: "Para quando a sua equipe passar de 3 profissionais e precisar de atendimento sem teto e plantão noturno.",
   itens: [
     "Tudo do Nexora",
     "O Plantão: atende o WhatsApp com a loja fechada e marca na agenda",
@@ -361,63 +379,161 @@ export default function Precos() {
           </div>
         </section>
 
-        {/* OS DOIS PLANOS — um para contratar, um para onde subir. */}
+        {/* OS PLANOS — COMPARAÇÃO DIRETA INSPIRADA NO MODELO CHATGPT (GRÁTIS VS RECOMENDADO). */}
         <section id="planos" className="scroll-mt-20 border-y border-nx-border bg-nx-surface-2/30 px-6 py-20">
-          <div className="mx-auto max-w-5xl">
-            <h2 className="text-3xl font-bold leading-tight sm:text-4xl">Dois planos, um só lugar para subir</h2>
-            <p className="mt-4 max-w-2xl text-lg leading-relaxed text-nx-secondary">
-              Na entrada, a oferta é uma só. O Completo é o destino de todos os gatilhos — e o painel avisa
-              com o seu número na tela, não com banner.
+          <div className="mx-auto max-w-5xl text-center">
+            <h2 className="text-3xl font-bold leading-tight sm:text-4xl">Escolha como começar</h2>
+            <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-nx-secondary">
+              A primeira Onda é por nossa conta. Você só decide continuar se o dinheiro recuperado compensar.
             </p>
 
-            <div className="mt-12 grid items-start gap-6 lg:grid-cols-2">
-              <div className="rounded-2xl border border-nx-gold/40 bg-nx-surface p-7 shadow-nx-panel">
-                <p className="text-sm font-medium text-nx-gold">{PLANO_DA_ENTRADA.rotulo}</p>
-                <h3 className="mt-2 text-2xl font-bold">{PLANO_DA_ENTRADA.nome}</h3>
-                <p className="mt-4 flex items-baseline gap-2">
-                  <span className="text-5xl font-bold tracking-tight tabular-nums">{PLANO_DA_ENTRADA.valor}</span>
-                  <span className="text-nx-secondary">/mês</span>
-                </p>
-                <ul className="mt-7 grid gap-3 border-t border-nx-border pt-7">
-                  {PLANO_DA_ENTRADA.itens.map((item) => (
-                    <li key={item} className="flex gap-3 leading-relaxed text-nx-secondary">
-                      <span aria-hidden="true" className="mt-1 text-nx-success">
-                        ✓
-                      </span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <CtaLink href="/cadastro" ctaName="precos_plano" className={`${BOTAO_DOURADO} mt-7 w-full px-6 py-3.5`}>
-                  Começar grátis <span aria-hidden="true">→</span>
-                </CtaLink>
-                <p className="mt-4 text-sm leading-relaxed text-nx-muted">{PLANO_DA_ENTRADA.pagamento}</p>
+            <div className="mx-auto mt-6 inline-flex rounded-full border border-nx-border bg-nx-surface p-1 text-xs">
+              <span className="rounded-full bg-nx-surface-2 px-4 py-1.5 font-semibold text-nx-primary shadow-sm">
+                Para o seu negócio
+              </span>
+              <span className="px-4 py-1.5 font-medium text-nx-muted">Sem cartão no início</span>
+            </div>
+
+            <div className="mt-12 grid items-stretch gap-8 text-left lg:grid-cols-2">
+              {/* CARD 1: GRÁTIS */}
+              <div className="flex flex-col justify-between rounded-3xl border border-nx-border bg-nx-surface/80 p-7 shadow-sm transition-all sm:p-8">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-nx-muted">
+                      {PLANO_GRATIS.rotulo}
+                    </span>
+                  </div>
+                  <h3 className="mt-2 text-2xl font-bold">{PLANO_GRATIS.nome}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-nx-secondary">
+                    {PLANO_GRATIS.descricao}
+                  </p>
+                  <p className="mt-6 flex items-baseline gap-1.5">
+                    <span className="text-4xl font-extrabold tracking-tight sm:text-5xl tabular-nums">
+                      {PLANO_GRATIS.valor}
+                    </span>
+                    <span className="text-sm font-medium text-nx-muted">/ mês</span>
+                  </p>
+
+                  <CtaLink
+                    href="/cadastro"
+                    ctaName="precos_gratis"
+                    className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-nx-border bg-nx-surface-2 px-6 py-3.5 text-sm font-semibold text-nx-primary transition-all hover:border-nx-border-2 hover:bg-nx-surface-3 active:scale-[0.98]"
+                  >
+                    Começar grátis sem cartão <span aria-hidden="true">→</span>
+                  </CtaLink>
+
+                  <div className="mt-8 border-t border-nx-border pt-6">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-nx-muted">
+                      Comece pelo básico:
+                    </p>
+                    <ul className="mt-4 grid gap-3">
+                      {PLANO_GRATIS.itens.map((item) => (
+                        <li key={item} className="flex gap-3 text-sm leading-relaxed text-nx-secondary">
+                          <span aria-hidden="true" className="mt-0.5 text-nx-muted">
+                            ○
+                          </span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
               </div>
 
-              <div className="rounded-2xl border border-dashed border-nx-border-2 bg-nx-bg/40 p-7">
-                <p className="text-sm font-medium text-nx-muted">{PLANO_DO_DEGRAU.rotulo}</p>
-                <h3 className="mt-2 text-2xl font-bold text-nx-secondary">{PLANO_DO_DEGRAU.nome}</h3>
-                <p className="mt-4 flex items-baseline gap-2 text-nx-secondary">
-                  <span className="text-5xl font-bold tracking-tight tabular-nums">{PLANO_DO_DEGRAU.valor}</span>
-                  <span>/mês</span>
+              {/* CARD 2: NEXORA (PAGO / RECOMENDADO) */}
+              <div className="relative flex flex-col justify-between rounded-3xl border-2 border-nx-gold/60 bg-gradient-to-b from-nx-surface via-nx-surface to-nx-surface-2 p-7 shadow-nx-glow-sm transition-all sm:p-8">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-nx-gold">
+                      {PLANO_DA_ENTRADA.rotulo}
+                    </span>
+                    <span className="rounded-full bg-nx-gold px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-nx-bg shadow-nx-glow-sm">
+                      {PLANO_DA_ENTRADA.badge}
+                    </span>
+                  </div>
+                  <h3 className="mt-2 text-2xl font-bold">{PLANO_DA_ENTRADA.nome}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-nx-secondary">
+                    {PLANO_DA_ENTRADA.descricao}
+                  </p>
+                  <p className="mt-6 flex items-baseline gap-1.5">
+                    <span className="text-4xl font-extrabold tracking-tight text-nx-gold sm:text-5xl tabular-nums">
+                      {PLANO_DA_ENTRADA.valor}
+                    </span>
+                    <span className="text-sm font-medium text-nx-secondary">/ mês</span>
+                  </p>
+
+                  <CtaLink
+                    href="/cadastro"
+                    ctaName="precos_plano"
+                    className={`${BOTAO_DOURADO} mt-6 w-full py-3.5 text-sm sm:text-base`}
+                  >
+                    ✦ Começar agora com Garantia <span aria-hidden="true">→</span>
+                  </CtaLink>
+
+                  <div className="mt-8 border-t border-nx-border pt-6">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-nx-gold">
+                      Tudo da primeira Onda, e:
+                    </p>
+                    <ul className="mt-4 grid gap-3">
+                      {PLANO_DA_ENTRADA.itens.map((item) => (
+                        <li key={item} className="flex gap-3 text-sm leading-relaxed text-nx-secondary">
+                          <span aria-hidden="true" className="mt-0.5 font-bold text-nx-success">
+                            ✓
+                          </span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="mt-8 border-t border-nx-border pt-4">
+                  <p className="text-xs leading-relaxed text-nx-muted">{PLANO_DA_ENTRADA.pagamento}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* O DEGRAU FUTURO: NEXORA COMPLETO */}
+            <div className="mt-12 rounded-2xl border border-dashed border-nx-border-2 bg-nx-bg/40 p-6 text-left sm:p-8">
+              <div className="flex flex-wrap items-baseline justify-between gap-4">
+                <div>
+                  <span className="rounded-full border border-nx-border bg-nx-surface px-2.5 py-0.5 text-xs font-medium text-nx-muted">
+                    {PLANO_DO_DEGRAU.rotulo}
+                  </span>
+                  <h3 className="mt-2 text-2xl font-bold text-nx-secondary">{PLANO_DO_DEGRAU.nome}</h3>
+                  <p className="mt-1 text-sm text-nx-muted">{PLANO_DO_DEGRAU.descricao}</p>
+                </div>
+                <p className="flex items-baseline gap-1 text-nx-secondary">
+                  <span className="text-3xl font-bold tracking-tight tabular-nums sm:text-4xl">
+                    {PLANO_DO_DEGRAU.valor}
+                  </span>
+                  <span className="text-sm">/ mês</span>
                 </p>
-                <ul className="mt-7 grid gap-3 border-t border-nx-border pt-7">
+              </div>
+
+              <div className="mt-6 border-t border-nx-border pt-5">
+                <p className="text-xs font-semibold uppercase tracking-wider text-nx-muted">
+                  Quando o Plantão nascer:
+                </p>
+                <ul className="mt-3 grid gap-2.5 sm:grid-cols-2">
                   {PLANO_DO_DEGRAU.itens.map((item) => (
-                    <li key={item} className="flex gap-3 leading-relaxed text-nx-muted">
-                      <span aria-hidden="true" className="mt-1">
+                    <li key={item} className="flex gap-2.5 text-sm leading-relaxed text-nx-muted">
+                      <span aria-hidden="true" className="mt-0.5 text-nx-muted">
                         ·
                       </span>
                       {item}
                     </li>
                   ))}
                 </ul>
-                <p className="mt-7 rounded-lg border border-nx-border bg-nx-surface/60 p-4 text-sm leading-relaxed text-nx-secondary">
-                  {PLANO_DO_DEGRAU.aviso}
-                </p>
               </div>
+
+              <p className="mt-6 rounded-lg border border-nx-border bg-nx-surface/60 p-4 text-sm leading-relaxed text-nx-secondary">
+                {PLANO_DO_DEGRAU.aviso}
+              </p>
+              <p className="mt-3 text-xs leading-relaxed text-nx-muted">{PLANO_DO_DEGRAU.pagamento}</p>
             </div>
 
-            <p className="mt-6 max-w-3xl leading-relaxed text-nx-secondary">
+            <p className="mt-6 max-w-3xl text-left text-sm leading-relaxed text-nx-secondary">
               Hoje a Nexora não limita profissionais: o limite de 3 passa a valer para contas novas quando o
               Completo existir, e quem já assina mantém o que tem.
             </p>
