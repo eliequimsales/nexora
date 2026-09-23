@@ -144,10 +144,10 @@ describe("o componente não inventa número nem guarda o que foi digitado", () =
     }
   });
 
-  it("o ritmo que a tela mostra é o da conta, e o ramo chega ao link", () => {
+  it("o ritmo que a tela mostra é o da conta, e o botão leva direto ao login", () => {
     const fonte = componente();
     expect(fonte).toContain("conta.ciclo");
-    expect(fonte).toMatch(/linkDoDiagnostico\(\{[^}]*ramo/);
+    expect(fonte).toContain('href="/login"');
   });
 
   it("só registra os dois eventos da calculadora", () => {

@@ -10,7 +10,6 @@ import {
   MAX_TICKET_REAIS,
   contaDaCalculadora,
   lerInteiro,
-  linkDoDiagnostico,
   type Fatia,
 } from "@/lib/recuperacao/calculadora";
 import { FAIXA_EM_TEXTO, JANELA_DIAS } from "@/lib/recuperacao/estimativa";
@@ -76,7 +75,7 @@ export function Calculadora({ ramo }: { ramo?: string }) {
     registrar("usou_calculadora");
   }
 
-  function aoIrParaODiagnostico() {
+  function aoIrParaLogin() {
     if (jaClicou.current) return;
     jaClicou.current = true;
     registrar("clicou_calculadora");
@@ -193,8 +192,8 @@ export function Calculadora({ ramo }: { ramo?: string }) {
           )}
 
           <Link
-            href={linkDoDiagnostico({ ticketReais, criativo, ramo })}
-            onClick={aoIrParaODiagnostico}
+            href="/login"
+            onClick={aoIrParaLogin}
             className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-nx-gold px-5 py-3.5 font-semibold text-nx-bg shadow-nx-glow-sm transition-all hover:bg-nx-gold/90 active:scale-[0.98]"
           >
             Trazer esses clientes de volta agora <span aria-hidden="true">→</span>
