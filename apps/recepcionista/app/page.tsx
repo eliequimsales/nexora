@@ -194,7 +194,7 @@ export default function Home() {
             <h1 className="mt-5 text-4xl font-bold leading-[1.08] tracking-tight [text-wrap:balance] sm:text-5xl lg:text-[3.4rem]">
               Seus clientes não sumiram porque quiseram. Eles só esqueceram de voltar.{" "}
               <span className="text-nx-gold">
-                Comece a colocar esse dinheiro de volta no seu caixa esta semana.
+                Descubra quem parou e quanto isso custa — grátis, com a sua lista.
               </span>
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-nx-secondary">
@@ -243,7 +243,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* A RECUPERAÇÃO NA PRÁTICA — a Onda de exemplo e o fim do medo do disparo. */}
+        {/* A RECUPERAÇÃO NA PRÁTICA — os 3 passos primeiro, depois a Onda de exemplo e as regras anti-disparo. */}
         <section id="como-funciona" className="scroll-mt-20 px-6 py-20">
           <div className="mx-auto max-w-5xl">
             <h2 className="text-center text-3xl font-bold leading-tight [text-wrap:balance] sm:text-4xl">
@@ -253,7 +253,19 @@ export default function Home() {
               A Nexora percebe pelo ritmo de cada um — e escreve a mensagem que traz cada um de volta.
             </p>
 
-            <div className="mt-12 grid items-start gap-10 lg:grid-cols-2">
+            <div className="mt-12 grid gap-6 md:grid-cols-3">
+              {PASSOS_DA_REATIVACAO.map((p, i) => (
+                <div key={p.titulo} className={CARTAO}>
+                  <span className="font-mono text-xs font-bold tracking-[0.14em] text-nx-gold">
+                    PASSO {i + 1}
+                  </span>
+                  <h3 className="mt-3 font-semibold leading-snug">{p.titulo}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-nx-secondary">{p.corpo}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-14 grid items-start gap-10 lg:grid-cols-2">
               <div>
                 <h3 className="text-2xl font-bold leading-snug">Não é para todo mundo no mesmo dia.</h3>
                 <p className="mt-4 text-lg leading-relaxed text-nx-secondary">
@@ -316,18 +328,6 @@ export default function Home() {
                   As etiquetas e a mensagem são as mesmas que o painel monta. Os nomes não são de ninguém.
                 </p>
               </div>
-            </div>
-
-            <div className="mt-14 grid gap-6 md:grid-cols-3">
-              {PASSOS_DA_REATIVACAO.map((p, i) => (
-                <div key={p.titulo} className={CARTAO}>
-                  <span className="font-mono text-xs font-bold tracking-[0.14em] text-nx-gold">
-                    PASSO {i + 1}
-                  </span>
-                  <h3 className="mt-3 font-semibold leading-snug">{p.titulo}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-nx-secondary">{p.corpo}</p>
-                </div>
-              ))}
             </div>
           </div>
         </section>
@@ -417,14 +417,19 @@ export default function Home() {
                 <span className="whitespace-nowrap text-7xl font-bold tracking-tight">R$ 97</span>
                 <span className="text-nx-secondary">/mês com tudo, depois do período por nossa conta</span>
               </p>
-              <p className="mt-6 max-w-md leading-relaxed text-nx-secondary">
-                A primeira Onda é por nossa conta: até {TAMANHO_DA_ONDA} mensagens prontas para mandar do seu
-                WhatsApp em até {DIAS_DA_PRIMEIRA_ONDA} dias — não pedimos cartão para começar. A primeira
-                semana do Atendente também: {SEMANA_GRATIS_DIAS} dias ou {SEMANA_GRATIS_CONVERSAS} conversas,
-                o que vier primeiro, a partir de quando você ligar. No plano, ele atende até{" "}
-                {TETO_CONVERSAS_MES} conversas por mês e entra no expediente depois de {MINUTOS_SEM_RESPOSTA}{" "}
-                minutos sem ninguém responder, se você quiser.
-              </p>
+              <div className="mt-6 max-w-md space-y-3 leading-relaxed text-nx-secondary">
+                <p>
+                  <strong className="font-semibold text-nx-primary">A primeira Onda é por nossa conta:</strong> até{" "}
+                  {TAMANHO_DA_ONDA} mensagens prontas para mandar do seu WhatsApp em até{" "}
+                  {DIAS_DA_PRIMEIRA_ONDA} dias — não pedimos cartão para começar.
+                </p>
+                <p>
+                  <strong className="font-semibold text-nx-primary">A primeira semana do Atendente também:</strong>{" "}
+                  {SEMANA_GRATIS_DIAS} dias ou {SEMANA_GRATIS_CONVERSAS} conversas, o que vier primeiro, a partir de quando você ligar. No plano, ele atende até{" "}
+                  {TETO_CONVERSAS_MES} conversas por mês e entra no expediente depois de {MINUTOS_SEM_RESPOSTA}{" "}
+                  minutos sem ninguém responder, se você quiser.
+                </p>
+              </div>
               <p className="mt-4 max-w-md rounded-lg border border-nx-gold/30 bg-nx-gold/5 p-4 text-sm leading-relaxed text-nx-secondary">
                 <strong className="font-semibold text-nx-primary">Garantia Dinheiro Recuperado.</strong> Se em{" "}
                 {GARANTIA_DIAS} dias você mandar as mensagens de {ONDAS_MINIMAS} ondas e o dinheiro que voltou

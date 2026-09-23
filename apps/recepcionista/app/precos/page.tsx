@@ -61,6 +61,8 @@ export const metadata: Metadata = {
 const BOTAO_DOURADO =
   "inline-flex items-center justify-center gap-2 rounded-lg bg-nx-gold font-semibold text-nx-bg shadow-nx-glow-sm transition-all hover:bg-nx-gold/90 active:scale-[0.98]";
 
+const CARTAO = "rounded-xl border border-nx-border bg-nx-surface p-6";
+
 /** `parede` é o passo em que entra dinheiro pela primeira vez: o único cheio de ouro. */
 type Passo = { titulo: string; corpo: string; valor: string; pago?: boolean; parede?: boolean };
 
@@ -116,11 +118,11 @@ const PLANO_DA_ENTRADA = {
   nome: "Nexora",
   valor: emReais(PRECO_MENSAL_CENTS),
   itens: [
-    `A Onda da semana: ${TAMANHO_DA_ONDA} mensagens prontas, com o porquê de cada cliente`,
+    `Recuperador: a Onda da semana com ${TAMANHO_DA_ONDA} mensagens prontas e o porquê de cada cliente`,
     "Dinheiro recuperado, com a prova de cada retorno",
     "Agenda com link próprio, grade da equipe e lembrete de confirmação",
-    `Atendente Virtual no WhatsApp, até ${TETO_CONVERSAS_MES} conversas por mês`,
-    "Clientes na lista sem limite",
+    "WhatsApp conectado",
+    "Até 3 profissionais · clientes ilimitados",
     `Garantia Dinheiro Recuperado de ${GARANTIA_DIAS} dias na primeira contratação`,
   ],
   pagamento: `${PLANOS.pix_30_dias.dias} dias no Pix: ${emReais(PLANOS.pix_30_dias.valorCents)}, sem renovação automática. Anual à vista: ${emReais(PRECO_ANUAL_CENTS)} — paga 10 meses, usa 12.`,
@@ -132,13 +134,33 @@ const PLANO_DO_DEGRAU = {
   valor: emReais(PRECO_COMPLETO_CENTS),
   itens: [
     "Tudo do Nexora",
-    "Atendente Virtual sem teto de conversas",
-    "Profissionais sem limite na agenda",
+    "O Plantão: atende o WhatsApp com a loja fechada e marca na agenda",
+    "Resumo da manhã e alerta de urgência no seu celular",
+    "Profissionais ilimitados",
     "Primeiro da fila no suporte",
   ],
   aviso:
     "Preço decidido, ainda não está à venda: ninguém pode contratá-lo hoje. Ele nasce no dia em que o Plantão sem teto existir — e, até lá, o painel não vende o que não entrega.",
+  pagamento: `${PLANOS.pix_30_dias.dias} dias no Pix: ${emReais(PRECO_COMPLETO_CENTS)} · Anual à vista: ${emReais(PRECO_COMPLETO_CENTS * 10)} (paga 10 meses, usa 12).`,
 };
+
+const MOTIVOS_CALENDARIO = [
+  {
+    titulo: "Ela já é de graça no mercado",
+    corpo:
+      "Ferramentas no mercado já oferecem agenda básica sem custo ou cobram valores pequenos por profissional. Cobrar a mais por agenda seria pedir ao dono para comparar a Nexora com software genérico.",
+  },
+  {
+    titulo: "Trocar de agenda não é impulso",
+    corpo:
+      "Order bump e upsell funcionam com decisão de um segundo. Trocar o sistema onde a equipe marca é uma mudança de rotina: migrar horários, avisar os profissionais, trocar link de agendamento. Ninguém faz isso numa caixinha de checkout.",
+  },
+  {
+    titulo: "É o combustível do Recuperador",
+    corpo:
+      "Cada horário atendido vira visita, e é a visita que mantém o ritmo de cada cliente atualizado. Sem visitas novas, a Onda piora mês a mês — e é aí que mora o cancelamento. A agenda é o que faz o sexto mês da Nexora ser melhor que o primeiro.",
+  },
+];
 
 /** O que separa os planos, e o que nunca vai separar. Cada "nunca" com o motivo. */
 const LIMITES = [
@@ -147,21 +169,21 @@ const LIMITES = [
     decisao: "Limita",
     limita: true,
     porque:
-      "Cresce junto com o faturamento do negócio e é difícil de burlar: cada profissional é uma coluna na agenda.",
+      "3 no Nexora, ilimitado no Completo. Cresce junto com o faturamento do negócio, é como o mercado já cobra e é difícil de burlar: cada profissional é uma coluna na agenda.",
   },
   {
     eixo: "Clientes na lista",
     decisao: "Nunca",
     limita: false,
     porque:
-      "A lista é o que faz a recuperação funcionar. Cobrar por cliente ensinaria você a importar menos — e a recuperar menos.",
+      "A lista é o ativo que faz a recuperação funcionar. Cobrar por cliente ensinaria você a importar menos — e a recuperar menos.",
   },
   {
     eixo: "Mensagens ou Ondas",
     decisao: "Nunca",
     limita: false,
     porque:
-      "A Onda é pequena para proteger o seu número, não para vender pacote. Cobrar por mensagem puxaria a conversa para quanto dá para mandar; a Nexora vende o contrário: poucas, certas.",
+      "A Onda é pequena para proteger o seu número, não para vender pacote. Segurança não é produto. E cobrar por volume puxaria a conversa para quanto dá para mandar; a Nexora vende o contrário: poucas mensagens, certas.",
   },
   {
     eixo: "% do dinheiro recuperado",
@@ -174,14 +196,43 @@ const LIMITES = [
 
 const PORQUES = [
   {
-    titulo: `Por que ${emReais(PRECO_MENSAL_CENTS)}`,
+    titulo: `Por que ${emReais(PRECO_MENSAL_CENTS)}, e não R$ 147`,
+    subtitulo: "O teste dos dois clientes",
     corpo:
-      "A mensalidade precisa caber em dois atendimentos. Num corte de R$ 45, dois clientes voltando já pagam o mês; num ticket de clínica, meio cliente paga. Preço de entrada que exige quatro retornos para se justificar vira dúvida todo mês — e dúvida todo mês vira cancelamento.",
+      "O preço de entrada precisa passar no teste dos dois clientes: a mensalidade tem que caber em dois atendimentos do segmento que o anúncio mais traz. Num corte de R$ 45 a R$ 50, a mensalidade são dois clientes voltando; um valor maior já seriam três ou quatro. Para clínica e estética, com ticket acima de R$ 150, um cliente paga qualquer um dos dois — por isso a diferença de ticket se cobra no degrau, não na porta. E este já é o valor em produção, nos Termos e no limite da garantia: mudar custaria migração sem ganho claro.",
   },
   {
     titulo: "Por que o degrau custa o dobro",
+    subtitulo: "Decisão, não dúvida",
     corpo:
-      "Porque subir precisa ser decisão, não dúvida. E a comparação que você faz não é com outro software: é com alguém atendendo o WhatsApp de madrugada, que custa mais de um salário por mês e ainda dorme.",
+      `Porque subir precisa ser uma decisão, não uma dúvida. + ${emReais(PRECO_COMPLETO_CENTS - PRECO_MENSAL_CENTS)} a mais é o valor de duas marcações na noite para uma barbearia e menos de uma para uma clínica. E a comparação que o dono faz não é com outro software: é com uma recepcionista, que custa mais de um salário mínimo por mês e não trabalha de madrugada.`,
+  },
+];
+
+const O_QUE_RECUSAMOS = [
+  {
+    titulo: "Produto de impulso barato (Tripwire)",
+    decisao: "Recusado",
+    porque:
+      "Filtra quem compra por impulso passageiro. A Nexora precisa de quem manda mensagem — o filtro certo é importar a lista de clientes, não passar o cartão.",
+  },
+  {
+    titulo: "Três planos no anúncio",
+    decisao: "Recusado",
+    porque:
+      "Paradoxo da escolha no pior momento. A tabela existe para quem procura, nunca para quem acabou de chegar no anúncio.",
+  },
+  {
+    titulo: "Escassez inventada",
+    decisao: "Recusado",
+    porque:
+      `“Últimas vagas” só se a vaga acabar de verdade — como na nossa implantação, que tem limite real de ${VAGAS_POR_SEMANA} vagas por semana.`,
+  },
+  {
+    titulo: "Promessa de receita em reais",
+    decisao: "Recusado",
+    porque:
+      "Prometer um valor arbitrário vira reclamação no primeiro mês fraco. A garantia promete o que dá para cumprir de verdade: devolver tudo o que você pagou se não recuperar a mensalidade.",
   },
 ];
 
@@ -373,8 +424,42 @@ export default function Precos() {
           </div>
         </section>
 
-        {/* LIMITES — o que separa os planos, e o que nunca vai separar. */}
+        {/* A decisão que mais muda: a agenda não se vende, ela alimenta. */}
         <section className="px-6 py-20">
+          <div className="mx-auto max-w-4xl">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-nx-gold">
+              A decisão que mais muda
+            </p>
+            <h2 className="mt-2 text-3xl font-bold leading-tight sm:text-4xl">
+              A agenda não se vende. Ela alimenta.
+            </h2>
+            <p className="mt-4 max-w-3xl text-lg leading-relaxed text-nx-secondary">
+              Muitos modelos de software fazem da agenda o primeiro upsell. Discordamos com convicção — por
+              três motivos centrais:
+            </p>
+
+            <div className="mt-10 grid gap-6 md:grid-cols-3">
+              {MOTIVOS_CALENDARIO.map((m) => (
+                <div key={m.titulo} className={CARTAO}>
+                  <h3 className="font-semibold leading-snug text-nx-primary">{m.titulo}</h3>
+                  <p className="mt-3 text-sm leading-relaxed text-nx-secondary">{m.corpo}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-8 rounded-xl border border-nx-gold/30 bg-nx-gold/5 p-6">
+              <p className="leading-relaxed text-nx-secondary">
+                <strong className="font-semibold text-nx-primary">Conclusão:</strong> a agenda entra no preço,
+                como parte inseparável da recuperação. Quem já usa outra agenda continua nela e apenas importa
+                a lista; quem não usa nenhuma ganha uma completa e pronta. O que se vende a mais no futuro não
+                é organização básica — é o que ninguém mais tem: o Plantão.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* LIMITES — o que separa os planos, e o que nunca vai separar. */}
+        <section className="border-t border-nx-border bg-nx-surface-2/30 px-6 py-20">
           <div className="mx-auto max-w-4xl">
             <h2 className="text-3xl font-bold leading-tight sm:text-4xl">
               O que separa os planos — e o que nunca vai separar
@@ -421,23 +506,44 @@ export default function Precos() {
           </div>
         </section>
 
-        {/* OS PORQUÊS — argumento em prosa, sem cartão nenhum. */}
-        <section className="border-y border-nx-border bg-nx-surface-2/30 px-6 py-20">
+        {/* OS PORQUÊS DOS PREÇOS */}
+        <section className="border-t border-nx-border px-6 py-20">
           <div className="mx-auto grid max-w-4xl gap-10 sm:grid-cols-2">
             {PORQUES.map((p) => (
-              <div key={p.titulo}>
-                <h2 className="text-xl font-bold">{p.titulo}</h2>
+              <div key={p.titulo} className={CARTAO}>
+                <span className="text-xs font-semibold uppercase tracking-wider text-nx-gold">
+                  {p.subtitulo}
+                </span>
+                <h2 className="mt-2 text-xl font-bold">{p.titulo}</h2>
                 <p className="mt-3 leading-relaxed text-nx-secondary">{p.corpo}</p>
               </div>
             ))}
-            <div className="sm:col-span-2">
-              <h2 className="text-xl font-bold">A agenda não se vende. Ela alimenta.</h2>
-              <p className="mt-3 max-w-3xl leading-relaxed text-nx-secondary">
-                Agenda com link e confirmação é commodity: existe de graça por aí. E ela é o combustível da
-                recuperação — cada horário atendido vira visita, e é a visita que mantém o ritmo de cada
-                cliente atualizado. Por isso a agenda entra no preço, e nunca como um a mais no checkout.
-                Quem já usa outra continua nela e só importa a lista.
-              </p>
+          </div>
+        </section>
+
+        {/* O QUE RECUSAMOS NESTA ARQUITETURA COMERCIAL */}
+        <section className="border-t border-nx-border bg-nx-surface-2/30 px-6 py-20">
+          <div className="mx-auto max-w-4xl">
+            <h2 className="text-3xl font-bold leading-tight sm:text-4xl">
+              O que recusamos nesta arquitetura comercial — e por quê
+            </h2>
+            <p className="mt-4 max-w-2xl text-lg leading-relaxed text-nx-secondary">
+              Decidir o que não fazer protege o produto e a confiança de quem compra. Quatro práticas comuns
+              no mercado que deixamos de fora:
+            </p>
+
+            <div className="mt-10 grid gap-6 sm:grid-cols-2">
+              {O_QUE_RECUSAMOS.map((item) => (
+                <div key={item.titulo} className={CARTAO}>
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-nx-primary">{item.titulo}</h3>
+                    <span className="rounded-full bg-nx-error/15 px-2 py-0.5 text-xs font-medium text-nx-error">
+                      {item.decisao}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm leading-relaxed text-nx-secondary">{item.porque}</p>
+                </div>
+              ))}
             </div>
           </div>
         </section>
