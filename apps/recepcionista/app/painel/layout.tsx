@@ -10,6 +10,7 @@ import { AvisoVerificarEmail } from "./aviso-verificar";
 import { LogoutButton } from "@/components/logout-button";
 import { BotaoBaixarApp } from "@/components/install-prompt";
 import { PainelNavDesktop, PainelNavMobile } from "@/components/painel/navegacao";
+import { BotaoFeedback } from "@/components/feedback/botao-feedback";
 
 // O MENU É O FLUXO DE VALOR, NÃO O ÍNDICE DO SISTEMA.
 const NAV = [
@@ -29,6 +30,8 @@ export default async function PainelLayout({ children }: { children: React.React
     where: { id: companyId },
     select: {
       name: true,
+      email: true,
+      phone: true,
       plan: true,
       emailVerificadoEm: true,
       subscriptionStatus: true,
@@ -123,6 +126,11 @@ export default async function PainelLayout({ children }: { children: React.React
       </header>
       <PainelNavMobile items={NAV} />
       <main className="mx-auto max-w-page px-6 py-8">{children}</main>
+      <BotaoFeedback
+        emailPadrao={company.email}
+        telefonePadrao={company.phone}
+        nomePadrao={company.name}
+      />
     </div>
   );
 }
