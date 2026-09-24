@@ -472,9 +472,14 @@ export default function PaginaImportar() {
       <CartaoDaNoite />
 
       <header>
-        <h1 className="font-display text-2xl text-panel-ink">Meus clientes</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="font-display text-2xl text-panel-ink">Meus clientes</h1>
+          <span className="rounded-md bg-panel-card border border-panel-line px-2 py-0.5 text-xs font-medium text-panel-sub">
+            Preenchimento opcional
+          </span>
+        </div>
         <p className="mt-1 text-sm text-panel-sub">
-          Adicione os dados dos seus clientes pelos campos abaixo ou, se preferir, cole sua planilha.
+          Adicione os dados dos seus clientes pelos campos abaixo ou, se preferir, cole sua planilha. Não é obrigatório cadastrar agora para usar a plataforma.
         </p>
       </header>
 
@@ -487,7 +492,7 @@ export default function PaginaImportar() {
               Prefere não mexer com planilhas? Use a Agenda Inteligente
             </h3>
             <p className="text-xs text-panel-sub">
-              Conforme você marca os atendimentos do dia a dia, a Nexora salva seus clientes e monitora o retorno de cada um de forma automática.
+              Você não precisa cadastrar clientes agora. Conforme você marca os atendimentos do dia a dia, a Nexora salva seus clientes e monitora o retorno de cada um de forma automática.
             </p>
           </div>
         </div>
@@ -502,8 +507,8 @@ export default function PaginaImportar() {
       {/* O medo aqui é de formato. Mata-se o medo antes do campo. */}
       <div className="rounded-2xl border border-amber/40 bg-amber/10 p-5">
         <p className="text-sm leading-relaxed text-panel-ink">
-          Preencha os campos abaixo com os dados dos seus clientes. A Nexora organiza tudo
-          automaticamente para você, identifica quem está sumido e mostra o resultado antes de salvar qualquer coisa.
+          Preencha os campos abaixo com os dados dos seus clientes se quiser começar com a sua lista organizada. A Nexora organiza tudo
+          automaticamente para você, identifica quem está sumido e mostra o resultado antes de salvar qualquer coisa. Se preferir não preencher agora, você pode usar todas as outras áreas da plataforma livremente.
         </p>
       </div>
 
@@ -580,31 +585,36 @@ export default function PaginaImportar() {
         </div>
       )}
 
-      <div className="rounded-2xl border border-panel-line bg-panel-card p-5 space-y-5">
+      <div id="formulario-clientes" className="scroll-mt-6 rounded-2xl border border-panel-line bg-panel-card p-5 space-y-5">
         {/* Abas de alternância de modo */}
-        <div className="flex items-center gap-2 border-b border-panel-line pb-3">
-          <button
-            type="button"
-            onClick={() => setModo("campos")}
-            className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-              modo === "campos"
-                ? "bg-panel-ink text-white"
-                : "text-panel-sub hover:text-panel-ink hover:bg-panel-bg"
-            }`}
-          >
-            Cadastrar cliente
-          </button>
-          <button
-            type="button"
-            onClick={() => setModo("colar")}
-            className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-              modo === "colar"
-                ? "bg-panel-ink text-white"
-                : "text-panel-sub hover:text-panel-ink hover:bg-panel-bg"
-            }`}
-          >
-            Adicionar lista de clientes
-          </button>
+        <div className="flex items-center justify-between border-b border-panel-line pb-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setModo("campos")}
+              className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                modo === "campos"
+                  ? "bg-panel-ink text-white"
+                  : "text-panel-sub hover:text-panel-ink hover:bg-panel-bg"
+              }`}
+            >
+              Cadastrar cliente
+            </button>
+            <button
+              type="button"
+              onClick={() => setModo("colar")}
+              className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                modo === "colar"
+                  ? "bg-panel-ink text-white"
+                  : "text-panel-sub hover:text-panel-ink hover:bg-panel-bg"
+              }`}
+            >
+              Adicionar lista de clientes
+            </button>
+          </div>
+          <span className="hidden sm:inline-block text-xs text-panel-sub font-medium">
+            Preenchimento opcional
+          </span>
         </div>
 
         {modo === "campos" ? (

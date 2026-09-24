@@ -117,26 +117,51 @@ export function ChecklistAtivacao({ sinais }: { sinais: SinaisDaAtivacao }) {
                 </span>
 
                 <div className="min-w-0">
-                  <p
-                    className={`font-semibold ${
-                      passo.feito ? "text-panel-sub" : "text-panel-ink"
-                    }`}
-                  >
-                    {passo.titulo}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p
+                      className={`font-semibold ${
+                        passo.feito ? "text-panel-sub" : "text-panel-ink"
+                      }`}
+                    >
+                      {passo.titulo}
+                    </p>
+                    {passo.numero === 1 && !passo.feito && (
+                      <span className="rounded-md bg-panel-bg border border-panel-line px-2 py-0.5 text-[11px] font-medium text-panel-sub">
+                        Opcional no início
+                      </span>
+                    )}
+                  </div>
                   <p className="mt-1 text-sm leading-relaxed text-panel-sub">{passo.detalhe}</p>
 
                   {!passo.feito && passo.liberado && (
-                    <Link
-                      href={passo.acao.href}
-                      className={`mt-3 inline-flex rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
-                        ehAtual
-                          ? "bg-amber text-night hover:brightness-110"
-                          : "border border-panel-line text-panel-ink hover:border-amber"
-                      }`}
-                    >
-                      {passo.acao.texto}
-                    </Link>
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                      <Link
+                        href={passo.acao.href}
+                        onClick={(e) => {
+                          if (passo.numero === 1 && typeof window !== "undefined") {
+                            const form = document.getElementById("formulario-clientes");
+                            if (form) {
+                              e.preventDefault();
+                              form.scrollIntoView({ behavior: "smooth", block: "start" });
+                              const input = form.querySelector<HTMLInputElement>("input");
+                              input?.focus();
+                            }
+                          }
+                        }}
+                        className={`inline-flex rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+                          ehAtual
+                            ? "bg-amber text-night hover:brightness-110"
+                            : "border border-panel-line text-panel-ink hover:border-amber"
+                        }`}
+                      >
+                        {passo.acao.texto}
+                      </Link>
+                      {passo.numero === 1 && (
+                        <span className="text-xs text-panel-sub">
+                          Preenchimento opcional · Você pode fazer depois
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
