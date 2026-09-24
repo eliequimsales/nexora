@@ -42,7 +42,7 @@ describe("formatarMomentoDaNoite", () => {
 });
 
 describe("calcularGatilhoDaNoite", () => {
-  it("sem WhatsApp conectado, devolve o exemplo pedagógico do documento", () => {
+  it("sem WhatsApp conectado, devolve estado de conscientização sem dados falsos", () => {
     const res = calcularGatilhoDaNoite({
       mensagens: [],
       horarios: HORARIOS_PADRAO,
@@ -53,10 +53,9 @@ describe("calcularGatilhoDaNoite", () => {
 
     expect(res.ehExemplo).toBe(true);
     expect(res.whatsappConectado).toBe(false);
-    expect(res.totalForaDoHorario).toBe(9);
-    expect(res.semResposta).toBe(4);
-    expect(res.maisAntiga?.nome).toBe("Rafael");
-    expect(res.maisAntiga?.quandoTexto).toBe("sábado às 21h12");
+    expect(res.totalForaDoHorario).toBe(0);
+    expect(res.semResposta).toBe(0);
+    expect(res.maisAntiga).toBeNull();
     expect(res.semana).toBe(3);
   });
 

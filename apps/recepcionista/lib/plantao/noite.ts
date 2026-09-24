@@ -61,16 +61,11 @@ export function calcularGatilhoDaNoite(p: {
   const semana = p.semana ?? 3;
 
   if (!p.whatsappConectado) {
-    // Exemplo pedagógico canônico conforme o documento:
+    // Sem WhatsApp conectado: conscientização da esteira sem dados fictícios
     return {
-      totalForaDoHorario: 9,
-      semResposta: 4,
-      maisAntiga: {
-        nome: "Rafael",
-        telefone: "",
-        quandoTexto: "sábado às 21h12",
-        recebidaEm: new Date(agora.getTime() - 2 * 86_400_000).toISOString(),
-      },
+      totalForaDoHorario: 0,
+      semResposta: 0,
+      maisAntiga: null,
       semana,
       whatsappConectado: false,
       ehExemplo: true,
