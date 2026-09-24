@@ -17,7 +17,6 @@ import {
   MINUTOS_DA_CHAMADA,
   PRAZO_DA_IMPLANTACAO_DIAS,
 } from "@/lib/billing/implantacao";
-import { ofertaDaEmpresa } from "@/lib/billing/oferta-da-conta";
 import { acoesDaConta, PLANOS, precoPendenteDoPlano, type PlanoId } from "@/lib/billing/planos";
 import { emReais, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
 import { garantirRelogio } from "@/lib/billing/relogio-da-conta";
@@ -26,8 +25,8 @@ import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
 import { linkDeSuporte } from "@/lib/institucional";
 import { FORNECEDOR, variaveisPendentesDoFornecedor } from "@/lib/legal/identidade";
-import { MIN_RECUPERAVEL_CENTS, MIN_SUMIDOS } from "@/lib/recuperacao/estimativa";
 import { CartaoDoAnual } from "@/components/cobranca/cartao-do-anual";
+import { BotaoBaixarApp } from "@/components/install-prompt";
 import { BotoesAssinatura, type OpcaoDePlano } from "./botoes";
 import { BotaoEsperaCompleto } from "./espera";
 import { BotaoDaGarantia } from "./garantia";
@@ -114,19 +113,7 @@ export default async function PaginaAssinatura({
   const planos = descricaoDosPlanos(estado);
   const aviso = avisoDoPrazo(estado, empresa);
 
-  // North Star: Receita Recuperada COMPROVADA. Só o que foi atribuído — o resto
-  // vai numa linha separada, nunca somado, para o número não inflar.
-  const [comprovado, semAtribuicao, garantia, implantacao] = await Promise.all([
-    prisma.recoveryEntry.aggregate({
-      where: { companyId, attributed: true },
-      _sum: { valueCents: true },
-      _count: true,
-    }),
-    prisma.recoveryEntry.aggregate({
-      where: { companyId, attributed: false },
-      _sum: { valueCents: true },
-      _count: true,
-    }),
+  const [garantia, implantacao] = await Promise.all([
     garantiaDaEmpresa(companyId, agora),
     prisma.implantacao.findUnique({
       where: { companyId },
@@ -146,15 +133,7 @@ export default async function PaginaAssinatura({
   // que três mensalidades em 30 dias. Falha no cálculo não derruba a tela.
   const anual = await anualDaEmpresa(companyId, estado, agora).catch(() => null);
 
-  // A garantia que uma compra NOVA levaria. Só existe enquanto a conta não tem a
-  // dela (é uma por negócio), e usa a mesma conta do checkout: a tela não pode
-  // prometer a garantia que a compra não vai carregar.
   const semGarantiaAinda = garantia.decisao.situacao === "SEM_GARANTIA";
-  const ofertaDeHoje =
-    semGarantiaAinda && acoes.planos.length > 0
-      ? await ofertaDaEmpresa(companyId, agora).catch(() => null)
-      : null;
-  const compraSemGarantia = Boolean(ofertaDeHoje?.corteHonesto);
 
   // Tudo que impede a cobrança de abrir, na ordem em que o dono resolve:
   // primeiro a Stripe e os preços de cada plano, depois a identificação exigida
@@ -169,10 +148,6 @@ export default async function PaginaAssinatura({
       ...variaveisPendentesDoFornecedor(),
     ]),
   );
-
-  const recuperadoCents = comprovado._sum.valueCents ?? 0;
-  const clientesDeVolta = comprovado._count;
-  const vezes = recuperadoCents / PRECO_MENSAL_CENTS;
 
   // Voltou do checkout e o acesso ainda não liberou: quase sempre é o Pix que o
   // banco ainda não confirmou. Dizer isso — e dar o botão de conferir de novo —
@@ -345,59 +320,48 @@ export default async function PaginaAssinatura({
         </div>
       </section>
 
-      {/* O que a próxima compra leva — dito antes do pagamento, nunca depois. */}
-      {semGarantiaAinda && acoes.planos.length > 0 && (
-        <p className="rounded-xl border border-panel-line bg-panel-card p-4 text-sm text-panel-sub">
-          {compraSemGarantia
-            ? `Pela sua lista de hoje — menos de ${MIN_SUMIDOS} clientes sumidos ou de ` +
-              `${reais(MIN_RECUPERAVEL_CENTS)} para recuperar —, esta contratação não inclui a ` +
-              "Garantia Dinheiro Recuperado."
-            : `Garantia Dinheiro Recuperado: se em ${GARANTIA_DIAS} dias você mandar as mensagens de ` +
-              `${ONDAS_MINIMAS} ondas, marcar quem voltou e o Dinheiro recuperado não chegar a ` +
-              `${reais(PRECO_MENSAL_CENTS)}, devolvemos tudo o que você pagou. Vale uma vez por negócio.`}
-        </p>
-      )}
+      {/* SESSÃO: BAIXAR APLICATIVO */}
+      <section className="rounded-2xl border border-panel-line bg-panel-card p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="max-w-xl">
+            <h2 className="text-sm font-medium uppercase tracking-wide text-panel-sub">
+              Baixar Aplicativo
+            </h2>
+            <p className="mt-1 text-base font-semibold text-panel-ink">
+              Instale a Nexora no seu celular ou computador
+            </p>
+            <p className="mt-1 text-sm text-panel-sub">
+              Tenha acesso direto em 1 clique na tela inicial do seu celular (Android e iPhone) ou no seu computador para acompanhar seus clientes e agendamentos.
+            </p>
+          </div>
+          <BotaoBaixarApp
+            rotulo="Baixar Aplicativo"
+            className="rounded-xl bg-amber px-5 py-2.5 font-display text-sm font-bold text-night transition hover:brightness-110 active:scale-95 shadow-sm"
+          />
+        </div>
+      </section>
 
-      {/* O placar. É o argumento inteiro da assinatura em um bloco. */}
-      <section className="rounded-2xl border border-panel-line bg-panel-card p-6">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-panel-sub">
-          O que a Nexora já trouxe de volta
-        </h2>
-
-        {clientesDeVolta === 0 ? (
-          <>
-            <p className="mt-3 text-panel-ink">
-              Ainda não há retorno comprovado para mostrar.
+      {/* SESSÃO: AGENDA INTELIGENTE */}
+      <section className="rounded-2xl border border-panel-line bg-panel-card p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="max-w-xl">
+            <h2 className="text-sm font-medium uppercase tracking-wide text-panel-sub">
+              Agenda Inteligente
+            </h2>
+            <p className="mt-1 text-base font-semibold text-panel-ink">
+              Sua grade de horários e agendamentos automáticos
             </p>
-            <p className="mt-2 text-sm text-panel-sub">
-              O número aparece aqui quando você marcar na Onda que alguém voltou. Enquanto
-              isso não acontece, a gente não tem o que provar — e não vai inventar.
+            <p className="mt-1 text-sm text-panel-sub">
+              Gerencie seus horários, equipe e serviços em um link exclusivo para clientes agendarem direto pelo WhatsApp sem conflito de horários.
             </p>
-          </>
-        ) : (
-          <>
-            <p className="mt-3 font-display text-4xl text-panel-ink tabular-nums">
-              {reais(recuperadoCents)}
-            </p>
-            <p className="mt-2 text-sm text-panel-sub">
-              {clientesDeVolta === 1
-                ? "1 cliente que tinha sumido e voltou"
-                : `${clientesDeVolta} clientes que tinham sumido e voltaram`}{" "}
-              depois de uma mensagem da Onda, dentro da janela de atribuição de 21 dias.
-            </p>
-            <p className="mt-3 rounded-xl bg-panel-bg p-3 text-sm text-panel-ink">
-              Isso é <strong>{vezes.toFixed(1)}x</strong> o valor da mensalidade de{" "}
-              {reais(PRECO_MENSAL_CENTS)}.
-            </p>
-            {semAtribuicao._count > 0 && (
-              <p className="mt-3 text-xs text-panel-sub">
-                Outros {semAtribuicao._count} clientes voltaram fora da janela de
-                atribuição ({reais(semAtribuicao._sum.valueCents ?? 0)}). Não somamos esse
-                valor porque não dá para afirmar que foi a Nexora que trouxe.
-              </p>
-            )}
-          </>
-        )}
+          </div>
+          <Link
+            href="/painel/agenda"
+            className="rounded-xl bg-amber px-5 py-2.5 font-display text-sm font-bold text-night transition hover:brightness-110 active:scale-95 shadow-sm"
+          >
+            Abrir Agenda →
+          </Link>
+        </div>
       </section>
 
       {anual && <CartaoDoAnual oferta={anual} />}

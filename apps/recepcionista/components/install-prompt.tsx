@@ -14,7 +14,13 @@ export function openPwaInstall() {
   }
 }
 
-export function BotaoBaixarApp({ className }: { className?: string }) {
+export function BotaoBaixarApp({
+  className,
+  rotulo = "Baixar App",
+}: {
+  className?: string;
+  rotulo?: string;
+}) {
   return (
     <button
       type="button"
@@ -25,7 +31,7 @@ export function BotaoBaixarApp({ className }: { className?: string }) {
       }
     >
       <span>📱</span>
-      <span>Baixar App</span>
+      <span>{rotulo}</span>
     </button>
   );
 }

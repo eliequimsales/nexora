@@ -27,8 +27,8 @@ const NAV = [...layout.matchAll(/\{\s*href:\s*"([^"]+)",\s*label:\s*"([^"]+)"\s*
 );
 
 describe("o menu do painel", () => {
-  it("tem exatamente cinco itens", () => {
-    expect(NAV).toHaveLength(5);
+  it("tem exatamente seis itens", () => {
+    expect(NAV).toHaveLength(6);
   });
 
   it("segue a ordem do fluxo de valor", () => {
@@ -37,12 +37,17 @@ describe("o menu do painel", () => {
       "/painel/onda",
       "/painel/atendente",
       "/painel/livro-caixa",
+      "/painel/agenda",
       "/painel/assinatura",
     ]);
   });
 
   it("o Atendente se chama pelo que é", () => {
     expect(NAV.find((i) => i.href === "/painel/atendente")?.label).toBe("Atendente Virtual");
+  });
+
+  it("a aba de agenda se chama Agenda", () => {
+    expect(NAV.find((i) => i.href === "/painel/agenda")?.label).toBe("Agenda");
   });
 
   it("a aba de planos se chama Planos", () => {
