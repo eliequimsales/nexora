@@ -94,6 +94,7 @@ export default async function PaginaAssinatura({
       cancelAtPeriodEnd: true,
       dunningIniciadoEm: true,
       acessoPagoAte: true,
+      plan: true,
     },
   });
   if (!lida) redirect("/login");
@@ -260,7 +261,7 @@ export default async function PaginaAssinatura({
                 <BotoesAssinatura
                   opcoes={opcoesEntrada}
                   portal={acoes.portal}
-                  comprouComSucesso={Boolean(searchParams.ok)}
+                  comprouComSucesso={Boolean(searchParams.ok) && lida.plan !== "completo"}
                 />
               </div>
             </div>
@@ -319,7 +320,7 @@ export default async function PaginaAssinatura({
                 <BotoesAssinatura
                   opcoes={opcoesCompleto}
                   portal={acoes.portal}
-                  comprouComSucesso={Boolean(searchParams.ok)}
+                  comprouComSucesso={Boolean(searchParams.ok) && lida.plan === "completo"}
                 />
               </div>
             </div>

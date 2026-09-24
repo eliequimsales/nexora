@@ -96,10 +96,15 @@ export function trackFirstRecoverySent(): void {
 }
 
 export function trackInitiateCheckout(plano: string, preco?: string): void {
+  let valor = 97;
+  if (plano.includes("completo_anual")) valor = 1970;
+  else if (plano.includes("anual")) valor = 970;
+  else if (plano.includes("completo")) valor = 197;
+
   track("InitiateCheckout", {
     content_name: plano,
     currency: "BRL",
-    value: plano.includes("anual") ? 970 : 97,
+    value: valor,
     price_label: preco,
   });
 }
@@ -110,5 +115,12 @@ export function trackPurchase(valorReais: number = 97.0, plano: string = "pro_me
     currency: "BRL",
     content_name: plano,
     content_type: "product",
+  });
+}
+
+export function trackSchedule(servico?: string): void {
+  track("Schedule", {
+    content_name: servico || "Agendamento Realizado",
+    currency: "BRL",
   });
 }

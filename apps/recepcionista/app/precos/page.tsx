@@ -4,7 +4,6 @@ import Link from "next/link";
 import { CtaLink, TrackViewContent } from "@/components/funil";
 import { RodapeFunil } from "@/components/rodape-funil";
 import { TemaNexora } from "@/components/tema-nexora";
-import { TETO_CONVERSAS_MES } from "@/lib/atendente/constantes";
 import { GARANTIA_DIAS, ONDAS_MINIMAS } from "@/lib/billing/garantia";
 import {
   MINUTOS_DA_CHAMADA,
@@ -121,7 +120,7 @@ const PLANO_GRATIS = {
   itens: [
     `Primeira Onda: até ${TAMANHO_DA_ONDA} mensagens prontas em até ${DIAS_DA_PRIMEIRA_ONDA} dias`,
     "Diagnóstico automático do dinheiro parado na sua lista",
-    "Primeira semana do Atendente Virtual de teste",
+    "Demonstração e teste do Atendente Virtual no simulador",
     "Importação de planilha, lista colada ou caderno digitado",
     "Sem pedir cartão de crédito",
   ],
@@ -132,12 +131,11 @@ const PLANO_DA_ENTRADA = {
   badge: "RECOMENDADO",
   nome: "Nexora",
   valor: emReais(PRECO_MENSAL_CENTS),
-  descricao: "Recuperação contínua toda semana, agenda inteligente anti-falta e Atendente Virtual 24 horas no WhatsApp.",
+  descricao: "Recuperação contínua toda semana, agenda inteligente anti-falta e acompanhamento do dinheiro recuperado.",
   itens: [
     `Recuperador: ${TAMANHO_DA_ONDA} mensagens novas toda semana no ritmo dos clientes`,
     "Dinheiro recuperado, com a prova de cada retorno em reais",
     "Agenda com link próprio, grade da equipe e lembretes anti-falta",
-    `Atendente Virtual no WhatsApp, até ${TETO_CONVERSAS_MES} conversas por mês`,
     "WhatsApp conectado via QR Code",
     "Até 3 profissionais · clientes ilimitados",
     `Garantia Dinheiro Recuperado de ${GARANTIA_DIAS} dias na primeira contratação`,

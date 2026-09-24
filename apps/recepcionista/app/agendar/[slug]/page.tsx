@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { gerarIcsConteudo } from "@/lib/agenda/disponibilidade";
+import { trackSchedule } from "@/lib/analytics/pixel";
 
 type Servico = { id: string; name: string; durationMin: number; priceCents: number };
 type Profissional = { id: string; nome: string; cargo: string };
@@ -182,6 +183,7 @@ export default function PaginaAgendar({ params }: { params: { slug: string } }) 
         googleCalendarUrl: json.confirmacao?.googleCalendarUrl,
         mensagemWhatsApp: json.confirmacao?.mensagemWhatsApp,
       });
+      trackSchedule(json.confirmacao?.servico || "Atendimento Geral");
     } catch {
       setErro("Erro de conexão ao marcar horário. Tente novamente.");
     } finally {

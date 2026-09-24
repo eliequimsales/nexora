@@ -45,12 +45,16 @@ export function BotoesAssinatura({
       const chave = `nx_purchased_${sessionId}`;
       if (!sessionStorage.getItem(chave)) {
         sessionStorage.setItem(chave, "1");
-        trackPurchase(97.0, "assinatura_stripe");
+        const eCompleto = opcoes.some((o) => o.plano.startsWith("completo"));
+        const eAnual = opcoes.some((o) => o.plano.includes("anual"));
+        const valor = eCompleto && eAnual ? 1970.0 : eCompleto ? 197.0 : eAnual ? 970.0 : 97.0;
+        const plano = eCompleto ? "completo_cartao" : "mensal_cartao";
+        trackPurchase(valor, plano);
       }
     } catch {
       trackPurchase(97.0, "assinatura_stripe");
     }
-  }, [comprouComSucesso]);
+  }, [comprouComSucesso, opcoes]);
 
   const abrir = async (destino: PlanoId | "portal") => {
     setAbrindo(destino);
