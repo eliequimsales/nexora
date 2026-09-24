@@ -3,6 +3,8 @@ import { acessoDoAtendente, podeLigar } from "@/lib/atendente/portao";
 import { usoDoAtendente } from "@/lib/atendente/uso";
 import { prisma } from "@/lib/db";
 import { estadoDaConta, podeExecutar, type Acao, type EstadoConta } from "./acesso";
+import { ehPlanoCompleto, PRECO_COMPLETO_MENSAL_CENTS } from "./planos";
+import { emReais } from "./preco";
 import { ofertaDaEmpresa } from "./oferta-da-conta";
 import { ACOES_DA_PRIMEIRA_ONDA, podeNaPrimeiraOnda } from "./primeira-onda";
 import { primeiraOndaDaEmpresa, type PrimeiraOndaDaConta } from "./primeira-onda-da-conta";
@@ -46,6 +48,46 @@ export async function estadoDaEmpresa(companyId: string): Promise<EstadoConta> {
 /** O que a primeira semana do Atendente libera para quem está sem plano. */
 const ACOES_DA_SEMANA_DO_ATENDENTE: Acao[] = ["LIGAR_ATENDENTE", "CONECTAR_WHATSAPP"];
 
+export async function empresaTemPlanoCompleto(
+  companyId: string,
+  agora: Date = new Date(),
+): Promise<boolean> {
+  const empresa = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: {
+      plan: true,
+      subscriptionStatus: true,
+      acessoPagoAte: true,
+      currentPeriodEnd: true,
+      cancelAtPeriodEnd: true,
+      dunningIniciadoEm: true,
+      trialEndsAt: true,
+    },
+  });
+  if (!empresa) return false;
+
+  const estado = estadoDaConta(empresa, agora);
+  const temAcessoValido = ["ATIVO", "PASSE", "TOLERANCIA", "CANCELADO_COM_ACESSO"].includes(estado);
+  if (!temAcessoValido) return false;
+
+  if (ehPlanoCompleto(empresa.plan)) return true;
+
+  if (empresa.acessoPagoAte && agora < empresa.acessoPagoAte) {
+    const passe = await prisma.passePago.findFirst({
+      where: {
+        companyId,
+        fim: { gt: agora },
+        reembolsadoEm: null,
+      },
+      orderBy: { fim: "desc" },
+      select: { plano: true },
+    });
+    if (passe && ehPlanoCompleto(passe.plano)) return true;
+  }
+
+  return false;
+}
+
 /** Estados em que a recusa leva a oferta: quem ainda pode escolher um plano. */
 const RECUSA_COM_OFERTA: EstadoConta[] = ["GRATIS", "TRIAL_EXPIRADO"];
 
@@ -60,6 +102,23 @@ export async function exigirAcesso(
   companyId: string,
   acao: Acao,
 ): Promise<NextResponse | null> {
+  if (acao === "LIGAR_ATENDENTE") {
+    const temCompleto = await empresaTemPlanoCompleto(companyId);
+    if (!temCompleto) {
+      return NextResponse.json(
+        {
+          error: "O Atendente Virtual é exclusivo do plano Nexora Completo.",
+          acao: {
+            texto: `Assinar o plano Completo — ${emReais(PRECO_COMPLETO_MENSAL_CENTS)}/mês`,
+            href: "/painel/assinatura",
+          },
+        },
+        { status: 402 },
+      );
+    }
+    return null;
+  }
+
   const estado = await estadoDaEmpresa(companyId);
   const permissao = podeExecutar(estado, acao);
   if (permissao.pode) return null;

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
 import type { TelaDoAtendente } from "@/lib/atendente/tela";
-import { emReais, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
+import { emReais, PRECO_COMPLETO_CENTS, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
 import { ModalConectarWhatsApp } from "@/components/painel/modal-conectar-whatsapp";
 
 /**
@@ -77,6 +77,41 @@ export function Ligar({
     setConectando(false);
     void ligarAgora.current();
   }, []);
+
+  if (!tela.temPlanoCompleto) {
+    return (
+      <section className="rounded-2xl border border-amber/40 bg-amber/10 p-5 space-y-3">
+        <div>
+          <span className="rounded-md bg-amber px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-night">
+            Nexora Completo
+          </span>
+          <h3 className="mt-2 font-display text-lg font-bold text-panel-ink">
+            Atendente Virtual 24 Horas
+          </h3>
+          <p className="mt-1 text-sm leading-relaxed text-panel-sub">
+            Atende no WhatsApp dia e noite, tira dúvidas e marca direto na sua agenda sozinho.
+          </p>
+        </div>
+        <ul className="space-y-1.5 text-xs text-panel-sub">
+          <li className="flex items-center gap-2">
+            <span className="text-leaf">✓</span>
+            <span>Atende clientes fora do horário e de madrugada</span>
+          </li>
+          <li className="flex items-center gap-2">
+            <span className="text-leaf">✓</span>
+            <span>Marca horários direto na sua Agenda</span>
+          </li>
+          <li className="flex items-center gap-2">
+            <span className="text-leaf">✓</span>
+            <span>Alerta no celular para recados urgentes</span>
+          </li>
+        </ul>
+        <Link href="/painel/assinatura" className={`${BOTAO} block text-center`}>
+          Assinar o plano Completo — {emReais(PRECO_COMPLETO_CENTS)}/mês
+        </Link>
+      </section>
+    );
+  }
 
   if (tela.acesso === "SEMANA_ACABOU") {
     const s = tela.resultadoDaSemana;

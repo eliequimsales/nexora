@@ -27,6 +27,11 @@ export type PlanoId =
 export const PRECO_COMPLETO_MENSAL_CENTS = 197_00;
 export const PRECO_COMPLETO_ANUAL_CENTS = 1970_00;
 
+export function ehPlanoCompleto(plano: string | null | undefined): boolean {
+  if (!plano) return false;
+  return plano === "completo" || plano.startsWith("completo");
+}
+
 export type Plano = {
   modo: "subscription" | "payment";
   variavelDoPreco:
@@ -157,7 +162,7 @@ export function parametrosDoCheckout(p: {
     const assinatura: Stripe.Checkout.SessionCreateParams.SubscriptionData = {
       // A garantia viaja na assinatura porque é ela que a convergência re-busca a
       // cada evento — o metadata da sessão não volta nos eventos da assinatura.
-      metadata: { companyId: p.companyId, garantia },
+      metadata: { companyId: p.companyId, garantia, plano: p.plano },
     };
     if (p.fimDoTrial) {
       assinatura.trial_end = p.fimDoTrial;

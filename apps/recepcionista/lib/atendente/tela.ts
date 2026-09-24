@@ -1,6 +1,6 @@
 import { horariosLivres } from "@/lib/agenda/livres";
 import { configuracaoDaIaFaltando } from "@/lib/ai/provider";
-import { estadoDaEmpresa } from "@/lib/billing/guarda";
+import { empresaTemPlanoCompleto, estadoDaEmpresa } from "@/lib/billing/guarda";
 import { prisma } from "@/lib/db";
 import { telefoneFalado } from "@/lib/recuperacao/telefone";
 import type { BusinessHour } from "@/lib/validation";
@@ -49,6 +49,7 @@ export type TelaDoAtendente = {
   whatsappLigado: boolean;
   acesso: Acesso;
   podeLigar: boolean;
+  temPlanoCompleto: boolean;
   estado: { texto: string; tom: Tom };
   uso: { texto: string; conversasNoMes: number; teto: number };
   /** A conversa do passo 1: dados de verdade, ou de exemplo — e a tela diz qual. */
@@ -215,7 +216,7 @@ async function exemploDaConversa(companyId: string, fatos: Fatos, agora: Date): 
 const CONTAGEM = { respostas: true, marcados: true, valorMarcadoCents: true } as const;
 
 export async function telaDoAtendente(companyId: string, agora: Date = new Date()): Promise<TelaDoAtendente> {
-  const [fatos, perfil, estadoDaConta, uso] = await Promise.all([
+  const [fatos, perfil, estadoDaConta, uso, temPlanoCompleto] = await Promise.all([
     fatosDaEmpresa(companyId),
     prisma.companyProfile.findUnique({
       where: { companyId },
@@ -223,14 +224,17 @@ export async function telaDoAtendente(companyId: string, agora: Date = new Date(
     }),
     estadoDaEmpresa(companyId),
     usoDoAtendente(companyId, agora),
+    empresaTemPlanoCompleto(companyId, agora),
   ]);
 
-  const acesso = acessoDoAtendente({ estado: estadoDaConta, ...uso, agora });
+  const acesso: Acesso = temPlanoCompleto
+    ? (uso.conversasNoMes < TETO_CONVERSAS_MES ? "INCLUIDO" : "TETO")
+    : "SEMANA_ACABOU";
   const whatsappLigado = Boolean(perfil?.whatsappInstance) && perfil?.whatsappStatus === "CONNECTED";
   // A mesma regra do executor: ligado é o que passou pelo "Ligar".
-  const ligado = Boolean(perfil?.plantaoAtivo && uso.primeiraVezEm);
+  const ligado = Boolean(perfil?.plantaoAtivo && uso.primeiraVezEm && temPlanoCompleto);
   const desde = ultimoFechamento(fatos.horarios, fatos.diasFechados, agora);
-  const naSemanaGratis = (acesso === "SEMANA_GRATIS" || acesso === "SEMANA_ACABOU") && uso.primeiraVezEm;
+  const naSemanaGratis = Boolean(!temPlanoCompleto && uso.primeiraVezEm);
 
   const [doFechamento, pendentes, daSemana, exemplo] = await Promise.all([
     desde
@@ -276,18 +280,23 @@ export async function telaDoAtendente(companyId: string, agora: Date = new Date(
     testado: Boolean(perfil?.atendenteTestadoEm),
     whatsappLigado,
     acesso,
-    podeLigar: podeLigar(acesso),
-    estado: estadoDoAtendente({
-      ligado,
-      nome: fatos.nome,
-      acesso,
-      whatsappLigado,
-      horarios: fatos.horarios,
-      diasFechados: fatos.diasFechados,
-      expediente: fatos.expediente,
-      agora,
-    }),
-    uso: { texto: textoDoUso({ acesso, agora, uso }), conversasNoMes: uso.conversasNoMes, teto: TETO_CONVERSAS_MES },
+    podeLigar: temPlanoCompleto && podeLigar(acesso),
+    temPlanoCompleto,
+    estado: temPlanoCompleto
+      ? estadoDoAtendente({
+          ligado,
+          nome: fatos.nome,
+          acesso,
+          whatsappLigado,
+          horarios: fatos.horarios,
+          diasFechados: fatos.diasFechados,
+          expediente: fatos.expediente,
+          agora,
+        })
+      : { texto: "Disponível no plano Nexora Completo.", tom: "DESLIGADO" },
+    uso: temPlanoCompleto
+      ? { texto: textoDoUso({ acesso, agora, uso }), conversasNoMes: uso.conversasNoMes, teto: TETO_CONVERSAS_MES }
+      : { texto: "Disponível no plano Nexora Completo.", conversasNoMes: uso.conversasNoMes, teto: TETO_CONVERSAS_MES },
     exemplo,
     sabe: {
       servicos: fatos.servicos.map((s) => ({

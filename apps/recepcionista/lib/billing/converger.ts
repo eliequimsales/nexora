@@ -27,6 +27,7 @@ import { diasDoPasse, fimDoAcessoAtual, periodoDoPasse } from "./passe";
 import { registrarImplantacao } from "./implantacao-da-conta";
 import { enviarEmail } from "@/lib/reengajamento/email";
 import { logError } from "@/lib/errors";
+import { ehPlanoCompleto } from "./planos";
 
 function paraData(seg: number | null | undefined): Date | null {
   return typeof seg === "number" && Number.isFinite(seg) ? new Date(seg * 1000) : null;
@@ -46,9 +47,11 @@ function marcaDaGarantia(metadata: Stripe.Metadata | null | undefined): boolean 
 }
 
 /** Rótulo grosso para exibição. O acesso real é decidido por subscriptionStatus. */
-function planoDoStatus(status: string): string {
+function planoDoStatus(status: string, metadataPlano?: string | null): string {
   if (status === "trialing") return "trial";
-  if (status === "active" || status === "past_due" || status === "unpaid") return "pro";
+  if (status === "active" || status === "past_due" || status === "unpaid") {
+    return metadataPlano && ehPlanoCompleto(metadataPlano) ? "completo" : "pro";
+  }
   return "canceled";
 }
 
@@ -73,7 +76,7 @@ export async function aplicarAssinatura(sub: Stripe.Subscription): Promise<strin
       stripeSubscriptionId: sub.id,
       stripeCustomerId: typeof sub.customer === "string" ? sub.customer : sub.customer.id,
       subscriptionStatus: sub.status,
-      plan: planoDoStatus(sub.status),
+      plan: planoDoStatus(sub.status, sub.metadata?.plano),
       // Encerrada, termina quando acabou — não no fim de um mês que ninguém pagou.
       currentPeriodEnd: fimDoPeriodoPago(sub),
       cancelAtPeriodEnd: sub.cancel_at_period_end,
@@ -279,6 +282,7 @@ export async function aplicarPasse(
           // Pagou: não abandonou carrinho nenhum e não é mais quem cancelou.
           checkoutAbertoEm: null,
           canceladoEm: null,
+          ...(ehPlanoCompleto(sessao.metadata?.plano) ? { plan: "completo" } : {}),
         },
       });
       if (gravou.count === 0) {

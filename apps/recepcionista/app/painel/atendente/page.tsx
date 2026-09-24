@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { Jeito } from "@/lib/atendente/jeitos";
 import type { TelaDoAtendente, Tom } from "@/lib/atendente/tela";
@@ -8,7 +9,6 @@ import { Celular } from "@/components/atendente/celular";
 import { Ligar } from "@/components/atendente/ligar";
 import { Situacao } from "@/components/atendente/situacao";
 import { CartaoDaNoite } from "@/components/painel/cartao-da-noite";
-import { ListaDeEsperaPlantao } from "@/components/painel/lista-espera-plantao";
 
 /**
  * ATENDENTE VIRTUAL — UMA TELA SÓ, QUE SE EXPLICA SOZINHA.
@@ -148,12 +148,35 @@ export default function PaginaDoAtendente() {
         </div>
         <div className="flex items-center gap-3">
           {salvo && <span className="text-xs text-panel-sub">Salvo</span>}
-          <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold ${pilula.classe}`}>
-            <span className={`h-2 w-2 rounded-full ${pilula.ponto}`} aria-hidden="true" />
-            {pilula.texto}
-          </span>
+          {!tela.temPlanoCompleto ? (
+            <Link
+              href="/painel/assinatura"
+              className="inline-flex items-center gap-1.5 rounded-full border border-amber/40 bg-amber/10 px-3 py-1.5 text-xs font-bold text-amber hover:bg-amber/20"
+            >
+              <span>Exclusivo do plano Completo</span>
+            </Link>
+          ) : (
+            <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold ${pilula.classe}`}>
+              <span className={`h-2 w-2 rounded-full ${pilula.ponto}`} aria-hidden="true" />
+              {pilula.texto}
+            </span>
+          )}
         </div>
       </header>
+
+      {!tela.temPlanoCompleto && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber/30 bg-amber/5 p-4 text-sm">
+          <p className="text-panel-ink">
+            O Atendente no seu WhatsApp é exclusivo do plano Nexora Completo.
+          </p>
+          <Link
+            href="/painel/assinatura"
+            className="rounded-lg bg-amber px-4 py-2 text-xs font-bold text-night hover:brightness-110"
+          >
+            Ver plano Completo
+          </Link>
+        </div>
+      )}
 
       {erro && (
         <p role="alert" className="text-sm text-red-700">
@@ -180,22 +203,6 @@ export default function PaginaDoAtendente() {
               <div className="border-t border-panel-line p-4">{ajustes}</div>
             </details>
           )}
-
-          {/* O Degrau futuro: O Plantão com equipe sem limite */}
-          <div className="rounded-2xl border border-dashed border-panel-line bg-panel-bg p-5 text-sm">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-semibold text-panel-ink">O Plantão · Chega junto com o Nexora Completo</p>
-                <p className="mt-1 text-xs leading-relaxed text-panel-sub">
-                  Atende de madrugada e traz profissionais ilimitados.
-                </p>
-                <p className="text-[11px] text-panel-sub">
-                  Aparece aqui quando o Plantão sem teto nascer.
-                </p>
-              </div>
-              <ListaDeEsperaPlantao />
-            </div>
-          </div>
         </div>
       </div>
     </div>

@@ -17,7 +17,7 @@ import { SEMANA_GRATIS_CONVERSAS, SEMANA_GRATIS_DIAS } from "@/lib/atendente/con
 import { usoDoAtendente } from "@/lib/atendente/uso";
 import { ACOES, ACOES_SEMPRE_LIVRES, podeExecutar, type EstadoConta } from "@/lib/billing/acesso";
 import { exigirAcesso } from "@/lib/billing/guarda";
-import { emReais, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
+import { emReais, PRECO_COMPLETO_CENTS, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
 import { primeiraOndaDaEmpresa } from "@/lib/billing/primeira-onda-da-conta";
 
 /**
@@ -46,13 +46,13 @@ describe("LIGAR_ATENDENTE na regra pura", () => {
     for (const estado of comPlano) expect(podeExecutar(estado, "LIGAR_ATENDENTE").pode, estado).toBe(true);
   });
 
-  it("sem plano, a recusa fala do Atendente e aponta o plano", () => {
+  it("sem plano, a recusa fala do Atendente e aponta o plano Completo", () => {
     for (const estado of ["GRATIS", "TRIAL_EXPIRADO"] as EstadoConta[]) {
       const p = podeExecutar(estado, "LIGAR_ATENDENTE");
       expect(p.pode).toBe(false);
       if (p.pode) continue;
-      expect(p.motivo).toMatch(/semana do Atendente/);
-      expect(p.acao.texto).toContain(emReais(PRECO_MENSAL_CENTS));
+      expect(p.motivo).toMatch(/plano Nexora Completo/);
+      expect(p.acao.texto).toContain(emReais(PRECO_COMPLETO_CENTS));
       expect(p.acao.href).toBe("/painel/assinatura");
     }
   });
@@ -99,31 +99,30 @@ beforeEach(() => {
   (usoDoAtendente as Fn).mockResolvedValue(semana({ diasDesde: null }));
 });
 
-describe("a primeira semana do Atendente no exigirAcesso", () => {
-  it("quem nunca ligou pode ligar", async () => {
-    expect(await exigirAcesso("c1", "LIGAR_ATENDENTE")).toBeNull();
-  });
-
-  it("dentro da semana, continua ligado", async () => {
-    (usoDoAtendente as Fn).mockResolvedValue(semana({ diasDesde: 3, conversas: 10 }));
-    expect(await exigirAcesso("c1", "LIGAR_ATENDENTE")).toBeNull();
-  });
-
-  it(`passados ${SEMANA_GRATIS_DIAS} dias, a recusa aponta o plano`, async () => {
-    (usoDoAtendente as Fn).mockResolvedValue(semana({ diasDesde: SEMANA_GRATIS_DIAS + 1, conversas: 12 }));
+describe("o Atendente no exigirAcesso — exclusivo do plano Completo", () => {
+  it("conta sem plano não pode ligar e recebe recusa apontando o plano Completo", async () => {
     const r = await exigirAcesso("c1", "LIGAR_ATENDENTE");
     expect(r?.status).toBe(402);
     const corpo = await r!.json();
-    expect(corpo.error).toMatch(/semana do Atendente/);
+    expect(corpo.error).toMatch(/exclusivo do plano Nexora Completo/);
     expect(corpo.acao.href).toBe("/painel/assinatura");
+    expect(corpo.acao.texto).toContain(emReais(PRECO_COMPLETO_CENTS));
   });
 
-  it(`com ${SEMANA_GRATIS_CONVERSAS} conversas, a semana acaba antes dos ${SEMANA_GRATIS_DIAS} dias`, async () => {
-    (usoDoAtendente as Fn).mockResolvedValue(semana({ diasDesde: 2, conversas: SEMANA_GRATIS_CONVERSAS }));
-    expect((await exigirAcesso("c1", "LIGAR_ATENDENTE"))?.status).toBe(402);
+  it("conta com plano básico (pro) não pode ligar", async () => {
+    db.company.findUnique.mockResolvedValue({ ...SEM_PLANO, plan: "pro", subscriptionStatus: "active" });
+    const r = await exigirAcesso("c1", "LIGAR_ATENDENTE");
+    expect(r?.status).toBe(402);
+    const corpo = await r!.json();
+    expect(corpo.error).toMatch(/exclusivo do plano Nexora Completo/);
   });
 
-  it("ligar o WhatsApp vem junto com a semana, mesmo depois da primeira Onda", async () => {
+  it("conta com plano completo ativo pode ligar", async () => {
+    db.company.findUnique.mockResolvedValue({ ...SEM_PLANO, plan: "completo", subscriptionStatus: "active" });
+    expect(await exigirAcesso("c1", "LIGAR_ATENDENTE")).toBeNull();
+  });
+
+  it("ligar o WhatsApp vem junto com a semana da primeira Onda", async () => {
     expect(await exigirAcesso("c1", "CONECTAR_WHATSAPP")).toBeNull();
     (usoDoAtendente as Fn).mockResolvedValue(semana({ diasDesde: SEMANA_GRATIS_DIAS + 1 }));
     expect((await exigirAcesso("c1", "CONECTAR_WHATSAPP"))?.status).toBe(402);
@@ -132,12 +131,6 @@ describe("a primeira semana do Atendente no exigirAcesso", () => {
   it("a semana do Atendente não libera a Onda", async () => {
     expect((await exigirAcesso("c1", "GERAR_ONDA"))?.status).toBe(402);
     expect((await exigirAcesso("c1", "ENVIAR_TOQUE"))?.status).toBe(402);
-  });
-
-  it("com plano, nem consulta o uso", async () => {
-    db.company.findUnique.mockResolvedValue({ ...SEM_PLANO, subscriptionStatus: "active" });
-    expect(await exigirAcesso("c1", "LIGAR_ATENDENTE")).toBeNull();
-    expect(usoDoAtendente).not.toHaveBeenCalled();
   });
 });
 

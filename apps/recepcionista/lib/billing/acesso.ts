@@ -17,7 +17,7 @@
  *   executável. Tela de bloqueio que só informa é proibida como qualquer outra.
  */
 
-import { emReais, PRECO_MENSAL_CENTS } from "./preco";
+import { emReais, PRECO_COMPLETO_CENTS, PRECO_MENSAL_CENTS } from "./preco";
 
 export type EstadoConta =
   | "GRATIS"
@@ -187,9 +187,9 @@ const RECUSA: Record<string, { motivo: string; texto: string }> = {
  */
 const RECUSA_DO_ATENDENTE = {
   motivo:
-    "A primeira semana do Atendente por nossa conta terminou. Para ele continuar respondendo " +
-    "seus clientes, é só escolher um plano — suas conversas e sua agenda continuam suas.",
-  texto: `Continuar com o Atendente — ${emReais(PRECO_MENSAL_CENTS)}/mês`,
+    "O Atendente Virtual é exclusivo do plano Nexora Completo. Para ele responder " +
+    "seus clientes, assine o plano Completo — suas conversas e sua agenda continuam suas.",
+  texto: `Assinar o plano Completo — ${emReais(PRECO_COMPLETO_CENTS)}/mês`,
 };
 
 export function podeExecutar(estado: EstadoConta, acao: Acao): Permissao {
