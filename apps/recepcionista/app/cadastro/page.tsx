@@ -8,6 +8,7 @@ import {
   trackStartRegistration,
   trackCompleteRegistration,
 } from "@/lib/analytics/pixel";
+import { registrar } from "@/components/funil";
 
 const FIELDS = [
   { key: "name", label: "Nome da empresa", type: "text", placeholder: "Ex.: Minha Empresa" },
@@ -45,6 +46,7 @@ export default function CadastroPage() {
         return;
       }
       trackCompleteRegistration("email");
+      registrar("criou_conta");
       router.push("/painel/clientes/importar");
       router.refresh();
     } catch {

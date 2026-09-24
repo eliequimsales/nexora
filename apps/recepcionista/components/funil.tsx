@@ -8,6 +8,7 @@ import {
   trackViewContent,
   trackCompleteRegistration,
 } from "@/lib/analytics/pixel";
+import { obterUtmsSalvas } from "@/lib/analytics/utm";
 
 /**
  * O gancho de instrumentação, do lado do navegador.
@@ -38,7 +39,10 @@ function sessaoAnonima(): string | null {
 
 function criativoDaUrl(): string | null {
   try {
-    return new URLSearchParams(window.location.search).get("c");
+    const daUrl = new URLSearchParams(window.location.search).get("c");
+    if (daUrl) return daUrl;
+    const utms = obterUtmsSalvas();
+    return utms?.criativo || null;
   } catch {
     return null;
   }
