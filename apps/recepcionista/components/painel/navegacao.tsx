@@ -148,15 +148,6 @@ export function PainelNavDesktop({ items }: { items: NavItem[] }) {
                 {iconeParaRota(item.href)}
               </span>
               <span>{item.label}</span>
-              {item.href === "/painel/atendente" && (
-                <span
-                  className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                    ativo ? "bg-night/20 text-night" : "bg-amber/20 text-amber"
-                  }`}
-                >
-                  Completo
-                </span>
-              )}
             </Link>
           );
         })}
@@ -194,13 +185,8 @@ export function PainelNavMobile({ items }: { items: NavItem[] }) {
               >
                 {iconeParaRota(item.href)}
               </span>
-              <span className="flex items-center justify-center gap-0.5 text-[11px] font-semibold leading-tight tracking-tight">
-                <span>{item.label}</span>
-                {item.href === "/painel/atendente" && (
-                  <span className="rounded bg-amber/20 px-1 text-[9px] font-bold text-amber">
-                    ★
-                  </span>
-                )}
+              <span className="text-[11px] font-semibold leading-tight tracking-tight">
+                {item.label}
               </span>
               {ativo && (
                 <span
