@@ -5,29 +5,31 @@ import {
   parametrosDoCheckout,
   planoDisponivel,
   PLANOS,
+  PRECO_COMPLETO_ANUAL_CENTS,
+  PRECO_COMPLETO_MENSAL_CENTS,
   precoPendenteDoPlano,
   type PlanoId,
 } from "@/lib/billing/planos";
 import { PRECO_ANUAL_CENTS, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
 
 /**
- * OS TRÊS JEITOS DE PAGAR.
+ * OS SEIS PLANOS (NEXORA E NEXORA COMPLETO).
  *
  * - Mensal no cartão: assinatura recorrente (STRIPE_PRICE_PRO).
- * - 30 dias no Pix: pagamento avulso (STRIPE_PRICE_PASSE_30). A Stripe no Brasil
- *   só faz Pix avulso: o Pix Automático, que seria o recorrente, não está
- *   disponível para contas brasileiras (documentação conferida em 14/09/2026).
+ * - 30 dias no Pix: pagamento avulso (STRIPE_PRICE_PASSE_30).
  * - Anual à vista: pagamento avulso de 12 meses (STRIPE_PRICE_ANUAL).
- *
- * Os parâmetros saem de uma função pura para serem testados sem chamar a Stripe:
- * o erro caro aqui é cobrar o preço errado ou liberar prazo errado, e isso se
- * decide nos parâmetros, não na chamada.
+ * - Completo mensal: assinatura recorrente (STRIPE_PRICE_COMPLETO_MENSAL).
+ * - Completo Pix 30 dias: pagamento avulso (STRIPE_PRICE_COMPLETO_PIX).
+ * - Completo anual: pagamento avulso de 12 meses (STRIPE_PRICE_COMPLETO_ANUAL).
  */
 
 const ENV = {
   STRIPE_PRICE_PRO: "price_mensal",
   STRIPE_PRICE_PASSE_30: "price_passe",
   STRIPE_PRICE_ANUAL: "price_anual",
+  STRIPE_PRICE_COMPLETO_MENSAL: "price_completo_mensal",
+  STRIPE_PRICE_COMPLETO_PIX: "price_completo_pix",
+  STRIPE_PRICE_COMPLETO_ANUAL: "price_completo_anual",
 };
 
 const BASE = {
@@ -39,23 +41,43 @@ const BASE = {
   env: ENV,
 };
 
-const TODOS: PlanoId[] = ["mensal_cartao", "pix_30_dias", "anual"];
+const TODOS: PlanoId[] = [
+  "mensal_cartao",
+  "pix_30_dias",
+  "anual",
+  "completo_cartao",
+  "completo_pix",
+  "completo_anual",
+];
 
 describe("PLANOS", () => {
-  it("são exatamente três: mensal no cartão, 30 dias e anual", () => {
-    expect(Object.keys(PLANOS).sort()).toEqual(["anual", "mensal_cartao", "pix_30_dias"]);
+  it("são exatamente seis: três de entrada e três completos", () => {
+    expect(Object.keys(PLANOS).sort()).toEqual([
+      "anual",
+      "completo_anual",
+      "completo_cartao",
+      "completo_pix",
+      "mensal_cartao",
+      "pix_30_dias",
+    ]);
   });
 
-  it("o mensal é assinatura; os outros dois são pagamentos avulsos com prazo", () => {
+  it("os mensais são assinatura; os outros quatro são pagamentos avulsos com prazo", () => {
     expect(PLANOS.mensal_cartao).toMatchObject({ modo: "subscription", dias: null });
     expect(PLANOS.pix_30_dias).toMatchObject({ modo: "payment", dias: 30 });
     expect(PLANOS.anual).toMatchObject({ modo: "payment", dias: 365 });
+    expect(PLANOS.completo_cartao).toMatchObject({ modo: "subscription", dias: null });
+    expect(PLANOS.completo_pix).toMatchObject({ modo: "payment", dias: 30 });
+    expect(PLANOS.completo_anual).toMatchObject({ modo: "payment", dias: 365 });
   });
 
   it("os valores vêm das constantes de preço, nunca de número solto", () => {
     expect(PLANOS.mensal_cartao.valorCents).toBe(PRECO_MENSAL_CENTS);
     expect(PLANOS.pix_30_dias.valorCents).toBe(PRECO_MENSAL_CENTS);
     expect(PLANOS.anual.valorCents).toBe(PRECO_ANUAL_CENTS);
+    expect(PLANOS.completo_cartao.valorCents).toBe(PRECO_COMPLETO_MENSAL_CENTS);
+    expect(PLANOS.completo_pix.valorCents).toBe(PRECO_COMPLETO_MENSAL_CENTS);
+    expect(PLANOS.completo_anual.valorCents).toBe(PRECO_COMPLETO_ANUAL_CENTS);
   });
 
   // A Stripe aceita Pix de R$ 0,50 a R$ 3.000 por transação.
@@ -127,7 +149,7 @@ describe("parametrosDoCheckout", () => {
   });
 
   it("pagamento avulso nunca carrega teste grátis", () => {
-    for (const plano of ["pix_30_dias", "anual"] as const) {
+    for (const plano of ["pix_30_dias", "anual", "completo_pix", "completo_anual"] as const) {
       const p = parametrosDoCheckout({ ...BASE, plano, fimDoTrial: 1_900_000_000 });
       expect(p.subscription_data, plano).toBeUndefined();
     }
@@ -151,14 +173,18 @@ describe("precoPendenteDoPlano", () => {
     expect(precoPendenteDoPlano("pix_30_dias", {})).toBe("STRIPE_PRICE_PASSE_30");
     expect(precoPendenteDoPlano("anual", { STRIPE_PRICE_ANUAL: "   " })).toBe("STRIPE_PRICE_ANUAL");
     expect(precoPendenteDoPlano("mensal_cartao", {})).toBe("STRIPE_PRICE_PRO");
+    expect(precoPendenteDoPlano("completo_cartao", {})).toBe("STRIPE_PRICE_COMPLETO_MENSAL");
+    expect(precoPendenteDoPlano("completo_pix", {})).toBe("STRIPE_PRICE_COMPLETO_PIX");
+    expect(precoPendenteDoPlano("completo_anual", {})).toBe("STRIPE_PRICE_COMPLETO_ANUAL");
     expect(precoPendenteDoPlano("mensal_cartao", ENV)).toBeNull();
+    expect(precoPendenteDoPlano("completo_cartao", ENV)).toBeNull();
   });
 });
 
 /**
  * O QUE A CONTA PODE CONTRATAR AGORA.
  *
- * Três planos convivendo abrem um jeito novo de errar com o dinheiro dos outros:
+ * Seis planos convivendo abrem um jeito novo de errar com o dinheiro dos outros:
  * vender um segundo plano para quem já paga o primeiro. A regra mora numa função
  * pura e vale dos dois lados — a tela só mostra o que a rota aceita.
  */
@@ -177,11 +203,18 @@ const ESTADOS: EstadoConta[] = [
 const STATUS = [null, "active", "trialing", "past_due", "unpaid", "paused", "canceled", "incomplete"];
 
 describe("acoesDaConta", () => {
-  it("sem assinatura nenhuma, os três planos e nada para gerenciar", () => {
+  it("sem assinatura nenhuma, os seis planos e nada para gerenciar", () => {
     for (const estado of ["GRATIS", "TRIAL", "TRIAL_EXPIRADO"] as const) {
       expect(acoesDaConta({ estado, subscriptionStatus: null }), estado).toEqual({
         portal: null,
-        planos: ["mensal_cartao", "pix_30_dias", "anual"],
+        planos: [
+          "mensal_cartao",
+          "pix_30_dias",
+          "anual",
+          "completo_cartao",
+          "completo_pix",
+          "completo_anual",
+        ],
       });
     }
   });
@@ -205,18 +238,18 @@ describe("acoesDaConta", () => {
   it("teste com a assinatura já criada: cartão pelo portal, e Pix ou anual liberados", () => {
     expect(acoesDaConta({ estado: "TRIAL", subscriptionStatus: "trialing" })).toEqual({
       portal: "Gerenciar assinatura",
-      planos: ["pix_30_dias", "anual"],
+      planos: ["pix_30_dias", "anual", "completo_pix", "completo_anual"],
     });
   });
 
   it("passe valendo: dá para estender no Pix ou no anual, e o mensal espera o passe acabar", () => {
     expect(acoesDaConta({ estado: "PASSE", subscriptionStatus: null })).toEqual({
       portal: null,
-      planos: ["pix_30_dias", "anual"],
+      planos: ["pix_30_dias", "anual", "completo_pix", "completo_anual"],
     });
   });
 
-  it("cancelada ou pausada: os três planos de novo", () => {
+  it("cancelada ou pausada: os seis planos de novo", () => {
     for (const [estado, status] of [
       ["CANCELADO", "canceled"],
       ["CANCELADO_COM_ACESSO", "canceled"],
@@ -226,6 +259,9 @@ describe("acoesDaConta", () => {
         "mensal_cartao",
         "pix_30_dias",
         "anual",
+        "completo_cartao",
+        "completo_pix",
+        "completo_anual",
       ]);
     }
   });

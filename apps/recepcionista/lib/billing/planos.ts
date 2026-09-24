@@ -16,11 +16,26 @@ import { PRECO_ANUAL_CENTS, PRECO_MENSAL_CENTS } from "./preco";
  * Price, que é configurado fora do repositório.
  */
 
-export type PlanoId = "mensal_cartao" | "pix_30_dias" | "anual";
+export type PlanoId =
+  | "mensal_cartao"
+  | "pix_30_dias"
+  | "anual"
+  | "completo_cartao"
+  | "completo_pix"
+  | "completo_anual";
+
+export const PRECO_COMPLETO_MENSAL_CENTS = 197_00;
+export const PRECO_COMPLETO_ANUAL_CENTS = 1970_00;
 
 export type Plano = {
   modo: "subscription" | "payment";
-  variavelDoPreco: "STRIPE_PRICE_PRO" | "STRIPE_PRICE_PASSE_30" | "STRIPE_PRICE_ANUAL";
+  variavelDoPreco:
+    | "STRIPE_PRICE_PRO"
+    | "STRIPE_PRICE_PASSE_30"
+    | "STRIPE_PRICE_ANUAL"
+    | "STRIPE_PRICE_COMPLETO_MENSAL"
+    | "STRIPE_PRICE_COMPLETO_PIX"
+    | "STRIPE_PRICE_COMPLETO_ANUAL";
   /** Dias de acesso de um pagamento avulso. null na assinatura. */
   dias: number | null;
   valorCents: number;
@@ -44,6 +59,24 @@ export const PLANOS: Record<PlanoId, Plano> = {
     variavelDoPreco: "STRIPE_PRICE_ANUAL",
     dias: 365,
     valorCents: PRECO_ANUAL_CENTS,
+  },
+  completo_cartao: {
+    modo: "subscription",
+    variavelDoPreco: "STRIPE_PRICE_COMPLETO_MENSAL",
+    dias: null,
+    valorCents: PRECO_COMPLETO_MENSAL_CENTS,
+  },
+  completo_pix: {
+    modo: "payment",
+    variavelDoPreco: "STRIPE_PRICE_COMPLETO_PIX",
+    dias: 30,
+    valorCents: PRECO_COMPLETO_MENSAL_CENTS,
+  },
+  completo_anual: {
+    modo: "payment",
+    variavelDoPreco: "STRIPE_PRICE_COMPLETO_ANUAL",
+    dias: 365,
+    valorCents: PRECO_COMPLETO_ANUAL_CENTS,
   },
 };
 
@@ -155,8 +188,15 @@ export function parametrosDoCheckout(p: {
 /** Assinatura que já está cobrando o cartão — ou tentando cobrar. */
 const COBRANDO_NO_CARTAO = ["active", "past_due", "unpaid"];
 
-const ORDEM_DA_TELA: PlanoId[] = ["mensal_cartao", "pix_30_dias", "anual"];
-const SO_AVULSOS: PlanoId[] = ["pix_30_dias", "anual"];
+const ORDEM_DA_TELA: PlanoId[] = [
+  "mensal_cartao",
+  "pix_30_dias",
+  "anual",
+  "completo_cartao",
+  "completo_pix",
+  "completo_anual",
+];
+const SO_AVULSOS: PlanoId[] = ["pix_30_dias", "anual", "completo_pix", "completo_anual"];
 
 export type AcoesDaConta = {
   /** Texto do botão do portal da Stripe; null quando não há assinatura no cartão para gerenciar. */

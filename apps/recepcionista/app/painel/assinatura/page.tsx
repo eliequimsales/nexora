@@ -28,7 +28,6 @@ import { FORNECEDOR, variaveisPendentesDoFornecedor } from "@/lib/legal/identida
 import { CartaoDoAnual } from "@/components/cobranca/cartao-do-anual";
 import { BotaoBaixarApp } from "@/components/install-prompt";
 import { BotoesAssinatura, type OpcaoDePlano } from "./botoes";
-import { BotaoEsperaCompleto } from "./espera";
 import { BotaoDaGarantia } from "./garantia";
 
 export const dynamic = "force-dynamic";
@@ -112,6 +111,16 @@ export default async function PaginaAssinatura({
   const acoes = acoesDaConta({ estado, subscriptionStatus: empresa.subscriptionStatus });
   const planos = descricaoDosPlanos(estado);
   const aviso = avisoDoPrazo(estado, empresa);
+
+  const planosEntrada: PlanoId[] = ["mensal_cartao", "pix_30_dias", "anual"];
+  const opcoesEntrada = planosEntrada
+    .filter((p) => acoes.planos.includes(p))
+    .map((p) => planos[p]);
+
+  const planosCompleto: PlanoId[] = ["completo_cartao", "completo_pix", "completo_anual"];
+  const opcoesCompleto = planosCompleto
+    .filter((p) => acoes.planos.includes(p))
+    .map((p) => planos[p]);
 
   const [garantia, implantacao] = await Promise.all([
     garantiaDaEmpresa(companyId, agora),
@@ -249,7 +258,7 @@ export default async function PaginaAssinatura({
 
               <div className="mt-8 border-t border-gray-800/80 pt-6">
                 <BotoesAssinatura
-                  opcoes={acoes.planos.map((p) => planos[p])}
+                  opcoes={opcoesEntrada}
                   portal={acoes.portal}
                   comprouComSucesso={Boolean(searchParams.ok)}
                 />
@@ -263,12 +272,12 @@ export default async function PaginaAssinatura({
             </div>
           </div>
 
-          {/* CARD 2: NEXORA COMPLETO (CHEGA JUNTO COM O PLANTÃO) */}
-          <div className="relative flex flex-col justify-between rounded-3xl border border-gray-800 bg-[#0B0F17] p-7 text-white shadow-lg sm:p-8">
+          {/* CARD 2: NEXORA COMPLETO */}
+          <div className="relative flex flex-col justify-between rounded-3xl border-2 border-amber-500/80 bg-[#0B0F17] p-7 text-white shadow-xl shadow-amber-500/5 sm:p-8">
             <div>
               <div className="flex items-center justify-between">
-                <span className="rounded-md bg-gray-800/80 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-gray-400">
-                  CHEGA JUNTO COM O PLANTÃO
+                <span className="rounded-md bg-amber-500/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-amber-400">
+                  MAIS VENDIDO · PLANTÃO 24/7
                 </span>
               </div>
 
@@ -307,7 +316,11 @@ export default async function PaginaAssinatura({
               </ul>
 
               <div className="mt-8 border-t border-gray-800/80 pt-6">
-                <BotaoEsperaCompleto />
+                <BotoesAssinatura
+                  opcoes={opcoesCompleto}
+                  portal={acoes.portal}
+                  comprouComSucesso={Boolean(searchParams.ok)}
+                />
               </div>
             </div>
 
@@ -331,7 +344,7 @@ export default async function PaginaAssinatura({
               Instale a Nexora no seu celular ou computador
             </p>
             <p className="mt-1 text-sm text-panel-sub">
-              Tenha acesso direto em 1 clique na tela inicial do seu celular (Android e iPhone) ou no seu computador para acompanhar seus clientes e agendamentos.
+              Tenha acesso rápido na tela inicial do seu celular (Android e iPhone) ou no seu computador para acompanhar seus clientes e agendamentos.
             </p>
           </div>
           <BotaoBaixarApp
@@ -462,6 +475,9 @@ type Empresa = {
  */
 function descricaoDosPlanos(estado: EstadoConta): Record<PlanoId, OpcaoDePlano> {
   const mensalidadesNoAnual = Math.round(PLANOS.anual.valorCents / PLANOS.mensal_cartao.valorCents);
+  const mensalidadesNoCompletoAnual = Math.round(
+    PLANOS.completo_anual.valorCents / PLANOS.completo_cartao.valorCents,
+  );
   return {
     mensal_cartao: {
       plano: "mensal_cartao",
@@ -484,6 +500,29 @@ function descricaoDosPlanos(estado: EstadoConta): Record<PlanoId, OpcaoDePlano> 
       titulo: "Anual à vista",
       preco: reais(PLANOS.anual.valorCents),
       detalhe: `12 meses pelo preço de ${mensalidadesNoAnual} mensalidades, num pagamento só, no Pix ou no cartão.`,
+      acao: "Pagar o ano",
+    },
+    completo_cartao: {
+      plano: "completo_cartao",
+      titulo: "Mensal no cartão",
+      preco: `${reais(PLANOS.completo_cartao.valorCents)}/mês`,
+      detalhe:
+        "Renova sozinho todo mês. Inclui o Plantão 24/7 e profissionais ilimitados. Cancele pelo painel quando quiser.",
+      acao: "Assinar no cartão",
+    },
+    completo_pix: {
+      plano: "completo_pix",
+      titulo: estado === "PASSE" ? "Mais 30 dias no Pix" : "30 dias no Pix",
+      preco: reais(PLANOS.completo_pix.valorCents),
+      detalhe:
+        "Pagamento único de 30 dias com o Plantão 24/7 incluso, no Pix ou no cartão. Não renova sozinho.",
+      acao: "Pagar 30 dias",
+    },
+    completo_anual: {
+      plano: "completo_anual",
+      titulo: "Anual à vista",
+      preco: reais(PLANOS.completo_anual.valorCents),
+      detalhe: `12 meses de Nexora Completo pelo preço de ${mensalidadesNoCompletoAnual} mensalidades, num pagamento só, no Pix ou no cartão.`,
       acao: "Pagar o ano",
     },
   };

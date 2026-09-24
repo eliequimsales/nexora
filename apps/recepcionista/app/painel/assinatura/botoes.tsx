@@ -82,7 +82,8 @@ export function BotoesAssinatura({
     }
   };
 
-  const principal = opcoes.find((o) => o.plano === "mensal_cartao") ?? opcoes[0];
+  const principal =
+    opcoes.find((o) => o.plano === "mensal_cartao" || o.plano === "completo_cartao") ?? opcoes[0];
   const secundarias = opcoes.filter((o) => o.plano !== principal?.plano);
 
   return (

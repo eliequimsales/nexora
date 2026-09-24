@@ -47,7 +47,14 @@ describe("a página de preços", () => {
 
   it("os jeitos de pagar são exatamente os que o checkout aceita", () => {
     const p = pagina();
-    expect(Object.keys(PLANOS)).toEqual(["mensal_cartao", "pix_30_dias", "anual"]);
+    expect(Object.keys(PLANOS)).toEqual([
+      "mensal_cartao",
+      "pix_30_dias",
+      "anual",
+      "completo_cartao",
+      "completo_pix",
+      "completo_anual",
+    ]);
     expect(p).toContain("PRECO_MENSAL_CENTS");
     expect(p).toContain("PRECO_ANUAL_CENTS");
     expect(p).toContain("PLANOS.pix_30_dias");
