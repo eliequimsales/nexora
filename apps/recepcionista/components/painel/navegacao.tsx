@@ -81,7 +81,7 @@ function iconeParaRota(href: string) {
       </svg>
     );
   }
-  // Minha conta / Assinatura
+  // Planos / Assinatura
   return (
     <svg
       className="h-4 w-4 shrink-0"
@@ -94,7 +94,7 @@ function iconeParaRota(href: string) {
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
-        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3z"
       />
     </svg>
   );
@@ -146,7 +146,7 @@ export function PainelNavMobile({ items }: { items: NavItem[] }) {
       aria-label="Menu principal para celular"
       className="border-b border-panel-line bg-panel-card px-3 py-2 sm:hidden"
     >
-      <div className="grid grid-cols-4 gap-1.5 rounded-2xl border border-panel-line/80 bg-panel-bg p-1 shadow-inner">
+      <div className="grid grid-cols-5 gap-1 rounded-2xl border border-panel-line/80 bg-panel-bg p-1 shadow-inner">
         {items.map((item) => {
           const ativo = estaAtivo(item.href, pathname);
           return (

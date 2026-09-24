@@ -27,10 +27,8 @@ const NAV = [...layout.matchAll(/\{\s*href:\s*"([^"]+)",\s*label:\s*"([^"]+)"\s*
 );
 
 describe("o menu do painel", () => {
-  // O Atendente Virtual entrou como o quarto item em 22/09/2026: é a outra
-  // metade da esteira — o cliente que escreve e ninguém responde.
-  it("tem exatamente quatro itens", () => {
-    expect(NAV).toHaveLength(4);
+  it("tem exatamente cinco itens", () => {
+    expect(NAV).toHaveLength(5);
   });
 
   it("segue a ordem do fluxo de valor", () => {
@@ -39,6 +37,7 @@ describe("o menu do painel", () => {
       "/painel/onda",
       "/painel/atendente",
       "/painel/livro-caixa",
+      "/painel/assinatura",
     ]);
   });
 
@@ -46,8 +45,12 @@ describe("o menu do painel", () => {
     expect(NAV.find((i) => i.href === "/painel/atendente")?.label).toBe("Atendente Virtual");
   });
 
+  it("a aba de planos se chama Planos", () => {
+    expect(NAV.find((i) => i.href === "/painel/assinatura")?.label).toBe("Planos");
+  });
+
   it("não leva para telas secundárias fora do fluxo direto de valor", () => {
-    for (const fora of ["/painel/conversas", "/painel/treinamento", "/painel/relatorios", "/painel/configuracoes", "/painel/assinatura"]) {
+    for (const fora of ["/painel/conversas", "/painel/treinamento", "/painel/relatorios", "/painel/configuracoes"]) {
       expect(NAV.map((i) => i.href), fora).not.toContain(fora);
     }
   });

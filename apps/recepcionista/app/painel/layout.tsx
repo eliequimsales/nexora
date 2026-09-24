@@ -17,6 +17,7 @@ const NAV = [
   { href: "/painel/onda", label: "Reativar clientes" },
   { href: "/painel/atendente", label: "Atendente Virtual" },
   { href: "/painel/livro-caixa", label: "Dinheiro recuperado" },
+  { href: "/painel/assinatura", label: "Planos" },
 ];
 
 export default async function PainelLayout({ children }: { children: React.ReactNode }) {
@@ -120,12 +121,6 @@ export default async function PainelLayout({ children }: { children: React.React
             >
               <span>🗓️</span>
               <span>Agenda</span>
-            </Link>
-            <Link
-              href="/painel/assinatura"
-              className="text-xs font-medium text-panel-sub hover:text-panel-ink transition"
-            >
-              Minha conta
             </Link>
             <span className="hidden text-sm text-panel-sub md:inline">{company.name}</span>
             <LogoutButton />

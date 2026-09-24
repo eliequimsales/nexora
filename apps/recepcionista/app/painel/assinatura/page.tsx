@@ -29,6 +29,7 @@ import { FORNECEDOR, variaveisPendentesDoFornecedor } from "@/lib/legal/identida
 import { MIN_RECUPERAVEL_CENTS, MIN_SUMIDOS } from "@/lib/recuperacao/estimativa";
 import { CartaoDoAnual } from "@/components/cobranca/cartao-do-anual";
 import { BotoesAssinatura, type OpcaoDePlano } from "./botoes";
+import { BotaoEsperaCompleto } from "./espera";
 import { BotaoDaGarantia } from "./garantia";
 
 export const dynamic = "force-dynamic";
@@ -182,9 +183,9 @@ export default async function PaginaAssinatura({
     : "/painel/assinatura?ok=1";
 
   return (
-    <main className="max-w-2xl space-y-6">
+    <main className="max-w-5xl space-y-8">
       <header>
-        <h1 className="font-display text-2xl text-panel-ink">Minha conta</h1>
+        <h1 className="font-display text-2xl sm:text-3xl text-panel-ink">Planos</h1>
         <p className="mt-1 text-sm text-panel-sub">{RESUMO[estado](empresa, agora)}</p>
       </header>
 
@@ -201,6 +202,159 @@ export default async function PaginaAssinatura({
           <Link href={conferirDeNovo} className="font-semibold text-panel-ink underline">
             Conferir agora
           </Link>
+        </p>
+      )}
+
+      {aviso && (
+        <p className="rounded-xl border border-amber/30 bg-amber/10 p-4 text-sm text-panel-ink">
+          {aviso}
+        </p>
+      )}
+
+      {pendentes.length > 0 && (
+        <p className="rounded-xl bg-amber/20 p-4 text-sm text-[#7A5A10]">
+          A cobrança ainda não está ligada nesta instalação. Nada será cobrado de você agora.
+          Falta configurar: {pendentes.join(", ")}.
+        </p>
+      )}
+
+      {/*
+        OS DOIS PLANOS — COMPARATIVO LADO A LADO CONFORME O DESIGN APROVADO.
+        Nexora (A Entrada) e Nexora Completo (Chega junto com o Plantão).
+      */}
+      <section aria-labelledby="titulo-planos" className="space-y-4">
+        <h2 id="titulo-planos" className="sr-only">Planos da Nexora</h2>
+        <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
+          {/* CARD 1: NEXORA (A ENTRADA) */}
+          <div className="relative flex flex-col justify-between rounded-3xl border-2 border-amber-500/80 bg-[#0B0F17] p-7 text-white shadow-xl shadow-amber-500/5 sm:p-8">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="rounded-md bg-amber-500/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-amber-400">
+                  A ENTRADA
+                </span>
+              </div>
+
+              <h3 className="mt-4 font-display text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                Nexora
+              </h3>
+
+              <div className="mt-3 flex items-baseline gap-1.5">
+                <span className="font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl tabular-nums">
+                  R$ 97
+                </span>
+                <span className="text-sm font-medium text-gray-400">/mês</span>
+              </div>
+
+              <ul className="mt-6 space-y-3.5 text-sm text-gray-200">
+                <li className="flex items-start gap-3">
+                  <span className="mt-0.5 font-bold text-emerald-400" aria-hidden="true">✓</span>
+                  <span>Recuperador: a Onda da semana com as mensagens prontas e o porquê de cada cliente</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="mt-0.5 font-bold text-emerald-400" aria-hidden="true">✓</span>
+                  <span>Dinheiro recuperado, com a prova de cada retorno</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="mt-0.5 font-bold text-emerald-400" aria-hidden="true">✓</span>
+                  <span>Agenda com link próprio, grade da equipe e lembretes anti-falta</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="mt-0.5 font-bold text-emerald-400" aria-hidden="true">✓</span>
+                  <span>WhatsApp conectado</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="mt-0.5 font-bold text-emerald-400" aria-hidden="true">✓</span>
+                  <span>Até 3 profissionais · clientes ilimitados</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="mt-0.5 font-bold text-emerald-400" aria-hidden="true">✓</span>
+                  <span>Garantia Dinheiro Recuperado na primeira contratação</span>
+                </li>
+              </ul>
+
+              <div className="mt-8 border-t border-gray-800/80 pt-6">
+                <BotoesAssinatura
+                  opcoes={acoes.planos.map((p) => planos[p])}
+                  portal={acoes.portal}
+                  comprouComSucesso={Boolean(searchParams.ok)}
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 border-t border-gray-800/80 pt-4">
+              <p className="text-xs text-gray-400">
+                Pix, 30 dias: R$ 97 · Anual à vista: R$ 970 (paga 10, usa 12)
+              </p>
+            </div>
+          </div>
+
+          {/* CARD 2: NEXORA COMPLETO (CHEGA JUNTO COM O PLANTÃO) */}
+          <div className="relative flex flex-col justify-between rounded-3xl border border-gray-800 bg-[#0B0F17] p-7 text-white shadow-lg sm:p-8">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="rounded-md bg-gray-800/80 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                  CHEGA JUNTO COM O PLANTÃO
+                </span>
+              </div>
+
+              <h3 className="mt-4 font-display text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                Nexora Completo
+              </h3>
+
+              <div className="mt-3 flex items-baseline gap-1.5">
+                <span className="font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl tabular-nums">
+                  R$ 197
+                </span>
+                <span className="text-sm font-medium text-gray-400">/mês</span>
+              </div>
+
+              <ul className="mt-6 space-y-3.5 text-sm text-gray-200">
+                <li className="flex items-start gap-3">
+                  <span className="mt-0.5 font-bold text-emerald-400" aria-hidden="true">✓</span>
+                  <span>Tudo do Nexora</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="mt-0.5 font-bold text-emerald-400" aria-hidden="true">✓</span>
+                  <span>O Plantão: atende o WhatsApp com a loja fechada e marca na agenda</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="mt-0.5 font-bold text-emerald-400" aria-hidden="true">✓</span>
+                  <span>Resumo da manhã e alerta de urgência no seu celular</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="mt-0.5 font-bold text-emerald-400" aria-hidden="true">✓</span>
+                  <span>Profissionais ilimitados</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="mt-0.5 font-bold text-emerald-400" aria-hidden="true">✓</span>
+                  <span>Primeiro da fila no suporte</span>
+                </li>
+              </ul>
+
+              <div className="mt-8 border-t border-gray-800/80 pt-6">
+                <BotaoEsperaCompleto />
+              </div>
+            </div>
+
+            <div className="mt-6 border-t border-gray-800/80 pt-4">
+              <p className="text-xs text-gray-400">
+                Pix, 30 dias: R$ 197 · Anual à vista: R$ 1.970 (paga 10, usa 12)
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* O que a próxima compra leva — dito antes do pagamento, nunca depois. */}
+      {semGarantiaAinda && acoes.planos.length > 0 && (
+        <p className="rounded-xl border border-panel-line bg-panel-card p-4 text-sm text-panel-sub">
+          {compraSemGarantia
+            ? `Pela sua lista de hoje — menos de ${MIN_SUMIDOS} clientes sumidos ou de ` +
+              `${reais(MIN_RECUPERAVEL_CENTS)} para recuperar —, esta contratação não inclui a ` +
+              "Garantia Dinheiro Recuperado."
+            : `Garantia Dinheiro Recuperado: se em ${GARANTIA_DIAS} dias você mandar as mensagens de ` +
+              `${ONDAS_MINIMAS} ondas, marcar quem voltou e o Dinheiro recuperado não chegar a ` +
+              `${reais(PRECO_MENSAL_CENTS)}, devolvemos tudo o que você pagou. Vale uma vez por negócio.`}
         </p>
       )}
 
@@ -225,7 +379,6 @@ export default async function PaginaAssinatura({
             <p className="mt-3 font-display text-4xl text-panel-ink tabular-nums">
               {reais(recuperadoCents)}
             </p>
-            {/* Frase inteira nas duas formas: "voltou" + "ram" dá "voltouram". */}
             <p className="mt-2 text-sm text-panel-sub">
               {clientesDeVolta === 1
                 ? "1 cliente que tinha sumido e voltou"
@@ -267,63 +420,6 @@ export default async function PaginaAssinatura({
             Ligar meu WhatsApp
           </Link>
         </div>
-      </section>
-
-      <section className="rounded-2xl border border-panel-line bg-panel-card p-6">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-panel-sub">
-          {acoes.planos.length > 0 ? "Planos" : "Sua assinatura"}
-        </h2>
-
-        {acoes.planos.length > 0 ? (
-          <p className="mt-2 text-sm text-panel-sub">
-            Todos com a Nexora completa e impostos inclusos. A diferença é só como você paga.
-          </p>
-        ) : (
-          <p className="mt-2 text-panel-ink">
-            <span className="font-display text-2xl">{reais(PLANOS.mensal_cartao.valorCents)}</span>
-            <span className="text-sm text-panel-sub"> /mês no cartão, impostos inclusos</span>
-          </p>
-        )}
-
-        {aviso && <p className="mt-3 text-sm text-panel-ink">{aviso}</p>}
-
-        {/* O que a próxima compra leva — dito antes do pagamento, nunca depois. */}
-        {semGarantiaAinda && acoes.planos.length > 0 && (
-          <p className="mt-3 rounded-xl bg-panel-bg p-3 text-sm text-panel-ink">
-            {compraSemGarantia
-              ? `Pela sua lista de hoje — menos de ${MIN_SUMIDOS} clientes sumidos ou de ` +
-                `${reais(MIN_RECUPERAVEL_CENTS)} para recuperar —, esta contratação não inclui a ` +
-                "Garantia Dinheiro Recuperado."
-              : `Garantia Dinheiro Recuperado: se em ${GARANTIA_DIAS} dias você mandar as mensagens de ` +
-                `${ONDAS_MINIMAS} ondas, marcar quem voltou e o Dinheiro recuperado não chegar a ` +
-                `${reais(PRECO_MENSAL_CENTS)}, devolvemos tudo o que você pagou. Vale uma vez por negócio.`}
-          </p>
-        )}
-
-        {/*
-          O que falta, pelo nome. São NOMES de variável, nunca valores, e a tela
-          só existe para quem já está logado na própria conta. Enquanto isso ficava
-          em "fale com a gente", o dono da instalação abria um chamado para si
-          mesmo em vez de resolver em trinta segundos no painel do Railway.
-        */}
-        {pendentes.length > 0 && (
-          <p className="mt-4 rounded-xl bg-amber/20 p-3 text-sm text-[#7A5A10]">
-            A cobrança ainda não está ligada nesta instalação. Nada será cobrado de você
-            agora. Falta configurar: {pendentes.join(", ")}.
-          </p>
-        )}
-
-        {/*
-          Os botões continuam clicáveis de propósito. Desabilitados, eles nunca
-          chamam a API — e a mensagem que diz exatamente o que falta morre sem
-          nunca chegar à tela. Quem clica sem a cobrança ligada recebe o motivo;
-          nada é cobrado porque o checkout recusa antes de criar sessão.
-        */}
-        <BotoesAssinatura
-          opcoes={acoes.planos.map((p) => planos[p])}
-          portal={acoes.portal}
-          comprouComSucesso={Boolean(searchParams.ok)}
-        />
       </section>
 
       {implantacao && (

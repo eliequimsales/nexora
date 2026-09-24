@@ -82,51 +82,63 @@ export function BotoesAssinatura({
     }
   };
 
+  const principal = opcoes.find((o) => o.plano === "mensal_cartao") ?? opcoes[0];
+  const secundarias = opcoes.filter((o) => o.plano !== principal?.plano);
+
   return (
-    <div className="mt-5">
+    <div>
       {/*
         Só o clique em andamento desabilita. Travar os botões quando a cobrança não
         está configurada parecia cuidado e era o contrário: a API sabe exatamente
         qual variável falta, e um botão morto garante que ninguém nunca leia essa
         resposta.
       */}
-      {opcoes.length > 0 && (
-        <ul className="grid gap-3 sm:grid-cols-3">
-          {opcoes.map((o) => (
-            <li
-              key={o.plano}
-              className="flex flex-col rounded-xl border border-panel-line bg-panel-bg p-4"
-            >
-              <p className="text-sm font-medium text-panel-ink">{o.titulo}</p>
-              <p className="mt-1 font-display text-2xl text-panel-ink tabular-nums">{o.preco}</p>
-              <p className="mt-2 flex-1 text-xs leading-relaxed text-panel-sub">{o.detalhe}</p>
-              <button
-                onClick={() => abrir(o.plano)}
-                disabled={abrindo !== null}
-                className="mt-4 rounded-xl bg-amber px-4 py-2.5 text-sm font-semibold text-night transition hover:brightness-110 disabled:opacity-40"
-              >
-                {abrindo === o.plano ? "Abrindo…" : o.acao}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {portal && (
+      {portal ? (
         <button
           onClick={() => abrir("portal")}
           disabled={abrindo !== null}
-          className={`rounded-xl px-5 py-3 text-sm font-semibold transition hover:brightness-110 disabled:opacity-40 ${
-            opcoes.length > 0
-              ? "mt-4 border border-panel-line bg-panel-card text-panel-ink"
-              : "bg-amber text-night"
-          }`}
+          className="w-full rounded-xl bg-amber py-3.5 px-4 text-sm font-bold text-night shadow-md transition hover:brightness-110 active:scale-[0.98] disabled:opacity-40"
         >
           {abrindo === "portal" ? "Abrindo…" : portal}
         </button>
-      )}
+      ) : opcoes.length > 0 ? (
+        <div className="space-y-3">
+          {principal && (
+            <button
+              onClick={() => abrir(principal.plano)}
+              disabled={abrindo !== null}
+              className="w-full rounded-xl bg-amber py-3.5 px-4 text-sm font-bold text-night shadow-lg shadow-amber-500/20 transition hover:brightness-110 active:scale-[0.98] disabled:opacity-40"
+            >
+              {abrindo === principal.plano ? "Abrindo…" : `${principal.acao} — ${principal.preco} →`}
+            </button>
+          )}
 
-      {erro && <p className="mt-3 text-sm text-red-700">{erro}</p>}
+          {secundarias.length > 0 && (
+            <div
+              className={`grid gap-2.5 ${
+                secundarias.length > 1 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"
+              }`}
+            >
+              {secundarias.map((o) => (
+                <button
+                  key={o.plano}
+                  onClick={() => abrir(o.plano)}
+                  disabled={abrindo !== null}
+                  className="rounded-xl border border-gray-700 bg-gray-900/80 py-2.5 px-3 text-xs font-semibold text-gray-200 transition hover:bg-gray-800 hover:border-gray-600 disabled:opacity-40 text-center"
+                >
+                  {abrindo === o.plano ? "Abrindo…" : `${o.titulo} (${o.preco})`}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {erro && (
+        <p className="mt-3 rounded-lg border border-red-800/60 bg-red-950/40 p-2.5 text-xs text-red-300">
+          {erro}
+        </p>
+      )}
     </div>
   );
 }
