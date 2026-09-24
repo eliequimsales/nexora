@@ -271,14 +271,14 @@ export function planoDisponivel(p: {
     return {
       pode: false,
       motivo:
-        "Sua assinatura mensal já existe e está no período de teste. Para cadastrar o cartão, use " +
-        "“Gerenciar assinatura”. Se preferir o Pix, escolha 30 dias ou o anual.",
+        "Sua assinatura já existe e está no período de teste. Para cadastrar o cartão, use " +
+        "“Gerenciar assinatura”. Se preferir pagamento avulso, escolha 30 dias ou o anual.",
     };
   }
   return {
     pode: false,
     motivo:
       "Seus dias pagos ainda estão valendo. A assinatura no cartão fica disponível quando esses " +
-      "dias acabarem; até lá, dá para estender no Pix ou no anual.",
+      "dias acabarem; até lá, dá para estender nos 30 dias ou no anual.",
   };
 }

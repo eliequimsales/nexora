@@ -181,7 +181,7 @@ export default async function PaginaAssinatura({
 
       {aguardandoPagamento && (
         <p className="rounded-xl border border-panel-line bg-panel-card p-4 text-sm text-panel-sub">
-          Recebemos seu pedido. Se você pagou no Pix, o banco confirma em instantes e o
+          Recebemos seu pedido. O banco confirma em instantes e o
           acesso libera sozinho.{" "}
           <Link href={conferirDeNovo} className="font-semibold text-panel-ink underline">
             Conferir agora
@@ -267,7 +267,7 @@ export default async function PaginaAssinatura({
 
             <div className="mt-6 border-t border-gray-800/80 pt-4">
               <p className="text-xs text-gray-400">
-                Pix, 30 dias: R$ 97 · Anual à vista: R$ 970 (paga 10, usa 12)
+                30 dias à vista: R$ 97 · Anual à vista: R$ 970 (paga 10, usa 12)
               </p>
             </div>
           </div>
@@ -326,7 +326,7 @@ export default async function PaginaAssinatura({
 
             <div className="mt-6 border-t border-gray-800/80 pt-4">
               <p className="text-xs text-gray-400">
-                Pix, 30 dias: R$ 197 · Anual à vista: R$ 1.970 (paga 10, usa 12)
+                30 dias à vista: R$ 197 · Anual à vista: R$ 1.970 (paga 10, usa 12)
               </p>
             </div>
           </div>
@@ -489,17 +489,17 @@ function descricaoDosPlanos(estado: EstadoConta): Record<PlanoId, OpcaoDePlano> 
     },
     pix_30_dias: {
       plano: "pix_30_dias",
-      titulo: estado === "PASSE" ? "Mais 30 dias no Pix" : "30 dias no Pix",
+      titulo: estado === "PASSE" ? "Mais 30 dias à vista" : "30 dias à vista",
       preco: reais(PLANOS.pix_30_dias.valorCents),
       detalhe:
-        "Pagamento único, no Pix ou no cartão. Não renova sozinho: quando os 30 dias acabarem, você decide se paga de novo.",
+        "Pagamento único, sem renovação automática: quando os 30 dias acabarem, você decide se paga de novo.",
       acao: "Pagar 30 dias",
     },
     anual: {
       plano: "anual",
       titulo: "Anual à vista",
       preco: reais(PLANOS.anual.valorCents),
-      detalhe: `12 meses pelo preço de ${mensalidadesNoAnual} mensalidades, num pagamento só, no Pix ou no cartão.`,
+      detalhe: `12 meses pelo preço de ${mensalidadesNoAnual} mensalidades, num pagamento só, sem renovação automática.`,
       acao: "Pagar o ano",
     },
     completo_cartao: {
@@ -512,17 +512,17 @@ function descricaoDosPlanos(estado: EstadoConta): Record<PlanoId, OpcaoDePlano> 
     },
     completo_pix: {
       plano: "completo_pix",
-      titulo: estado === "PASSE" ? "Mais 30 dias no Pix" : "30 dias no Pix",
+      titulo: estado === "PASSE" ? "Mais 30 dias à vista" : "30 dias à vista",
       preco: reais(PLANOS.completo_pix.valorCents),
       detalhe:
-        "Pagamento único de 30 dias com o Plantão 24/7 incluso, no Pix ou no cartão. Não renova sozinho.",
+        "Pagamento único de 30 dias com o Plantão 24/7 incluso. Não renova sozinho.",
       acao: "Pagar 30 dias",
     },
     completo_anual: {
       plano: "completo_anual",
       titulo: "Anual à vista",
       preco: reais(PLANOS.completo_anual.valorCents),
-      detalhe: `12 meses de Nexora Completo pelo preço de ${mensalidadesNoCompletoAnual} mensalidades, num pagamento só, no Pix ou no cartão.`,
+      detalhe: `12 meses de Nexora Completo pelo preço de ${mensalidadesNoCompletoAnual} mensalidades, num pagamento só, sem renovação automática.`,
       acao: "Pagar o ano",
     },
   };
@@ -536,7 +536,7 @@ function avisoDoPrazo(estado: EstadoConta, e: Empresa): string | null {
   if (estado === "TRIAL" && e.trialEndsAt) {
     return (
       `Seu teste grátis vai até ${dataBr(e.trialEndsAt)}, e contratar agora não encurta esses dias: ` +
-      "no cartão, a primeira cobrança só acontece quando o teste acabar; no Pix e no anual, você " +
+      "no cartão, a primeira cobrança só acontece quando o teste acabar; no plano avulso e no anual, você " +
       "paga hoje e os dias pagos começam depois do teste."
     );
   }
@@ -548,7 +548,7 @@ function avisoDoPrazo(estado: EstadoConta, e: Empresa): string | null {
   }
   if (estado === "CANCELADO_COM_ACESSO" && e.currentPeriodEnd) {
     return (
-      `Você tem acesso até ${dataBr(e.currentPeriodEnd)}. No Pix e no anual, os dias pagos começam ` +
+      `Você tem acesso até ${dataBr(e.currentPeriodEnd)}. No plano avulso e no anual, os dias pagos começam ` +
       "depois dessa data; a assinatura no cartão começa a cobrar no dia em que você assinar."
     );
   }
