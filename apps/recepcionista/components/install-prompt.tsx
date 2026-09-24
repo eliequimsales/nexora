@@ -124,29 +124,7 @@ export function InstallPrompt() {
 
   return (
     <>
-      {/* Botão Fixo e Explícito de Baixar Aplicativo */}
-      <div className="fixed bottom-4 right-4 z-40 animate-fade-in">
-        <button
-          onClick={() => setModalAberto(true)}
-          className="group flex items-center gap-2.5 rounded-full border border-amber/40 bg-[#0A0A0F]/95 px-4 py-2.5 shadow-2xl backdrop-blur-md hover:border-amber hover:bg-night transition-all active:scale-95"
-          title="Baixar e instalar o aplicativo Nexora"
-        >
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber text-night font-black text-xs shadow-sm">
-            N
-          </div>
-          <div className="text-left">
-            <span className="block text-xs font-bold text-white group-hover:text-amber transition">
-              Baixar Aplicativo
-            </span>
-            <span className="block text-[10px] text-zinc-300 font-medium">
-              {isMobile ? "Instalar no celular" : "Celular ou PC"}
-            </span>
-          </div>
-          <span className="text-amber text-sm font-bold ml-1">↓</span>
-        </button>
-      </div>
-
-      {/* Modal Explícito de Download / Instalação */}
+      {/* Modal Explícito de Download / Instalação (acionado pelo botão Baixar App no topo ou links do painel) */}
       {modalAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-fade-in">
           <div className="relative w-full max-w-md rounded-2xl border border-panel-line bg-white p-6 shadow-2xl">
