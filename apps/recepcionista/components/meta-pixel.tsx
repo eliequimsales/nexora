@@ -24,14 +24,27 @@ function MetaPixelTracker() {
 }
 
 export function MetaPixel({ id }: { id?: string }) {
-  const pixelId = id || process.env.NEXT_PUBLIC_META_PIXEL_ID || "1101648275753987";
+  const pixelIds = Array.from(
+    new Set(
+      [
+        id,
+        process.env.NEXT_PUBLIC_META_PIXEL_ID,
+        "1041816645171094",
+        "1101648275753987",
+      ]
+        .filter((val): val is string => typeof val === "string" && val.trim().length > 0)
+        .flatMap((val) => val.split(","))
+        .map((p) => p.trim())
+        .filter(Boolean)
+    )
+  );
 
   return (
     <>
       <Suspense fallback={null}>
         <MetaPixelTracker />
       </Suspense>
-      {pixelId && (
+      {pixelIds.length > 0 && (
         <>
           <script
             id="meta-pixel-script"
@@ -45,19 +58,22 @@ export function MetaPixel({ id }: { id?: string }) {
                 t.src=v;s=b.getElementsByTagName(e)[0];
                 s.parentNode.insertBefore(t,s)}(window, document,'script',
                 'https://connect.facebook.net/en_US/fbevents.js');
-                fbq('init', '${pixelId}');
+                ${pixelIds.map((p) => `fbq('init', '${p}');`).join("\n")}
                 fbq('track', 'PageView');
               `,
             }}
           />
           <noscript>
-            <img
-              height="1"
-              width="1"
-              style={{ display: "none" }}
-              src={`https://www.facebook.com/tr?id=${pixelId}&ev=PageView&noscript=1`}
-              alt=""
-            />
+            {pixelIds.map((p) => (
+              <img
+                key={p}
+                height="1"
+                width="1"
+                style={{ display: "none" }}
+                src={`https://www.facebook.com/tr?id=${p}&ev=PageView&noscript=1`}
+                alt=""
+              />
+            ))}
           </noscript>
         </>
       )}
