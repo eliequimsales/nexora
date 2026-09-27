@@ -148,7 +148,7 @@ export default function PaginaDoAtendente() {
         </div>
         <div className="flex items-center gap-3">
           {salvo && <span className="text-xs text-panel-sub">Salvo</span>}
-          {!tela.temPlanoCompleto ? (
+          {tela.acesso === "SEMANA_ACABOU" ? (
             <Link
               href="/painel/assinatura"
               className="inline-flex items-center gap-1.5 rounded-full border border-amber/40 bg-amber/10 px-3 py-1.5 text-xs font-bold text-amber hover:bg-amber/20"
@@ -164,10 +164,10 @@ export default function PaginaDoAtendente() {
         </div>
       </header>
 
-      {!tela.temPlanoCompleto && (
+      {tela.acesso === "SEMANA_ACABOU" && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber/30 bg-amber/5 p-4 text-sm">
           <p className="text-panel-ink">
-            Para o Atendente responder seus clientes 24 horas no WhatsApp, ative o plano Atendente.
+            A semana grátis acabou. Para o Atendente continuar respondendo 24 horas no WhatsApp, ative o plano Atendente.
           </p>
           <Link
             href="/painel/assinatura"

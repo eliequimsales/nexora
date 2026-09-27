@@ -227,16 +227,20 @@ export async function telaDoAtendente(companyId: string, agora: Date = new Date(
     empresaTemPlanoCompleto(companyId, agora),
   ]);
 
+  const acesso: Acesso = acessoDoAtendente({
+    estado: estadoDaConta,
+    primeiraVezEm: uso.primeiraVezEm,
+    conversasNaSemana: uso.conversasNaSemana,
+    conversasNoMes: uso.conversasNoMes,
+    agora,
+  });
   const temPlano = ["ATIVO", "PASSE", "TOLERANCIA", "CANCELADO_COM_ACESSO", "TRIAL"].includes(estadoDaConta);
-  const acesso: Acesso = temPlano
-    ? (uso.conversasNoMes < TETO_CONVERSAS_MES ? "INCLUIDO" : "TETO")
-    : (uso.primeiraVezEm ? "SEMANA_ACABOU" : "SEMANA_GRATIS");
   const whatsappLigado = Boolean(perfil?.whatsappInstance) && perfil?.whatsappStatus === "CONNECTED";
-  const temAcessoAtendente = temPlano || acesso !== "SEMANA_ACABOU";
+  const temAcessoAtendente = podeLigar(acesso);
   // A mesma regra do executor: ligado é o que passou pelo "Ligar".
   const ligado = Boolean(perfil?.plantaoAtivo && uso.primeiraVezEm && temAcessoAtendente);
   const desde = ultimoFechamento(fatos.horarios, fatos.diasFechados, agora);
-  const naSemanaGratis = Boolean(!temPlano && uso.primeiraVezEm);
+  const naSemanaGratis = Boolean(!temPlano && uso.primeiraVezEm && acesso === "SEMANA_GRATIS");
 
   const [doFechamento, pendentes, daSemana, exemplo] = await Promise.all([
     desde
