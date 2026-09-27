@@ -574,7 +574,10 @@ export function Ajustes({
             aoMudar={(expediente) => aoAjustar({ expediente })}
           />
         </Linha>
-        <Linha rotulo="Marca direto na agenda">
+        <Linha
+          rotulo="Marca direto na agenda"
+          detalhe={tela.marcaDireto ? "sugere 3 horários em texto" : "envia o link para o cliente escolher"}
+        >
           <Chave rotulo="Marca direto na agenda" ligada={tela.marcaDireto} aoMudar={(marcaDireto) => aoAjustar({ marcaDireto })} />
         </Linha>
       </section>

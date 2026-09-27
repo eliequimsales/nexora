@@ -307,8 +307,8 @@ model CompanyProfile {
   atendenteNome                String    @default("")
   // ACOLHEDOR | DIRETO | DESCONTRAIDO (lib/atendente/jeitos.ts)
   atendenteJeito               String    @default("ACOLHEDOR")
-  // Marcar direto na agenda; desligado, só mostra os horários com o link.
-  atendenteMarca               Boolean   @default(true)
+  // Marcar direto na agenda; desligado, envia o link direto de agendamento online.
+  atendenteMarca               Boolean   @default(false)
   // No expediente, entra quando ninguém responde em 5 minutos.
   atendenteExpediente          Boolean   @default(true)
   // O "Ligar" só aparece depois do primeiro teste no simulador.

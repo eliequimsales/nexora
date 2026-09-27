@@ -86,7 +86,7 @@ export async function fatosDaEmpresa(companyId: string, sobrescrever: Sobrescrit
     empresa: empresa?.name ?? "",
     nome: sobrescrever.nome ?? perfil?.atendenteNome ?? "",
     jeito: sobrescrever.jeito ?? lerJeito(perfil?.atendenteJeito),
-    marcaDireto: sobrescrever.marcaDireto ?? perfil?.atendenteMarca ?? true,
+    marcaDireto: sobrescrever.marcaDireto ?? perfil?.atendenteMarca ?? false,
     expediente: perfil?.atendenteExpediente ?? true,
     servicos: servicos.map((s) => ({ id: s.id, nome: s.name, precoCents: s.priceCents, duracaoMin: s.durationMin })),
     profissionais: ehEquipeDeExemplo(equipe) ? [] : equipe.map((e) => e.nome),
@@ -95,7 +95,7 @@ export async function fatosDaEmpresa(companyId: string, sobrescrever: Sobrescrit
     endereco: (perfil?.address ?? "").trim(),
     pagamento: (perfil?.paymentMethods ?? "").trim(),
     perguntas: [...lerPerguntas(perfil?.faqs), ...treinamento],
-    linkAgenda: appUrl && empresa?.slug ? `${appUrl}/agendar/${empresa.slug}` : null,
+    linkAgenda: appUrl && (empresa?.slug || companyId) ? `${appUrl}/agendar/${empresa?.slug || companyId}` : null,
   };
 }
 

@@ -13,11 +13,10 @@ import { PainelNavDesktop, PainelNavMobile } from "@/components/painel/navegacao
 import { BotaoFeedback } from "@/components/feedback/botao-feedback";
 
 // O MENU É O FLUXO DE VALOR, NÃO O ÍNDICE DO SISTEMA.
-// A tela /painel/livro-caixa (Dinheiro recuperado) continua acessível diretamente fora do menu.
+// As telas /painel/onda (Reativar clientes) e /painel/livro-caixa (Dinheiro recuperado) continuam acessíveis diretamente fora do menu.
 const NAV = [
   { href: "/painel/atendente", label: "Atendente Virtual" },
   { href: "/painel/clientes/importar", label: "Meus clientes" },
-  { href: "/painel/onda", label: "Reativar clientes" },
   { href: "/painel/agenda", label: "Agenda" },
   { href: "/painel/assinatura", label: "Planos" },
 ];

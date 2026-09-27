@@ -106,6 +106,7 @@ export interface Textos {
   semHorario(quando: string | null): string;
   semAgenda: string;
   linkAgenda(link: string): string;
+  conviteLink(p: { link: string; servico: string | null }): string;
   pessoa(volta: string | null): string;
   reclamacao(volta: string | null): string;
   naoSei(volta: string | null): string;
@@ -148,6 +149,8 @@ const ACOLHEDOR: Textos = {
     quando ? `Para ${quando} não tenho mais horário livre. Os próximos são:` : "Os próximos horários livres são:",
   semAgenda: "Não encontrei horário livre nos próximos dias. Deixei anotado para a equipe te chamar.",
   linkAgenda: (link) => `Para confirmar, é só escolher o seu por aqui: ${link}`,
+  conviteLink: (p) =>
+    `Com certeza! Você pode consultar todos os nossos horários livres${p.servico ? ` para ${p.servico}` : ""} e escolher o melhor momento para você direto por este link:\n${p.link} 💛`,
   pessoa: (volta) =>
     volta
       ? `Claro! A equipe volta ${volta} e já deixei anotado para falarem com você.`
@@ -185,6 +188,8 @@ const DIRETO: Textos = {
   semHorario: (quando) => (quando ? `Sem horário livre para ${quando}. Próximos:` : "Próximos horários livres:"),
   semAgenda: "Não há horário livre nos próximos dias. Anotei para a equipe entrar em contato.",
   linkAgenda: (link) => `Para confirmar, escolha pelo link: ${link}`,
+  conviteLink: (p) =>
+    `Você pode consultar os horários livres${p.servico ? ` para ${p.servico}` : ""} e fazer seu agendamento direto pelo link:\n${p.link}`,
   pessoa: (volta) =>
     volta
       ? `Certo. A equipe volta ${volta} e vai falar com você.`
@@ -217,6 +222,8 @@ const DESCONTRAIDO: Textos = {
   semHorario: (quando) => (quando ? `Pra ${quando} lotou. Os próximos são:` : "Os próximos livres são:"),
   semAgenda: "Nos próximos dias tá tudo cheio. Deixei anotado pro pessoal te chamar.",
   linkAgenda: (link) => `Pra confirmar, é só escolher o seu aqui: ${link}`,
+  conviteLink: (p) =>
+    `Com certeza! Dá uma olhada nos horários livres${p.servico ? ` pra ${p.servico}` : ""} e escolhe o melhor pra você direto pelo link:\n${p.link} 😄`,
   pessoa: (volta) =>
     volta
       ? `Claro! O pessoal volta ${volta} e já deixei anotado pra falarem com você.`

@@ -204,6 +204,17 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
     let servico = servicoId ? fatos.servicos.find((s) => s.id === servicoId) : undefined;
     if (!servico && fatos.servicos.length === 1) servico = fatos.servicos[0];
 
+    // Com marcação direta desligada (padrão) e link disponível, convida direto pelo link interativo
+    if (!fatos.marcaDireto && fatos.linkAgenda) {
+      const linkComServico = servico?.id ? `${fatos.linkAgenda}?serviceId=${servico.id}` : fatos.linkAgenda;
+      return saida({
+        mensagens: comAbertura(
+          t.conviteLink({ link: linkComServico, servico: servico?.id ? servico.nome : null }),
+        ),
+        fontes: ["Link da sua agenda online", ...(servico?.id ? [`Serviço ${servico.nome}`] : [])],
+      });
+    }
+
     if (!servico && fatos.servicos.length > 1) {
       const lista = fatos.servicos.slice(0, MAX_SERVICOS_NA_LISTA);
       return saida({
@@ -231,6 +242,13 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
     if (estado?.tipo === "SERVICO") {
       const opcao = estado.opcoes.find((o) => o.n === n);
       const servico = opcao && fatos.servicos.find((s) => s.id === opcao.servicoId);
+      if (servico && !fatos.marcaDireto && fatos.linkAgenda) {
+        const linkComServico = `${fatos.linkAgenda}?serviceId=${servico.id}`;
+        return saida({
+          mensagens: comAbertura(t.conviteLink({ link: linkComServico, servico: servico.nome })),
+          fontes: ["Link da sua agenda online", `Serviço ${servico.nome}`],
+        });
+      }
       return servico ? oferecer(servico, estado.pedido, null, null) : pedirHorario(undefined, estado.pedido, undefined);
     }
 

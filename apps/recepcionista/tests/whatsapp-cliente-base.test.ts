@@ -34,7 +34,7 @@ describe("clientes do WhatsApp salvos em Meus clientes", () => {
     (prisma.conversation.create as any).mockResolvedValue({ id: "conv_1", status: "AI" });
   });
 
-  it("salva um novo contato do WhatsApp na tabela Customer com source WHATSAPP", async () => {
+  it("não cria cliente na tabela Customer apenas por mandar mensagem (aguarda agendamento)", async () => {
     (prisma.customer.findFirst as any).mockResolvedValue(null);
 
     await handleIncomingMessage({
@@ -46,14 +46,7 @@ describe("clientes do WhatsApp salvos em Meus clientes", () => {
       timestamp: Date.now(),
     });
 
-    expect(prisma.customer.create).toHaveBeenCalledWith({
-      data: {
-        companyId: "empresa_1",
-        phone: "5511988887777",
-        name: "Carlos Pereira",
-        source: "WHATSAPP",
-      },
-    });
+    expect(prisma.customer.create).not.toHaveBeenCalled();
   });
 
   it("atualiza o nome do cliente se antes estava registrado apenas o telefone", async () => {

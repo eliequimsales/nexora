@@ -236,6 +236,10 @@ export default function PaginaAgenda() {
   const [novoProfNome, setNovoProfNome] = useState<string>("");
   const [salvandoProf, setSalvandoProf] = useState<boolean>(false);
 
+  // Feriados e Dias Fechados
+  const [diasFechados, setDiasFechados] = useState<string[]>([]);
+  const [bloqueandoDia, setBloqueandoDia] = useState<boolean>(false);
+
   const carregarAgenda = async (dataAlvo: string) => {
     setCarregando(true);
     setErro("");
@@ -251,6 +255,7 @@ export default function PaginaAgenda() {
       setResumo(data.resumo || null);
       setServicos(data.servicos || []);
       setDiasComAgendamentos(data.diasComAgendamentos || []);
+      setDiasFechados(data.diasFechados || []);
       setProximoAgendamento(data.proximoAgendamento || null);
       setLinkPublico(data.linkPublico || null);
     } catch (e: unknown) {
@@ -258,6 +263,32 @@ export default function PaginaAgenda() {
       setErro(msg);
     } finally {
       setCarregando(false);
+    }
+  };
+
+  const diaEstaBloqueado = diasFechados.includes(dataSelecionada);
+
+  const handleAlternarBloqueioDia = async () => {
+    setBloqueandoDia(true);
+    try {
+      const acao = diaEstaBloqueado ? "desbloquear_dia" : "bloquear_dia";
+      const res = await fetch("/api/agenda", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ acao, data: dataSelecionada }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Não consegui alterar o bloqueio deste dia.");
+        return;
+      }
+      setDiasFechados(data.diasFechados || []);
+      setFeedbackAcao(data.mensagem || (diaEstaBloqueado ? "Dia reaberto!" : "Dia bloqueado!"));
+      setTimeout(() => setFeedbackAcao(""), 4500);
+    } catch {
+      alert("Erro ao alterar bloqueio do dia.");
+    } finally {
+      setBloqueandoDia(false);
     }
   };
 
@@ -583,9 +614,17 @@ export default function PaginaAgenda() {
       {/* Topo da Agenda: Título e Ações Principais */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-panel-ink sm:text-3xl">
-            Agenda
-          </h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="font-display text-2xl font-bold tracking-tight text-panel-ink sm:text-3xl">
+              Agenda
+            </h1>
+            {diaEstaBloqueado && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-red-600" />
+                Fechado / Feriado
+              </span>
+            )}
+          </div>
           <p className="mt-0.5 text-xs text-panel-sub font-medium">
             {formatarDataExtenso(dataSelecionada)}
           </p>
@@ -657,6 +696,13 @@ export default function PaginaAgenda() {
                         title="Possui atendimentos marcados"
                       />
                     )}
+                    {/* Indicador de dia bloqueado (feriado / recesso) */}
+                    {diasFechados.includes(d.dataIso) && (
+                      <span
+                        className="absolute -top-1 -left-0.5 flex h-2 w-2 rounded-full bg-red-500 ring-1 ring-night"
+                        title="Dia bloqueado na agenda (feriado/recesso)"
+                      />
+                    )}
                   </button>
                 );
               })}
@@ -680,6 +726,25 @@ export default function PaginaAgenda() {
             className="rounded-xl border border-panel-line bg-panel-card px-2.5 py-1.5 text-xs font-medium text-panel-ink shadow-sm focus:border-amber focus:outline-none"
             title="Escolher data futura no calendário"
           />
+
+          {/* Botão Bloquear / Reabrir Dia (Feriados e Recessos) */}
+          <button
+            type="button"
+            disabled={bloqueandoDia}
+            onClick={handleAlternarBloqueioDia}
+            className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold shadow-sm transition disabled:opacity-50 ${
+              diaEstaBloqueado
+                ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                : "border-panel-line bg-panel-card text-panel-sub hover:border-red-300 hover:text-red-700"
+            }`}
+            title={
+              diaEstaBloqueado
+                ? "Reabrir esta data para agendamentos"
+                : "Bloquear agendamentos nesta data (feriado, folga ou recesso)"
+            }
+          >
+            <span>{diaEstaBloqueado ? "🔓 Reabrir este dia" : "🔒 Bloquear dia (Feriado)"}</span>
+          </button>
 
           {/* Botão de Equipe */}
           <button
@@ -715,6 +780,21 @@ export default function PaginaAgenda() {
           </button>
         </div>
       </div>
+
+      {/* Alerta de Dia Bloqueado na Agenda */}
+      {diaEstaBloqueado && (
+        <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-950 shadow-sm animate-fade-in">
+          <span className="text-xl leading-none">🔒</span>
+          <div>
+            <p className="font-bold text-red-950">
+              Esta data está bloqueada na sua agenda ({formatarDataExtenso(dataSelecionada)})
+            </p>
+            <p className="mt-0.5 text-xs text-red-700">
+              O Atendente Virtual no WhatsApp e a página pública de agendamento não aceitam novos horários para este dia. Para liberar agendamentos normalmente, clique no botão <strong>Reabrir este dia</strong> acima.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Faixa / Card do Link de Agendamento do Cliente */}
       <div className="rounded-2xl border border-amber/20 bg-amber/5 p-4 sm:p-5 shadow-sm">

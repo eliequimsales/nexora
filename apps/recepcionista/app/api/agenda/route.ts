@@ -16,6 +16,7 @@ import {
   salvarProfissionais,
   type Profissional,
 } from "@/lib/agenda/painel";
+import { lerDiasFechados } from "@/lib/agenda/horario";
 
 export const dynamic = "force-dynamic";
 
@@ -105,7 +106,7 @@ export async function GET(request: Request) {
     const inicioJanela = new Date(agora.getTime() - 24 * 60 * 60 * 1000);
     const fimJanela = new Date(agora.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    const [grade, resumo, servicos, agendamentosProximos] = await Promise.all([
+    const [grade, resumo, servicos, agendamentosProximos, perfil] = await Promise.all([
       obterGradeDoDia(companyId, dataSelecionada),
       obterResumoDaAgenda(companyId, dataSelecionada),
       listarServicos(companyId),
@@ -125,7 +126,13 @@ export async function GET(request: Request) {
         },
         orderBy: { startsAt: "asc" },
       }),
+      prisma.companyProfile.findUnique({
+        where: { companyId },
+        select: { diasFechados: true },
+      }),
     ]);
+
+    const diasFechados = lerDiasFechados(perfil?.diasFechados);
 
     const diasComAgendamentos = Array.from(
       new Set(agendamentosProximos.map((a) => formatarDataLocal(a.startsAt))),
@@ -154,6 +161,7 @@ export async function GET(request: Request) {
       resumo,
       servicos,
       diasComAgendamentos,
+      diasFechados,
       proximoAgendamento,
       empresaNome: empresa?.name,
       slug: slug || empresa?.slug,
@@ -190,6 +198,37 @@ export async function POST(request: Request) {
       }
       const salvos = await salvarProfissionais(companyId, parsedProf.data.profissionais);
       return NextResponse.json({ ok: true, profissionais: salvos });
+    }
+
+    // Se a requisição for para bloquear ou reabrir um dia específico (feriados, recessos, etc):
+    if (json.acao === "bloquear_dia" || json.acao === "desbloquear_dia") {
+      const dataIso = typeof json.data === "string" ? json.data.trim() : "";
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dataIso)) {
+        return NextResponse.json({ error: "Data inválida (formato YYYY-MM-DD)" }, { status: 400 });
+      }
+      const perfil = await prisma.companyProfile.findUnique({
+        where: { companyId },
+        select: { diasFechados: true },
+      });
+      const atuais = lerDiasFechados(perfil?.diasFechados);
+      let novos: string[];
+      if (json.acao === "bloquear_dia") {
+        novos = Array.from(new Set([...atuais, dataIso])).sort();
+      } else {
+        novos = atuais.filter((d) => d !== dataIso);
+      }
+      await prisma.companyProfile.update({
+        where: { companyId },
+        data: { diasFechados: novos },
+      });
+      return NextResponse.json({
+        ok: true,
+        diasFechados: novos,
+        mensagem:
+          json.acao === "bloquear_dia"
+            ? `Dia bloqueado na sua agenda! O atendente e o link de agendamento não aceitarão horários nesta data.`
+            : `Dia reaberto com sucesso!`,
+      });
     }
 
     const parsed = agendamentoSchema.safeParse(json);

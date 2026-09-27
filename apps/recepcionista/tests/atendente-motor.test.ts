@@ -187,13 +187,13 @@ describe("pedido de horário", () => {
     expect(s.mensagens[0]).not.toContain("10h30");
   });
 
-  it("com \"marcar direto\" desligado, mostra os horários com o link e não marca", async () => {
+  it("com \"marcar direto\" desligado, envia o link direto para o cliente agendar online", async () => {
     const fatos = { ...FATOS, marcaDireto: false };
     const oferta = await responder(entrada("tem horário amanhã pra corte?", { fatos }), deps);
     expect(oferta.mensagens[0]).toContain("https://app.exemplo/agendar/barbearia-do-leo");
-    const s = await responder(entrada("2", { estado: oferta.estado, fatos }), deps);
+    expect(oferta.mensagens[0]).not.toContain("1 ·");
+    expect(oferta.estado).toBeNull();
     expect(deps.marcar).not.toHaveBeenCalled();
-    expect(s.anotar?.motivo).toContain("Corte");
   });
 
   it("sem link e sem marcar direto, a escolha vira anotação para a equipe confirmar", async () => {

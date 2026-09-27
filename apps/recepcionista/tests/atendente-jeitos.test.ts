@@ -52,6 +52,7 @@ function amostras(jeito: Jeito): string[] {
     t.semHorario(null),
     t.semAgenda,
     t.linkAgenda("https://exemplo.app/agendar/barbearia"),
+    t.conviteLink({ link: "https://exemplo.app/agendar/barbearia", servico: "Corte" }),
     t.pessoa("amanhã às 9h"),
     t.pessoa(null),
     t.reclamacao("amanhã às 9h"),

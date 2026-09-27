@@ -88,10 +88,9 @@ export async function handleIncomingMessage(incoming: IncomingWhatsAppMessage): 
       });
     }
 
-    // 3.5 Garante o cliente na base de clientes ("Meus clientes")
+    // 3.5 Se o contato já for um cliente agendado na base, atualiza o nome se antes estava apenas o telefone
     try {
       const telefoneLimpo = incoming.phone.replace(/\D/g, "");
-      const nomeCliente = incoming.senderName?.trim() || incoming.phone;
       const variantes = variantesDeTelefone(incoming.phone);
       const clienteExistente = await prisma.customer.findFirst({
         where: {
@@ -101,16 +100,8 @@ export async function handleIncomingMessage(incoming: IncomingWhatsAppMessage): 
         select: { id: true, name: true },
       });
 
-      if (!clienteExistente) {
-        await prisma.customer.create({
-          data: {
-            companyId,
-            phone: incoming.phone,
-            name: nomeCliente,
-            source: "WHATSAPP",
-          },
-        });
-      } else if (
+      if (
+        clienteExistente &&
         incoming.senderName?.trim() &&
         (!clienteExistente.name ||
           clienteExistente.name === clienteExistente.id ||
