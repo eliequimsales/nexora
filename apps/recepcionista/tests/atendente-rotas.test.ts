@@ -209,16 +209,15 @@ describe("GET e PUT /api/atendente", () => {
 });
 
 describe("POST /api/atendente/ligar", () => {
-  it("sem o teste no simulador, não liga", async () => {
+  it("liga mesmo sem teste prévio no simulador", async () => {
     db.companyProfile.findUnique.mockResolvedValue({ atendenteTestadoEm: null, whatsappStatus: "CONNECTED", whatsappInstance: "x" });
     const r = await LIGAR(pedido({ ligar: true }));
-    expect(r.status).toBe(409);
-    expect((await r.json()).faltando).toBe("TESTE");
-    expect(db.companyProfile.update).not.toHaveBeenCalled();
+    expect(r.status).toBe(200);
+    expect(db.companyProfile.update).toHaveBeenCalledWith({ where: { companyId: "c1" }, data: { plantaoAtivo: true } });
   });
 
   it("sem o WhatsApp ligado, não liga — e diz o que falta", async () => {
-    db.companyProfile.findUnique.mockResolvedValue({ atendenteTestadoEm: new Date(), whatsappStatus: "DISCONNECTED", whatsappInstance: null });
+    db.companyProfile.findUnique.mockResolvedValue({ atendenteTestadoEm: null, whatsappStatus: "DISCONNECTED", whatsappInstance: null });
     const r = await LIGAR(pedido({ ligar: true }));
     expect(r.status).toBe(409);
     expect((await r.json()).faltando).toBe("WHATSAPP");

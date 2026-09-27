@@ -9,11 +9,11 @@ import { ModalConectarWhatsApp } from "@/components/painel/modal-conectar-whatsa
 /**
  * O BOTÃO QUE LIGA O ATENDENTE — UMA AÇÃO, E A VERDADE NA HORA DE DECIDIR.
  *
- * O botão só funciona depois de um teste no celular. Ao apertar, a tela diz o
- * que o dono precisa saber antes de ligar (a conexão por QR Code não é a
- * oficial), e só então liga. Sem WhatsApp, abre a conexão e liga em seguida;
- * sem acesso, a recusa vira o botão que resolve. Depois da semana grátis, o
- * lugar do botão é o do plano.
+ * O botão liga o atendente. Ao apertar, a tela diz o que o dono precisa
+ * saber antes de ligar (a conexão por QR Code não é a oficial), e só então
+ * liga. Sem WhatsApp, abre a conexão e liga em seguida; sem acesso, a recusa
+ * vira o botão que resolve. Depois da semana grátis, o lugar do botão é o do
+ * plano.
  */
 
 type Recusa = { error: string; acao: { texto: string; href: string } };
@@ -28,7 +28,7 @@ export function Ligar({
   aoMudarTela,
 }: {
   tela: TelaDoAtendente;
-  testado: boolean;
+  testado?: boolean;
   aoMudarTela: (tela: TelaDoAtendente) => void;
 }) {
   const [confirmando, setConfirmando] = useState(false);
@@ -164,14 +164,13 @@ export function Ligar({
         <>
           <button
             type="button"
-            disabled={!testado}
             onClick={() => setConfirmando(true)}
-            className={`${BOTAO} w-full disabled:cursor-not-allowed disabled:opacity-50`}
+            className={`${BOTAO} w-full`}
           >
             Ligar no meu WhatsApp
           </button>
           <p className="mt-2 text-center text-xs text-panel-sub">
-            {testado ? tela.uso.texto : "Mande uma mensagem de teste no celular para liberar."}
+            {tela.uso.texto}
           </p>
         </>
       )}

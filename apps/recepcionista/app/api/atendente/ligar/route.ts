@@ -13,11 +13,9 @@ export const dynamic = "force-dynamic";
 /**
  * Ligar e desligar o Atendente no WhatsApp do dono.
  *
- * Ligar exige três coisas, nesta ordem, e cada recusa diz o que falta: o teste
- * no simulador (o dono precisa ver como ele responde antes de ele falar com um
- * cliente), o WhatsApp ligado (é por ele que o Atendente responde) e o acesso
- * da conta (plano, teste ou a primeira semana por nossa conta). Desligar é
- * sempre possível, sem conferir nada.
+ * Ligar confere o WhatsApp ligado (é por ele que o Atendente responde) e o
+ * acesso da conta (plano, teste ou a primeira semana por nossa conta).
+ * Desligar é sempre possível, sem conferir nada.
  */
 export async function POST(request: Request) {
   const companyId = await getSessionCompanyId();
@@ -38,15 +36,9 @@ export async function POST(request: Request) {
 
     const perfil = await prisma.companyProfile.findUnique({
       where: { companyId },
-      select: { atendenteTestadoEm: true, whatsappStatus: true, whatsappInstance: true },
+      select: { whatsappStatus: true, whatsappInstance: true },
     });
-    if (!perfil?.atendenteTestadoEm) {
-      return NextResponse.json(
-        { error: "Faça um teste no simulador antes de ligar: é assim que você vê como ele responde.", faltando: "TESTE" },
-        { status: 409 },
-      );
-    }
-    if (!perfil.whatsappInstance || perfil.whatsappStatus !== "CONNECTED") {
+    if (!perfil?.whatsappInstance || perfil?.whatsappStatus !== "CONNECTED") {
       return NextResponse.json(
         { error: "Ligue o seu WhatsApp primeiro: é por ele que o Atendente responde.", faltando: "WHATSAPP" },
         { status: 409 },

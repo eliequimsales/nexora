@@ -240,9 +240,9 @@ describe("o \"Ligar no meu WhatsApp\"", () => {
     .replace(/\/\*[\s\S]*?\*\//g, " ")
     .replace(/(^|[^:])\/\/.*$/gm, "$1");
 
-  it("só liga depois do primeiro teste", () => {
+  it("permite ligar a qualquer momento sem travar por teste prévio", () => {
     expect(ligar).toContain("Ligar no meu WhatsApp");
-    expect(ligar).toMatch(/disabled=\{!testado/);
+    expect(ligar).not.toMatch(/disabled=\{!testado/);
   });
 
   it("a frase honesta sobre o QR Code aparece na hora de decidir, antes de confirmar", () => {
