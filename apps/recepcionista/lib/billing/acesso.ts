@@ -187,9 +187,9 @@ const RECUSA: Record<string, { motivo: string; texto: string }> = {
  */
 const RECUSA_DO_ATENDENTE = {
   motivo:
-    "O Atendente Virtual é exclusivo do plano Nexora Completo. Para ele responder " +
-    "seus clientes, assine o plano Completo — suas conversas e sua agenda continuam suas.",
-  texto: `Assinar o plano Completo — ${emReais(PRECO_COMPLETO_CENTS)}/mês`,
+    "Para o Atendente Virtual responder seus clientes 24h no WhatsApp, assine o plano Atendente — " +
+    "suas conversas e sua agenda continuam suas.",
+  texto: `Assinar o plano Atendente — ${emReais(PRECO_MENSAL_CENTS)}/mês`,
 };
 
 export function podeExecutar(estado: EstadoConta, acao: Acao): Permissao {

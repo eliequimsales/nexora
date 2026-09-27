@@ -46,13 +46,13 @@ describe("LIGAR_ATENDENTE na regra pura", () => {
     for (const estado of comPlano) expect(podeExecutar(estado, "LIGAR_ATENDENTE").pode, estado).toBe(true);
   });
 
-  it("sem plano, a recusa fala do Atendente e aponta o plano Completo", () => {
+  it("sem plano, a recusa fala do Atendente e aponta o plano Atendente", () => {
     for (const estado of ["GRATIS", "TRIAL_EXPIRADO"] as EstadoConta[]) {
       const p = podeExecutar(estado, "LIGAR_ATENDENTE");
       expect(p.pode).toBe(false);
       if (p.pode) continue;
-      expect(p.motivo).toMatch(/plano Nexora Completo/);
-      expect(p.acao.texto).toContain(emReais(PRECO_COMPLETO_CENTS));
+      expect(p.motivo).toMatch(/plano Atendente/);
+      expect(p.acao.texto).toContain(emReais(PRECO_MENSAL_CENTS));
       expect(p.acao.href).toBe("/painel/assinatura");
     }
   });
@@ -99,9 +99,25 @@ beforeEach(() => {
   (usoDoAtendente as Fn).mockResolvedValue(semana({ diasDesde: null }));
 });
 
-describe("o Atendente no exigirAcesso — exclusivo do plano Completo", () => {
-  it("conta sem plano não pode ligar e recebe recusa apontando o plano Completo", async () => {
+describe("o Atendente no exigirAcesso e a divisão de planos", () => {
+  it("conta sem plano após a semana grátis não pode ligar e recebe recusa apontando o plano Atendente", async () => {
+    (usoDoAtendente as Fn).mockResolvedValue(semana({ diasDesde: SEMANA_GRATIS_DIAS + 1 }));
     const r = await exigirAcesso("c1", "LIGAR_ATENDENTE");
+    expect(r?.status).toBe(402);
+    const corpo = await r!.json();
+    expect(corpo.error).toMatch(/plano Atendente/);
+    expect(corpo.acao.href).toBe("/painel/assinatura");
+    expect(corpo.acao.texto).toContain(emReais(PRECO_MENSAL_CENTS));
+  });
+
+  it("conta com plano básico (pro) pode ligar o Atendente", async () => {
+    db.company.findUnique.mockResolvedValue({ ...SEM_PLANO, plan: "pro", subscriptionStatus: "active" });
+    expect(await exigirAcesso("c1", "LIGAR_ATENDENTE")).toBeNull();
+  });
+
+  it("conta com plano básico (pro) tentando gerar onda recebe 402 apontando o plano Completo", async () => {
+    db.company.findUnique.mockResolvedValue({ ...SEM_PLANO, plan: "pro", subscriptionStatus: "active" });
+    const r = await exigirAcesso("c1", "GERAR_ONDA");
     expect(r?.status).toBe(402);
     const corpo = await r!.json();
     expect(corpo.error).toMatch(/exclusivo do plano Nexora Completo/);
@@ -109,20 +125,13 @@ describe("o Atendente no exigirAcesso — exclusivo do plano Completo", () => {
     expect(corpo.acao.texto).toContain(emReais(PRECO_COMPLETO_CENTS));
   });
 
-  it("conta com plano básico (pro) não pode ligar", async () => {
-    db.company.findUnique.mockResolvedValue({ ...SEM_PLANO, plan: "pro", subscriptionStatus: "active" });
-    const r = await exigirAcesso("c1", "LIGAR_ATENDENTE");
-    expect(r?.status).toBe(402);
-    const corpo = await r!.json();
-    expect(corpo.error).toMatch(/exclusivo do plano Nexora Completo/);
-  });
-
-  it("conta com plano completo ativo pode ligar", async () => {
+  it("conta com plano completo ativo pode ligar o Atendente e gerar onda", async () => {
     db.company.findUnique.mockResolvedValue({ ...SEM_PLANO, plan: "completo", subscriptionStatus: "active" });
     expect(await exigirAcesso("c1", "LIGAR_ATENDENTE")).toBeNull();
+    expect(await exigirAcesso("c1", "GERAR_ONDA")).toBeNull();
   });
 
-  it("ligar o WhatsApp vem junto com a semana da primeira Onda", async () => {
+  it("ligar o WhatsApp vem junto com a semana da primeira Onda ou semana do Atendente", async () => {
     expect(await exigirAcesso("c1", "CONECTAR_WHATSAPP")).toBeNull();
     (usoDoAtendente as Fn).mockResolvedValue(semana({ diasDesde: SEMANA_GRATIS_DIAS + 1 }));
     expect((await exigirAcesso("c1", "CONECTAR_WHATSAPP"))?.status).toBe(402);

@@ -227,14 +227,16 @@ export async function telaDoAtendente(companyId: string, agora: Date = new Date(
     empresaTemPlanoCompleto(companyId, agora),
   ]);
 
-  const acesso: Acesso = temPlanoCompleto
+  const temPlano = ["ATIVO", "PASSE", "TOLERANCIA", "CANCELADO_COM_ACESSO", "TRIAL"].includes(estadoDaConta);
+  const acesso: Acesso = temPlano
     ? (uso.conversasNoMes < TETO_CONVERSAS_MES ? "INCLUIDO" : "TETO")
-    : "SEMANA_ACABOU";
+    : (uso.primeiraVezEm ? "SEMANA_ACABOU" : "SEMANA_GRATIS");
   const whatsappLigado = Boolean(perfil?.whatsappInstance) && perfil?.whatsappStatus === "CONNECTED";
+  const temAcessoAtendente = temPlano || acesso !== "SEMANA_ACABOU";
   // A mesma regra do executor: ligado é o que passou pelo "Ligar".
-  const ligado = Boolean(perfil?.plantaoAtivo && uso.primeiraVezEm && temPlanoCompleto);
+  const ligado = Boolean(perfil?.plantaoAtivo && uso.primeiraVezEm && temAcessoAtendente);
   const desde = ultimoFechamento(fatos.horarios, fatos.diasFechados, agora);
-  const naSemanaGratis = Boolean(!temPlanoCompleto && uso.primeiraVezEm);
+  const naSemanaGratis = Boolean(!temPlano && uso.primeiraVezEm);
 
   const [doFechamento, pendentes, daSemana, exemplo] = await Promise.all([
     desde
@@ -280,9 +282,9 @@ export async function telaDoAtendente(companyId: string, agora: Date = new Date(
     testado: Boolean(perfil?.atendenteTestadoEm),
     whatsappLigado,
     acesso,
-    podeLigar: temPlanoCompleto && podeLigar(acesso),
-    temPlanoCompleto,
-    estado: temPlanoCompleto
+    podeLigar: temAcessoAtendente && podeLigar(acesso),
+    temPlanoCompleto: temAcessoAtendente,
+    estado: temAcessoAtendente
       ? estadoDoAtendente({
           ligado,
           nome: fatos.nome,
@@ -293,10 +295,10 @@ export async function telaDoAtendente(companyId: string, agora: Date = new Date(
           expediente: fatos.expediente,
           agora,
         })
-      : { texto: "Disponível no plano Nexora Completo.", tom: "DESLIGADO" },
-    uso: temPlanoCompleto
+      : { texto: "Disponível no plano Atendente.", tom: "DESLIGADO" },
+    uso: temAcessoAtendente
       ? { texto: textoDoUso({ acesso, agora, uso }), conversasNoMes: uso.conversasNoMes, teto: TETO_CONVERSAS_MES }
-      : { texto: "Disponível no plano Nexora Completo.", conversasNoMes: uso.conversasNoMes, teto: TETO_CONVERSAS_MES },
+      : { texto: "Disponível no plano Atendente.", conversasNoMes: uso.conversasNoMes, teto: TETO_CONVERSAS_MES },
     exemplo,
     sabe: {
       servicos: fatos.servicos.map((s) => ({

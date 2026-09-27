@@ -210,17 +210,17 @@ export default async function PaginaAssinatura({
       <section aria-labelledby="titulo-planos" className="space-y-4">
         <h2 id="titulo-planos" className="sr-only">Planos da Nexora</h2>
         <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
-          {/* CARD 1: NEXORA (A ENTRADA) */}
+          {/* CARD 1: NEXORA ATENDENTE (A ENTRADA) */}
           <div className="relative flex flex-col justify-between rounded-3xl border-2 border-amber-500/80 bg-[#0B0F17] p-7 text-white shadow-xl shadow-amber-500/5 sm:p-8">
             <div>
               <div className="flex items-center justify-between">
                 <span className="rounded-md bg-amber-500/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-amber-400">
-                  A ENTRADA
+                  A ENTRADA · MAIS PROCURADO
                 </span>
               </div>
 
               <h3 className="mt-4 font-display text-2xl font-bold tracking-tight text-white sm:text-3xl">
-                Nexora
+                Nexora Atendente
               </h3>
 
               <div className="mt-3 flex items-baseline gap-1.5">
@@ -233,11 +233,11 @@ export default async function PaginaAssinatura({
               <ul className="mt-6 space-y-3.5 text-sm text-gray-200">
                 <li className="flex items-start gap-3">
                   <span className="mt-0.5 font-bold text-emerald-400" aria-hidden="true">✓</span>
-                  <span>Recuperador: a Onda da semana com as mensagens prontas e o porquê de cada cliente</span>
+                  <span>Atendente Virtual 24 horas no WhatsApp (dia, noite e fins de semana)</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-0.5 font-bold text-emerald-400" aria-hidden="true">✓</span>
-                  <span>Dinheiro recuperado, com a prova de cada retorno</span>
+                  <span>Respostas automáticas para tirar dúvidas, preços e serviços</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-0.5 font-bold text-emerald-400" aria-hidden="true">✓</span>
@@ -245,7 +245,7 @@ export default async function PaginaAssinatura({
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-0.5 font-bold text-emerald-400" aria-hidden="true">✓</span>
-                  <span>WhatsApp conectado</span>
+                  <span>WhatsApp conectado no seu número via QR Code</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-0.5 font-bold text-emerald-400" aria-hidden="true">✓</span>
@@ -278,7 +278,7 @@ export default async function PaginaAssinatura({
             <div>
               <div className="flex items-center justify-between">
                 <span className="rounded-md bg-amber-500/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-amber-400">
-                  MAIS VENDIDO · PLANTÃO 24/7
+                  COMPLETO · ATENDENTE + RECUPERADOR
                 </span>
               </div>
 
@@ -296,19 +296,19 @@ export default async function PaginaAssinatura({
               <ul className="mt-6 space-y-3.5 text-sm text-gray-200">
                 <li className="flex items-start gap-3">
                   <span className="mt-0.5 font-bold text-emerald-400" aria-hidden="true">✓</span>
-                  <span>Tudo do Nexora</span>
+                  <span>Tudo do plano Atendente 24h</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-0.5 font-bold text-emerald-400" aria-hidden="true">✓</span>
-                  <span>O Plantão: atende o WhatsApp com a loja fechada e marca na agenda</span>
+                  <span>O Recuperador: 12 mensagens prontas toda semana no ritmo dos clientes</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-0.5 font-bold text-emerald-400" aria-hidden="true">✓</span>
-                  <span>Resumo da manhã e alerta de urgência no seu celular</span>
+                  <span>Dinheiro recuperado: acompanhe cada retorno em reais no painel</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-0.5 font-bold text-emerald-400" aria-hidden="true">✓</span>
-                  <span>Profissionais ilimitados</span>
+                  <span>Profissionais ilimitados na equipe</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-0.5 font-bold text-emerald-400" aria-hidden="true">✓</span>
@@ -485,7 +485,7 @@ function descricaoDosPlanos(estado: EstadoConta): Record<PlanoId, OpcaoDePlano> 
       titulo: "Mensal no cartão",
       preco: `${reais(PLANOS.mensal_cartao.valorCents)}/mês`,
       detalhe:
-        "Renova sozinho todo mês. Cancele pelo painel, sem falar com ninguém, e fique até o fim do período pago.",
+        "Renova sozinho todo mês. Atendente 24h no WhatsApp e agenda inteligente. Cancele pelo painel quando quiser.",
       acao: "Assinar no cartão",
     },
     pix_30_dias: {
@@ -493,7 +493,7 @@ function descricaoDosPlanos(estado: EstadoConta): Record<PlanoId, OpcaoDePlano> 
       titulo: estado === "PASSE" ? "Mais 30 dias à vista" : "30 dias à vista",
       preco: reais(PLANOS.pix_30_dias.valorCents),
       detalhe:
-        "Pagamento único, sem renovação automática: quando os 30 dias acabarem, você decide se paga de novo.",
+        "Pagamento único de 30 dias com Atendente 24h. Quando acabar, você decide se renova.",
       acao: "Pagar 30 dias",
     },
     anual: {
@@ -508,7 +508,7 @@ function descricaoDosPlanos(estado: EstadoConta): Record<PlanoId, OpcaoDePlano> 
       titulo: "Mensal no cartão",
       preco: `${reais(PLANOS.completo_cartao.valorCents)}/mês`,
       detalhe:
-        "Renova sozinho todo mês. Inclui o Plantão 24/7 e profissionais ilimitados. Cancele pelo painel quando quiser.",
+        "Renova sozinho todo mês. Inclui Atendente 24h, Recuperador semanal e profissionais ilimitados. Cancele pelo painel quando quiser.",
       acao: "Assinar no cartão",
     },
     completo_pix: {
@@ -516,7 +516,7 @@ function descricaoDosPlanos(estado: EstadoConta): Record<PlanoId, OpcaoDePlano> 
       titulo: estado === "PASSE" ? "Mais 30 dias à vista" : "30 dias à vista",
       preco: reais(PLANOS.completo_pix.valorCents),
       detalhe:
-        "Pagamento único de 30 dias com o Plantão 24/7 incluso. Não renova sozinho.",
+        "Pagamento único de 30 dias com Atendente 24h e Recuperador inclusos. Não renova sozinho.",
       acao: "Pagar 30 dias",
     },
     completo_anual: {

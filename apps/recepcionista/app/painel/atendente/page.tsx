@@ -153,7 +153,7 @@ export default function PaginaDoAtendente() {
               href="/painel/assinatura"
               className="inline-flex items-center gap-1.5 rounded-full border border-amber/40 bg-amber/10 px-3 py-1.5 text-xs font-bold text-amber hover:bg-amber/20"
             >
-              <span>Exclusivo do plano Completo</span>
+              <span>Ativar plano Atendente</span>
             </Link>
           ) : (
             <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold ${pilula.classe}`}>
@@ -167,13 +167,13 @@ export default function PaginaDoAtendente() {
       {!tela.temPlanoCompleto && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber/30 bg-amber/5 p-4 text-sm">
           <p className="text-panel-ink">
-            O Atendente no seu WhatsApp é exclusivo do plano Nexora Completo.
+            Para o Atendente responder seus clientes 24 horas no WhatsApp, ative o plano Atendente.
           </p>
           <Link
             href="/painel/assinatura"
             className="rounded-lg bg-amber px-4 py-2 text-xs font-bold text-night hover:brightness-110"
           >
-            Ver plano Completo
+            Ver planos
           </Link>
         </div>
       )}

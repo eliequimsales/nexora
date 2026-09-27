@@ -102,16 +102,28 @@ export async function exigirAcesso(
   companyId: string,
   acao: Acao,
 ): Promise<NextResponse | null> {
-  if (acao === "LIGAR_ATENDENTE") {
+  const estado = await estadoDaEmpresa(companyId);
+
+  // O RECUPERADOR DE CLIENTES: exclusivo do plano Completo (exceto a primeira Onda grátis)
+  if (acao === "GERAR_ONDA" || acao === "ENVIAR_TOQUE") {
+    if (estado === "GRATIS" && ACOES_DA_PRIMEIRA_ONDA.includes(acao)) {
+      const primeira = await primeiraOndaDaEmpresa(companyId);
+      if (podeNaPrimeiraOnda(estado, acao, primeira.situacao)) return null;
+    }
+
     const temCompleto = await empresaTemPlanoCompleto(companyId);
     if (!temCompleto) {
+      const oferta = RECUSA_COM_OFERTA.includes(estado)
+        ? await ofertaDaEmpresa(companyId).catch(() => null)
+        : null;
       return NextResponse.json(
         {
-          error: "O Atendente Virtual é exclusivo do plano Nexora Completo.",
+          error: "O Recuperador de Clientes é exclusivo do plano Nexora Completo.",
           acao: {
             texto: `Assinar o plano Completo — ${emReais(PRECO_COMPLETO_MENSAL_CENTS)}/mês`,
             href: "/painel/assinatura",
           },
+          oferta,
         },
         { status: 402 },
       );
@@ -119,7 +131,6 @@ export async function exigirAcesso(
     return null;
   }
 
-  const estado = await estadoDaEmpresa(companyId);
   const permissao = podeExecutar(estado, acao);
   if (permissao.pode) return null;
 
