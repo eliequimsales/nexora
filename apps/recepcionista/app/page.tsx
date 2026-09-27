@@ -216,6 +216,18 @@ export default function Home({
               </a>
             </div>
 
+            {/* MICRO BADGES DE CONFIANÇA E RAPIDEZ */}
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-nx-secondary font-medium">
+              <span className="flex items-center gap-1.5 text-nx-gold">
+                <span className="h-1.5 w-1.5 rounded-full bg-nx-gold animate-pulse" />
+                Pronto no seu WhatsApp em 2 minutos
+              </span>
+              <span className="text-nx-muted">•</span>
+              <span>não pedimos cartão para começar</span>
+              <span className="text-nx-muted">•</span>
+              <span>Cancele quando quiser</span>
+            </div>
+
             {/* SELOS DE SEGURANÇA */}
             <ul className="mt-8 flex flex-wrap items-center justify-center gap-2.5 text-xs text-nx-secondary">
               {SELOS.map((selo) => (

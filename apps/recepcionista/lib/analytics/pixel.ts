@@ -81,6 +81,10 @@ export function trackStartRegistration(): void {
   trackCustom("StartRegistration");
 }
 
+export function trackLead(conteudo: string = "Interesse Atendente", extra?: Record<string, unknown>): void {
+  track("Lead", { content_name: conteudo, ...extra });
+}
+
 export function trackCompleteRegistration(metodo: string = "email"): void {
   track("CompleteRegistration", { status: true, content_name: metodo });
   // Dispara Lead junto para maximizar compatibilidade com campanhas otimizadas para Lead

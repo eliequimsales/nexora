@@ -8,6 +8,7 @@ import {
   trackViewContent,
   trackStartRegistration,
   trackCompleteRegistration,
+  trackLead,
   trackFirstClientAdded,
   trackFirstRecoverySent,
   trackInitiateCheckout,
@@ -90,6 +91,11 @@ describe("Meta Pixel e UTMs em ambiente de navegador (simulado)", () => {
     }));
     expect(mockFbq).toHaveBeenCalledWith("track", "Lead", expect.objectContaining({
       content_name: "Cadastro Criado",
+    }));
+
+    trackLead("Clique CTA");
+    expect(mockFbq).toHaveBeenCalledWith("track", "Lead", expect.objectContaining({
+      content_name: "Clique CTA",
     }));
 
     trackInitiateCheckout("mensal_cartao", "R$ 97,00");

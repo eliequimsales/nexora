@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GoogleButton } from "@/components/google-button";
 import {
   trackStartRegistration,
   trackCompleteRegistration,
+  trackViewContent,
 } from "@/lib/analytics/pixel";
 import { registrar } from "@/components/funil";
 
@@ -24,6 +25,11 @@ export default function CadastroPage() {
   const [aceite, setAceite] = useState(false);
   const jaIniciou = useRef(false);
 
+  useEffect(() => {
+    trackViewContent("Página de Cadastro");
+    trackStartRegistration();
+  }, []);
+
   function aoFocarCampo() {
     if (jaIniciou.current) return;
     jaIniciou.current = true;
@@ -33,6 +39,10 @@ export default function CadastroPage() {
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError("");
+    if (!aceite) {
+      setError("Por favor, marque a caixa confirmando o aceite dos Termos de Uso para criar sua conta.");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/auth/signup", {
@@ -67,11 +77,26 @@ export default function CadastroPage() {
             Nexora
           </span>
         </Link>
-        <div className="rounded-2xl border border-nx-border bg-nx-surface p-8 shadow-nx-panel">
+        <div className="rounded-2xl border border-nx-border bg-nx-surface p-7 sm:p-8 shadow-nx-panel">
           <h1 className="text-xl font-bold">Criar conta da empresa</h1>
-          <p className="mb-6 mt-1 text-sm text-nx-secondary">
+          <p className="mb-4 mt-1 text-sm text-nx-secondary">
             Ative seu Atendente 24h no WhatsApp. Sem cartão para começar.
           </p>
+
+          <div className="mb-5 grid grid-cols-3 gap-2 text-center text-[11px] font-medium text-nx-secondary">
+            <div className="rounded-lg border border-nx-border bg-nx-surface-2 py-1.5 px-2">⚡ Leva 30 seg</div>
+            <div className="rounded-lg border border-nx-border bg-nx-surface-2 py-1.5 px-2">🔒 Sem cartão</div>
+            <div className="rounded-lg border border-nx-border bg-nx-surface-2 py-1.5 px-2">📱 No WhatsApp</div>
+          </div>
+
+          <GoogleButton label="Cadastrar com o Google em 1 clique" />
+
+          <div className="my-5 flex items-center gap-3">
+            <span className="h-px flex-1 bg-nx-border" />
+            <span className="text-xs text-nx-muted">ou preencha com seu e-mail</span>
+            <span className="h-px flex-1 bg-nx-border" />
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             {FIELDS.map((field) => (
               <div key={field.key}>
@@ -95,12 +120,14 @@ export default function CadastroPage() {
               consentimento — é armadilha, e o CDC trata cláusula assim como não
               escrita. A data e a versão do texto ficam gravadas no cadastro.
             */}
-            <label className="flex gap-3 text-sm leading-relaxed text-nx-secondary">
+            <label className={`flex gap-3 rounded-lg border p-2.5 text-sm leading-relaxed transition-colors ${
+              !aceite && error ? "border-nx-gold/60 bg-nx-gold/5 text-nx-primary" : "border-transparent text-nx-secondary"
+            }`}>
               <input
                 type="checkbox"
                 checked={aceite}
                 onChange={(e) => setAceite(e.target.checked)}
-                className="mt-1"
+                className="mt-1 accent-nx-gold"
               />
               <span>
                 Li e aceito os{" "}
@@ -121,20 +148,13 @@ export default function CadastroPage() {
             {error && <p className="text-sm text-nx-error">{error}</p>}
             <button
               type="submit"
-              disabled={loading || !aceite}
+              disabled={loading}
               className="w-full rounded-lg bg-nx-gold shadow-nx-glow-sm px-4 py-3 text-sm font-semibold text-nx-bg transition hover:bg-nx-gold/90 active:scale-[0.98] disabled:opacity-60"
             >
               {loading ? "Criando conta..." : "Criar minha conta"}
             </button>
-            <div className="flex items-center gap-3 py-1">
-              <span className="h-px flex-1 bg-nx-border" />
-              <span className="text-xs text-nx-secondary">ou</span>
-              <span className="h-px flex-1 bg-nx-border" />
-            </div>
-            <GoogleButton label="Cadastrar com o Google" />
-            <p className="text-center text-xs leading-relaxed text-nx-secondary">
-              Entrar com o Google também significa aceitar os Termos de Uso, a Política de
-              Privacidade e o Contrato de Operador.
+            <p className="text-center text-xs leading-relaxed text-nx-muted">
+              Entrar com o Google também confirma o aceite dos Termos de Uso e Política de Privacidade.
             </p>
           </form>
         </div>
