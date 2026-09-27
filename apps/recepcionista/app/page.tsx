@@ -21,55 +21,42 @@ import { TAMANHO_DA_ONDA } from "@/lib/recuperacao/onda";
 import { mensagemDoToque, TOTAL_TOQUES } from "@/lib/recuperacao/toques";
 
 export const metadata: Metadata = {
-  title: "Nexora — traga de volta os clientes que pararam de vir, e responda no WhatsApp quando você não pode",
+  title: "Nexora — Atendente Inteligente 24h no WhatsApp e recuperação de clientes",
   description:
-    "A Nexora descobre quem parou de vir, mostra quanto dinheiro isso representa e escreve a mensagem para trazer cada um de volta. O Atendente Virtual responde no WhatsApp quando você não pode. A primeira Onda e a primeira semana do Atendente são por nossa conta, sem cartão.",
+    "O Atendente Inteligente que aprende com a sua empresa e atende no WhatsApp quando você não pode. Nunca mais perca um cliente fora do horário ou de madrugada. A primeira semana do Atendente e a primeira Onda são por nossa conta, sem cartão.",
 };
 
 /**
- * A LANDING DA ESTEIRA — ATAQUE, DEPOIS DEFESA.
+ * A LANDING DA NEXORA — ATENDENTE 24H COMO CARRO-CHEFE.
  *
- * Ordem decidida pelo fundador em 22/09/2026, à tarde:
- *
- *   1. ATAQUE: o dinheiro que já está na lista dele. Quem parou de vir não foi
- *      embora de propósito — esqueceu. Hero, calculadora e a Onda de exemplo.
- *   2. DEFESA: o Atendente Virtual, para nenhum cliente novo ficar sem resposta
- *      de noite, no domingo ou com a loja cheia.
- *
- * Tudo que a página promete, o código cumpre: os números saem das constantes
- * (tests/promessas-da-landing.test.ts), a demonstração usa os textos do motor e
- * se declara exemplo, e o risco zero é exatamente o que a conta nova ganha — a
- * primeira Onda e a primeira semana do Atendente.
- *
- * Quatro frases do pedido não entraram como vieram, porque o produto não as
- * cumpre (Constituição, VI — verdade acima de marketing):
- *   - "zero risco de banimento" → a conexão por QR Code não é a oficial: a
- *     página diz o que diminui o risco, e que ele não some;
- *   - "foto de caderno" → o importador lê texto, não foto;
- *   - "clientes que não voltam há mais de 45 dias" → não existe prazo único: o
- *     atraso é medido no ritmo de cada cliente;
- *   - "coloque esse dinheiro de volta esta semana" → o que começa esta semana é
- *     a primeira Onda; o retorno vem no ritmo de quem volta.
- *
- * Direção visual: a da Nexora antiga, que os anúncios mostram
- * (docs/superpowers/specs/2026-09-10-visual-antigo-no-funil-design.md).
+ * Produto Principal:
+ *   1. O Atendente Inteligente 24h no WhatsApp: aprende com as regras, preços,
+ *      serviços e horários da sua empresa. Atende e fecha agendamentos à noite e finais de semana.
+ *   2. O Recuperador de Clientes (Plano Completo): traz de volta quem parou de vir.
  */
 
 const SELOS = [
-  "Primeira Onda por nossa conta",
+  "Aprende com a sua empresa",
+  "Primeira semana por nossa conta",
   "Sem cartão de crédito",
-  "Não é disparo em massa",
-  "Funciona com planilha ou caderno digitado",
+  "Responde no seu WhatsApp",
 ];
 
-/**
- * A ONDA DE EXEMPLO — e a tela diz que é exemplo.
- *
- * Os ritmos são plausíveis para uma barbearia e os nomes não são de ninguém. O
- * que NÃO é inventado: a etiqueta sai da mesma classificação que monta a Onda de
- * verdade, e a mensagem sai do mesmo motor que escreve a do painel. A data é fixa
- * para a página não mudar de etiqueta sozinha de um dia para o outro.
- */
+const PASSOS_ATENDENTE = [
+  {
+    titulo: "1. Você cadastra seus serviços e preços",
+    corpo: "Corte, barba, consulta, sessão ou pacote: o Atendente aprende exatamente quanto custa e o tempo de cada atendimento.",
+  },
+  {
+    titulo: "2. Você define seus horários de expediente",
+    corpo: "Ele consulta sua grade livre em tempo real e nunca marca dois clientes no mesmo horário nem fura seu almoço.",
+  },
+  {
+    titulo: "3. Conecta o WhatsApp via QR Code",
+    corpo: "No seu próprio número de WhatsApp comercial. Você descansa e ele tira dúvidas, informa preços e agenda clientes.",
+  },
+];
+
 const HOJE_DO_EXEMPLO = new Date("2026-09-14T12:00:00.000Z");
 const DIA_MS = 86_400_000;
 
@@ -96,7 +83,6 @@ const ONDA_EXEMPLO = [
 
 const MENSAGEM_EXEMPLO = mensagemDoToque(1, { primeiroNome: "Marcos", negocio: "", link: "" });
 
-/** As regras da Onda que respondem ao medo de disparo. Cada uma é código, não promessa. */
 const REGRAS_DA_ONDA = [
   "Quem tem horário marcado nunca entra na lista.",
   "Quem já respondeu sai na hora.",
@@ -106,8 +92,6 @@ const REGRAS_DA_ONDA = [
 const PASSOS_DA_REATIVACAO = [
   {
     titulo: "Você manda sua lista do jeito que ela está",
-    // O WhatsApp não entra aqui: o importador agrupa a exportação por remetente,
-    // e uma conversa rende um cliente só, sem telefone.
     corpo:
       "Colado do Excel, planilha, lista de contatos ou caderno digitado. A Nexora entende e diz em português o que não conseguiu ler.",
   },
@@ -119,16 +103,21 @@ const PASSOS_DA_REATIVACAO = [
   {
     titulo: "Toda segunda, doze mensagens prontas",
     corpo:
-      "Uma para cada cliente, com o nome dele escrito. Você lê, muda se quiser e manda do SEU WhatsApp. Uns nove minutos.",
+      "Mensagens personalizadas para cada pessoa no tom certo. Você aprova e envia com um toque no seu WhatsApp.",
   },
 ];
 
 /** O diferencial do Atendente, que é também o limite dele. */
 const DIFERENCA_DO_ATENDENTE = [
   {
-    titulo: "Preço e horário só do seu cadastro",
+    titulo: "Aprende com a sua empresa",
     corpo:
-      "Horário livre sai da sua agenda de verdade, e é nela que ele marca. O que não está cadastrado, ele não inventa: anota para você responder.",
+      "Preço e horário só do seu cadastro: horário livre sai da sua agenda de verdade, e é nela que ele marca. O que não está cadastrado, ele não inventa: anota para você responder.",
+  },
+  {
+    titulo: "Agenda em tempo real sem conflito",
+    corpo:
+      "Ele sabe quem são os profissionais da equipe, consulta vagas em tempo real e confirma direto com o cliente.",
   },
   {
     titulo: "Nunca finge ser gente",
@@ -142,35 +131,25 @@ const DIFERENCA_DO_ATENDENTE = [
 ];
 
 const INCLUI = [
-  `A primeira Onda por nossa conta, sem cartão: até ${TAMANHO_DA_ONDA} mensagens em até ${DIAS_DA_PRIMEIRA_ONDA} dias`,
-  "Doze mensagens prontas por semana, escritas para cada cliente",
-  `Garantia Dinheiro Recuperado de ${GARANTIA_DIAS} dias`,
-  "O quanto você já recuperou, em reais, com nome de quem voltou",
   `Atendente Virtual no seu WhatsApp, até ${TETO_CONVERSAS_MES} conversas por mês`,
   `A primeira semana do Atendente por nossa conta: ${SEMANA_GRATIS_DIAS} dias ou ${SEMANA_GRATIS_CONVERSAS} conversas`,
+  "Aprende seus serviços, valores e horários para responder sem inventar",
   "Página de agendamento com seu link, para o cliente marcar sozinho",
+  `A primeira Onda por nossa conta, sem cartão: até ${TAMANHO_DA_ONDA} mensagens em até ${DIAS_DA_PRIMEIRA_ONDA} dias`,
+  "Doze mensagens prontas por semana, escritas para cada cliente no plano Completo",
+  `Garantia Dinheiro Recuperado de ${GARANTIA_DIAS} dias`,
+  "O quanto você já recuperou, em reais, com nome de quem voltou",
   "Cancele quando quiser — você fica com o período que já pagou",
 ];
 
-/** O botão dourado da Nexora antiga, com o brilho. */
 const BOTAO_DOURADO =
   "inline-flex items-center justify-center gap-2 rounded-lg bg-nx-gold font-semibold text-nx-bg shadow-nx-glow-sm transition-all hover:bg-nx-gold/90 active:scale-[0.98]";
-
-const SELOS_MADRUGADA = [
-  "Primeira semana por nossa conta",
-  "Sem cartão de crédito",
-  "Responde no seu WhatsApp",
-  "Atendimento automático 24h",
-];
 
 export default function Home({
   searchParams,
 }: {
   searchParams?: { [key: string]: string | string[] | undefined };
 }) {
-  const c = typeof searchParams?.c === "string" ? searchParams.c : undefined;
-  const isMadrugada = c === "madrugada_02" || c === "madrugada";
-
   return (
     <TemaNexora>
       <TrackViewContent name="Landing Page" />
@@ -197,84 +176,49 @@ export default function Home({
       </header>
 
       <main>
-        {/* HERO — O PRODUTO SE EXPLICA SOZINHO LOGO NO PRIMEIRO IMPACTO */}
+        {/* HERO — ATENDENTE 24H COMO CARRO-CHEFE */}
         <section className="relative overflow-hidden px-6 pb-20 pt-16 sm:pt-24 lg:pb-28">
           <div className="mx-auto max-w-4xl text-center">
-            {isMadrugada ? (
-              <div className="inline-flex items-center gap-2 rounded-full border border-nx-gold/30 bg-nx-gold/10 px-3.5 py-1 text-xs font-semibold text-nx-gold">
-                <span className="h-1.5 w-1.5 rounded-full bg-nx-gold animate-pulse" />
-                Atendente Inteligente 24 horas no WhatsApp
-              </div>
-            ) : (
-              <div className="inline-flex items-center gap-2 rounded-full border border-nx-gold/30 bg-nx-gold/10 px-3.5 py-1 text-xs font-semibold text-nx-gold">
-                <span className="h-1.5 w-1.5 rounded-full bg-nx-gold animate-pulse" />
-                Recuperação de clientes + Atendente 24 horas no WhatsApp
-              </div>
-            )}
+            <div className="inline-flex items-center gap-2 rounded-full border border-nx-gold/30 bg-nx-gold/10 px-3.5 py-1 text-xs font-semibold text-nx-gold">
+              <span className="h-1.5 w-1.5 rounded-full bg-nx-gold animate-pulse" />
+              Atendente Inteligente 24 horas no WhatsApp
+            </div>
 
-            {isMadrugada ? (
-              <h1 className="mt-6 text-4xl font-bold leading-[1.12] tracking-tight [text-wrap:balance] sm:text-5xl lg:text-[3.5rem]">
-                Nunca mais perca um cliente{" "}
-                <span className="text-nx-gold">de madrugada.</span>
-                <span className="mt-4 block text-xl font-normal tracking-normal text-nx-secondary sm:text-2xl lg:text-[1.65rem]">
-                  O Atendente Inteligente que responde e agenda no seu WhatsApp enquanto você dorme.
-                </span>
-              </h1>
-            ) : (
-              <h1 className="mt-6 text-4xl font-bold leading-[1.12] tracking-tight [text-wrap:balance] sm:text-5xl lg:text-[3.5rem]">
-                Seus clientes não sumiram porque quiseram.{" "}
-                <span className="text-nx-gold">Eles só esqueceram de voltar.</span>
-                <span className="mt-4 block text-xl font-normal tracking-normal text-nx-secondary sm:text-2xl lg:text-[1.65rem]">
-                  Descubra quem parou e quanto isso custa — grátis, com a sua lista.
-                </span>
-              </h1>
-            )}
+            <h1 className="mt-6 text-4xl font-bold leading-[1.12] tracking-tight [text-wrap:balance] sm:text-5xl lg:text-[3.5rem]">
+              Nunca mais perca clientes fora do horário ou{" "}
+              <span className="text-nx-gold">de madrugada.</span>
+              <span className="mt-4 block text-xl font-normal tracking-normal text-nx-secondary sm:text-2xl lg:text-[1.65rem]">
+                O Atendente Inteligente que aprende tudo sobre a sua empresa e fecha agendamentos no seu WhatsApp enquanto você dorme.
+              </span>
+            </h1>
 
-            {isMadrugada ? (
-              <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-nx-secondary sm:text-lg">
-                Quantas mensagens chegam no seu WhatsApp às 22h, 23h ou no fim de semana e você só vê no dia seguinte?
-                A Nexora responde na hora, tira dúvidas, passa preços e fecha o agendamento no automático — direto no seu
-                número, mesmo com o estabelecimento fechado.
-              </p>
-            ) : (
-              <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-nx-secondary sm:text-lg">
-                A Nexora descobre quem parou de vir, calcula quanto dinheiro eles deixaram na mesa e escreve
-                a mensagem para trazer cada um de volta. E quando você não pode responder, o Atendente Virtual
-                responde no WhatsApp e marca na sua agenda.
-              </p>
-            )}
+            <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-nx-secondary sm:text-lg">
+              Quantas mensagens chegam no seu WhatsApp às 22h, 23h ou no fim de semana e você só vê no dia seguinte?
+              A Nexora responde imediatamente, tira dúvidas sobre serviços e preços e fecha o agendamento no automático — direto no seu
+              número, mesmo com o estabelecimento fechado.
+            </p>
 
             <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
-              {isMadrugada ? (
-                <>
-                  <CtaLink href="/cadastro" ctaName="hero_madrugada" className={`${BOTAO_DOURADO} px-8 py-4 text-base shadow-nx-glow-sm hover:scale-[1.02]`}>
-                    Ativar meu Atendente 24h grátis <span aria-hidden="true">→</span>
-                  </CtaLink>
-                  <a
-                    href="#atendente"
-                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-nx-border-2 bg-nx-surface/60 px-6 py-4 text-base font-medium text-nx-primary transition-all hover:border-nx-gold/40 hover:bg-nx-surface"
-                  >
-                    Ver demonstração ao vivo <span aria-hidden="true">↓</span>
-                  </a>
-                </>
-              ) : (
-                <>
-                  <CtaLink href="/cadastro" ctaName="hero" className={`${BOTAO_DOURADO} px-8 py-4 text-base shadow-nx-glow-sm hover:scale-[1.02]`}>
-                    Recuperar meus clientes grátis <span aria-hidden="true">→</span>
-                  </CtaLink>
-                  <a
-                    href="#calculadora"
-                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-nx-border-2 bg-nx-surface/60 px-6 py-4 text-base font-medium text-nx-primary transition-all hover:border-nx-gold/40 hover:bg-nx-surface"
-                  >
-                    Calcular quanto estou perdendo <span aria-hidden="true">↓</span>
-                  </a>
-                </>
-              )}
+              <CtaLink href="/cadastro" ctaName="hero_atendente" className={`${BOTAO_DOURADO} px-8 py-4 text-base shadow-nx-glow-sm hover:scale-[1.02]`}>
+                Ativar meu Atendente 24h grátis <span aria-hidden="true">→</span>
+              </CtaLink>
+              <a
+                href="#atendente"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-nx-border-2 bg-nx-surface/60 px-6 py-4 text-base font-medium text-nx-primary transition-all hover:border-nx-gold/40 hover:bg-nx-surface"
+              >
+                Ver demonstração ao vivo <span aria-hidden="true">↓</span>
+              </a>
+              <a
+                href="#calculadora"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-nx-border-2 bg-nx-surface/60 px-6 py-4 text-base font-medium text-nx-primary transition-all hover:border-nx-gold/40 hover:bg-nx-surface"
+              >
+                Calcular quanto estou perdendo <span aria-hidden="true">↓</span>
+              </a>
             </div>
 
             {/* SELOS DE SEGURANÇA */}
             <ul className="mt-8 flex flex-wrap items-center justify-center gap-2.5 text-xs text-nx-secondary">
-              {(isMadrugada ? SELOS_MADRUGADA : SELOS).map((selo) => (
+              {SELOS.map((selo) => (
                 <li
                   key={selo}
                   className="inline-flex items-center gap-1.5 rounded-full border border-nx-border/80 bg-nx-surface/80 px-3.5 py-1 font-medium"
@@ -287,142 +231,149 @@ export default function Home({
               ))}
             </ul>
 
-            {/* PREVIEW VISUAL IMEDIATO — O DONO DA LOJA ENXERGA O RESULTADO NA HORA */}
+            {/* PREVIEW VISUAL DA CONVERSA NO WHATSAPP */}
             <div className="mx-auto mt-14 max-w-2xl text-left">
               <div className="overflow-hidden rounded-2xl border border-nx-border-2 bg-nx-surface shadow-nx-panel">
-                {isMadrugada ? (
-                  <>
-                    <div className="flex items-center justify-between border-b border-nx-border bg-nx-surface-2 px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <span className="h-2.5 w-2.5 rounded-full bg-nx-error/60" />
-                        <span className="h-2.5 w-2.5 rounded-full bg-nx-warning/60" />
-                        <span className="h-2.5 w-2.5 rounded-full bg-nx-success/60" />
-                        <span className="ml-2 text-xs font-semibold text-nx-primary">
-                          Nexora · Atendente Noturno no WhatsApp
-                        </span>
-                      </div>
-                      <span className="rounded-full border border-nx-success/30 bg-nx-success/10 px-2.5 py-0.5 text-[11px] font-semibold text-nx-success flex items-center gap-1.5">
-                        <span className="h-1.5 w-1.5 rounded-full bg-nx-success animate-pulse" />
-                        Plantão 24/7 Ativo
-                      </span>
+                <div className="flex items-center justify-between border-b border-nx-border bg-nx-surface-2 px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full bg-nx-error/60" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-nx-warning/60" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-nx-success/60" />
+                    <span className="ml-2 text-xs font-semibold text-nx-primary">
+                      Nexora · Atendente Noturno no WhatsApp
+                    </span>
+                  </div>
+                  <span className="rounded-full border border-nx-success/30 bg-nx-success/10 px-2.5 py-0.5 text-[11px] font-semibold text-nx-success flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-nx-success animate-pulse" />
+                    Plantão 24/7 Ativo
+                  </span>
+                </div>
+                <div className="p-5 space-y-3.5">
+                  <div className="flex items-center justify-between border-b border-nx-border pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-nx-primary">Atendimento fora do horário</span>
                     </div>
-                    <div className="p-5 space-y-3.5">
-                      <div className="flex items-center justify-between border-b border-nx-border pb-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-nx-primary">Atendimento fora do horário</span>
-                        </div>
-                        <span className="rounded-lg bg-nx-gold/15 px-2.5 py-0.5 text-[11px] font-semibold text-nx-gold">
-                          Enquanto você dorme
-                        </span>
-                      </div>
-                      <div className="flex flex-col items-start gap-1">
-                        <span className="text-[10px] text-nx-muted">23:42 · Cliente novo</span>
-                        <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-nx-surface-2 border border-nx-border px-4 py-2.5 text-sm text-nx-primary">
-                          Boa noite! Vocês têm horário livre para amanhã de tarde?
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <span className="text-[10px] text-nx-gold font-medium">23:42 · Nexora Atendente</span>
-                        <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-nx-gold/10 border border-nx-gold/25 px-4 py-2.5 text-sm text-nx-primary">
-                          Olá! Sou o atendente virtual. Temos sim! Às 14:30 e às 16:00. Qual desses horários fica melhor para você?
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-start gap-1">
-                        <span className="text-[10px] text-nx-muted">23:43 · Cliente</span>
-                        <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-nx-surface-2 border border-nx-border px-4 py-2.5 text-sm text-nx-primary">
-                          Pode ser às 16:00, por favor!
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <span className="text-[10px] text-nx-gold font-medium">23:43 · Nexora Atendente</span>
-                        <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-nx-gold/10 border border-nx-gold/25 px-4 py-2.5 text-sm text-nx-primary">
-                          Perfeito! Agendado para amanhã às 16:00. Salvei na agenda. Tenha uma ótima noite! ✅
-                        </div>
-                      </div>
-                      <div className="mt-2 rounded-xl border border-nx-success/30 bg-nx-success/10 p-2.5 text-center text-xs font-medium text-nx-success">
-                        ✓ Horário reservado automaticamente · Você acorda com a agenda preenchida
-                      </div>
+                    <span className="rounded-lg bg-nx-gold/15 px-2.5 py-0.5 text-[11px] font-semibold text-nx-gold">
+                      Enquanto você dorme
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-start gap-1">
+                    <span className="text-[10px] text-nx-muted">23:42 · Cliente novo</span>
+                    <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-nx-surface-2 border border-nx-border px-4 py-2.5 text-sm text-nx-primary">
+                      Boa noite! Vocês têm horário livre para amanhã de tarde?
                     </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex items-center justify-between border-b border-nx-border bg-nx-surface-2 px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <span className="h-2.5 w-2.5 rounded-full bg-nx-error/60" />
-                        <span className="h-2.5 w-2.5 rounded-full bg-nx-warning/60" />
-                        <span className="h-2.5 w-2.5 rounded-full bg-nx-success/60" />
-                        <span className="ml-2 text-xs font-semibold text-nx-primary">
-                          Nexora · Sua Lista em Ação
-                        </span>
-                      </div>
-                      <span className="rounded-full border border-nx-gold/30 bg-nx-gold/10 px-2.5 py-0.5 text-[11px] font-semibold text-nx-gold">
-                        12 mensagens prontas
-                      </span>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="text-[10px] text-nx-gold font-medium">23:42 · Nexora Atendente</span>
+                    <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-nx-gold/10 border border-nx-gold/25 px-4 py-2.5 text-sm text-nx-primary">
+                      Olá! Sou o atendente virtual. Temos sim! Às 14:30 e às 16:00. Qual desses horários fica melhor para você?
                     </div>
-                    <div className="p-5">
-                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-nx-border pb-3.5">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold text-nx-primary">Marcos</p>
-                            <span className="rounded-full border border-nx-gold/30 bg-nx-gold/10 px-2 py-0.5 text-[11px] font-semibold text-nx-gold">
-                              Prestes a sumir
-                            </span>
-                          </div>
-                          <p className="mt-0.5 text-xs text-nx-secondary">
-                            Costuma vir a cada 28 dias · Última visita há 64 dias
-                          </p>
-                        </div>
-                        <span className="rounded-lg bg-nx-gold/15 px-3 py-1 text-xs font-semibold text-nx-gold">
-                          Pronta para enviar
-                        </span>
-                      </div>
-                      <div className="mt-3.5 rounded-xl border border-nx-border bg-nx-surface-2 p-3.5">
-                        <p className="text-[11px] font-mono font-semibold text-nx-gold">MENSAGEM SUGERIDA NO SEU WHATSAPP:</p>
-                        <p className="mt-1 text-sm leading-relaxed text-nx-secondary">
-                          {MENSAGEM_EXEMPLO}
-                        </p>
-                      </div>
+                  </div>
+                  <div className="flex flex-col items-start gap-1">
+                    <span className="text-[10px] text-nx-muted">23:43 · Cliente</span>
+                    <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-nx-surface-2 border border-nx-border px-4 py-2.5 text-sm text-nx-primary">
+                      Pode ser às 16:00, por favor!
                     </div>
-                  </>
-                )}
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="text-[10px] text-nx-gold font-medium">23:43 · Nexora Atendente</span>
+                    <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-nx-gold/10 border border-nx-gold/25 px-4 py-2.5 text-sm text-nx-primary">
+                      Perfeito! Agendado para amanhã às 16:00. Salvei na agenda. Tenha uma ótima noite! ✅
+                    </div>
+                  </div>
+                  <div className="mt-2 rounded-xl border border-nx-success/30 bg-nx-success/10 p-2.5 text-center text-xs font-medium text-nx-success">
+                    ✓ Horário reservado automaticamente · Você acorda com a agenda preenchida
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* A CONTA — QUANTO MAIS CEDO ELE PÕE OS NÚMEROS DELE, MAIS O PROBLEMA VIRA DELE */}
-        <section id="calculadora" className="scroll-mt-20 border-t border-nx-border/80 bg-nx-surface-2/20 px-6 py-24">
-          <div className="mx-auto max-w-4xl">
+        {/* DEMONSTRAÇÃO DO ATENDENTE VIRTUAL NO WHATSAPP */}
+        <section id="atendente" className="scroll-mt-20 border-t border-nx-border/80 bg-nx-surface-2/20 px-6 py-24">
+          <div className="mx-auto max-w-5xl">
             <div className="text-center">
               <span className="inline-block text-[11px] font-semibold uppercase tracking-widest text-nx-gold">
-                A conta que ninguém faz
+                Atendente Virtual
               </span>
-              <h2 className="mt-3 text-3xl font-bold leading-tight text-nx-primary sm:text-4xl">
-                Quanto dinheiro está parado na sua lista de clientes?
+              <h2 className="mt-3 text-3xl font-bold leading-tight [text-wrap:balance] sm:text-4xl text-nx-primary">
+                O Atendente que aprende tudo sobre a sua empresa — e nunca deixa cliente sem resposta
               </h2>
-              <p className="mx-auto mt-3 max-w-xl text-nx-secondary">
-                Três números seus. A conta aparece na hora, com a fórmula à vista.
+              <p className="mx-auto mt-4 max-w-2xl text-nx-secondary">
+                O cliente mandou mensagem às 22h, no domingo ou enquanto você atendia outra pessoa? Quem
+                responde primeiro fica com a venda.
               </p>
             </div>
-            <div className="mt-12 rounded-2xl border border-nx-border-2 bg-nx-surface p-6 sm:p-10 shadow-nx-panel">
-              <Calculadora />
+
+            <div className="mt-14 grid items-start gap-12 lg:grid-cols-2">
+              <div className="mx-auto w-full max-w-md">
+                <DemoAtendente />
+              </div>
+              <div className="space-y-4">
+                {DIFERENCA_DO_ATENDENTE.map((d) => (
+                  <div key={d.titulo} className="rounded-2xl border border-nx-border bg-nx-surface p-5 transition-all hover:border-nx-gold/30">
+                    <h3 className="flex items-center gap-2.5 font-semibold text-nx-primary">
+                      <span aria-hidden="true" className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-nx-success/15 text-xs font-bold text-nx-success">
+                        ✓
+                      </span>
+                      {d.titulo}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-nx-secondary pl-7">{d.corpo}</p>
+                  </div>
+                ))}
+                <div className="rounded-xl border border-nx-border/80 bg-nx-surface-2/60 p-4 text-xs leading-relaxed text-nx-muted">
+                  <span className="font-semibold text-nx-secondary">Nota de transparência:</span> A conexão pelo QR Code não é a oficial do WhatsApp, e números podem ser restringidos. Como o
+                  Atendente só responde quem escreveu primeiro e nunca manda mensagem sozinho, o risco
+                  diminui — mas não some.
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* A RECUPERAÇÃO NA PRÁTICA — O FLUXO EM 3 PASSOS E A ONDA DE EXEMPLO */}
+        {/* COMO O ATENDENTE APRENDE COM A SUA EMPRESA */}
+        <section className="border-t border-nx-border/80 bg-nx-surface-2/10 px-6 py-20">
+          <div className="mx-auto max-w-5xl text-center">
+            <span className="inline-block text-[11px] font-semibold uppercase tracking-widest text-nx-gold">
+              O Diferencial da Nexora
+            </span>
+            <h2 className="mt-3 text-3xl font-bold leading-tight sm:text-4xl text-nx-primary">
+              O Atendente aprende as regras exatas da sua empresa
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-nx-secondary">
+              Ele não é um robô que inventa respostas. Ele consulta os dados que você mesmo cadastrou no painel.
+            </p>
+
+            <div className="mt-12 grid gap-6 md:grid-cols-3 text-left">
+              {PASSOS_ATENDENTE.map((p) => (
+                <div key={p.titulo} className="rounded-2xl border border-nx-border bg-nx-surface p-7 transition-all hover:border-nx-gold/40">
+                  <h3 className="font-semibold text-lg text-nx-primary">{p.titulo}</h3>
+                  <p className="mt-2.5 text-sm leading-relaxed text-nx-secondary">{p.corpo}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* E PARA QUEM QUER MAIS: O RECUPERADOR DE CLIENTES (PLANO COMPLETO) */}
         <section id="como-funciona" className="scroll-mt-20 border-t border-nx-border/80 px-6 py-24">
           <div className="mx-auto max-w-5xl">
             <div className="text-center">
               <span className="inline-block text-[11px] font-semibold uppercase tracking-widest text-nx-gold">
-                Como funciona
+                Disponível no Plano Completo
               </span>
               <h2 className="mt-3 text-3xl font-bold leading-tight [text-wrap:balance] sm:text-4xl text-nx-primary">
                 Seus clientes não avisam que estão indo embora. Eles simplesmente param de voltar.
               </h2>
               <p className="mx-auto mt-4 max-w-2xl text-nx-secondary">
-                A Nexora percebe pelo ritmo de cada um — e escreve a mensagem que traz cada um de volta.
+                Seus clientes não sumiram porque quiseram. Eles só esqueceram de voltar. A Nexora percebe pelo ritmo de cada um — e escreve a mensagem que traz cada um de volta.
               </p>
+              <div className="mt-6 flex justify-center">
+                <CtaLink href="/cadastro" ctaName="recuperador_secao" className={`${BOTAO_DOURADO} px-6 py-3 text-sm`}>
+                  Recuperar meus clientes grátis <span aria-hidden="true">→</span>
+                </CtaLink>
+              </div>
             </div>
 
             {/* OS 3 PASSOS DA REATIVAÇÃO */}
@@ -515,49 +466,27 @@ export default function Home({
           </div>
         </section>
 
-        {/* A DEFESA — O ATENDENTE VIRTUAL NO WHATSAPP */}
-        <section id="atendente" className="scroll-mt-20 border-t border-nx-border/80 bg-nx-surface-2/20 px-6 py-24">
-          <div className="mx-auto max-w-5xl">
+        {/* CALCULADORA DE RETORNO */}
+        <section id="calculadora" className="scroll-mt-20 border-t border-nx-border/80 bg-nx-surface-2/20 px-6 py-24">
+          <div className="mx-auto max-w-4xl">
             <div className="text-center">
               <span className="inline-block text-[11px] font-semibold uppercase tracking-widest text-nx-gold">
-                Atendente Virtual
+                A conta que ninguém faz
               </span>
-              <h2 className="mt-3 text-3xl font-bold leading-tight [text-wrap:balance] sm:text-4xl text-nx-primary">
-                E enquanto você recupera quem sumiu, seu Atendente Virtual não deixa cliente novo sem resposta.
+              <h2 className="mt-3 text-3xl font-bold leading-tight text-nx-primary sm:text-4xl">
+                Quanto dinheiro está parado na sua lista de clientes?
               </h2>
-              <p className="mx-auto mt-4 max-w-2xl text-nx-secondary">
-                O cliente mandou mensagem às 22h, no domingo ou enquanto você atendia outra pessoa? Quem
-                responde primeiro fica com a venda.
+              <p className="mx-auto mt-3 max-w-xl text-nx-secondary">
+                Três números seus. A conta aparece na hora, com a fórmula à vista.
               </p>
             </div>
-
-            <div className="mt-14 grid items-start gap-12 lg:grid-cols-2">
-              <div className="mx-auto w-full max-w-md">
-                <DemoAtendente />
-              </div>
-              <div className="space-y-4">
-                {DIFERENCA_DO_ATENDENTE.map((d) => (
-                  <div key={d.titulo} className="rounded-2xl border border-nx-border bg-nx-surface p-5 transition-all hover:border-nx-gold/30">
-                    <h3 className="flex items-center gap-2.5 font-semibold text-nx-primary">
-                      <span aria-hidden="true" className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-nx-success/15 text-xs font-bold text-nx-success">
-                        ✓
-                      </span>
-                      {d.titulo}
-                    </h3>
-                    <p className="mt-2 text-sm leading-relaxed text-nx-secondary pl-7">{d.corpo}</p>
-                  </div>
-                ))}
-                <div className="rounded-xl border border-nx-border/80 bg-nx-surface-2/60 p-4 text-xs leading-relaxed text-nx-muted">
-                  <span className="font-semibold text-nx-secondary">Nota de transparência:</span> A conexão pelo QR Code não é a oficial do WhatsApp, e números podem ser restringidos. Como o
-                  Atendente só responde quem escreveu primeiro e nunca manda mensagem sozinho, o risco
-                  diminui — mas não some.
-                </div>
-              </div>
+            <div className="mt-12 rounded-2xl border border-nx-border-2 bg-nx-surface p-6 sm:p-10 shadow-nx-panel">
+              <Calculadora />
             </div>
           </div>
         </section>
 
-        {/* O QUE A NEXORA NÃO É — CONTRASTE VISUAL DIRETO */}
+        {/* O QUE A NEXORA NÃO É */}
         <section id="nao-e" className="scroll-mt-20 border-t border-nx-border/80 px-6 py-24">
           <div className="mx-auto max-w-5xl">
             <div className="text-center">
@@ -593,7 +522,7 @@ export default function Home({
           </div>
         </section>
 
-        {/* A OFERTA — RISCO ZERO E ESTRUTURA CRISTALINA */}
+        {/* A OFERTA — ATENDENTE COMO ENTRADA (R$ 97) E COMPLETO (R$ 197) */}
         <section id="preco" className="scroll-mt-20 border-t border-nx-border/80 bg-nx-surface-2/30 px-6 py-24">
           <div className="mx-auto grid max-w-5xl gap-12 lg:grid-cols-2 lg:items-center">
             <div>
@@ -601,24 +530,23 @@ export default function Home({
                 Risco zero
               </div>
               <h2 className="mt-4 text-3xl font-bold leading-tight sm:text-4xl text-nx-primary">
-                A primeira Onda e a primeira semana são por nossa conta. Se o dinheiro não voltar, devolvemos
-                o que você pagou.
+                A primeira semana do Atendente e a primeira Onda são por nossa conta.
               </h2>
               <div className="mt-8 flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <span className="whitespace-nowrap text-6xl sm:text-7xl font-bold tracking-tight text-nx-primary">R$ 97</span>
-                <span className="text-base text-nx-secondary">/mês com tudo, depois do período por nossa conta</span>
+                <span className="text-base text-nx-secondary">/mês no plano Atendente 24h</span>
               </div>
               <div className="mt-6 space-y-3 leading-relaxed text-nx-secondary">
-                <div className="rounded-xl border border-nx-border bg-nx-surface p-4 text-sm">
-                  <strong className="font-semibold text-nx-primary">A primeira Onda é por nossa conta:</strong> até{" "}
-                  {TAMANHO_DA_ONDA} mensagens prontas para mandar do seu WhatsApp em até{" "}
-                  {DIAS_DA_PRIMEIRA_ONDA} dias — não pedimos cartão para começar.
-                </div>
                 <div className="rounded-xl border border-nx-border bg-nx-surface p-4 text-sm">
                   <strong className="font-semibold text-nx-primary">A primeira semana do Atendente também:</strong>{" "}
                   {SEMANA_GRATIS_DIAS} dias ou {SEMANA_GRATIS_CONVERSAS} conversas, o que vier primeiro, a partir de quando você ligar. No plano, ele atende até{" "}
                   {TETO_CONVERSAS_MES} conversas por mês e entra no expediente depois de {MINUTOS_SEM_RESPOSTA}{" "}
                   minutos sem ninguém responder, se você quiser.
+                </div>
+                <div className="rounded-xl border border-nx-border bg-nx-surface p-4 text-sm">
+                  <strong className="font-semibold text-nx-primary">A primeira Onda é por nossa conta:</strong> até{" "}
+                  {TAMANHO_DA_ONDA} mensagens prontas para mandar do seu WhatsApp em até{" "}
+                  {DIAS_DA_PRIMEIRA_ONDA} dias — não pedimos cartão para começar.
                 </div>
               </div>
               <div className="mt-4 rounded-xl border border-nx-gold/40 bg-nx-gold/10 p-4 text-sm leading-relaxed text-nx-secondary">
@@ -634,7 +562,7 @@ export default function Home({
               </div>
               <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
                 <CtaLink href="/cadastro" ctaName="preco" className={`${BOTAO_DOURADO} px-8 py-4 text-base shadow-nx-glow-sm hover:scale-[1.02]`}>
-                  Recuperar meus clientes grátis <span aria-hidden="true">→</span>
+                  Ativar meu Atendente 24h grátis <span aria-hidden="true">→</span>
                 </CtaLink>
                 <Link href="/precos" className="text-sm font-semibold text-nx-gold transition-colors hover:underline">
                   Ver os três jeitos de pagar <span aria-hidden="true">→</span>
@@ -644,7 +572,7 @@ export default function Home({
 
             {/* CHECKLIST DE TUDO INCLUSO */}
             <div className="rounded-2xl border border-nx-border-2 bg-nx-surface p-6 sm:p-8 shadow-nx-panel">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-nx-gold">Tudo incluído no plano</h3>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-nx-gold">Tudo incluído no plano Atendente</h3>
               <ul className="mt-6 divide-y divide-nx-border">
                 {INCLUI.map((item) => (
                   <li
@@ -684,19 +612,18 @@ export default function Home({
           </div>
         </section>
 
-        {/* CTA FINAL DE FECHAMENTO */}
+        {/* CTA FINAL */}
         <section className="border-t border-nx-border/80 px-6 py-24">
           <div className="relative mx-auto max-w-3xl overflow-hidden rounded-3xl border border-nx-gold/30 bg-nx-surface p-8 text-center sm:p-14 shadow-nx-glow-sm">
             <h2 className="text-3xl font-bold leading-tight sm:text-4xl text-nx-primary">
-              Traga de volta quem sumiu. E responda primeiro.
+              Nunca mais perca clientes fora do horário.
             </h2>
             <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-nx-secondary sm:text-lg">
-              Crie sua conta em 15 segundos, sem cartão de crédito. Mande a primeira Onda e teste o Atendente
-              com os seus dados. Você só continua se quiser.
+              Crie sua conta em 15 segundos, sem cartão de crédito. Teste o Atendente 24h com as regras da sua empresa. Você só continua se gostar do resultado.
             </p>
             <div className="mt-8 flex justify-center">
               <CtaLink href="/cadastro" ctaName="final" className={`${BOTAO_DOURADO} px-8 py-4 text-base sm:text-lg shadow-nx-glow-sm hover:scale-[1.02]`}>
-                Começar agora por nossa conta <span aria-hidden="true">→</span>
+                Ativar meu Atendente 24h grátis <span aria-hidden="true">→</span>
               </CtaLink>
             </div>
           </div>
@@ -705,17 +632,11 @@ export default function Home({
 
       <RodapeFunil />
 
-      {/* No celular o botão nunca sai da tela — veio da Nexora antiga. */}
+      {/* No celular o botão nunca sai da tela */}
       <div className="fixed inset-x-0 bottom-0 z-50 border-t border-nx-border bg-nx-bg/95 p-3 backdrop-blur-md sm:hidden">
-        {isMadrugada ? (
-          <CtaLink href="/cadastro" ctaName="mobile_sticky_madrugada" className={`${BOTAO_DOURADO} w-full px-5 py-3.5`}>
-            Ativar meu Atendente 24h grátis <span aria-hidden="true">→</span>
-          </CtaLink>
-        ) : (
-          <CtaLink href="/cadastro" ctaName="mobile_sticky" className={`${BOTAO_DOURADO} w-full px-5 py-3.5`}>
-            Recuperar meus clientes grátis <span aria-hidden="true">→</span>
-          </CtaLink>
-        )}
+        <CtaLink href="/cadastro" ctaName="mobile_sticky_atendente" className={`${BOTAO_DOURADO} w-full px-5 py-3.5`}>
+          Ativar meu Atendente 24h grátis <span aria-hidden="true">→</span>
+        </CtaLink>
       </div>
     </TemaNexora>
   );

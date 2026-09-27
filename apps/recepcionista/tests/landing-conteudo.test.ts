@@ -24,25 +24,28 @@ const PROIBIDAS =
   /disparar mensagens|ia escolhe|banid[oa] em \d|perdem até|garantidos|um clique|1 clique|equipe distribuída|\bRRI\b/i;
 
 describe("o hero", () => {
-  // Desde o redesenho de conversão de 22/09/2026, o hero é a recuperação — o
-  // dinheiro que já está na lista do dono. O Atendente Virtual é a defesa, na
-  // seção dele. (Entre a manhã e a tarde desse dia, o hero foi o Atendente.)
-  it("abre com o dinheiro parado na lista de clientes", () => {
+  // Desde 27/09/2026, com a validação do tráfego pago, o Atendente 24h é o produto
+  // principal da Nexora, e a recuperação de clientes inativos é o plano Completo.
+  it("abre com o Atendente 24h e o aprendizado com a empresa", () => {
     const home = semQuebras(leia("app/page.tsx"));
+    expect(home).toContain("Nunca mais perca clientes fora do horário");
+    expect(home).toContain("de madrugada.");
+    expect(home).toContain("O Atendente Inteligente que aprende");
+    expect(home).toContain("Ativar meu Atendente 24h grátis");
+  });
+
+  it("as frases da reativação continuam na página na seção do plano Completo", () => {
+    const home = semQuebras(leia("app/page.tsx"));
+    expect(home).toContain("Seus clientes não avisam que estão indo embora.");
+    expect(home).toContain("Eles simplesmente param de voltar.");
     expect(home).toContain("Seus clientes não sumiram porque quiseram.");
     expect(home).toContain("Eles só esqueceram de voltar.");
     expect(home).toContain("Recuperar meus clientes grátis");
   });
 
-  it("a frase aprovada da reativação continua na página", () => {
-    const home = semQuebras(leia("app/page.tsx"));
-    expect(home).toContain("Seus clientes não avisam que estão indo embora.");
-    expect(home).toContain("Eles simplesmente param de voltar.");
-  });
-
-  it("ataque antes da defesa: a conta e a recuperação vêm antes do Atendente", () => {
+  it("hierarquia do produto: o Atendente vem antes do Recuperador", () => {
     const home = leia("app/page.tsx");
-    const marcos = ["<h1", 'id="calculadora"', 'id="como-funciona"', 'id="atendente"', 'id="nao-e"', 'id="preco"', 'id="perguntas"'];
+    const marcos = ["<h1", 'id="atendente"', 'id="como-funciona"', 'id="calculadora"', 'id="nao-e"', 'id="preco"', 'id="perguntas"'];
     const posicoes = marcos.map((m) => home.indexOf(m));
     marcos.forEach((m, i) => expect(posicoes[i], m).toBeGreaterThan(-1));
     expect(posicoes).toEqual([...posicoes].sort((a, b) => a - b));
@@ -52,12 +55,11 @@ describe("o hero", () => {
 describe("a demonstração do Atendente Virtual", () => {
   const demo = leia("components/demo-atendente.tsx");
 
-  it("está na seção do Atendente, depois da recuperação", () => {
+  it("está na seção do Atendente", () => {
     const home = leia("app/page.tsx");
     expect(home).toMatch(/import\s*\{\s*DemoAtendente\s*\}\s*from\s*["']@\/components\/demo-atendente["']/);
     const onde = home.indexOf("<DemoAtendente />");
     expect(onde).toBeGreaterThan(home.indexOf('id="atendente"'));
-    expect(onde).toBeGreaterThan(home.indexOf('id="como-funciona"'));
   });
 
   it("usa os mesmos textos do motor, nos três jeitos", () => {

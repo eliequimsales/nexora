@@ -47,7 +47,7 @@ export default function CadastroPage() {
       }
       trackCompleteRegistration("email");
       registrar("criou_conta");
-      router.push("/painel/clientes/importar");
+      router.push("/painel/atendente");
       router.refresh();
     } catch {
       setError("Falha de conexão. Tente novamente.");
@@ -70,7 +70,7 @@ export default function CadastroPage() {
         <div className="rounded-2xl border border-nx-border bg-nx-surface p-8 shadow-nx-panel">
           <h1 className="text-xl font-bold">Criar conta da empresa</h1>
           <p className="mb-6 mt-1 text-sm text-nx-secondary">
-            A primeira Onda é por nossa conta. Sem cartão para começar.
+            Ative seu Atendente 24h no WhatsApp. Sem cartão para começar.
           </p>
           <form onSubmit={handleSubmit} className="space-y-4">
             {FIELDS.map((field) => (
