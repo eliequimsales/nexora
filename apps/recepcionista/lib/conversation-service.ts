@@ -88,6 +88,44 @@ export async function handleIncomingMessage(incoming: IncomingWhatsAppMessage): 
       });
     }
 
+    // 3.5 Garante o cliente na base de clientes ("Meus clientes")
+    try {
+      const telefoneLimpo = incoming.phone.replace(/\D/g, "");
+      const nomeCliente = incoming.senderName?.trim() || incoming.phone;
+      const variantes = variantesDeTelefone(incoming.phone);
+      const clienteExistente = await prisma.customer.findFirst({
+        where: {
+          companyId,
+          phone: { in: variantes.length > 0 ? variantes : [incoming.phone, telefoneLimpo] },
+        },
+        select: { id: true, name: true },
+      });
+
+      if (!clienteExistente) {
+        await prisma.customer.create({
+          data: {
+            companyId,
+            phone: incoming.phone,
+            name: nomeCliente,
+            source: "WHATSAPP",
+          },
+        });
+      } else if (
+        incoming.senderName?.trim() &&
+        (!clienteExistente.name ||
+          clienteExistente.name === clienteExistente.id ||
+          clienteExistente.name === incoming.phone ||
+          clienteExistente.name === telefoneLimpo)
+      ) {
+        await prisma.customer.update({
+          where: { id: clienteExistente.id },
+          data: { name: incoming.senderName.trim() },
+        });
+      }
+    } catch {
+      // Ignora erro de corrida ou duplicidade concorrente
+    }
+
     // 4. Salva a mensagem do cliente (tudo fica registrado, sempre)
     try {
       await prisma.message.create({

@@ -23,12 +23,19 @@ export function CartaoDaOferta({
   if (!oferta) {
     return (
       <div className="rounded-2xl border border-amber/40 bg-amber/10 p-6">
-        <p className="text-panel-ink">{motivo}</p>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-xl">🔒</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-amber-deep">Recurso Exclusivo</span>
+        </div>
+        <h3 className="font-display text-lg font-bold text-panel-ink mb-1">
+          Recuperador de Clientes
+        </h3>
+        <p className="text-sm text-panel-ink leading-relaxed">{motivo}</p>
         <Link
           href={acao.href}
-          className="mt-4 inline-flex rounded-xl bg-amber px-5 py-3 text-sm font-semibold text-night transition hover:brightness-110"
+          className="mt-4 inline-flex items-center justify-center rounded-xl bg-amber px-5 py-3 text-sm font-bold text-night transition hover:brightness-110 shadow-sm"
         >
-          {acao.texto}
+          {acao.texto} →
         </Link>
       </div>
     );

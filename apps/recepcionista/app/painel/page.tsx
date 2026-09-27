@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 
 /**
- * O painel abre em Meus clientes, permitindo cadastrar e visualizar a base.
+ * O painel abre em Atendente Virtual, a sessao principal da plataforma.
  */
 export default function PainelPage() {
-  redirect("/painel/clientes/importar");
+  redirect("/painel/atendente");
 }

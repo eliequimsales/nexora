@@ -104,23 +104,22 @@ export async function exigirAcesso(
 ): Promise<NextResponse | null> {
   const estado = await estadoDaEmpresa(companyId);
 
-  // O RECUPERADOR DE CLIENTES: exclusivo do plano Completo (exceto a primeira Onda grátis)
+  // O RECUPERADOR DE CLIENTES: exclusivo do plano Completo
   if (acao === "GERAR_ONDA" || acao === "ENVIAR_TOQUE") {
-    if (estado === "GRATIS" && ACOES_DA_PRIMEIRA_ONDA.includes(acao)) {
-      const primeira = await primeiraOndaDaEmpresa(companyId);
-      if (podeNaPrimeiraOnda(estado, acao, primeira.situacao)) return null;
-    }
-
     const temCompleto = await empresaTemPlanoCompleto(companyId);
     if (!temCompleto) {
       const oferta = RECUSA_COM_OFERTA.includes(estado)
         ? await ofertaDaEmpresa(companyId).catch(() => null)
         : null;
+      const temPro = estado === "ATIVO" || estado === "TRIAL" || estado === "PASSE";
+      const textoCta = temPro
+        ? `Fazer upgrade para o Plano Completo — ${emReais(PRECO_COMPLETO_MENSAL_CENTS)}/mês`
+        : `Assinar o plano Completo — ${emReais(PRECO_COMPLETO_MENSAL_CENTS)}/mês`;
       return NextResponse.json(
         {
           error: "O Recuperador de Clientes é exclusivo do plano Nexora Completo.",
           acao: {
-            texto: `Assinar o plano Completo — ${emReais(PRECO_COMPLETO_MENSAL_CENTS)}/mês`,
+            texto: textoCta,
             href: "/painel/assinatura",
           },
           oferta,

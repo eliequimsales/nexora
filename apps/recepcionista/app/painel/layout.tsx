@@ -13,11 +13,11 @@ import { PainelNavDesktop, PainelNavMobile } from "@/components/painel/navegacao
 import { BotaoFeedback } from "@/components/feedback/botao-feedback";
 
 // O MENU É O FLUXO DE VALOR, NÃO O ÍNDICE DO SISTEMA.
+// A tela /painel/livro-caixa (Dinheiro recuperado) continua acessível diretamente fora do menu.
 const NAV = [
+  { href: "/painel/atendente", label: "Atendente Virtual" },
   { href: "/painel/clientes/importar", label: "Meus clientes" },
   { href: "/painel/onda", label: "Reativar clientes" },
-  { href: "/painel/atendente", label: "Atendente Virtual" },
-  { href: "/painel/livro-caixa", label: "Dinheiro recuperado" },
   { href: "/painel/agenda", label: "Agenda" },
   { href: "/painel/assinatura", label: "Planos" },
 ];
@@ -107,7 +107,7 @@ export default async function PainelLayout({ children }: { children: React.React
       <header className="border-b border-panel-line bg-panel-card">
         <div className="mx-auto flex max-w-page items-center justify-between px-6 py-3">
           <div className="flex items-center gap-8">
-            <Link href="/painel/clientes/importar" className="flex items-center gap-2">
+            <Link href="/painel/atendente" className="flex items-center gap-2">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber font-display text-sm font-bold text-night">
                 N
               </span>

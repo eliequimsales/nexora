@@ -27,16 +27,15 @@ const NAV = [...layout.matchAll(/\{\s*href:\s*"([^"]+)",\s*label:\s*"([^"]+)"\s*
 );
 
 describe("o menu do painel", () => {
-  it("tem exatamente seis itens", () => {
-    expect(NAV).toHaveLength(6);
+  it("tem exatamente cinco itens", () => {
+    expect(NAV).toHaveLength(5);
   });
 
   it("segue a ordem do fluxo de valor", () => {
     expect(NAV.map((i) => i.href)).toEqual([
+      "/painel/atendente",
       "/painel/clientes/importar",
       "/painel/onda",
-      "/painel/atendente",
-      "/painel/livro-caixa",
       "/painel/agenda",
       "/painel/assinatura",
     ]);
@@ -55,7 +54,7 @@ describe("o menu do painel", () => {
   });
 
   it("não leva para telas secundárias fora do fluxo direto de valor", () => {
-    for (const fora of ["/painel/conversas", "/painel/treinamento", "/painel/relatorios", "/painel/configuracoes"]) {
+    for (const fora of ["/painel/conversas", "/painel/treinamento", "/painel/relatorios", "/painel/configuracoes", "/painel/livro-caixa"]) {
       expect(NAV.map((i) => i.href), fora).not.toContain(fora);
     }
   });
@@ -69,6 +68,7 @@ describe("tirar do menu não é apagar a tela", () => {
       "app/painel/relatorios/page.tsx",
       "app/painel/configuracoes/page.tsx",
       "app/painel/assinatura/page.tsx",
+      "app/painel/livro-caixa/page.tsx",
     ]) {
       expect(existsSync(join(RAIZ, pagina)), pagina).toBe(true);
     }
