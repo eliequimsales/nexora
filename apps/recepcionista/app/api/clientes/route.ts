@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionCompanyId } from "@/lib/auth";
 import { podeExecutar } from "@/lib/billing/acesso";
 import { anualDaEmpresa } from "@/lib/billing/anual-da-conta";
-import { estadoDaEmpresa } from "@/lib/billing/guarda";
+import { estadoDaEmpresa, empresaTemPlanoCompleto } from "@/lib/billing/guarda";
 import { ofertaDaEmpresa } from "@/lib/billing/oferta-da-conta";
 import { TRAVA_NA_PRIMEIRA_ONDA } from "@/lib/billing/primeira-onda";
 import { primeiraOndaDaEmpresa } from "@/lib/billing/primeira-onda-da-conta";
@@ -224,6 +224,7 @@ export async function GET() {
     clientes: lista,
     total: lista.length,
     emRisco: atrasados,
+    temPlanoCompleto: await empresaTemPlanoCompleto(companyId).catch(() => false),
     ativacao: {
       clientes: lista.length,
       atrasados,

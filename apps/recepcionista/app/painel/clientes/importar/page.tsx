@@ -6,7 +6,7 @@ import { DECLARACAO_BASE } from "@/lib/legal/identidade";
 import { variantesDeTelefone } from "@/lib/recuperacao/telefone";
 import { CartaoDaOferta } from "@/components/cobranca/cartao-da-oferta";
 import { CartaoDoAnual } from "@/components/cobranca/cartao-do-anual";
-import { CartaoDaNoite } from "@/components/painel/cartao-da-noite";
+import { CartaoDoRecuperador } from "@/components/painel/cartao-recuperador";
 import type { OfertaDoAnual } from "@/lib/billing/anual-na-prova";
 import { ChecklistAtivacao } from "@/components/painel/checklist-ativacao";
 import { progressoDaAtivacao, type SinaisDaAtivacao } from "@/lib/painel/ativacao";
@@ -165,6 +165,8 @@ export default function PaginaImportar() {
   const [travaMensagem, setTravaMensagem] = useState<Recusa | null>(null);
   // O anual no momento da prova, pronto do servidor.
   const [anual, setAnual] = useState<OfertaDoAnual | null>(null);
+  const [emRisco, setEmRisco] = useState(0);
+  const [temPlanoCompleto, setTemPlanoCompleto] = useState(false);
   // Os sinais do topo da tela: os três passos e o que já voltou no mês.
   const [painel, setPainel] = useState<{
     ativacao: SinaisDaAtivacao;
@@ -196,6 +198,8 @@ export default function PaginaImportar() {
         setCadastrados(data.clientes || []);
         setTravaMensagem(data.trava ?? null);
         setAnual(data.anual ?? null);
+        setEmRisco(data.emRisco ?? 0);
+        setTemPlanoCompleto(Boolean(data.temPlanoCompleto));
         setPainel(
           data.ativacao && data.retorno
             ? { ativacao: data.ativacao, retorno: data.retorno }
@@ -469,7 +473,11 @@ export default function PaginaImportar() {
       */}
       {painel && <ChecklistAtivacao sinais={painel.ativacao} />}
       {anual && <CartaoDoAnual oferta={anual} />}
-      <CartaoDaNoite />
+      <CartaoDoRecuperador
+        emRisco={emRisco}
+        totalClientes={cadastrados.length}
+        temPlanoCompleto={temPlanoCompleto}
+      />
 
       <header>
         <div className="flex flex-wrap items-center gap-2">
