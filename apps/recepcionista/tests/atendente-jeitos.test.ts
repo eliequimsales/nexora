@@ -247,12 +247,12 @@ describe("conversaDeExemplo — a mesma conversa nos três jeitos", () => {
     cumprimento: "Boa noite",
   };
 
-  it("o cliente pergunta, o Atendente se apresenta, oferece, e confirma a escolha", () => {
+  it("o cliente pergunta, o Atendente se apresenta, envia o link da agenda, e confirma", () => {
     for (const jeito of JEITOS) {
       const bolhas = conversaDeExemplo(jeito, dados);
       expect(bolhas[0].de).toBe("cliente");
       expect(bolhas.some((b) => b.de === "atendente" && b.texto.includes("Eu sou Bia"))).toBe(true);
-      expect(bolhas.some((b) => b.texto.includes("2 · qua 23/09, 11h com Léo"))).toBe(true);
+      expect(bolhas.some((b) => b.texto.includes("https://meunexora.com.br/agendar"))).toBe(true);
       expect(bolhas.at(-1)?.texto).toMatch(/quarta, 23\/09, às 11h/i);
     }
   });

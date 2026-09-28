@@ -575,10 +575,12 @@ export function Ajustes({
           />
         </Linha>
         <Linha
-          rotulo="Marca direto na agenda"
-          detalhe={tela.marcaDireto ? "sugere 3 horários em texto" : "envia o link para o cliente escolher"}
+          rotulo="Agendamento no WhatsApp"
+          detalhe="O Atendente sempre envia o link da sua agenda para o cliente escolher o dia e horário."
         >
-          <Chave rotulo="Marca direto na agenda" ligada={tela.marcaDireto} aoMudar={(marcaDireto) => aoAjustar({ marcaDireto })} />
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+            ✓ Sempre por link da agenda
+          </span>
         </Linha>
       </section>
 

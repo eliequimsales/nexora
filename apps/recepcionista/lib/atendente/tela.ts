@@ -177,6 +177,7 @@ async function exemploDaConversa(companyId: string, fatos: Fatos, agora: Date): 
     cliente: "Marina",
     volta: abertura ? textoDaVolta(abertura, noiteAnterior) : null,
     cumprimento: "Boa noite",
+    linkAgenda: fatos.linkAgenda,
   };
 
   if (servico) {

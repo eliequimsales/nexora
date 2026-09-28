@@ -289,11 +289,12 @@ export function conversaDeExemplo(
     escolhida: { quando: string; profissional: string | null };
     volta: string | null;
     cumprimento: string;
+    linkAgenda?: string | null;
   },
 ): Bolha[] {
   const t = textosDoJeito(jeito);
   const ap = apresentacao({ nome: d.nome, empresa: d.empresa });
-  const numeroEscolhido = String(Math.min(2, d.opcoes.length) || 1);
+  const link = d.linkAgenda || "https://meunexora.com.br/agendar";
   return [
     {
       de: "cliente",
@@ -305,12 +306,16 @@ export function conversaDeExemplo(
     },
     {
       de: "atendente",
-      texto: [t.ofertaLead({ servico: d.servico, detalhe: d.detalhe, quando: "amanhã" }), ...d.opcoes, t.respondaComNumero].join("\n"),
+      texto: t.conviteLink({ link, servico: d.servico }),
     },
-    { de: "cliente", texto: numeroEscolhido },
+    {
+      de: "cliente",
+      texto: "Perfeito, vou escolher o melhor horário no link!",
+    },
     {
       de: "atendente",
       texto: t.confirmacao({ quando: d.escolhida.quando, servico: d.servico, profissional: d.escolhida.profissional }),
     },
   ];
 }
+
