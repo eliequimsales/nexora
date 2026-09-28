@@ -229,8 +229,8 @@ describe("o celular é a explicação", () => {
     expect(celular).toContain("/api/atendente/simular");
   });
 
-  it("oferece ouvir em voz alta quando o navegador tem voz", () => {
-    expect(celular).toContain("speechSynthesis");
+  it("não possui locutor robótico nem reprodução de voz invasiva", () => {
+    expect(celular).not.toContain("speechSynthesis");
   });
 });
 

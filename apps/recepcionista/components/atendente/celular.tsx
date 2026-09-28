@@ -38,7 +38,6 @@ export function Celular({
   const [entrada, setEntrada] = useState("");
   const [digitando, setDigitando] = useState(false);
   const [erro, setErro] = useState("");
-  const [temVoz, setTemVoz] = useState(false);
   const rolagem = useRef<HTMLDivElement>(null);
 
   const exemplo = useMemo<Mensagem[]>(
@@ -46,13 +45,6 @@ export function Celular({
     [jeito, nome, tela.exemplo.dados],
   );
   const mensagens = teste ?? exemplo;
-
-  useEffect(() => {
-    setTemVoz(typeof window !== "undefined" && "speechSynthesis" in window);
-    return () => {
-      if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
-    };
-  }, []);
 
   useEffect(() => {
     rolagem.current?.scrollTo({ top: rolagem.current.scrollHeight, behavior: "smooth" });
@@ -98,21 +90,6 @@ export function Celular({
     }
   }
 
-  function ouvir() {
-    const fala = window.speechSynthesis;
-    fala.cancel();
-    const texto = mensagens
-      .filter((m) => m.de === "atendente")
-      .map((m) => m.texto)
-      .join(". ")
-      .replace(/\p{Extended_Pictographic}/gu, "")
-      .replace(/ · /g, ", ");
-    const frase = new SpeechSynthesisUtterance(texto);
-    frase.lang = "pt-BR";
-    const voz = fala.getVoices().find((v) => v.lang?.toLowerCase().startsWith("pt"));
-    if (voz) frase.voice = voz;
-    fala.speak(frase);
-  }
 
   function recomecar() {
     setTeste(null);
@@ -137,19 +114,7 @@ export function Celular({
               {digitando ? "digitando…" : teste ? "teste · nada é enviado" : "exemplo"}
             </p>
           </div>
-          {temVoz && (
-            <button
-              type="button"
-              onClick={ouvir}
-              aria-label="Ouvir a conversa"
-              title="Ouvir"
-              className="rounded-full p-2 text-mist/70 transition hover:bg-night hover:text-mist"
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5L6 9H3v6h3l5 4V5zM15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13" />
-              </svg>
-            </button>
-          )}
+
           {teste && (
             <button
               type="button"

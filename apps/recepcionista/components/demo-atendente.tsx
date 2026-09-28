@@ -395,42 +395,8 @@ function horaAtualFormatada(): string {
   return `${h}:${m}`;
 }
 
-function emitirSom(tipo: "envio" | "resposta") {
-  if (typeof window === "undefined") return;
-  try {
-    const AudioContextClass =
-      window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContextClass) return;
-    const ctx = new AudioContextClass();
-
-    if (tipo === "envio") {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(540, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(820, ctx.currentTime + 0.05);
-      gain.gain.setValueAtTime(0.08, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.06);
-    } else {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(800, ctx.currentTime);
-      osc.frequency.setValueAtTime(1040, ctx.currentTime + 0.07);
-      gain.gain.setValueAtTime(0.07, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.2);
-    }
-  } catch {
-    // Silencia se áudio for bloqueado pelo navegador
-  }
+function emitirSom(_tipo: "envio" | "resposta") {
+  // Áudio desativado: sem sons ou locutor
 }
 
 export function DemoAtendente({
