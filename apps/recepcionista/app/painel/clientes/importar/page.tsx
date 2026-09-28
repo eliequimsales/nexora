@@ -479,46 +479,26 @@ export default function PaginaImportar() {
         temPlanoCompleto={temPlanoCompleto}
       />
 
-      <header>
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="font-display text-2xl text-panel-ink">Meus clientes</h1>
-          <span className="rounded-md bg-panel-card border border-panel-line px-2 py-0.5 text-xs font-medium text-panel-sub">
-            Preenchimento opcional
-          </span>
-        </div>
-        <p className="mt-1 text-sm text-panel-sub">
-          Adicione os dados dos seus clientes pelos campos abaixo ou, se preferir, cole sua planilha. Não é obrigatório cadastrar agora para usar a plataforma.
-        </p>
-      </header>
-
-      {/* Opção sem planilhas: Agenda Inteligente */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-amber/30 bg-panel-card p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <span className="text-2xl">🗓️</span>
-          <div>
-            <h3 className="text-sm font-bold text-panel-ink">
-              Prefere não mexer com planilhas? Use a Agenda Inteligente
-            </h3>
-            <p className="text-xs text-panel-sub">
-              Você não precisa cadastrar clientes agora. Conforme você marca os atendimentos do dia a dia, a Nexora salva seus clientes e monitora o retorno de cada um de forma automática.
-            </p>
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="font-display text-2xl text-panel-ink">Meus clientes</h1>
+            <span className="rounded-full bg-panel-card border border-panel-line px-2.5 py-0.5 text-xs font-medium text-panel-sub">
+              Opcional
+            </span>
           </div>
+          <p className="mt-1 text-sm text-panel-sub">
+            Cadastre seus clientes abaixo ou importe sua planilha. A Agenda e o WhatsApp também salvam automaticamente.
+          </p>
         </div>
         <Link
           href="/painel/agenda"
-          className="inline-flex items-center justify-center whitespace-nowrap rounded-xl bg-amber px-4 py-2 text-xs font-bold text-night hover:bg-amber-hover transition"
+          className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-xl border border-panel-line bg-panel-card px-3.5 py-2 text-xs font-semibold text-panel-ink transition hover:bg-panel-bg shadow-sm"
         >
-          Abrir Agenda Inteligente →
+          <span>🗓️ Usar Agenda Inteligente</span>
+          <span aria-hidden="true">→</span>
         </Link>
-      </div>
-
-      {/* O medo aqui é de formato. Mata-se o medo antes do campo. */}
-      <div className="rounded-2xl border border-amber/40 bg-amber/10 p-5">
-        <p className="text-sm leading-relaxed text-panel-ink">
-          Preencha os campos abaixo com os dados dos seus clientes se quiser começar com a sua lista organizada. A Nexora organiza tudo
-          automaticamente para você, identifica quem está sumido e mostra o resultado antes de salvar qualquer coisa. Se preferir não preencher agora, você pode usar todas as outras áreas da plataforma livremente.
-        </p>
-      </div>
+      </header>
 
       {/* Feedback de sucesso e reversão imediata para cliente cadastrado */}
       {ultimoCadastrado && (
