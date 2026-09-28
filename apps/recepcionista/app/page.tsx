@@ -27,13 +27,6 @@ export const metadata: Metadata = {
  *   serviços e horários da sua empresa. Atende e fecha agendamentos à noite e finais de semana.
  */
 
-const SELOS = [
-  "Aprende com a sua empresa",
-  "Primeira semana por nossa conta",
-  "Sem cartão de crédito",
-  "Responde no seu WhatsApp",
-];
-
 const PASSOS_ATENDENTE = [
   {
     titulo: "1. Você cadastra seus serviços e preços",
@@ -114,21 +107,16 @@ export default function Home({
               Atendente Inteligente 24 horas no WhatsApp
             </div>
 
-            <h1 className="mt-6 text-4xl font-bold leading-[1.12] tracking-tight [text-wrap:balance] sm:text-5xl lg:text-[3.5rem]">
+            <h1 className="mt-6 text-4xl font-bold leading-[1.15] tracking-tight [text-wrap:balance] sm:text-5xl lg:text-[3.35rem]">
               Nunca mais perca clientes fora do horário ou{" "}
               <span className="text-nx-gold">de madrugada.</span>
-              <span className="mt-4 block text-xl font-normal tracking-normal text-nx-secondary sm:text-2xl lg:text-[1.65rem]">
-                O Atendente Inteligente que aprende tudo sobre a sua empresa e fecha agendamentos no seu WhatsApp enquanto você dorme.
-              </span>
             </h1>
 
-            <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-nx-secondary sm:text-lg">
-              Quantas mensagens chegam no seu WhatsApp às 22h, 23h ou no fim de semana e você só vê no dia seguinte?
-              A Nexora responde imediatamente, tira dúvidas sobre serviços e preços e fecha o agendamento no automático — direto no seu
-              número, mesmo com o estabelecimento fechado.
+            <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-nx-secondary sm:text-xl">
+              O Atendente Inteligente que aprende tudo sobre a sua empresa e fecha agendamentos no seu WhatsApp enquanto você dorme.
             </p>
 
-            <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
               <CtaLink href="/cadastro" ctaName="hero_atendente" className={`${BOTAO_DOURADO} px-8 py-4 text-base shadow-nx-glow-sm hover:scale-[1.02]`}>
                 Ativar meu Atendente 24h grátis <span aria-hidden="true">→</span>
               </CtaLink>
@@ -141,31 +129,22 @@ export default function Home({
             </div>
 
             {/* MICRO BADGES DE CONFIANÇA E RAPIDEZ */}
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-nx-secondary font-medium">
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-nx-secondary font-medium">
               <span className="flex items-center gap-1.5 text-nx-gold">
                 <span className="h-1.5 w-1.5 rounded-full bg-nx-gold animate-pulse" />
                 Pronto no seu WhatsApp em 2 minutos
               </span>
               <span className="text-nx-muted">•</span>
-              <span>não pedimos cartão para começar</span>
+              <span className="inline-flex items-center gap-1">
+                <span aria-hidden="true" className="text-nx-success font-bold">✓</span>
+                Primeira semana por nossa conta
+              </span>
               <span className="text-nx-muted">•</span>
-              <span>Cancele quando quiser</span>
+              <span className="inline-flex items-center gap-1">
+                <span aria-hidden="true" className="text-nx-success font-bold">✓</span>
+                não pedimos cartão para começar
+              </span>
             </div>
-
-            {/* SELOS DE SEGURANÇA */}
-            <ul className="mt-8 flex flex-wrap items-center justify-center gap-2.5 text-xs text-nx-secondary">
-              {SELOS.map((selo) => (
-                <li
-                  key={selo}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-nx-border/80 bg-nx-surface/80 px-3.5 py-1 font-medium"
-                >
-                  <span aria-hidden="true" className="text-nx-success">
-                    ✓
-                  </span>
-                  {selo}
-                </li>
-              ))}
-            </ul>
 
             {/* SIMULADOR INTERATIVO NO WHATSAPP */}
             <div id="atendente" className="scroll-mt-24 mx-auto mt-12 w-full max-w-2xl text-left">

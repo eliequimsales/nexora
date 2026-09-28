@@ -762,18 +762,6 @@ export function DemoAtendente({
         >
           ✦ Começar teste grátis (Sem cartão) →
         </Link>
-        <p className="mt-2 text-[11px] text-nx-muted">
-          Ou se preferir,{" "}
-          <a
-            href={linkWhatsApp}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-nx-secondary underline hover:text-nx-primary"
-          >
-            no WhatsApp de Teste
-          </a>
-          .
-        </p>
       </div>
 
       <div className="mt-2 text-center text-[10px] text-nx-muted">
