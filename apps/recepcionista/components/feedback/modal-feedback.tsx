@@ -127,14 +127,15 @@ export function ModalFeedback({
             <h3 className="text-xl font-bold text-white">Muito obrigado pelo seu feedback!</h3>
             <p className="text-sm text-gray-300 max-w-sm mx-auto leading-relaxed">
               Sua mensagem foi enviada diretamente aos fundadores da Nexora (
-              <span className="text-amber-400 font-mono text-xs">{EMAIL_FEEDBACK}</span>). Vamos
+              <span className="text-amber font-mono text-xs">{EMAIL_FEEDBACK}</span>). Vamos
               analisá-la com carinho para melhorar a ferramenta para o seu negócio.
             </p>
             <div className="pt-4">
               <button
                 type="button"
                 onClick={handleResetEFechar}
-                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-amber-400 font-bold text-gray-950 hover:bg-amber-300 transition"
+                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-amber font-bold text-night hover:brightness-110 shadow-md transition"
+                style={{ backgroundColor: "#EAB308", color: "#0A0A0F" }}
               >
                 Concluir
               </button>
@@ -144,7 +145,10 @@ export function ModalFeedback({
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-amber-400 text-xs font-black text-gray-950">
+                <span
+                  className="flex h-6 w-6 items-center justify-center rounded-md bg-amber text-xs font-black text-night shadow-sm"
+                  style={{ backgroundColor: "#EAB308", color: "#0A0A0F" }}
+                >
                   N
                 </span>
                 <h3 id="feedback-titulo" className="text-lg font-bold text-white">
@@ -170,12 +174,12 @@ export function ModalFeedback({
                     className="p-1 text-2xl transition hover:scale-125 focus:outline-none"
                     aria-label={`Avaliar com ${nota} estrelas`}
                   >
-                    <span className={nota <= rating ? "text-amber-400" : "text-gray-600"}>
+                    <span className={nota <= rating ? "text-amber" : "text-gray-600"}>
                       ★
                     </span>
                   </button>
                 ))}
-                <span className="ml-2 text-xs font-medium text-amber-300/90">
+                <span className="ml-2 text-xs font-medium text-amber">
                   {LEGENDA_ESTRELAS[rating]}
                 </span>
               </div>
@@ -196,7 +200,7 @@ export function ModalFeedback({
                       onClick={() => setCategoria(cat.id)}
                       className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition border ${
                         ativa
-                          ? "bg-amber-400/15 border-amber-400/60 text-amber-300"
+                          ? "bg-amber/15 border-amber/60 text-amber"
                           : "bg-gray-800/60 border-gray-700/60 text-gray-300 hover:bg-gray-800 hover:text-white"
                       }`}
                     >
@@ -211,7 +215,7 @@ export function ModalFeedback({
             {/* Campo de Mensagem */}
             <div className="space-y-1.5">
               <label htmlFor="feedback-mensagem" className="block text-xs font-semibold uppercase tracking-wider text-gray-400">
-                Sua Mensagem <span className="text-amber-400">*</span>
+                Sua Mensagem <span className="text-amber">*</span>
               </label>
               <textarea
                 id="feedback-mensagem"
@@ -220,7 +224,7 @@ export function ModalFeedback({
                 value={mensagem}
                 onChange={(e) => setMensagem(e.target.value)}
                 placeholder="Conte com detalhes o que você achou, o que você sente falta ou qual problema você enfrentou..."
-                className="w-full rounded-xl border border-gray-700 bg-gray-900/90 px-3.5 py-2.5 text-sm text-white placeholder-gray-500 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400 transition"
+                className="w-full rounded-xl border border-gray-700 bg-gray-900/90 px-3.5 py-2.5 text-sm text-white placeholder-gray-500 focus:border-amber focus:outline-none focus:ring-1 focus:ring-amber transition"
               />
             </div>
 
@@ -236,7 +240,7 @@ export function ModalFeedback({
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="seu@email.com"
-                  className="w-full rounded-lg border border-gray-700 bg-gray-900/90 px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:border-amber-400 focus:outline-none"
+                  className="w-full rounded-lg border border-gray-700 bg-gray-900/90 px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:border-amber focus:outline-none"
                 />
               </div>
               <div className="space-y-1">
@@ -249,7 +253,7 @@ export function ModalFeedback({
                   value={whatsapp}
                   onChange={(e) => setWhatsapp(e.target.value)}
                   placeholder="(11) 99999-9999"
-                  className="w-full rounded-lg border border-gray-700 bg-gray-900/90 px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:border-amber-400 focus:outline-none"
+                  className="w-full rounded-lg border border-gray-700 bg-gray-900/90 px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:border-amber focus:outline-none"
                 />
               </div>
             </div>
@@ -264,7 +268,7 @@ export function ModalFeedback({
             <div className="pt-2 border-t border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-3">
               <a
                 href={`mailto:${EMAIL_FEEDBACK}?subject=Feedback%20Nexora`}
-                className="text-xs text-gray-400 hover:text-amber-300 transition"
+                className="text-xs text-gray-400 hover:text-amber transition"
               >
                 Escrever direto por e-mail →
               </a>
@@ -279,8 +283,9 @@ export function ModalFeedback({
                 </button>
                 <button
                   type="submit"
-                  disabled={enviando || mensagem.trim().length < 3}
-                  className="flex items-center justify-center gap-2 rounded-xl bg-amber-400 px-5 py-2 text-xs font-bold text-gray-950 hover:bg-amber-300 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  disabled={enviando}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-amber px-6 py-2.5 text-xs font-bold text-night shadow-md transition hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: "#EAB308", color: "#0A0A0F" }}
                 >
                   {enviando ? "Enviando..." : "Enviar Feedback"}
                 </button>

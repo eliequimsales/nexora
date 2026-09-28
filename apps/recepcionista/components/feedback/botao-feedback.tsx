@@ -22,11 +22,11 @@ export function BotaoFeedback({
         <button
           type="button"
           onClick={() => setAberto(true)}
-          className="group flex items-center gap-2 rounded-full border border-gray-700/80 bg-[#121217]/95 px-3.5 py-2 text-xs font-semibold text-gray-200 shadow-2xl backdrop-blur-md transition-all duration-200 hover:border-amber-400/60 hover:bg-[#1a1a22] hover:text-white hover:scale-105 active:scale-95"
+          className="group flex items-center gap-2 rounded-full border border-gray-700/80 bg-[#121217]/95 px-3.5 py-2 text-xs font-semibold text-gray-200 shadow-2xl backdrop-blur-md transition-all duration-200 hover:border-amber/60 hover:bg-[#1a1a22] hover:text-white hover:scale-105 active:scale-95"
           title="Envie uma sugestão ou feedback para a equipe Nexora"
           aria-label="Abrir formulário de feedback"
         >
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-400/20 text-amber-400 transition-colors group-hover:bg-amber-400 group-hover:text-gray-950">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber/20 text-amber transition-colors group-hover:bg-amber group-hover:text-night">
             <svg
               className="h-3 w-3"
               fill="none"
