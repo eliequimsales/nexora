@@ -189,24 +189,22 @@ describe("a home", () => {
     expect(achadosDoTemaAntigo("components/demo-atendente.tsx")).toEqual([]);
   });
 
-  it("o hero leva à calculadora, e a calculadora está na home", () => {
+  it("o hero leva à demonstração do Atendente, e o simulador está na home", () => {
     const home = leia("app/page.tsx");
-    expect(home).toMatch(/href="#calculadora"[\s\S]{0,300}Calcular quanto estou perdendo/);
-    expect(home).toMatch(/import\s*\{\s*Calculadora\s*\}\s*from\s*["']@\/components\/calculadora["']/);
-    expect(home).toContain("<Calculadora />");
+    expect(home).toMatch(/href="#atendente"[\s\S]{0,300}Ver demonstração ao vivo/);
+    expect(home).toMatch(/import\s*\{\s*DemoAtendente\s*\}\s*from\s*["']@\/components\/demo-atendente["']/);
+    expect(home).toContain("<DemoAtendente />");
   });
 
   it("não promete subir a base pela exportação de conversa do WhatsApp", () => {
     expect(leia("app/page.tsx")).not.toMatch(PROMESSA_EXPORTACAO);
   });
 
-  it("a lista de exemplo se declara exemplo e usa o tamanho real da Onda", () => {
-    const home = leia("app/page.tsx");
-    expect(home).toMatch(
+  it("a oferta nos precos usa o tamanho real da Onda", () => {
+    const precos = leia("app/precos/page.tsx");
+    expect(precos).toMatch(
       /import\s*\{\s*TAMANHO_DA_ONDA\s*\}\s*from\s*["']@\/lib\/recuperacao\/onda["']/,
     );
-    expect(home).toMatch(/Reativar clientes[\s\S]{0,600}exemplo/);
-    expect(home).toContain("{TAMANHO_DA_ONDA} clientes");
   });
 
   it("todo link da home leva a algum lugar que existe", () => {

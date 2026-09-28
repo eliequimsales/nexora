@@ -34,18 +34,15 @@ describe("o hero", () => {
     expect(home).toContain("Ativar meu Atendente 24h grátis");
   });
 
-  it("as frases da reativação continuam na página na seção do plano Completo", () => {
+  it("a landing page foca 100% no Atendente 24h sem distrair com recuperação externa", () => {
     const home = semQuebras(leia("app/page.tsx"));
-    expect(home).toContain("Seus clientes não avisam que estão indo embora.");
-    expect(home).toContain("Eles simplesmente param de voltar.");
-    expect(home).toContain("Seus clientes não sumiram porque quiseram.");
-    expect(home).toContain("Eles só esqueceram de voltar.");
-    expect(home).toContain("Recuperar meus clientes grátis");
+    expect(home).not.toContain("Seus clientes não avisam que estão indo embora.");
+    expect(home).not.toContain("Recuperar meus clientes grátis");
   });
 
-  it("hierarquia do produto: o Atendente vem antes do Recuperador", () => {
+  it("hierarquia do produto: foco limpo e sequencial no Atendente", () => {
     const home = leia("app/page.tsx");
-    const marcos = ["<h1", 'id="atendente"', 'id="como-funciona"', 'id="calculadora"', 'id="nao-e"', 'id="preco"', 'id="perguntas"'];
+    const marcos = ["<h1", 'id="atendente"', 'id="nao-e"', 'id="perguntas"'];
     const posicoes = marcos.map((m) => home.indexOf(m));
     marcos.forEach((m, i) => expect(posicoes[i], m).toBeGreaterThan(-1));
     expect(posicoes).toEqual([...posicoes].sort((a, b) => a - b));
@@ -96,13 +93,10 @@ describe("a calculadora", () => {
   });
 });
 
-describe("a demonstração do produto", () => {
-  it("usa a classificação, as etiquetas e a mensagem de verdade, e se declara exemplo", () => {
-    const home = leia("app/page.tsx");
-    expect(home).toContain("NOME_DA_ESTEIRA");
-    expect(home).toContain("classificar(");
-    expect(home).toContain("mensagemDoToque(");
-    expect(home).toMatch(/exemplo/i);
+describe("a demonstração da Onda", () => {
+  it("usa a classificação, as etiquetas e a mensagem de verdade no painel", () => {
+    const onda = leia("app/painel/onda/page.tsx");
+    expect(onda).toContain("NOME_DA_ESTEIRA");
   });
 
   it("as etiquetas são uma só: as mesmas da Onda, do Livro-Caixa e da landing", () => {

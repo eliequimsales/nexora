@@ -1,40 +1,30 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Calculadora } from "@/components/calculadora";
 import { DemoAtendente } from "@/components/demo-atendente";
 import { CtaLink, TrackViewContent } from "@/components/funil";
 import { RodapeFunil } from "@/components/rodape-funil";
 import { TemaNexora } from "@/components/tema-nexora";
 import { WhatsAppDemoCard } from "@/components/whatsapp-demo-card";
-import { obterLinkWhatsAppDemo } from "@/lib/whatsapp/demo";
 import {
   MINUTOS_SEM_RESPOSTA,
   SEMANA_GRATIS_CONVERSAS,
   SEMANA_GRATIS_DIAS,
   TETO_CONVERSAS_MES,
 } from "@/lib/atendente/constantes";
-import { GARANTIA_DIAS, ONDAS_MINIMAS } from "@/lib/billing/garantia";
-import { emReais, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
-import { DIAS_DA_PRIMEIRA_ONDA } from "@/lib/billing/primeira-onda";
 import { O_QUE_A_NEXORA_NAO_E, PERGUNTAS_DA_HOME } from "@/lib/perguntas";
-import { classificar, NOME_DA_ESTEIRA } from "@/lib/recuperacao/esteiras";
-import { MIN_SUMIDOS } from "@/lib/recuperacao/estimativa";
-import { TAMANHO_DA_ONDA } from "@/lib/recuperacao/onda";
-import { mensagemDoToque, TOTAL_TOQUES } from "@/lib/recuperacao/toques";
 
 export const metadata: Metadata = {
-  title: "Nexora — Atendente Inteligente 24h no WhatsApp e recuperação de clientes",
+  title: "Nexora — Atendente Inteligente 24h no WhatsApp",
   description:
-    "O Atendente Inteligente que aprende com a sua empresa e atende no WhatsApp quando você não pode. Nunca mais perca um cliente fora do horário ou de madrugada. A primeira semana do Atendente e a primeira Onda são por nossa conta, sem cartão.",
+    "O Atendente Inteligente que aprende com a sua empresa e atende no WhatsApp quando você não pode. Nunca mais perca um cliente fora do horário ou de madrugada. A primeira semana é por nossa conta, sem cartão.",
 };
 
 /**
- * A LANDING DA NEXORA — ATENDENTE 24H COMO CARRO-CHEFE.
+ * A LANDING DA NEXORA — 100% FOCADA NO ATENDENTE 24H.
  *
- * Produto Principal:
- *   1. O Atendente Inteligente 24h no WhatsApp: aprende com as regras, preços,
- *      serviços e horários da sua empresa. Atende e fecha agendamentos à noite e finais de semana.
- *   2. O Recuperador de Clientes (Plano Completo): traz de volta quem parou de vir.
+ * Produto Único de Entrada:
+ *   O Atendente Inteligente 24h no WhatsApp: aprende com as regras, preços,
+ *   serviços e horários da sua empresa. Atende e fecha agendamentos à noite e finais de semana.
  */
 
 const SELOS = [
@@ -59,56 +49,6 @@ const PASSOS_ATENDENTE = [
   },
 ];
 
-const HOJE_DO_EXEMPLO = new Date("2026-09-14T12:00:00.000Z");
-const DIA_MS = 86_400_000;
-
-const ONDA_EXEMPLO = [
-  { nome: "Marcos", ciclo: 28, dias: 64 },
-  { nome: "Dona Cida", ciclo: 35, dias: 120 },
-  { nome: "Júnior", ciclo: 21, dias: 18 },
-].map((c) => {
-  const { esteira, diasAlemDoCiclo } = classificar({
-    ultimaVisita: new Date(HOJE_DO_EXEMPLO.getTime() - c.dias * DIA_MS),
-    ciclo: { dias: c.ciclo, confianca: "alta", visitas: 6, motivo: "" },
-    temAgendamentoFuturo: false,
-    hoje: HOJE_DO_EXEMPLO,
-  });
-  return {
-    ...c,
-    etiqueta: esteira === "EM_DIA" ? null : NOME_DA_ESTEIRA[esteira],
-    porque:
-      diasAlemDoCiclo > 0
-        ? `Costuma voltar a cada ${c.ciclo} dias e já passou ${diasAlemDoCiclo} dias disso.`
-        : `Costuma voltar a cada ${c.ciclo} dias, e a data dele cai nesta semana.`,
-  };
-});
-
-const MENSAGEM_EXEMPLO = mensagemDoToque(1, { primeiroNome: "Marcos", negocio: "", link: "" });
-
-const REGRAS_DA_ONDA = [
-  "Quem tem horário marcado nunca entra na lista.",
-  "Quem já respondeu sai na hora.",
-  "Você lê cada mensagem antes de ela sair do seu WhatsApp.",
-];
-
-const PASSOS_DA_REATIVACAO = [
-  {
-    titulo: "Você manda sua lista do jeito que ela está",
-    corpo:
-      "Colado do Excel, planilha, lista de contatos ou caderno digitado. A Nexora entende e diz em português o que não conseguiu ler.",
-  },
-  {
-    titulo: "Ela descobre o ritmo de cada cliente",
-    corpo:
-      "Nada de regra de 60 dias para todo mundo. Quem ia toda semana e sumiu há um mês está muito mais atrasado que quem ia de três em três meses.",
-  },
-  {
-    titulo: "Toda segunda, doze mensagens prontas",
-    corpo:
-      "Mensagens personalizadas para cada pessoa no tom certo. Você aprova e envia com um toque no seu WhatsApp.",
-  },
-];
-
 /** O diferencial do Atendente, que é também o limite dele. */
 const DIFERENCA_DO_ATENDENTE = [
   {
@@ -130,18 +70,6 @@ const DIFERENCA_DO_ATENDENTE = [
     titulo: "Você respondeu, ele sai",
     corpo: `Com a loja aberta, a mensagem é sua: ele só entra depois de ${MINUTOS_SEM_RESPOSTA} minutos sem ninguém responder, se você deixar. Respondeu pelo celular, ele sai da conversa.`,
   },
-];
-
-const INCLUI = [
-  `Atendente Virtual no seu WhatsApp, até ${TETO_CONVERSAS_MES} conversas por mês`,
-  `A primeira semana do Atendente por nossa conta: ${SEMANA_GRATIS_DIAS} dias ou ${SEMANA_GRATIS_CONVERSAS} conversas`,
-  "Aprende seus serviços, valores e horários para responder sem inventar",
-  "Página de agendamento com seu link, para o cliente marcar sozinho",
-  `A primeira Onda por nossa conta, sem cartão: até ${TAMANHO_DA_ONDA} mensagens em até ${DIAS_DA_PRIMEIRA_ONDA} dias`,
-  "Doze mensagens prontas por semana, escritas para cada cliente no plano Completo",
-  `Garantia Dinheiro Recuperado de ${GARANTIA_DIAS} dias`,
-  "O quanto você já recuperou, em reais, com nome de quem voltou",
-  "Cancele quando quiser — você fica com o período que já pagou",
 ];
 
 const BOTAO_DOURADO =
@@ -210,12 +138,6 @@ export default function Home({
               >
                 Ver demonstração ao vivo <span aria-hidden="true">↓</span>
               </a>
-              <a
-                href="#calculadora"
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-nx-border-2 bg-nx-surface/60 px-6 py-4 text-base font-medium text-nx-primary transition-all hover:border-nx-gold/40 hover:bg-nx-surface"
-              >
-                Calcular quanto estou perdendo <span aria-hidden="true">↓</span>
-              </a>
             </div>
 
             {/* MICRO BADGES DE CONFIANÇA E RAPIDEZ */}
@@ -245,7 +167,7 @@ export default function Home({
               ))}
             </ul>
 
-            {/* SIMULADOR INTERATIVO NO WHATSAPP (Substitui o card e o preview estático) */}
+            {/* SIMULADOR INTERATIVO NO WHATSAPP */}
             <div id="atendente" className="scroll-mt-24 mx-auto mt-12 w-full max-w-2xl text-left">
               <DemoAtendente />
             </div>
@@ -314,136 +236,6 @@ export default function Home({
           </div>
         </section>
 
-        {/* E PARA QUEM QUER MAIS: O RECUPERADOR DE CLIENTES (PLANO COMPLETO) */}
-        <section id="como-funciona" className="scroll-mt-20 border-t border-nx-border/80 px-6 py-24">
-          <div className="mx-auto max-w-5xl">
-            <div className="text-center">
-              <span className="inline-block text-[11px] font-semibold uppercase tracking-widest text-nx-gold">
-                Disponível no Plano Completo
-              </span>
-              <h2 className="mt-3 text-3xl font-bold leading-tight [text-wrap:balance] sm:text-4xl text-nx-primary">
-                Seus clientes não avisam que estão indo embora. Eles simplesmente param de voltar.
-              </h2>
-              <p className="mx-auto mt-4 max-w-2xl text-nx-secondary">
-                Seus clientes não sumiram porque quiseram. Eles só esqueceram de voltar. A Nexora percebe pelo ritmo de cada um — e escreve a mensagem que traz cada um de volta.
-              </p>
-              <div className="mt-6 flex justify-center">
-                <CtaLink href="/cadastro" ctaName="recuperador_secao" className={`${BOTAO_DOURADO} px-6 py-3 text-sm`}>
-                  Recuperar meus clientes grátis <span aria-hidden="true">→</span>
-                </CtaLink>
-              </div>
-            </div>
-
-            {/* OS 3 PASSOS DA REATIVAÇÃO */}
-            <div className="mt-14 grid gap-6 md:grid-cols-3">
-              {PASSOS_DA_REATIVACAO.map((p, i) => (
-                <div
-                  key={p.titulo}
-                  className="rounded-2xl border border-nx-border bg-nx-surface p-7 transition-all hover:border-nx-gold/40 hover:bg-nx-surface-2/60"
-                >
-                  <span className="font-mono text-xs font-bold tracking-[0.16em] text-nx-gold">
-                    PASSO 0{i + 1}
-                  </span>
-                  <h3 className="mt-3 text-lg font-semibold leading-snug text-nx-primary">{p.titulo}</h3>
-                  <p className="mt-2.5 text-sm leading-relaxed text-nx-secondary">{p.corpo}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* A ONDA DE EXEMPLO COM REGRAS ANTI-DISPARO */}
-            <div className="mt-16 grid items-start gap-10 lg:grid-cols-2">
-              <div>
-                <h3 className="text-2xl font-bold leading-snug text-nx-primary">
-                  Não é para todo mundo no mesmo dia.
-                </h3>
-                <p className="mt-4 text-base leading-relaxed text-nx-secondary sm:text-lg">
-                  A Nexora manda <strong className="font-semibold text-nx-primary">doze por semana</strong>,
-                  escolhidas pelo ritmo de cada cliente. É mais devagar de propósito.
-                </p>
-                <ul className="mt-6 space-y-3">
-                  {REGRAS_DA_ONDA.map((regra) => (
-                    <li
-                      key={regra}
-                      className="flex items-start gap-3 rounded-xl border border-nx-border/80 bg-nx-surface/60 p-3.5 text-sm text-nx-secondary"
-                    >
-                      <span aria-hidden="true" className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-nx-success/15 text-xs font-bold text-nx-success">
-                        ✓
-                      </span>
-                      <span>{regra}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* CARD DE EXEMPLO DA ONDA */}
-              <div className="rounded-2xl border border-nx-border-2 bg-nx-surface p-6 shadow-nx-panel">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-nx-border pb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-nx-gold" />
-                    <p className="font-semibold text-nx-primary">Reativar clientes</p>
-                    <span className="rounded-full border border-nx-border bg-nx-surface-2 px-2 py-0.5 text-[11px] font-medium text-nx-muted">
-                      exemplo
-                    </span>
-                  </div>
-                  <span className="font-mono text-xs font-semibold text-nx-gold">
-                    {TAMANHO_DA_ONDA} clientes · ~9 min
-                  </span>
-                </div>
-                <ul className="divide-y divide-nx-border">
-                  {ONDA_EXEMPLO.map((c, i) => (
-                    <li key={c.nome} className="py-4 first:pt-4 last:pb-0">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="text-sm font-semibold text-nx-primary">{c.nome}</p>
-                          <p className="mt-0.5 text-xs leading-relaxed text-nx-secondary">
-                            Última visita há {c.dias} dias. {c.porque}
-                          </p>
-                        </div>
-                        <div className="flex shrink-0 flex-col items-end gap-1">
-                          {c.etiqueta && (
-                            <span className="rounded-full border border-nx-gold/25 bg-nx-gold/10 px-2 py-0.5 text-[11px] font-semibold text-nx-gold">
-                              {c.etiqueta}
-                            </span>
-                          )}
-                          <span className="text-[11px] text-nx-muted">1ª de {TOTAL_TOQUES} mensagens</span>
-                        </div>
-                      </div>
-                      {i === 0 && (
-                        <div className="mt-3 whitespace-pre-line rounded-xl border border-nx-border bg-nx-surface-2 p-3.5 text-sm leading-relaxed text-nx-secondary">
-                          {MENSAGEM_EXEMPLO}
-                        </div>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-4 border-t border-nx-border/60 pt-3 text-center text-[11px] leading-relaxed text-nx-muted">
-                  As etiquetas e a mensagem são as mesmas que o painel monta. Os nomes não são de ninguém.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* CALCULADORA DE RETORNO */}
-        <section id="calculadora" className="scroll-mt-20 border-t border-nx-border/80 bg-nx-surface-2/20 px-6 py-24">
-          <div className="mx-auto max-w-4xl">
-            <div className="text-center">
-              <span className="inline-block text-[11px] font-semibold uppercase tracking-widest text-nx-gold">
-                A conta que ninguém faz
-              </span>
-              <h2 className="mt-3 text-3xl font-bold leading-tight text-nx-primary sm:text-4xl">
-                Quanto dinheiro está parado na sua lista de clientes?
-              </h2>
-              <p className="mx-auto mt-3 max-w-xl text-nx-secondary">
-                Três números seus. A conta aparece na hora, com a fórmula à vista.
-              </p>
-            </div>
-            <div className="mt-12 rounded-2xl border border-nx-border-2 bg-nx-surface p-6 sm:p-10 shadow-nx-panel">
-              <Calculadora />
-            </div>
-          </div>
-        </section>
-
         {/* O QUE A NEXORA NÃO É */}
         <section id="nao-e" className="scroll-mt-20 border-t border-nx-border/80 px-6 py-24">
           <div className="mx-auto max-w-5xl">
@@ -461,9 +253,8 @@ export default function Home({
                 robô.
               </p>
               <p>
-                A Nexora faz o contrário de propósito: poucas mensagens, no ritmo de cada cliente, lidas por
-                você antes de saírem do seu WhatsApp. O Atendente Virtual segue a mesma regra: só responde
-                quem escreveu primeiro.
+                A Nexora faz o contrário de propósito: o Atendente Virtual só responde quem escreveu primeiro.
+                Ele nunca inicia conversas sozinho sem interação do cliente.
               </p>
             </div>
             <div className="mt-12 grid gap-6 md:grid-cols-3">
@@ -476,77 +267,6 @@ export default function Home({
                   <p className="mt-2 text-sm leading-relaxed text-nx-secondary">{item.explicacao}</p>
                 </div>
               ))}
-            </div>
-          </div>
-        </section>
-
-        {/* A OFERTA — ATENDENTE COMO ENTRADA (R$ 97) E COMPLETO (R$ 197) */}
-        <section id="preco" className="scroll-mt-20 border-t border-nx-border/80 bg-nx-surface-2/30 px-6 py-24">
-          <div className="mx-auto grid max-w-5xl gap-12 lg:grid-cols-2 lg:items-center">
-            <div>
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-nx-gold/30 bg-nx-gold/10 px-3 py-1 text-xs font-semibold text-nx-gold">
-                Risco zero
-              </div>
-              <h2 className="mt-4 text-3xl font-bold leading-tight sm:text-4xl text-nx-primary">
-                A primeira semana do Atendente e a primeira Onda são por nossa conta.
-              </h2>
-              <div className="mt-8 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <span className="whitespace-nowrap text-6xl sm:text-7xl font-bold tracking-tight text-nx-primary">R$ 97</span>
-                <span className="text-base text-nx-secondary">/mês no plano Atendente 24h</span>
-              </div>
-              <div className="mt-6 space-y-3 leading-relaxed text-nx-secondary">
-                <div className="rounded-xl border border-nx-border bg-nx-surface p-4 text-sm">
-                  <strong className="font-semibold text-nx-primary">A primeira semana do Atendente também:</strong>{" "}
-                  {SEMANA_GRATIS_DIAS} dias ou {SEMANA_GRATIS_CONVERSAS} conversas, o que vier primeiro, a partir de quando você ligar. No plano, ele atende até{" "}
-                  {TETO_CONVERSAS_MES} conversas por mês e entra no expediente depois de {MINUTOS_SEM_RESPOSTA}{" "}
-                  minutos sem ninguém responder, se você quiser.
-                </div>
-                <div className="rounded-xl border border-nx-border bg-nx-surface p-4 text-sm">
-                  <strong className="font-semibold text-nx-primary">A primeira Onda é por nossa conta:</strong> até{" "}
-                  {TAMANHO_DA_ONDA} mensagens prontas para mandar do seu WhatsApp em até{" "}
-                  {DIAS_DA_PRIMEIRA_ONDA} dias — não pedimos cartão para começar.
-                </div>
-              </div>
-              <div className="mt-4 rounded-xl border border-nx-gold/40 bg-nx-gold/10 p-4 text-sm leading-relaxed text-nx-secondary">
-                <strong className="font-semibold text-nx-gold">Garantia Dinheiro Recuperado.</strong> Se em{" "}
-                {GARANTIA_DIAS} dias você mandar as mensagens de {ONDAS_MINIMAS} ondas e o dinheiro que voltou
-                não chegar a {emReais(PRECO_MENSAL_CENTS)}, devolvemos tudo o que você pagou. O risco é
-                nosso. Vale uma vez por negócio, para lista com pelo menos {MIN_SUMIDOS} clientes sumidos; as
-                regras completas estão nos{" "}
-                <Link href="/termos" className="text-nx-gold underline underline-offset-4 hover:text-nx-gold/80">
-                  Termos de Uso
-                </Link>
-                .
-              </div>
-              <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
-                <CtaLink href="/cadastro" ctaName="preco" className={`${BOTAO_DOURADO} px-8 py-4 text-base shadow-nx-glow-sm hover:scale-[1.02]`}>
-                  Ativar meu Atendente 24h grátis <span aria-hidden="true">→</span>
-                </CtaLink>
-                <Link href="/precos" className="text-sm font-semibold text-nx-gold transition-colors hover:underline">
-                  Ver os três jeitos de pagar <span aria-hidden="true">→</span>
-                </Link>
-              </div>
-              <div className="mt-6">
-                <WhatsAppDemoCard className="text-left" origem="atendente" />
-              </div>
-            </div>
-
-            {/* CHECKLIST DE TUDO INCLUSO */}
-            <div className="rounded-2xl border border-nx-border-2 bg-nx-surface p-6 sm:p-8 shadow-nx-panel">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-nx-gold">Tudo incluído no plano Atendente</h3>
-              <ul className="mt-6 divide-y divide-nx-border">
-                {INCLUI.map((item) => (
-                  <li
-                    key={item}
-                    className="flex items-start gap-3.5 py-3.5 text-sm leading-relaxed text-nx-secondary first:pt-0 last:pb-0"
-                  >
-                    <span aria-hidden="true" className="mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-nx-gold/20 text-[10px] font-bold text-nx-gold">
-                      ✓
-                    </span>
-                    <span className="text-nx-primary/95">{item}</span>
-                  </li>
-                ))}
-              </ul>
             </div>
           </div>
         </section>
@@ -570,6 +290,11 @@ export default function Home({
                 </div>
               ))}
             </div>
+
+            {/* DEMONSTRAÇÃO DIRETA NO WHATSAPP REAL */}
+            <div className="mt-12">
+              <WhatsAppDemoCard className="text-left" origem="atendente" />
+            </div>
           </div>
         </section>
 
@@ -580,12 +305,15 @@ export default function Home({
               Nunca mais perca clientes fora do horário.
             </h2>
             <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-nx-secondary sm:text-lg">
-              Crie sua conta em 15 segundos, sem cartão de crédito. Teste o Atendente 24h com as regras da sua empresa. Você só continua se gostar do resultado.
+              Crie sua conta em 15 segundos, sem cartão de crédito. Teste o Atendente 24h por {SEMANA_GRATIS_DIAS} dias ou até {SEMANA_GRATIS_CONVERSAS} conversas com as regras da sua empresa. Você só continua se gostar do resultado.
             </p>
-            <div className="mt-8 flex justify-center">
+            <div className="mt-8 flex flex-col items-center justify-center gap-4">
               <CtaLink href="/cadastro" ctaName="final" className={`${BOTAO_DOURADO} px-8 py-4 text-base sm:text-lg shadow-nx-glow-sm hover:scale-[1.02]`}>
                 Ativar meu Atendente 24h grátis <span aria-hidden="true">→</span>
               </CtaLink>
+              <Link href="/precos" className="text-sm font-semibold text-nx-gold transition-colors hover:underline">
+                Conhecer todos os planos e preços <span aria-hidden="true">→</span>
+              </Link>
             </div>
           </div>
         </section>

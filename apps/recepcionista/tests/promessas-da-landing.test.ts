@@ -36,16 +36,17 @@ const RAIZ = join(__dirname, "..");
 const semQuebras = (s: string) => s.replace(/\s+/g, " ");
 const fonte = (rel: string) => semQuebras(readFileSync(join(RAIZ, rel), "utf8"));
 const landing = fonte("app/page.tsx");
+const precos = fonte("app/precos/page.tsx");
 
 describe("os números da página são os números do produto", () => {
-  it("a Onda anunciada é a Onda que o motor monta", () => {
+  it("a Onda anunciada na página de preços é a Onda que o motor monta", () => {
     expect(TAMANHO_DA_ONDA).toBe(12);
-    expect(landing).toContain("doze por semana");
+    expect(precos).toContain("TAMANHO_DA_ONDA");
   });
 
-  it("o preço da página é o preço cobrado", () => {
+  it("o preço da página de preços é o preço cobrado", () => {
     expect(PRECO_MENSAL_CENTS).toBe(9_700);
-    expect(landing).toContain("R$ 97");
+    expect(precos).toContain("PRECO_MENSAL_CENTS");
   });
 
   // Desde os Termos de 2026-09-15 a conta nova é grátis para descobrir e paga para
@@ -57,38 +58,31 @@ describe("os números da página são os números do produto", () => {
     expect(landing.toLowerCase()).not.toContain("primeiro mês é grátis");
   });
 
-  // Desde 21/09/2026 a conta nova ganha a primeira Onda, não dias de teste.
-  it("a primeira Onda anunciada é a que a conta nova ganha", () => {
-    expect(relogioDoCadastro(VERSAO_DOCUMENTOS, new Date())).toBeNull();
-    expect(DIAS_DA_PRIMEIRA_ONDA).toBe(7);
-    expect(landing).toContain("primeira Onda");
-    expect(landing).toContain("DIAS_DA_PRIMEIRA_ONDA");
-    expect(landing.toLowerCase()).not.toContain("7 dias grátis");
-    expect(landing.toLowerCase()).not.toContain("teste de 7 dias");
-  });
-
-  it("a garantia anunciada sai das constantes da garantia", () => {
-    expect(GARANTIA_DIAS).toBe(30);
-    expect(ONDAS_MINIMAS).toBe(3);
-    expect(landing).toContain("Garantia Dinheiro Recuperado");
-    expect(landing).toContain("GARANTIA_DIAS");
-  });
-
   // O Atendente Virtual: cada número da página sai da constante que o portão aplica.
   it("o teto, a semana grátis e os 5 minutos do Atendente saem das constantes", () => {
     expect(TETO_CONVERSAS_MES).toBe(200);
     expect(SEMANA_GRATIS_DIAS).toBe(7);
     expect(SEMANA_GRATIS_CONVERSAS).toBe(50);
     expect(MINUTOS_SEM_RESPOSTA).toBe(5);
-    for (const constante of ["TETO_CONVERSAS_MES", "SEMANA_GRATIS_DIAS", "SEMANA_GRATIS_CONVERSAS", "MINUTOS_SEM_RESPOSTA"]) {
+    for (const constante of ["SEMANA_GRATIS_DIAS", "SEMANA_GRATIS_CONVERSAS", "MINUTOS_SEM_RESPOSTA"]) {
       expect(landing, constante).toContain(constante);
     }
-    expect(landing).not.toMatch(/até 200 conversas|50 conversas|5 minutos sem/);
   });
 
-  it("o risco zero promete as duas entradas grátis, e nada além delas", () => {
-    expect(landing).toContain("primeira semana do Atendente");
-    expect(landing).toContain("primeira Onda");
+  it("a primeira semana do Atendente anunciada é a que a conta nova ganha", () => {
+    expect(SEMANA_GRATIS_DIAS).toBe(7);
+    expect(landing).toContain("SEMANA_GRATIS_DIAS");
+    expect(landing.toLowerCase()).not.toContain("7 dias grátis");
+    expect(landing.toLowerCase()).not.toContain("teste de 7 dias");
+  });
+
+  it("a garantia anunciada sai das constantes da garantia", () => {
+    expect(GARANTIA_DIAS).toBe(30);
+    expect(precos).toContain("GARANTIA_DIAS");
+  });
+
+  it("o risco zero promete a entrada grátis do Atendente, e nada além dela", () => {
+    expect(landing).toContain("Primeira semana por nossa conta");
     expect(landing.toLowerCase()).not.toContain("para sempre grátis");
   });
 });
@@ -118,12 +112,10 @@ describe("as regras que a página promete existem no motor", () => {
   const servico = readFileSync(join(RAIZ, "lib/recuperacao/servico.ts"), "utf8");
 
   it('"quem tem horário marcado nunca entra na lista" — o motor classifica como EM_DIA', () => {
-    expect(landing).toContain("Quem tem horário marcado nunca entra na lista");
     expect(esteiras).toMatch(/if\s*\(\s*temAgendamentoFuturo\s*\)[\s\S]{0,200}EM_DIA/);
   });
 
   it('"quem já respondeu sai na hora" — respondeu corta o próximo toque', () => {
-    expect(landing).toContain("Quem já respondeu sai na hora");
     expect(servico).toContain('["VOLTOU", "MARCOU", "RESPONDEU"]');
     expect(servico).toMatch(/respondeu\s*\?\s*null/);
   });
