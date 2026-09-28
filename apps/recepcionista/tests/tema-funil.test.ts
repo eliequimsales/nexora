@@ -69,6 +69,7 @@ const HOME = [
   "components/rodape-funil.tsx",
   // A demonstração do Atendente Virtual no hero (22/09/2026).
   "components/demo-atendente.tsx",
+  "components/whatsapp-demo-card.tsx",
 ];
 const ACESSO = [
   "app/cadastro/page.tsx",
@@ -92,8 +93,8 @@ const DIAGNOSTICO = [
   "components/funil.tsx",
   "app/diagnostico/layout.tsx",
 ];
-/** Páginas de nicho, como /barbearia: a cara da home, com a conversa do ramo. */
-const NICHO = ["app/barbearia/page.tsx"];
+/** Páginas de nicho, como /barbearia e /clinica: a cara da home, com a conversa do ramo. */
+const NICHO = ["app/barbearia/page.tsx", "app/clinica/page.tsx"];
 /** A tabela de preços, para quem foi procurar: mesma cara da home. */
 const PRECOS = ["app/precos/page.tsx"];
 const FUNIL = [

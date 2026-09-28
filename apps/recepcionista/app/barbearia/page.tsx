@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Calculadora } from "@/components/calculadora";
 import { RodapeFunil } from "@/components/rodape-funil";
 import { TemaNexora } from "@/components/tema-nexora";
+import { WhatsAppDemoCard } from "@/components/whatsapp-demo-card";
 import { GARANTIA_DIAS, ONDAS_MINIMAS } from "@/lib/billing/garantia";
 import { PLANOS } from "@/lib/billing/planos";
 import { emReais, PRECO_ANUAL_CENTS, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
@@ -105,6 +106,8 @@ export default function PaginaBarbearia() {
                 Calcular quanto estou perdendo
               </a>
             </div>
+
+            <WhatsAppDemoCard className="mx-auto mt-6 max-w-2xl text-left" origem="hero" />
           </div>
         </section>
 

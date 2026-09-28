@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CtaLink, TrackViewContent } from "@/components/funil";
 import { RodapeFunil } from "@/components/rodape-funil";
 import { TemaNexora } from "@/components/tema-nexora";
+import { WhatsAppDemoCard } from "@/components/whatsapp-demo-card";
 import { GARANTIA_DIAS, ONDAS_MINIMAS } from "@/lib/billing/garantia";
 import {
   MINUTOS_DA_CHAMADA,
@@ -546,6 +547,10 @@ export default function Precos() {
               Hoje a Nexora não limita profissionais: o limite de 3 passa a valer para contas novas quando o
               Completo existir, e quem já assina mantém o que tem.
             </p>
+
+            <div className="mt-12 text-left">
+              <WhatsAppDemoCard origem="precos" />
+            </div>
           </div>
         </section>
 

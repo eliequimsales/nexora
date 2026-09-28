@@ -10,6 +10,7 @@ import {
   trackViewContent,
 } from "@/lib/analytics/pixel";
 import { registrar } from "@/components/funil";
+import { obterLinkWhatsAppDemo } from "@/lib/whatsapp/demo";
 
 const FIELDS = [
   { key: "name", label: "Nome da empresa", type: "text", placeholder: "Ex.: Minha Empresa" },
@@ -157,6 +158,24 @@ export default function CadastroPage() {
               Entrar com o Google também confirma o aceite dos Termos de Uso e Política de Privacidade.
             </p>
           </form>
+
+          {/* DEMONSTRAÇÃO DIRETA NO WHATSAPP PARA QUEM HESITA */}
+          <div className="mt-6 rounded-xl border border-nx-gold/30 bg-nx-gold/5 p-4 text-center">
+            <p className="text-xs font-semibold text-nx-primary">
+              Prefere ver funcionando antes de criar conta?
+            </p>
+            <p className="mt-1 text-[11px] text-nx-secondary">
+              Mande um &quot;Oi&quot; no WhatsApp do nosso Atendente Virtual e teste agora no seu próprio celular.
+            </p>
+            <a
+              href={obterLinkWhatsAppDemo()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-lg bg-nx-success px-4 py-2 text-xs font-bold text-nx-bg transition-all hover:bg-nx-success/90 hover:scale-[1.02] active:scale-[0.98]"
+            >
+              💬 Mandar &quot;Oi&quot; no WhatsApp de Teste →
+            </a>
+          </div>
         </div>
         <p className="mt-6 text-center text-sm text-nx-secondary">
           Já tem conta?{" "}

@@ -5,6 +5,8 @@ import { DemoAtendente } from "@/components/demo-atendente";
 import { CtaLink, TrackViewContent } from "@/components/funil";
 import { RodapeFunil } from "@/components/rodape-funil";
 import { TemaNexora } from "@/components/tema-nexora";
+import { WhatsAppDemoCard } from "@/components/whatsapp-demo-card";
+import { obterLinkWhatsAppDemo } from "@/lib/whatsapp/demo";
 import {
   MINUTOS_SEM_RESPOSTA,
   SEMANA_GRATIS_CONVERSAS,
@@ -242,6 +244,9 @@ export default function Home({
                 </li>
               ))}
             </ul>
+
+            {/* DEMONSTRAÇÃO DIRETA NO WHATSAPP */}
+            <WhatsAppDemoCard className="mx-auto mt-10 max-w-2xl text-left" origem="hero" />
 
             {/* PREVIEW VISUAL DA CONVERSA NO WHATSAPP */}
             <div className="mx-auto mt-14 max-w-2xl text-left">
@@ -579,6 +584,19 @@ export default function Home({
                 <Link href="/precos" className="text-sm font-semibold text-nx-gold transition-colors hover:underline">
                   Ver os três jeitos de pagar <span aria-hidden="true">→</span>
                 </Link>
+              </div>
+              <div className="mt-4">
+                <a
+                  href={obterLinkWhatsAppDemo()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-xs font-semibold text-nx-secondary transition-colors hover:text-nx-primary"
+                >
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-nx-success/20 text-nx-success text-[10px]">
+                    ✓
+                  </span>
+                  Prefere ver funcionando antes? Mande um &quot;Oi&quot; no WhatsApp do Atendente →
+                </a>
               </div>
             </div>
 
