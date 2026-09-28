@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Calculadora } from "@/components/calculadora";
+import { DemoAtendente } from "@/components/demo-atendente";
 import { RodapeFunil } from "@/components/rodape-funil";
 import { TemaNexora } from "@/components/tema-nexora";
 import { WhatsAppDemoCard } from "@/components/whatsapp-demo-card";
@@ -108,6 +109,24 @@ export default function PaginaBarbearia() {
             </div>
 
             <WhatsAppDemoCard className="mx-auto mt-6 max-w-2xl text-left" origem="hero" />
+          </div>
+        </section>
+
+        {/* SIMULADOR AO VIVO DO WHATSAPP */}
+        <section id="simulador" className="scroll-mt-20 border-t border-nx-border/80 bg-nx-surface-2/20 px-6 py-20">
+          <div className="mx-auto max-w-4xl text-center">
+            <span className="inline-block text-[11px] font-semibold uppercase tracking-widest text-nx-gold">
+              Demonstração ao Vivo
+            </span>
+            <h2 className="mt-2 text-3xl font-bold sm:text-4xl text-nx-primary">
+              Experimente o Atendente da Barbearia ao vivo
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-base text-nx-secondary">
+              Mande uma mensagem abaixo como se fosse um cliente pedindo corte ou barba, mesmo no domingo ou de madrugada.
+            </p>
+            <div className="mt-10 mx-auto max-w-md text-left">
+              <DemoAtendente nichoInicial="barbearia" />
+            </div>
           </div>
         </section>
 
