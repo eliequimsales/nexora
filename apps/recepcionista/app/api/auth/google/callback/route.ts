@@ -114,7 +114,7 @@ export async function GET(request: Request) {
 
     setSessionCookie(await createSessionToken(company.id, company.sessaoEpoca));
     return NextResponse.redirect(
-      appRedirect("/painel/atendente", request.url),
+      appRedirect(isNew ? "/painel/atendente?novo=1" : "/painel/atendente", request.url),
     );
   } catch (error) {
     await logError("auth-google-callback", error);

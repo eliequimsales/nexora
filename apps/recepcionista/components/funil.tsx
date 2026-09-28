@@ -7,7 +7,6 @@ import {
   trackCustom,
   trackViewContent,
   trackCompleteRegistration,
-  trackLead,
 } from "@/lib/analytics/pixel";
 import { obterUtmsSalvas } from "@/lib/analytics/utm";
 
@@ -116,7 +115,6 @@ export function CtaLink({
       className={className}
       onClick={() => {
         trackCustom("ClickSignupCTA", { cta_location: ctaName });
-        trackLead(`CTA_${ctaName}`);
       }}
     >
       {children}

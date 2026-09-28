@@ -93,6 +93,12 @@ describe("Meta Pixel e UTMs em ambiente de navegador (simulado)", () => {
       content_name: "Cadastro Criado",
     }));
 
+    trackCompleteRegistration("google");
+    expect(mockFbq).toHaveBeenCalledWith("track", "CompleteRegistration", expect.objectContaining({
+      status: true,
+      content_name: "google",
+    }));
+
     trackLead("Clique CTA");
     expect(mockFbq).toHaveBeenCalledWith("track", "Lead", expect.objectContaining({
       content_name: "Clique CTA",

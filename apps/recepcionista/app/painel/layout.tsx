@@ -11,6 +11,7 @@ import { LogoutButton } from "@/components/logout-button";
 import { BotaoBaixarApp } from "@/components/install-prompt";
 import { PainelNavDesktop, PainelNavMobile } from "@/components/painel/navegacao";
 import { BotaoFeedback } from "@/components/feedback/botao-feedback";
+import { RastreadorCadastroNovo } from "@/components/painel/rastreador-cadastro-novo";
 
 // O MENU É O FLUXO DE VALOR, NÃO O ÍNDICE DO SISTEMA.
 // As telas /painel/onda (Reativar clientes) e /painel/livro-caixa (Dinheiro recuperado) continuam acessíveis diretamente fora do menu.
@@ -54,6 +55,7 @@ export default async function PainelLayout({ children }: { children: React.React
 
   return (
     <div className="min-h-screen bg-panel-bg text-panel-ink">
+      <RastreadorCadastroNovo />
       {/*
         Aviso de e-mail não confirmado.
       */}
