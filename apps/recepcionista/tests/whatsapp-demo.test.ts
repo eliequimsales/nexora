@@ -41,7 +41,7 @@ describe("Canal de Demonstração no WhatsApp", () => {
 
     const home = semQuebras(leia("app/page.tsx"));
     expect(home).toContain("WhatsAppDemoCard");
-    expect(home).toContain("Prefere ver funcionando antes?");
+    expect(home).toContain("<DemoAtendente");
   });
 
   it("a página de cadastro traz a opção de teste direto no WhatsApp para evitar desistência", () => {
@@ -55,9 +55,9 @@ describe("Canal de Demonstração no WhatsApp", () => {
     expect(precos).toContain("WhatsAppDemoCard");
   });
 
-  it("o componente DemoAtendente possui o modo interativo de teste ao vivo", () => {
+  it("o componente DemoAtendente possui o modo interativo de teste ao vivo por seleção", () => {
     const demo = semQuebras(leia("components/demo-atendente.tsx"));
-    expect(demo).toContain("Testar digitando");
+    expect(demo).toContain("Simulação interativa");
     expect(demo).toContain("/api/demo/chat");
     expect(demo).toContain("no WhatsApp de Teste");
   });

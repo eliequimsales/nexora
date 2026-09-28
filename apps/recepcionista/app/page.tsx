@@ -245,74 +245,19 @@ export default function Home({
               ))}
             </ul>
 
-            {/* DEMONSTRAÇÃO DIRETA NO WHATSAPP */}
-            <WhatsAppDemoCard className="mx-auto mt-10 max-w-2xl text-left" origem="hero" />
-
-            {/* PREVIEW VISUAL DA CONVERSA NO WHATSAPP */}
-            <div className="mx-auto mt-14 max-w-2xl text-left">
-              <div className="overflow-hidden rounded-2xl border border-nx-border-2 bg-nx-surface shadow-nx-panel">
-                <div className="flex items-center justify-between border-b border-nx-border bg-nx-surface-2 px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-nx-error/60" />
-                    <span className="h-2.5 w-2.5 rounded-full bg-nx-warning/60" />
-                    <span className="h-2.5 w-2.5 rounded-full bg-nx-success/60" />
-                    <span className="ml-2 text-xs font-semibold text-nx-primary">
-                      Nexora · Atendente Noturno no WhatsApp
-                    </span>
-                  </div>
-                  <span className="rounded-full border border-nx-success/30 bg-nx-success/10 px-2.5 py-0.5 text-[11px] font-semibold text-nx-success flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-nx-success animate-pulse" />
-                    Plantão 24/7 Ativo
-                  </span>
-                </div>
-                <div className="p-5 space-y-3.5">
-                  <div className="flex items-center justify-between border-b border-nx-border pb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-nx-primary">Atendimento fora do horário</span>
-                    </div>
-                    <span className="rounded-lg bg-nx-gold/15 px-2.5 py-0.5 text-[11px] font-semibold text-nx-gold">
-                      Enquanto você dorme
-                    </span>
-                  </div>
-                  <div className="flex flex-col items-start gap-1">
-                    <span className="text-[10px] text-nx-muted">23:42 · Cliente novo</span>
-                    <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-nx-surface-2 border border-nx-border px-4 py-2.5 text-sm text-nx-primary">
-                      Boa noite! Vocês têm horário livre para amanhã de tarde?
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <span className="text-[10px] text-nx-gold font-medium">23:42 · Nexora Atendente</span>
-                    <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-nx-gold/10 border border-nx-gold/25 px-4 py-2.5 text-sm text-nx-primary">
-                      Olá! Sou o atendente virtual. Temos sim! Às 14:30 e às 16:00. Qual desses horários fica melhor para você?
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-start gap-1">
-                    <span className="text-[10px] text-nx-muted">23:43 · Cliente</span>
-                    <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-nx-surface-2 border border-nx-border px-4 py-2.5 text-sm text-nx-primary">
-                      Pode ser às 16:00, por favor!
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <span className="text-[10px] text-nx-gold font-medium">23:43 · Nexora Atendente</span>
-                    <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-nx-gold/10 border border-nx-gold/25 px-4 py-2.5 text-sm text-nx-primary">
-                      Perfeito! Agendado para amanhã às 16:00. Salvei na agenda. Tenha uma ótima noite! ✅
-                    </div>
-                  </div>
-                  <div className="mt-2 rounded-xl border border-nx-success/30 bg-nx-success/10 p-2.5 text-center text-xs font-medium text-nx-success">
-                    ✓ Horário reservado automaticamente · Você acorda com a agenda preenchida
-                  </div>
-                </div>
-              </div>
+            {/* SIMULADOR INTERATIVO NO WHATSAPP (Substitui o card e o preview estático) */}
+            <div id="atendente" className="scroll-mt-24 mx-auto mt-12 w-full max-w-2xl text-left">
+              <DemoAtendente />
             </div>
           </div>
         </section>
 
-        {/* DEMONSTRAÇÃO DO ATENDENTE VIRTUAL NO WHATSAPP */}
-        <section id="atendente" className="scroll-mt-20 border-t border-nx-border/80 bg-nx-surface-2/20 px-6 py-24">
+        {/* DIFERENCIAIS DO ATENDENTE VIRTUAL */}
+        <section className="scroll-mt-20 border-t border-nx-border/80 bg-nx-surface-2/20 px-6 py-20">
           <div className="mx-auto max-w-5xl">
             <div className="text-center">
               <span className="inline-block text-[11px] font-semibold uppercase tracking-widest text-nx-gold">
-                Atendente Virtual
+                Por que a Nexora
               </span>
               <h2 className="mt-3 text-3xl font-bold leading-tight [text-wrap:balance] sm:text-4xl text-nx-primary">
                 O Atendente que aprende tudo sobre a sua empresa — e nunca deixa cliente sem resposta
@@ -323,28 +268,24 @@ export default function Home({
               </p>
             </div>
 
-            <div className="mt-14 grid items-start gap-12 lg:grid-cols-2">
-              <div className="mx-auto w-full max-w-md">
-                <DemoAtendente />
-              </div>
-              <div className="space-y-4">
-                {DIFERENCA_DO_ATENDENTE.map((d) => (
-                  <div key={d.titulo} className="rounded-2xl border border-nx-border bg-nx-surface p-5 transition-all hover:border-nx-gold/30">
-                    <h3 className="flex items-center gap-2.5 font-semibold text-nx-primary">
-                      <span aria-hidden="true" className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-nx-success/15 text-xs font-bold text-nx-success">
-                        ✓
-                      </span>
-                      {d.titulo}
-                    </h3>
-                    <p className="mt-2 text-sm leading-relaxed text-nx-secondary pl-7">{d.corpo}</p>
-                  </div>
-                ))}
-                <div className="rounded-xl border border-nx-border/80 bg-nx-surface-2/60 p-4 text-xs leading-relaxed text-nx-muted">
-                  <span className="font-semibold text-nx-secondary">Nota de transparência:</span> A conexão pelo QR Code não é a oficial do WhatsApp, e números podem ser restringidos. Como o
-                  Atendente só responde quem escreveu primeiro e nunca manda mensagem sozinho, o risco
-                  diminui — mas não some.
+            <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {DIFERENCA_DO_ATENDENTE.map((d) => (
+                <div key={d.titulo} className="rounded-2xl border border-nx-border bg-nx-surface p-5 transition-all hover:border-nx-gold/30">
+                  <h3 className="flex items-center gap-2 font-semibold text-nx-primary text-base">
+                    <span aria-hidden="true" className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-nx-success/15 text-xs font-bold text-nx-success">
+                      ✓
+                    </span>
+                    {d.titulo}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-nx-secondary">{d.corpo}</p>
                 </div>
-              </div>
+              ))}
+            </div>
+
+            <div className="mx-auto mt-8 max-w-2xl rounded-xl border border-nx-border/80 bg-nx-surface-2/60 p-4 text-xs leading-relaxed text-nx-muted text-center">
+              <span className="font-semibold text-nx-secondary">Nota de transparência:</span> A conexão pelo QR Code não é a oficial do WhatsApp, e números podem ser restringidos. Como o
+              Atendente só responde quem escreveu primeiro e nunca manda mensagem sozinho, o risco
+              diminui — mas não some.
             </div>
           </div>
         </section>
@@ -585,18 +526,8 @@ export default function Home({
                   Ver os três jeitos de pagar <span aria-hidden="true">→</span>
                 </Link>
               </div>
-              <div className="mt-4">
-                <a
-                  href={obterLinkWhatsAppDemo()}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-xs font-semibold text-nx-secondary transition-colors hover:text-nx-primary"
-                >
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-nx-success/20 text-nx-success text-[10px]">
-                    ✓
-                  </span>
-                  Prefere ver funcionando antes? Mande um &quot;Oi&quot; no WhatsApp do Atendente →
-                </a>
+              <div className="mt-6">
+                <WhatsAppDemoCard className="text-left" origem="atendente" />
               </div>
             </div>
 
