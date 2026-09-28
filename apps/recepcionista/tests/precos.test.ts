@@ -88,13 +88,13 @@ describe("a página de preços", () => {
     expect(p).toContain("noStore()");
   });
 
-  it("o Completo é destino, não compra", () => {
+  it("o Completo está ativo para compra com CtaLink", () => {
     const p = pagina();
-    const inicio = p.indexOf("Nexora Completo");
+    const inicio = p.lastIndexOf("Nexora Completo");
     expect(inicio, "a página fala do Completo").toBeGreaterThan(-1);
-    expect(p).toContain("ainda não está à venda");
+    expect(p).not.toContain("ainda não está à venda");
     const bloco = p.slice(inicio, inicio + 1400);
-    expect(bloco).not.toMatch(/CtaLink|href="\/cadastro"|Assinar|Contratar/);
+    expect(bloco).toMatch(/CtaLink|href="\/cadastro|Assinar/);
   });
 
   it("diz o que nunca vai ser cobrado", () => {
@@ -143,7 +143,7 @@ describe("a página conta a esteira, não uma tabela", () => {
   it("os dois planos lado a lado, com o rótulo de cada um", () => {
     const p = pagina();
     expect(p).toContain("a entrada");
-    expect(p).toContain("chega junto com o Plantão");
+    expect(p).toContain("Nexora Completo");
   });
 
   it("a tabela diz o que separa os planos e o que nunca separa", () => {

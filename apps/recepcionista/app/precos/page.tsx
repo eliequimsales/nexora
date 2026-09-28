@@ -45,8 +45,7 @@ export const metadata: Metadata = {
  *   - o limite de 3 profissionais nasce junto com o Completo. Hoje o produto
  *     não limita, e a página diz isso em vez de anunciar uma trava que não
  *     existe;
- *   - o Completo não tem Price, nem plano em PLANOS: aparece como destino, com
- *     o preço decidido e sem nenhum botão;
+ *   - o Completo está ativo para contratação (Atendente 24h + Recuperador semanal) por R$ 197/mês;
  *   - a implantação some quando STRIPE_IMPLANTACAO_PRICE_ID não está
  *     configurado, porque aí ela não entra no checkout;
  *   - "várias unidades" fica fora, como o próprio documento manda, até existir
@@ -144,20 +143,20 @@ const PLANO_DA_ENTRADA = {
 };
 
 const PLANO_DO_DEGRAU = {
-  rotulo: "chega junto com o Plantão",
+  rotulo: "Mais Completo · Atendente + Recuperador",
   nome: "Nexora Completo",
+  badge: "Máximo Resultado",
   valor: emReais(PRECO_COMPLETO_CENTS),
-  descricao: "Tudo do Atendente 24h + o Recuperador semanal de clientes para trazer de volta quem parou de voltar.",
+  descricao: "Tudo do Atendente 24h + o Recuperador semanal de clientes para trazer de volta quem parou de voltar e encher sua agenda.",
   itens: [
-    "Tudo do Nexora Atendente",
+    "Tudo do Nexora Atendente (WhatsApp 24h e Agenda Inteligente)",
     `O Recuperador: ${TAMANHO_DA_ONDA} mensagens novas toda semana no ritmo dos clientes`,
-    "Dinheiro recuperado: acompanhe cada retorno em reais",
-    "Profissionais ilimitados",
-    "Primeiro da fila no suporte",
+    "Dinheiro recuperado: acompanhe cada retorno em reais no painel",
+    "Profissionais ilimitados na equipe",
+    `Garantia Dinheiro Recuperado de ${GARANTIA_DIAS} dias na primeira contratação`,
+    "Primeiro da fila no suporte prioritário",
   ],
-  aviso:
-    "Preço decidido, ainda não está à venda: ninguém pode contratá-lo hoje. Ele nasce no dia em que o Plantão sem teto existir — e, até lá, o painel não vende o que não entrega.",
-  pagamento: `${PLANOS.pix_30_dias.dias} dias no Pix: ${emReais(PRECO_COMPLETO_CENTS)} · Anual à vista: ${emReais(PRECO_COMPLETO_CENTS * 10)} (paga 10 meses, usa 12).`,
+  pagamento: `${PLANOS.pix_30_dias.dias} dias no Pix: ${emReais(PRECO_COMPLETO_CENTS)}, sem renovação automática · Anual à vista: ${emReais(PRECO_COMPLETO_CENTS * 10)} (paga 10 meses, usa 12).`,
 };
 
 const MOTIVOS_CALENDARIO = [
@@ -491,33 +490,38 @@ export default function Precos() {
               </div>
             </div>
 
-            {/* O DEGRAU FUTURO: NEXORA COMPLETO */}
-            <div className="mt-12 rounded-2xl border border-dashed border-nx-border-2 bg-nx-bg/40 p-6 text-left sm:p-8">
+            {/* O PLANO COMPLETO: NEXORA COMPLETO (ATIVO PARA COMPRA) */}
+            <div className="mt-12 rounded-3xl border-2 border-nx-gold/60 bg-gradient-to-b from-nx-surface via-nx-surface to-nx-surface-2 p-7 text-left shadow-nx-glow-sm sm:p-8">
               <div className="flex flex-wrap items-baseline justify-between gap-4">
                 <div>
-                  <span className="rounded-full border border-nx-border bg-nx-surface px-2.5 py-0.5 text-xs font-medium text-nx-muted">
-                    {PLANO_DO_DEGRAU.rotulo}
-                  </span>
-                  <h3 className="mt-2 text-2xl font-bold text-nx-secondary">{PLANO_DO_DEGRAU.nome}</h3>
-                  <p className="mt-1 text-sm text-nx-muted">{PLANO_DO_DEGRAU.descricao}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full border border-nx-gold/40 bg-nx-gold/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-nx-gold">
+                      {PLANO_DO_DEGRAU.rotulo}
+                    </span>
+                    <span className="rounded-full bg-nx-gold px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-nx-bg shadow-nx-glow-sm">
+                      {PLANO_DO_DEGRAU.badge}
+                    </span>
+                  </div>
+                  <h3 className="mt-3 text-2xl font-bold text-nx-primary sm:text-3xl">{PLANO_DO_DEGRAU.nome}</h3>
+                  <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-nx-secondary">{PLANO_DO_DEGRAU.descricao}</p>
                 </div>
-                <p className="flex items-baseline gap-1 text-nx-secondary">
-                  <span className="text-3xl font-bold tracking-tight tabular-nums sm:text-4xl">
+                <p className="flex items-baseline gap-1.5 text-nx-primary">
+                  <span className="text-4xl font-extrabold tracking-tight text-nx-gold sm:text-5xl tabular-nums">
                     {PLANO_DO_DEGRAU.valor}
                   </span>
-                  <span className="text-sm">/ mês</span>
+                  <span className="text-sm font-medium text-nx-secondary">/ mês</span>
                 </p>
               </div>
 
-              <div className="mt-6 border-t border-nx-border pt-5">
-                <p className="text-xs font-semibold uppercase tracking-wider text-nx-muted">
-                  Quando o Plantão nascer:
+              <div className="mt-6 border-t border-nx-border pt-6">
+                <p className="text-xs font-semibold uppercase tracking-wider text-nx-gold">
+                  O que está incluso no Nexora Completo:
                 </p>
-                <ul className="mt-3 grid gap-2.5 sm:grid-cols-2">
+                <ul className="mt-4 grid gap-3 sm:grid-cols-2">
                   {PLANO_DO_DEGRAU.itens.map((item) => (
-                    <li key={item} className="flex gap-2.5 text-sm leading-relaxed text-nx-muted">
-                      <span aria-hidden="true" className="mt-0.5 text-nx-muted">
-                        ·
+                    <li key={item} className="flex gap-3 text-sm leading-relaxed text-nx-secondary">
+                      <span aria-hidden="true" className="mt-0.5 font-bold text-nx-success">
+                        ✓
                       </span>
                       {item}
                     </li>
@@ -525,10 +529,17 @@ export default function Precos() {
                 </ul>
               </div>
 
-              <p className="mt-6 rounded-lg border border-nx-border bg-nx-surface/60 p-4 text-sm leading-relaxed text-nx-secondary">
-                {PLANO_DO_DEGRAU.aviso}
-              </p>
-              <p className="mt-3 text-xs leading-relaxed text-nx-muted">{PLANO_DO_DEGRAU.pagamento}</p>
+              <div className="mt-8 pt-2">
+                <CtaLink
+                  href="/cadastro?plano=completo"
+                  ctaName="precos_plano_completo"
+                  className={`${BOTAO_DOURADO} w-full py-4 text-base font-bold shadow-lg`}
+                >
+                  ✦ Assinar Nexora Completo com Garantia <span aria-hidden="true">→</span>
+                </CtaLink>
+              </div>
+
+              <p className="mt-4 text-xs leading-relaxed text-nx-muted text-center sm:text-left">{PLANO_DO_DEGRAU.pagamento}</p>
             </div>
 
             <p className="mt-6 max-w-3xl text-left text-sm leading-relaxed text-nx-secondary">
