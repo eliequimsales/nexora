@@ -28,16 +28,20 @@ export const metadata: Metadata = {
 
 const PASSOS_ATENDENTE = [
   {
-    titulo: "1. Você cadastra seus serviços e preços",
+    titulo: "Você cadastra seus serviços e preços",
     corpo: "Corte, barba, consulta, sessão ou pacote: o Atendente aprende exatamente quanto custa e o tempo de cada atendimento.",
   },
   {
-    titulo: "2. Você define seus horários de expediente",
+    titulo: "Você define seus horários de expediente",
     corpo: "Ele consulta sua grade livre em tempo real e nunca marca dois clientes no mesmo horário nem fura seu almoço.",
   },
   {
-    titulo: "3. Conecta o WhatsApp via QR Code",
+    titulo: "Conecta o WhatsApp via QR Code",
     corpo: "No seu próprio número de WhatsApp comercial. Você descansa e ele tira dúvidas, informa preços e agenda clientes.",
+  },
+  {
+    titulo: "Tira dúvidas com a sua empresa",
+    corpo: "Conforme trabalha, se surgir uma pergunta nova de cliente que ele ainda não sabe, ele pergunta para você no painel e aprende para as próximas vezes.",
   },
 ];
 
@@ -188,7 +192,7 @@ export default function Home({
 
         {/* COMO O ATENDENTE APRENDE COM A SUA EMPRESA */}
         <section className="border-t border-nx-border/80 bg-nx-surface-2/10 px-6 py-20">
-          <div className="mx-auto max-w-5xl text-center">
+          <div className="mx-auto max-w-6xl text-center">
             <span className="inline-block text-[11px] font-semibold uppercase tracking-widest text-nx-gold">
               O Diferencial da Nexora
             </span>
@@ -199,10 +203,10 @@ export default function Home({
               Ele não é um robô que inventa respostas. Ele consulta os dados que você mesmo cadastrou no painel.
             </p>
 
-            <div className="mt-12 grid gap-6 md:grid-cols-3 text-left">
+            <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4 text-left">
               {PASSOS_ATENDENTE.map((p) => (
-                <div key={p.titulo} className="rounded-2xl border border-nx-border bg-nx-surface p-7 transition-all hover:border-nx-gold/40">
-                  <h3 className="font-semibold text-lg text-nx-primary">{p.titulo}</h3>
+                <div key={p.titulo} className="rounded-2xl border border-nx-border bg-nx-surface p-6 sm:p-7 transition-all hover:border-nx-gold/40">
+                  <h3 className="font-semibold text-base sm:text-lg text-nx-primary">{p.titulo}</h3>
                   <p className="mt-2.5 text-sm leading-relaxed text-nx-secondary">{p.corpo}</p>
                 </div>
               ))}
