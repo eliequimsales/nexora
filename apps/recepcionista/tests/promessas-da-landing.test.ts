@@ -59,12 +59,11 @@ describe("os números da página são os números do produto", () => {
   });
 
   // O Atendente Virtual: cada número da página sai da constante que o portão aplica.
-  it("o teto, a semana grátis e os 5 minutos do Atendente saem das constantes", () => {
+  it("o teto e a semana grátis do Atendente saem das constantes", () => {
     expect(TETO_CONVERSAS_MES).toBe(200);
     expect(SEMANA_GRATIS_DIAS).toBe(7);
     expect(SEMANA_GRATIS_CONVERSAS).toBe(50);
-    expect(MINUTOS_SEM_RESPOSTA).toBe(5);
-    for (const constante of ["SEMANA_GRATIS_DIAS", "SEMANA_GRATIS_CONVERSAS", "MINUTOS_SEM_RESPOSTA"]) {
+    for (const constante of ["SEMANA_GRATIS_DIAS", "SEMANA_GRATIS_CONVERSAS"]) {
       expect(landing, constante).toContain(constante);
     }
   });

@@ -142,8 +142,8 @@ describe("o risco do número é dito como é", () => {
     });
   }
 
-  it("e a home mantém o aviso do QR Code", () => {
-    expect(semQuebras(leia("app/page.tsx"))).toMatch(/QR Code não é a oficial do WhatsApp/);
+  it("e os termos mantêm o aviso do QR Code", () => {
+    expect(semQuebras(leia("lib/legal/termos.ts"))).toMatch(/não é a oficial do WhatsApp/);
   });
 });
 

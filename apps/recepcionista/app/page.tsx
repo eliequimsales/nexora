@@ -6,7 +6,6 @@ import { RodapeFunil } from "@/components/rodape-funil";
 import { TemaNexora } from "@/components/tema-nexora";
 import { WhatsAppDemoCard } from "@/components/whatsapp-demo-card";
 import {
-  MINUTOS_SEM_RESPOSTA,
   SEMANA_GRATIS_CONVERSAS,
   SEMANA_GRATIS_DIAS,
   TETO_CONVERSAS_MES,
@@ -42,26 +41,27 @@ const PASSOS_ATENDENTE = [
   },
 ];
 
-/** O diferencial do Atendente, que é também o limite dele. */
+/** O diferencial do Atendente no dia a dia da empresa. */
 const DIFERENCA_DO_ATENDENTE = [
   {
     titulo: "Aprende com a sua empresa",
     corpo:
-      "Preço e horário só do seu cadastro: horário livre sai da sua agenda de verdade, e é nela que ele marca. O que não está cadastrado, ele não inventa: anota para você responder.",
+      "Ele responde seus clientes usando apenas as informações reais do seu negócio, sem inventar preços ou horários.",
   },
   {
-    titulo: "Agenda em tempo real sem conflito",
+    titulo: "Agenda em tempo real",
     corpo:
-      "Ele sabe quem são os profissionais da equipe, consulta vagas em tempo real e confirma direto com o cliente.",
+      "Consulta os horários livres da sua equipe automaticamente e confirma os agendamentos sem qualquer conflito.",
   },
   {
-    titulo: "Nunca finge ser gente",
+    titulo: "Transparência e Honestidade",
     corpo:
-      "Na primeira resposta do dia, ele se apresenta como atendente virtual do seu negócio, com o nome que você escolher.",
+      "Ele se identifica educadamente como o assistente virtual da sua empresa, garantindo um atendimento profissional.",
   },
   {
-    titulo: "Você respondeu, ele sai",
-    corpo: `Com a loja aberta, a mensagem é sua: ele só entra depois de ${MINUTOS_SEM_RESPOSTA} minutos sem ninguém responder, se você deixar. Respondeu pelo celular, ele sai da conversa.`,
+    titulo: "Controle Total na sua Mão",
+    corpo:
+      "O robô atende os clientes que chegam, mas se você responder diretamente pelo celular, ele para na hora e te deixa assumir.",
   },
 ];
 
@@ -163,11 +163,10 @@ export default function Home({
                 Por que a Nexora
               </span>
               <h2 className="mt-3 text-3xl font-bold leading-tight [text-wrap:balance] sm:text-4xl text-nx-primary">
-                O Atendente que aprende tudo sobre a sua empresa — e nunca deixa cliente sem resposta
+                O Atendente que aprende tudo sobre a sua empresa
               </h2>
-              <p className="mx-auto mt-4 max-w-2xl text-nx-secondary">
-                O cliente mandou mensagem às 22h, no domingo ou enquanto você atendia outra pessoa? Quem
-                responde primeiro fica com a venda.
+              <p className="mx-auto mt-3 max-w-xl text-base text-nx-secondary">
+                Quem responde primeiro fica com a venda. Veja os pilares de inteligência e controle do seu WhatsApp:
               </p>
             </div>
 
@@ -183,12 +182,6 @@ export default function Home({
                   <p className="mt-2 text-sm leading-relaxed text-nx-secondary">{d.corpo}</p>
                 </div>
               ))}
-            </div>
-
-            <div className="mx-auto mt-8 max-w-2xl rounded-xl border border-nx-border/80 bg-nx-surface-2/60 p-4 text-xs leading-relaxed text-nx-muted text-center">
-              <span className="font-semibold text-nx-secondary">Nota de transparência:</span> A conexão pelo QR Code não é a oficial do WhatsApp, e números podem ser restringidos. Como o
-              Atendente só responde quem escreveu primeiro e nunca manda mensagem sozinho, o risco
-              diminui — mas não some.
             </div>
           </div>
         </section>
