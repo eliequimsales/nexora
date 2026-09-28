@@ -9,7 +9,6 @@ import { Celular } from "@/components/atendente/celular";
 import { Ligar } from "@/components/atendente/ligar";
 import { Situacao } from "@/components/atendente/situacao";
 import { CartaoDaNoite } from "@/components/painel/cartao-da-noite";
-import { AlertadorRecuperacao } from "@/components/painel/alertador-recuperacao";
 
 /**
  * ATENDENTE VIRTUAL — UMA TELA SÓ, QUE SE EXPLICA SOZINHA.
@@ -191,7 +190,6 @@ export default function PaginaDoAtendente() {
 
         <div className="space-y-4">
           <CartaoDaNoite />
-          <AlertadorRecuperacao />
           {tela.ligado ? <Situacao tela={tela} aoMudarTela={setTela} /> : ajustes}
           {(!tela.ligado || tela.acesso === "SEMANA_ACABOU") && (
             <Ligar tela={tela} testado={testado} aoMudarTela={setTela} />

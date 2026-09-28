@@ -150,7 +150,7 @@ const ACOLHEDOR: Textos = {
   semAgenda: "Não encontrei horário livre nos próximos dias. Deixei anotado para a equipe te chamar.",
   linkAgenda: (link) => `Para confirmar, é só escolher o seu por aqui: ${link}`,
   conviteLink: (p) =>
-    `Com certeza! Você pode consultar todos os nossos horários livres${p.servico ? ` para ${p.servico}` : ""} e escolher o melhor momento para você direto por este link:\n${p.link} 💛`,
+    `Você pode escolher o melhor horário direto por este link:\n${p.link} 💛`,
   pessoa: (volta) =>
     volta
       ? `Claro! A equipe volta ${volta} e já deixei anotado para falarem com você.`
@@ -189,7 +189,7 @@ const DIRETO: Textos = {
   semAgenda: "Não há horário livre nos próximos dias. Anotei para a equipe entrar em contato.",
   linkAgenda: (link) => `Para confirmar, escolha pelo link: ${link}`,
   conviteLink: (p) =>
-    `Você pode consultar os horários livres${p.servico ? ` para ${p.servico}` : ""} e fazer seu agendamento direto pelo link:\n${p.link}`,
+    `Escolha seu horário direto pelo link:\n${p.link}`,
   pessoa: (volta) =>
     volta
       ? `Certo. A equipe volta ${volta} e vai falar com você.`
@@ -223,7 +223,7 @@ const DESCONTRAIDO: Textos = {
   semAgenda: "Nos próximos dias tá tudo cheio. Deixei anotado pro pessoal te chamar.",
   linkAgenda: (link) => `Pra confirmar, é só escolher o seu aqui: ${link}`,
   conviteLink: (p) =>
-    `Com certeza! Dá uma olhada nos horários livres${p.servico ? ` pra ${p.servico}` : ""} e escolhe o melhor pra você direto pelo link:\n${p.link} 😄`,
+    `Dá uma olhada nos horários e escolhe o seu aqui:\n${p.link} 😄`,
   pessoa: (volta) =>
     volta
       ? `Claro! O pessoal volta ${volta} e já deixei anotado pra falarem com você.`
