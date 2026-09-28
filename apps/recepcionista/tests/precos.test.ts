@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { GARANTIA_DIAS, ONDAS_MINIMAS } from "@/lib/billing/garantia";
+import { GARANTIA_DIAS } from "@/lib/billing/garantia";
 import { PLANOS } from "@/lib/billing/planos";
 import { LINKS_DO_RODAPE } from "@/lib/institucional";
 import { PERGUNTAS_DOS_PRECOS, PERGUNTAS_FREQUENTES } from "@/lib/perguntas";
@@ -38,7 +38,7 @@ describe("a página de preços", () => {
 
   it("a porta é grátis: a primeira Onda vem antes do primeiro real", () => {
     const p = pagina();
-    expect(p).toContain("primeira Onda");
+    expect(p).toMatch(/primeira onda/i);
     expect(p).toContain("TAMANHO_DA_ONDA");
     expect(p).toContain("DIAS_DA_PRIMEIRA_ONDA");
     expect(p.toLowerCase()).not.toContain("mês grátis");
@@ -72,10 +72,8 @@ describe("a página de preços", () => {
   it("a garantia sai das constantes da garantia", () => {
     const p = pagina();
     expect(GARANTIA_DIAS).toBe(30);
-    expect(ONDAS_MINIMAS).toBe(3);
-    expect(p).toContain("Garantia Dinheiro Recuperado");
+    expect(p).toContain("Garantia de Satisfação");
     expect(p).toContain("GARANTIA_DIAS");
-    expect(p).toContain("ONDAS_MINIMAS");
   });
 
   // A implantação é uma chamada com hora de gente: sem Price na Stripe ela não

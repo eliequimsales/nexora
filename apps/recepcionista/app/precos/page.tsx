@@ -5,7 +5,7 @@ import { CtaLink, TrackViewContent } from "@/components/funil";
 import { RodapeFunil } from "@/components/rodape-funil";
 import { TemaNexora } from "@/components/tema-nexora";
 import { WhatsAppDemoCard } from "@/components/whatsapp-demo-card";
-import { GARANTIA_DIAS, ONDAS_MINIMAS } from "@/lib/billing/garantia";
+import { GARANTIA_DIAS } from "@/lib/billing/garantia";
 import {
   MINUTOS_DA_CHAMADA,
   PRAZO_DA_IMPLANTACAO_DIAS,
@@ -22,12 +22,11 @@ import {
 } from "@/lib/billing/preco";
 import { DIAS_DA_PRIMEIRA_ONDA } from "@/lib/billing/primeira-onda";
 import { PERGUNTAS_DOS_PRECOS } from "@/lib/perguntas";
-import { MIN_SUMIDOS } from "@/lib/recuperacao/estimativa";
 import { TAMANHO_DA_ONDA } from "@/lib/recuperacao/onda";
 
 export const metadata: Metadata = {
   title: "Preços da Nexora — Planos simples e transparentes",
-  description: `Comece com a primeira Onda grátis sem cartão de crédito. Nexora Atendente por ${emReais(PRECO_MENSAL_CENTS)}/mês e Nexora Completo por ${emReais(PRECO_COMPLETO_CENTS)}/mês, com Garantia Dinheiro Recuperado de ${GARANTIA_DIAS} dias.`,
+  description: `Comece com a primeira semana grátis sem cartão de crédito. Nexora Atendente por ${emReais(PRECO_MENSAL_CENTS)}/mês e Nexora Completo por ${emReais(PRECO_COMPLETO_CENTS)}/mês, com Garantia de Satisfação de ${GARANTIA_DIAS} dias.`,
 };
 
 const BOTAO_DOURADO =
@@ -60,7 +59,7 @@ const PLANO_ATENDENTE = {
     "Conexão via QR Code no seu próprio número de WhatsApp",
     "Até 3 profissionais na equipe",
     "Clientes e conversas ilimitadas",
-    `Garantia Dinheiro Recuperado de ${GARANTIA_DIAS} dias`,
+    `Garantia de Satisfação de ${GARANTIA_DIAS} dias`,
   ],
   pagamento: `${PLANOS.pix_30_dias.dias} dias no Pix: ${emReais(PLANOS.pix_30_dias.valorCents)}, sem renovação automática · Cartão com renovação mensal · Anual à vista: ${emReais(PRECO_ANUAL_CENTS)} (2 meses grátis).`,
 };
@@ -77,7 +76,7 @@ const PLANO_COMPLETO = {
     "Painel de acompanhamento do faturamento recuperado em tempo real",
     "Profissionais ilimitados na equipe",
     "Suporte prioritário direto no WhatsApp",
-    `Garantia Dinheiro Recuperado de ${GARANTIA_DIAS} dias`,
+    `Garantia de Satisfação de ${GARANTIA_DIAS} dias`,
   ],
   pagamento: `${PLANOS.pix_30_dias.dias} dias no Pix: ${emReais(PRECO_COMPLETO_CENTS)}, sem renovação automática · Cartão com renovação mensal · Anual à vista: ${emReais(PRECO_COMPLETO_CENTS * 10)}.`,
 };
@@ -354,17 +353,13 @@ export default function Precos() {
               🛡️
             </span>
             <h2 className="mt-4 text-3xl font-bold leading-tight text-nx-primary sm:text-4xl">
-              Garantia Dinheiro Recuperado de {GARANTIA_DIAS} dias
+              Garantia de Satisfação de {GARANTIA_DIAS} dias
             </h2>
             <p className="mt-4 text-lg leading-relaxed text-nx-secondary">
-              Se em {GARANTIA_DIAS} dias você usar a Nexora (mínimo de {ONDAS_MINIMAS} ondas enviadas) e o faturamento recuperado na sua lista de clientes (com pelo menos {MIN_SUMIDOS} sumidos) não pagar o valor da assinatura de {emReais(PRECO_MENSAL_CENTS)}, devolvemos 100% do que você pagou.
+              Use o Atendente Virtual no WhatsApp da sua empresa por {GARANTIA_DIAS} dias. Se você achar que ele não atendeu como você esperava ou não valeu a pena para o seu negócio, nós devolvemos 100% do que você pagou.
             </p>
             <p className="mt-3 text-sm text-nx-muted">
-              Risco zero para você testar e aprovar. Detalhes completos nos{" "}
-              <Link href="/termos" className="underline underline-offset-4 hover:text-nx-secondary">
-                Termos de Uso
-              </Link>
-              .
+              Risco zero para você testar e aprovar. Simples assim, sem burocracia nem perguntas.
             </p>
           </div>
         </section>
@@ -373,7 +368,7 @@ export default function Precos() {
         <section id="perguntas" className="scroll-mt-20 px-6 py-20">
           <div className="mx-auto max-w-3xl">
             <h2 className="text-3xl font-bold leading-tight text-nx-primary sm:text-4xl text-center">
-              Dúvidas frequentes sobre os planos
+              Dúvidas frequentes sobre o Atendente e os planos
             </h2>
             <dl className="mt-10">
               {PERGUNTAS_DOS_PRECOS.map((p) => (

@@ -69,11 +69,22 @@ const LISTA_PEQUENA: Pergunta = {
   resposta: `O diagnóstico avisa antes de você pagar. Com menos de ${MIN_SUMIDOS} clientes sumidos ou de ${emReais(MIN_RECUPERAVEL_CENTS)} para recuperar, a recomendação é não assinar agora, porque a mensalidade tende a custar mais do que volta.`,
 };
 
+const ATENDENTE_24H: Pergunta = {
+  pergunta: "O Atendente Virtual responde de madrugada e aos finais de semana?",
+  resposta:
+    "Sim! Ele funciona 24 horas por dia, 7 dias por semana. Enquanto você dorme ou atende outros clientes, ele responde imediatamente no seu próprio WhatsApp, tira dúvidas sobre seus serviços e preços e fecha agendamentos na sua agenda.",
+};
+
+const GARANTIA_SATISFACAO: Pergunta = {
+  pergunta: "E se eu não gostar ou não valer a pena para a minha empresa?",
+  resposta: `Você tem a Garantia de Satisfação de ${GARANTIA_DIAS} dias. Se você achar que o Atendente não funcionou como esperado ou não valeu a pena para o seu negócio, nós devolvemos 100% do que você pagou. Sem burocracia nem perguntas.`,
+};
+
 /** As quatro dúvidas que a home responde, na ordem em que elas aparecem na cabeça de quem vai começar. */
 export const PERGUNTAS_DA_HOME: Pergunta[] = [CARTAO, RISCO, SEM_PLANILHA, BESTEIRA];
 
-/** As quatro de quem está olhando preço: o que se paga, o que volta, como sai e quando não vale a pena. */
-export const PERGUNTAS_DOS_PRECOS: Pergunta[] = [CARTAO, GARANTIA, CANCELAR, LISTA_PEQUENA];
+/** As quatro de quem está olhando preço do Atendente: cartão, horário 24h, garantia e cancelamento. */
+export const PERGUNTAS_DOS_PRECOS: Pergunta[] = [CARTAO, ATENDENTE_24H, GARANTIA_SATISFACAO, CANCELAR];
 
 export const PERGUNTAS_FREQUENTES: Pergunta[] = [
   {
@@ -102,6 +113,8 @@ export const PERGUNTAS_FREQUENTES: Pergunta[] = [
     resposta: `A primeira semana é por nossa conta, sem cartão: ${SEMANA_GRATIS_DIAS} dias ou ${SEMANA_GRATIS_CONVERSAS} conversas, o que vier primeiro, a partir de quando você ligar. Depois, ele para de responder até você escolher um plano — e você vê o que ele fez na semana antes de decidir. No plano de ${emReais(PRECO_MENSAL_CENTS)} por mês, ele atende até ${TETO_CONVERSAS_MES} conversas por mês.`,
   },
   CARTAO,
+  ATENDENTE_24H,
+  GARANTIA_SATISFACAO,
   GARANTIA,
   SEM_PLANILHA,
   CANCELAR,
