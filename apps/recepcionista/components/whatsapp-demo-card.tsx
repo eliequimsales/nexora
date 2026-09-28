@@ -1,15 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { obterLinkWhatsAppDemo } from "@/lib/whatsapp/demo";
-
 interface WhatsAppDemoCardProps {
   className?: string;
   origem?: "hero" | "cadastro" | "atendente" | "precos";
 }
 
 export function WhatsAppDemoCard({ className = "", origem = "hero" }: WhatsAppDemoCardProps) {
-  const linkWhatsApp = obterLinkWhatsAppDemo();
 
   return (
     <div
@@ -37,15 +34,6 @@ export function WhatsAppDemoCard({ className = "", origem = "hero" }: WhatsAppDe
           >
             💬 Testar no Simulador ao Vivo ↓
           </Link>
-          <a
-            href={linkWhatsApp}
-            target="_blank"
-            rel="noopener noreferrer"
-            data-origem={origem}
-            className="text-[11px] text-nx-muted underline hover:text-nx-secondary transition-colors"
-          >
-            Mandar &quot;Oi&quot; no WhatsApp →
-          </a>
         </div>
       </div>
 

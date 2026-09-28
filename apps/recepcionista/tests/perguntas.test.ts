@@ -144,11 +144,10 @@ describe("as quatro perguntas da home", () => {
     expect(r).toContain("não zera");
   });
 
-  // O importador lê texto. Foto de caderno só vira lista pela mão do fundador,
-  // e a home não promete o que o produto não faz sozinho.
-  it("sem planilha: o mesmo caminho que o diagnóstico ensina, sem prometer foto", () => {
+  // O Atendente não exige planilha nem importação manual de caderno: funciona 100% pelo celular.
+  it("sem planilha: configurado pelo celular em minutos, sem prometer foto", () => {
     const r = resposta("planilha");
-    expect(r).toContain("um cliente por linha");
+    expect(r).toContain("100% pelo celular");
     expect(r).not.toMatch(/foto|print/i);
   });
 

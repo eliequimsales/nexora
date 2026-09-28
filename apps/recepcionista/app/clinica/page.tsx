@@ -12,7 +12,6 @@ import { PERGUNTAS_FREQUENTES } from "@/lib/perguntas";
 import { MEDIANA_POR_SEGMENTO } from "@/lib/recuperacao/ciclo";
 import { MIN_SUMIDOS } from "@/lib/recuperacao/estimativa";
 import { TAMANHO_DA_ONDA } from "@/lib/recuperacao/onda";
-import { obterLinkWhatsAppDemo } from "@/lib/whatsapp/demo";
 
 export const metadata: Metadata = {
   title: "Nexora para Clínicas e Salões — Atendente Inteligente 24h no WhatsApp",
@@ -54,8 +53,6 @@ const PASSOS = [
 ];
 
 export default function PaginaClinica() {
-  const linkWhatsApp = obterLinkWhatsAppDemo();
-
   return (
     <TemaNexora>
       <header className="sticky top-0 z-40 border-b border-nx-border bg-nx-bg/85 backdrop-blur-md">
@@ -102,13 +99,11 @@ export default function PaginaClinica() {
                 Ativar meu Atendente 24h grátis <span aria-hidden="true">→</span>
               </Link>
               <a
-                href={linkWhatsApp}
-                target="_blank"
-                rel="noopener noreferrer"
+                href="#simulador"
                 className="inline-flex items-center justify-center gap-2 rounded-lg border border-nx-success/40 bg-nx-surface px-6 py-4 text-base font-medium text-nx-primary transition-colors hover:border-nx-success hover:bg-nx-surface-2"
               >
                 <span className="h-2 w-2 rounded-full bg-nx-success animate-pulse" />
-                Testar no WhatsApp de Demonstração
+                Ver demonstração no simulador ↓
               </a>
             </div>
 
@@ -193,12 +188,10 @@ export default function PaginaClinica() {
                 Ativar meu Atendente 24h grátis <span aria-hidden="true">→</span>
               </Link>
               <a
-                href={linkWhatsApp}
-                target="_blank"
-                rel="noopener noreferrer"
+                href="#simulador"
                 className="inline-flex items-center gap-2 rounded-lg border border-nx-border bg-nx-surface px-6 py-4 text-sm font-semibold text-nx-primary hover:bg-nx-surface-2 transition-colors"
               >
-                💬 Falar com o Atendente no WhatsApp
+                💬 Ver demonstração no simulador ↓
               </a>
             </div>
           </div>

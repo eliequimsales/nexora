@@ -13,7 +13,6 @@ import {
   type Bolha,
   type Jeito,
 } from "@/lib/atendente/jeitos";
-import { obterLinkWhatsAppDemo } from "@/lib/whatsapp/demo";
 
 /**
  * SIMULADOR IMERSIVO DO ATENDENTE NO WHATSAPP
@@ -447,7 +446,6 @@ export function DemoAtendente({
   const [digitando, setDigitando] = useState(false);
   const [horaStatus, setHoraStatus] = useState("14:30");
   const chatScrollRef = useRef<HTMLDivElement>(null);
-  const linkWhatsApp = obterLinkWhatsAppDemo();
 
   useEffect(() => {
     setHoraStatus(horaAtualFormatada());

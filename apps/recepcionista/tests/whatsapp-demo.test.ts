@@ -37,17 +37,17 @@ describe("Canal de Demonstração no WhatsApp", () => {
   it("o card de demonstração traz a chamada 'Prefere ver funcionando antes de criar conta?'", () => {
     const card = semQuebras(leia("components/whatsapp-demo-card.tsx"));
     expect(card).toContain("Prefere ver funcionando antes de criar conta?");
-    expect(card).toContain("obterLinkWhatsAppDemo");
+    expect(card).toContain("Testar no Simulador ao Vivo");
 
     const home = semQuebras(leia("app/page.tsx"));
     expect(home).toContain("WhatsAppDemoCard");
     expect(home).toContain("<DemoAtendente");
   });
 
-  it("a página de cadastro traz a opção de teste direto no WhatsApp para evitar desistência", () => {
+  it("a página de cadastro traz a opção de teste no simulador para evitar desistência", () => {
     const cadastro = semQuebras(leia("app/cadastro/page.tsx"));
     expect(cadastro).toContain("Prefere ver funcionando antes de criar conta?");
-    expect(cadastro).toContain("obterLinkWhatsAppDemo");
+    expect(cadastro).toContain("Simulador ao Vivo");
   });
 
   it("a página de preços traz o WhatsAppDemoCard", () => {

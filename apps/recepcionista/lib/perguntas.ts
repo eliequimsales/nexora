@@ -29,22 +29,21 @@ export type NaoE = { titulo: string; explicacao: string };
 
 const CARTAO: Pergunta = {
   pergunta: "Preciso de cartão de crédito para começar?",
-  resposta: `Não. O diagnóstico, a primeira Onda e a primeira semana do Atendente não pedem cartão. Para continuar depois, dá para pagar ${emReais(PLANOS.pix_30_dias.valorCents)} por ${PLANOS.pix_30_dias.dias} dias no Pix, sem renovação automática, ou ${emReais(PRECO_ANUAL_CENTS)} por 12 meses à vista. No cartão, a assinatura é de ${emReais(PRECO_MENSAL_CENTS)} por mês.`,
+  resposta: `Não. A primeira semana do Atendente é por nossa conta e não pede cartão. Você testa na prática com as regras da sua empresa e só decide se quer continuar depois de ver o resultado. Para continuar depois, dá para pagar ${emReais(PLANOS.pix_30_dias.valorCents)} por ${PLANOS.pix_30_dias.dias} dias no Pix, sem renovação automática, ou ${emReais(PRECO_ANUAL_CENTS)} por 12 meses à vista. No cartão, a assinatura é de ${emReais(PRECO_MENSAL_CENTS)} por mês.`,
 };
 
 // A conexão do Atendente é por QR Code, que não é a oficial. Prometer que o
 // número nunca será restringido seria vender o que não temos como cumprir.
 const RISCO: Pergunta = {
   pergunta: "Meu WhatsApp corre risco de ser banido?",
-  resposta: `Na reativação, quem manda é você, do seu próprio WhatsApp: ${TAMANHO_DA_ONDA} mensagens por semana, para quem já foi seu cliente — o ritmo de uma pessoa, não o de uma ferramenta de disparo. O Atendente Virtual usa uma conexão por QR Code que não é a oficial do WhatsApp, e números podem ser restringidos. Como ele só responde quem escreveu primeiro, no máximo ${MAX_RESPOSTAS_POR_DIA} respostas por conversa por dia, e nunca manda mensagem sozinho, o risco diminui — mas não zera.`,
+  resposta: `O Atendente Virtual não faz disparos em massa nem aborda pessoas do nada — quem manda é você, definindo quando ele atende. Ele só responde quem chamou a sua empresa primeiro, respeitando o ritmo humano (no máximo ${MAX_RESPOSTAS_POR_DIA} respostas por conversa por dia). A conexão usa leitura de QR Code, que não é a oficial do WhatsApp, e números podem ser restringidos. Como ele só atende conversas recebidas e nunca manda mensagem sozinho, o risco diminui — mas, por transparência, não zera.`,
 };
 
-// O importador lê texto: planilha, lista colada, caderno digitado. Foto de
-// caderno só vira lista com alguém digitando, então a página não promete isso.
+// O Atendente é configurado diretamente com serviços e horários da empresa.
 const SEM_PLANILHA: Pergunta = {
   pergunta: "E se eu não tiver planilha nem computador?",
   resposta:
-    "Funciona pelo celular. Você digita a lista do caderno do jeito que der: um cliente por linha, nome e telefone, com a data da última visita e o valor se você lembrar. A Nexora organiza e diz em português o que não conseguiu ler.",
+    "Você não precisa de planilha nem de computador: funciona 100% pelo celular. Você cadastra seus serviços, preços e horários de atendimento em 2 minutos direto pelo celular. Não precisa cadastrar clientes um por um nem organizar planilhas: conectou o WhatsApp pelo QR Code, ele já está pronto para atender.",
 };
 
 const BESTEIRA: Pergunta = {
@@ -90,7 +89,7 @@ export const PERGUNTAS_FREQUENTES: Pergunta[] = [
   {
     pergunta: "A Nexora manda mensagem para os meus clientes sozinha?",
     resposta:
-      "Para quem sumiu, não: na reativação, ela escreve a mensagem, e você lê e manda do seu próprio WhatsApp. É de propósito — número que manda muita mensagem não pedida pode ser limitado ou bloqueado pelo WhatsApp, e o número do seu negócio é a sua agenda. O Atendente Virtual, se você ligar, só responde quem escreveu primeiro: nunca começa conversa e nunca insiste.",
+      "Não. O Atendente Virtual só responde quem escreveu primeiro: ele nunca começa conversas do nada, nunca faz disparos em massa e nunca insiste. Ele funciona exatamente como uma recepcionista que atende quem chama no balcão da sua empresa.",
   },
   RISCO,
   {
@@ -141,7 +140,8 @@ export const PERGUNTAS_FREQUENTES: Pergunta[] = [
 export const O_QUE_A_NEXORA_NAO_E: NaoE[] = [
   {
     titulo: "Não é disparo em massa",
-    explicacao: `São ${TAMANHO_DA_ONDA} mensagens por semana, escolhidas pelo ritmo de cada cliente, e cada uma sai do seu WhatsApp depois que você lê. O ritmo de uma pessoa, não o de um robô.`,
+    explicacao:
+      "A Nexora não faz disparos frios nem manda mensagens não solicitadas. O Atendente só responde quem escreveu primeiro para a sua empresa, respeitando o ritmo de uma conversa real.",
   },
   {
     titulo: "Não é chatbot burro de menu",
@@ -151,6 +151,6 @@ export const O_QUE_A_NEXORA_NAO_E: NaoE[] = [
   {
     titulo: "Não é CRM para você configurar",
     explicacao:
-      "Nada de cadastrar cliente por cliente nem de treinamento demorado. Você manda a lista do jeito que ela está, e o Atendente aprende com a agenda e o cadastro que você já tem.",
+      "Nada de cadastrar cliente por cliente nem de semanas de configuração. Você cadastra seus serviços, valores e horários pelo celular em 2 minutos e o Atendente já sai pronto para atender.",
   },
 ];

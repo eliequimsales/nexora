@@ -112,8 +112,9 @@ export default function Home({
               <span className="text-nx-gold">de madrugada.</span>
             </h1>
 
-            <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-nx-secondary sm:text-xl">
-              O Atendente Inteligente que aprende tudo sobre a sua empresa e fecha agendamentos no seu WhatsApp enquanto você dorme.
+            <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-nx-secondary sm:text-lg">
+              Mensagens que chegam às 22h ou no fim de semana viram agendamentos fechados.
+              A Nexora atende no seu WhatsApp em segundos, tira dúvidas de preços e garante o cliente enquanto você descansa.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
@@ -148,6 +149,7 @@ export default function Home({
 
             {/* SIMULADOR INTERATIVO NO WHATSAPP */}
             <div id="atendente" className="scroll-mt-24 mx-auto mt-12 w-full max-w-2xl text-left">
+              <span id="simulador" className="sr-only" />
               <DemoAtendente />
             </div>
           </div>
@@ -226,14 +228,12 @@ export default function Home({
             </div>
             <div className="mx-auto mt-6 max-w-3xl space-y-4 text-center text-base leading-relaxed text-nx-secondary sm:text-lg">
               <p>
-                Ferramenta de disparo manda a mesma mensagem para a lista inteira no mesmo dia. Duas coisas
-                acontecem: o WhatsApp limita ou bloqueia o número — e o número da sua empresa é a sua agenda
-                inteira — e quem esteve na sua loja ontem recebe uma mensagem de saudade e percebe que é
-                robô.
+                Ferramentas de disparo e robôs invasivos mandam mensagens automáticas sem permissão,
+                irritam seus clientes e colocam o WhatsApp da sua empresa em sério risco de banimento.
               </p>
               <p>
                 A Nexora faz o contrário de propósito: o Atendente Virtual só responde quem escreveu primeiro.
-                Ele nunca inicia conversas sozinho sem interação do cliente.
+                Ele nunca inicia conversas sozinho sem interação do cliente e atende com linguagem natural humana.
               </p>
             </div>
             <div className="mt-12 grid gap-6 md:grid-cols-3">
