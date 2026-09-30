@@ -85,10 +85,18 @@ export function trackLead(conteudo: string = "Interesse Atendente", extra?: Reco
   track("Lead", { content_name: conteudo, ...extra });
 }
 
-export function trackCompleteRegistration(metodo: string = "email"): void {
-  track("CompleteRegistration", { status: true, content_name: metodo });
+export function trackCompleteRegistration(
+  metodo: string = "email",
+  dadosUsuario?: { email?: string; phone?: string }
+): void {
+  const payload: Record<string, unknown> = { status: true, content_name: metodo };
+  const userProps: Record<string, unknown> = {};
+  if (dadosUsuario?.email) userProps.em = dadosUsuario.email.trim().toLowerCase();
+  if (dadosUsuario?.phone) userProps.ph = dadosUsuario.phone.replace(/\D/g, "");
+
+  track("CompleteRegistration", { ...payload, ...userProps });
   // Dispara Lead junto para maximizar compatibilidade com campanhas otimizadas para Lead
-  track("Lead", { content_name: "Cadastro Criado" });
+  track("Lead", { content_name: "Cadastro Criado", status: true, ...userProps });
 }
 
 export function trackFirstClientAdded(metodo: "manual" | "lista" = "manual"): void {

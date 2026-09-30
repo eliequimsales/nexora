@@ -30,7 +30,6 @@ export function MetaPixel({ id }: { id?: string }) {
         id,
         process.env.NEXT_PUBLIC_META_PIXEL_ID,
         "1041816645171094",
-        "1101648275753987",
       ]
         .filter((val): val is string => typeof val === "string" && val.trim().length > 0)
         .flatMap((val) => val.split(","))

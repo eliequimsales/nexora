@@ -68,7 +68,6 @@ export function registrar(nome: NomeDeEvento): void {
     else if (nome === "comecou_entrada") trackCustom("StartedDiagnosisInput");
     else if (nome === "viu_numero") trackCustom("ViewDiagnosisResult");
     else if (nome === "clicou_mensagem") trackCustom("ClickDiagnosisMessage");
-    else if (nome === "criou_conta") trackCompleteRegistration("funil_diagnostico");
   } catch {
     // Métrica nunca derruba produto.
   }

@@ -52,7 +52,7 @@ export default function CadastroPage() {
         setError(data.error ?? "Erro ao criar conta");
         return;
       }
-      trackCompleteRegistration("email");
+      trackCompleteRegistration("email", { email: form.email });
       registrar("criou_conta");
       router.push("/painel/atendente");
       router.refresh();

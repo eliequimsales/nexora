@@ -59,7 +59,7 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID || "1101648275753987";
+  const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID || "1041816645171094";
 
   return (
     <html lang="pt-BR" className={`${display.variable} ${body.variable} ${mono.variable}`}>
