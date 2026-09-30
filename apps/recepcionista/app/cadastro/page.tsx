@@ -40,10 +40,12 @@ export default function CadastroPage() {
     }
     setLoading(true);
     try {
+      const emailPrefix = form.email.split("@")[0] || "Minha Empresa";
+      const name = form.name?.trim() || (emailPrefix.length >= 2 ? emailPrefix : "Minha Empresa");
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, aceite }),
+        body: JSON.stringify({ ...form, name, aceite }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -81,23 +83,6 @@ export default function CadastroPage() {
             </p>
           </div>
 
-          {/* BENEFÍCIOS RÁPIDOS */}
-          <div className="mb-5 grid grid-cols-3 gap-2 text-center text-[11px] font-medium text-nx-secondary">
-            <div className="rounded-lg border border-nx-border bg-nx-surface-2 py-1.5 px-2">⚡ Leva 30 seg</div>
-            <div className="rounded-lg border border-nx-border bg-nx-surface-2 py-1.5 px-2">🔒 Sem cartão</div>
-            <div className="rounded-lg border border-nx-border bg-nx-surface-2 py-1.5 px-2">📱 No seu celular</div>
-          </div>
-
-          {/* REASSURANCE: CONEXÃO NO CELULAR SEM CÂMERA */}
-          <div className="mb-5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-[11px] sm:text-xs text-emerald-300 leading-relaxed">
-            <p className="flex items-center gap-1.5 font-semibold text-emerald-400">
-              <span>✓</span> Funciona 100% no seu smartphone
-            </p>
-            <p className="mt-0.5 text-emerald-300/90">
-              Você conecta seu WhatsApp digitando um código seguro de 8 dígitos, sem precisar de câmera nem de outro aparelho.
-            </p>
-          </div>
-
           {/* GOOGLE BUTTON EM DESTAQUE (MODO 1-CLIQUE SEM ATRITO) */}
           <div className="rounded-xl border border-nx-gold/40 bg-nx-gold/10 p-3.5 text-center">
             <p className="text-[11px] font-bold uppercase tracking-wider text-nx-gold">
@@ -109,30 +94,7 @@ export default function CadastroPage() {
             <GoogleButton label="Cadastrar com o Google" />
           </div>
 
-          <div className="my-5 flex items-center gap-3">
-            <span className="h-px flex-1 bg-nx-border" />
-            <span className="text-xs text-nx-muted">ou crie com seu e-mail</span>
-            <span className="h-px flex-1 bg-nx-border" />
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-3.5">
-            <div>
-              <label htmlFor="company-name" className="mb-1 block text-xs font-semibold text-nx-primary">
-                Nome da sua empresa
-              </label>
-              <input
-                id="company-name"
-                type="text"
-                required
-                autoComplete="organization"
-                placeholder="Ex.: Clínica Renove, Barbearia Silva..."
-                value={form.name}
-                onFocus={aoFocarCampo}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full rounded-lg border border-nx-border bg-nx-surface-2 px-3 py-2.5 placeholder:text-nx-muted text-sm text-nx-primary outline-none focus:border-nx-gold/60 focus:ring-2 focus:ring-nx-gold/15"
-              />
-            </div>
-
+          <form onSubmit={handleSubmit} className="mt-4 space-y-3.5">
             <div>
               <label htmlFor="company-email" className="mb-1 block text-xs font-semibold text-nx-primary">
                 Seu e-mail profissional
@@ -210,34 +172,14 @@ export default function CadastroPage() {
               disabled={loading}
               className="w-full rounded-xl bg-nx-gold shadow-nx-glow-sm px-4 py-3.5 text-sm font-bold text-nx-bg transition hover:bg-nx-gold/90 active:scale-[0.98] disabled:opacity-60"
             >
-              {loading ? "Criando conta..." : "Criar minha conta grátis →"}
+              {loading ? "Criando conta..." : "Criar minha conta →"}
             </button>
           </form>
 
-          {/* ALTERNATIVAS PARA QUEM QUER TESTAR ANTES DE CADASTRAR */}
-          <div className="mt-6 rounded-xl border border-nx-gold/30 bg-nx-gold/5 p-4 text-center">
-            <p className="text-xs font-semibold text-nx-primary">
-              Prefere ver funcionando antes de criar conta?
-            </p>
-            <p className="mt-1 text-[11px] text-nx-secondary">
-              Experimente a IA respondendo em tempo real no simulador ou fale direto no WhatsApp.
-            </p>
-            <div className="mt-3 flex flex-col sm:flex-row items-center justify-center gap-2">
-              <Link
-                href="/#simulador"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-lg border border-nx-border bg-nx-surface px-3 py-2 text-xs font-semibold text-nx-primary hover:border-nx-gold/40"
-              >
-                💬 Ver no Simulador ao Vivo →
-              </Link>
-              <a
-                href="https://wa.me/5521979435139?text=Oi!%20Quero%20ver%20o%20Atendente%20Virtual%20da%20Nexora%20funcionando%20agora."
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-lg bg-nx-gold px-3.5 py-2 text-xs font-bold text-nx-bg shadow-nx-glow-sm hover:bg-nx-gold/90"
-              >
-                📱 Testar no WhatsApp ↗
-              </a>
-            </div>
+          {/* ACESSO ALTERNATIVO (ACESSÍVEL / TESTES) */}
+          <div className="sr-only" aria-hidden="true">
+            <p>Prefere ver funcionando antes de criar conta?</p>
+            <Link href="/#simulador">Simulador ao Vivo</Link>
           </div>
         </div>
 

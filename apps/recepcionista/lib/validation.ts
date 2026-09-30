@@ -8,7 +8,7 @@ const phoneSchema = z
   });
 
 export const signupSchema = z.object({
-  name: z.string().trim().min(2, "Nome muito curto").max(120),
+  name: z.string().trim().min(2, "Nome muito curto").max(120).optional().default("Minha Empresa"),
   email: z.string().trim().toLowerCase().email("E-mail inválido").max(200),
   password: z.string().min(8, "Senha deve ter pelo menos 8 caracteres").max(72),
   phone: z.string().optional().default(""),
