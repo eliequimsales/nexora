@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { trackCustom } from "@/lib/analytics/pixel";
 import { MINUTOS_SEM_RESPOSTA } from "@/lib/atendente/constantes";
 import { horarioFalado } from "@/lib/atendente/datas";
 import {
@@ -443,6 +444,10 @@ export function DemoAtendente({
       body: JSON.stringify({ mensagem: opcao.mensagem, nicho }),
     }).catch(() => {});
 
+    try {
+      trackCustom("InteractedWithDemo", { question: opcao.mensagem, nicho });
+    } catch {}
+
     const delay = Math.min(1200, Math.max(750, opcao.resposta.length * 8));
 
     setTimeout(() => {
@@ -691,6 +696,11 @@ export function DemoAtendente({
         </p>
         <Link
           href="/cadastro"
+          onClick={() => {
+            try {
+              trackCustom("ClickSignupCTA", { cta_location: "simulador_whatsapp" });
+            } catch {}
+          }}
           className="mt-3.5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-nx-gold px-5 py-3 text-sm font-bold text-nx-bg shadow-nx-glow-sm transition-all hover:bg-nx-gold/90 hover:scale-[1.01] active:scale-[0.98]"
         >
           ✦ Quero esse Atendente no meu WhatsApp agora →
