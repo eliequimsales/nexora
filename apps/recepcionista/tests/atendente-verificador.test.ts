@@ -85,6 +85,12 @@ describe("montarPrompt — as instruções da IA do Atendente", () => {
     expect(prompt).toMatch(/orientação médica/i);
   });
 
+  it("orienta dúvidas conceituais com consenso geral e convite para avaliação", () => {
+    expect(prompt).toMatch(/conhecimentos gerais e dúvidas conceituais/i);
+    expect(prompt).toMatch(/avaliação ou visita/i);
+    expect(prompt).toMatch(/horários livres/i);
+  });
+
   it("cada jeito orienta a escrita de um modo", () => {
     const direto = montarPrompt({
       textoDosFatos: FATOS,
