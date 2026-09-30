@@ -136,13 +136,6 @@ const PERGUNTAS_POR_NICHO: Record<Nicho, OpcaoPergunta[]> = {
           agendamentoConfirmado: true,
           proximasOpcoes: [
             {
-              id: "clin-pos-preco",
-              rotulo: "Consultar preços",
-              mensagem: "Quanto custa a limpeza de pele profunda?",
-              resposta:
-                "Nossa Limpeza de Pele Profunda é R$ 140,00 e a Drenagem Linfática R$ 90,00. A primeira avaliação estética é gratuita!",
-            },
-            {
               id: "clin-pos-lembrete",
               rotulo: "Como funciona o lembrete",
               mensagem: "Vocês mandam confirmação antes da consulta?",
@@ -158,30 +151,6 @@ const PERGUNTAS_POR_NICHO: Record<Nicho, OpcaoPergunta[]> = {
           resposta:
             "Excelente! Agendado para amanhã às 10:30 com a Dra. Camila. Te esperamos na clínica! ✅",
           agendamentoConfirmado: true,
-        },
-      ],
-    },
-    {
-      id: "clin-preco",
-      rotulo: "Valor dos procedimentos",
-      mensagem: "Quanto custa a limpeza de pele e a drenagem?",
-      resposta:
-        "Nossa Limpeza de Pele Profunda é R$ 140,00 e a Drenagem Linfática R$ 90,00. A primeira avaliação estética é gratuita! Deseja reservar seu horário para amanhã?",
-      proximasOpcoes: [
-        {
-          id: "clin-preco-agendar",
-          rotulo: "Agendar avaliação gratuita",
-          mensagem: "Quero agendar a avaliação gratuita para amanhã!",
-          resposta:
-            "Excelente escolha! Agendado para amanhã às 15:00 com a Dra. Camila. Salvei na agenda! ✅",
-          agendamentoConfirmado: true,
-        },
-        {
-          id: "clin-preco-fim-semana",
-          rotulo: "Horário de sábado",
-          mensagem: "Vocês atendem aos finais de semana?",
-          resposta:
-            "Sim! Aos sábados atendemos das 09:00 às 15:00. Deseja uma vaga no sábado?",
         },
       ],
     },
