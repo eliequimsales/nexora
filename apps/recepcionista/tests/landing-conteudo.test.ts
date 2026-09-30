@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { PERGUNTAS_DA_HOME, PERGUNTAS_FREQUENTES } from "@/lib/perguntas";
+import { O_QUE_A_NEXORA_NAO_E, PERGUNTAS_DA_HOME, PERGUNTAS_FREQUENTES } from "@/lib/perguntas";
 import { NOME_DA_ESTEIRA } from "@/lib/recuperacao/esteiras";
 
 /**
@@ -42,7 +42,7 @@ describe("o hero", () => {
 
   it("hierarquia do produto: foco limpo e sequencial no Atendente", () => {
     const home = leia("app/page.tsx");
-    const marcos = ["<h1", 'id="atendente"', 'id="nao-e"', 'id="perguntas"'];
+    const marcos = ["<h1", 'id="atendente"'];
     const posicoes = marcos.map((m) => home.indexOf(m));
     marcos.forEach((m, i) => expect(posicoes[i], m).toBeGreaterThan(-1));
     expect(posicoes).toEqual([...posicoes].sort((a, b) => a - b));
@@ -114,15 +114,10 @@ describe("a demonstração da Onda", () => {
 });
 
 describe("o que a Nexora não é, e as perguntas", () => {
-  it("a home mostra as listas compartilhadas — das perguntas, um recorte de quatro — com âncora", () => {
-    const home = leia("app/page.tsx");
-    expect(home).toContain("O_QUE_A_NEXORA_NAO_E");
-    expect(home).toContain('id="nao-e"');
-    expect(home).toContain("PERGUNTAS_DA_HOME");
-    expect(home).toContain('id="perguntas"');
+  it("as listas compartilhadas continuam mantidas e sincronizadas", () => {
     expect(PERGUNTAS_DA_HOME).toHaveLength(4);
-    // O mesmo objeto, não uma cópia: a resposta da home é a da página de ramo.
     for (const p of PERGUNTAS_DA_HOME) expect(PERGUNTAS_FREQUENTES).toContain(p);
+    expect(O_QUE_A_NEXORA_NAO_E).toHaveLength(3);
   });
 });
 

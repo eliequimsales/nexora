@@ -5,13 +5,10 @@ import { ProvaSocialNotion } from "@/components/prova-social-notion";
 import { CtaLink, TrackViewContent } from "@/components/funil";
 import { RodapeFunil } from "@/components/rodape-funil";
 import { TemaNexora } from "@/components/tema-nexora";
-import { WhatsAppDemoCard } from "@/components/whatsapp-demo-card";
 import {
   SEMANA_GRATIS_CONVERSAS,
   SEMANA_GRATIS_DIAS,
-  TETO_CONVERSAS_MES,
 } from "@/lib/atendente/constantes";
-import { O_QUE_A_NEXORA_NAO_E, PERGUNTAS_DA_HOME } from "@/lib/perguntas";
 
 export const metadata: Metadata = {
   title: "Nexora — Atendente Inteligente 24h no WhatsApp",
@@ -200,65 +197,6 @@ export default function Home({
           </div>
         </section>
 
-        {/* O QUE A NEXORA NÃO É */}
-        <section id="nao-e" className="scroll-mt-20 border-t border-nx-border/80 px-6 py-24">
-          <div className="mx-auto max-w-5xl">
-            <div className="text-center">
-              <span className="inline-block text-[11px] font-semibold uppercase tracking-widest text-nx-error">
-                Segurança do seu número
-              </span>
-              <h2 className="mt-3 text-3xl font-bold sm:text-4xl text-nx-primary">O que a Nexora não é</h2>
-            </div>
-            <div className="mx-auto mt-6 max-w-3xl space-y-4 text-center text-base leading-relaxed text-nx-secondary sm:text-lg">
-              <p>
-                Ferramentas de disparo e robôs invasivos mandam mensagens automáticas sem permissão,
-                irritam seus clientes e colocam o WhatsApp da sua empresa em sério risco de banimento.
-              </p>
-              <p>
-                A Nexora faz o contrário de propósito: o Atendente Virtual só responde quem escreveu primeiro.
-                Ele nunca inicia conversas sozinho sem interação do cliente e atende com linguagem natural humana.
-              </p>
-            </div>
-            <div className="mt-12 grid gap-6 md:grid-cols-3">
-              {O_QUE_A_NEXORA_NAO_E.map((item) => (
-                <div key={item.titulo} className="rounded-2xl border border-nx-border bg-nx-surface p-6 transition-all hover:border-nx-error/40">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-nx-error/10 text-nx-error font-bold text-sm">
-                    ✕
-                  </div>
-                  <h3 className="mt-4 font-semibold text-nx-primary">{item.titulo}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-nx-secondary">{item.explicacao}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* PERGUNTAS FREQUENTES */}
-        <section id="perguntas" className="scroll-mt-20 border-t border-nx-border/80 px-6 py-24">
-          <div className="mx-auto max-w-4xl">
-            <div className="text-center">
-              <span className="inline-block text-[11px] font-semibold uppercase tracking-widest text-nx-gold">
-                Tire suas dúvidas
-              </span>
-              <h2 className="mt-3 text-3xl font-bold sm:text-4xl text-nx-primary">
-                O que ainda pode estar te segurando
-              </h2>
-            </div>
-            <div className="mt-12 grid gap-6 md:grid-cols-2">
-              {PERGUNTAS_DA_HOME.map((p) => (
-                <div key={p.pergunta} className="rounded-2xl border border-nx-border bg-nx-surface p-6 sm:p-7 transition-all hover:border-nx-border-2">
-                  <h3 className="font-semibold text-nx-primary text-base">{p.pergunta}</h3>
-                  <p className="mt-2.5 text-sm leading-relaxed text-nx-secondary">{p.resposta}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* DEMONSTRAÇÃO DIRETA NO WHATSAPP REAL */}
-            <div className="mt-12">
-              <WhatsAppDemoCard className="text-left" origem="atendente" />
-            </div>
-          </div>
-        </section>
 
         {/* CTA FINAL */}
         <section className="border-t border-nx-border/80 px-6 py-24">

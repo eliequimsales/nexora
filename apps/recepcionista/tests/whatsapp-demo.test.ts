@@ -40,7 +40,6 @@ describe("Canal de Demonstração no WhatsApp", () => {
     expect(card).toContain("Testar no Simulador ao Vivo");
 
     const home = semQuebras(leia("app/page.tsx"));
-    expect(home).toContain("WhatsAppDemoCard");
     expect(home).toContain("<DemoAtendente");
   });
 
