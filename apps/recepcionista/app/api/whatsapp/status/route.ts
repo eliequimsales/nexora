@@ -23,18 +23,28 @@ export async function GET(request: Request) {
   const sync = new URL(request.url).searchParams.get("sync") === "1";
 
   if (sync) {
-    return NextResponse.json({ state: await refreshWhatsAppStatus(companyId) });
+    const [state, company] = await Promise.all([
+      refreshWhatsAppStatus(companyId),
+      prisma.company.findUnique({ where: { id: companyId }, select: { phone: true } }),
+    ]);
+    return NextResponse.json({ state: { ...state, phone: company?.phone ?? null } });
   }
 
-  const profile = await prisma.companyProfile.findUnique({
-    where: { companyId },
-    select: {
-      whatsappStatus: true,
-      whatsappQrCode: true,
-      whatsappConnectedAt: true,
-      whatsappError: true,
-    },
-  });
+  const [profile, company] = await Promise.all([
+    prisma.companyProfile.findUnique({
+      where: { companyId },
+      select: {
+        whatsappStatus: true,
+        whatsappQrCode: true,
+        whatsappConnectedAt: true,
+        whatsappError: true,
+      },
+    }),
+    prisma.company.findUnique({
+      where: { id: companyId },
+      select: { phone: true },
+    }),
+  ]);
   if (!profile) return NextResponse.json({ error: "Empresa não encontrada" }, { status: 404 });
 
   return NextResponse.json({
@@ -43,6 +53,7 @@ export async function GET(request: Request) {
       qrCode: profile.whatsappQrCode,
       connectedAt: profile.whatsappConnectedAt?.toISOString() ?? null,
       error: profile.whatsappError,
+      phone: company?.phone ?? null,
     },
   });
 }

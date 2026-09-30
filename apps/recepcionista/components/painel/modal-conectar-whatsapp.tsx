@@ -6,21 +6,25 @@ interface ModalConectarWhatsAppProps {
   aberto: boolean;
   aoFechar: () => void;
   aoConectar?: () => void;
+  telefonePadrao?: string;
 }
 
 export function ModalConectarWhatsApp({
   aberto,
   aoFechar,
   aoConectar,
+  telefonePadrao,
 }: ModalConectarWhatsAppProps) {
   const [aba, setAba] = useState<"CODIGO" | "QR">("CODIGO");
   const [carregando, setCarregando] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [telefone, setTelefone] = useState("");
+  const [editandoTelefone, setEditandoTelefone] = useState(false);
   const [status, setStatus] = useState<"DESLIGADO" | "AGUARDANDO_QR" | "CONECTADO" | "ERRO">("DESLIGADO");
   const [erro, setErro] = useState("");
   const [copiado, setCopiado] = useState(false);
+  const telefoneIniciado = useRef(false);
 
   // Formata telefone (XX) XXXXX-XXXX
   const formatarTelefoneInput = (valor: string) => {
@@ -29,6 +33,13 @@ export function ModalConectarWhatsApp({
     if (nums.length <= 7) return `(${nums.slice(0, 2)}) ${nums.slice(2)}`;
     return `(${nums.slice(0, 2)}) ${nums.slice(2, 7)}-${nums.slice(7)}`;
   };
+
+  useEffect(() => {
+    if (telefonePadrao && !telefoneIniciado.current) {
+      setTelefone(formatarTelefoneInput(telefonePadrao));
+      telefoneIniciado.current = true;
+    }
+  }, [telefonePadrao]);
 
   // Quem abre o modal costuma passar uma função nova a cada render. Com ela nas
   // dependências, a aba do QR Code pedia uma conexão nova a cada render até o
@@ -41,6 +52,10 @@ export function ModalConectarWhatsApp({
       const res = await fetch("/api/whatsapp/status");
       if (!res.ok) return;
       const data = await res.json();
+      if (data.state?.phone && !telefoneIniciado.current) {
+        telefoneIniciado.current = true;
+        setTelefone(formatarTelefoneInput(data.state.phone));
+      }
       if (data.state?.status === "CONNECTED") {
         setStatus("CONECTADO");
         aoConectarAgora.current?.();
@@ -91,21 +106,30 @@ export function ModalConectarWhatsApp({
     }
   }, []);
 
-  const handleGerarCodigo = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleGerarCodigo = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     const limpo = telefone.replace(/\D/g, "");
     if (limpo.length < 10) {
       setErro("Por favor, digite o DDD e o número completo (ex: 11 98888-7777).");
+      setEditandoTelefone(true);
       return;
     }
     void iniciarConexao(limpo);
   };
 
-  const handleCopiarCodigo = () => {
+  const handleCopiarEAbrirWhatsApp = () => {
     if (!pairingCode) return;
-    navigator.clipboard.writeText(pairingCode);
+    try {
+      navigator.clipboard.writeText(pairingCode);
+    } catch {}
     setCopiado(true);
-    setTimeout(() => setCopiado(false), 2500);
+    setTimeout(() => setCopiado(false), 3000);
+
+    try {
+      window.location.href = "whatsapp://";
+    } catch {
+      window.open("https://web.whatsapp.com", "_blank");
+    }
   };
 
   useEffect(() => {
@@ -218,88 +242,116 @@ export function ModalConectarWhatsApp({
             /* ========================================================================= */
             <div className="space-y-4">
               {!pairingCode ? (
-                <form onSubmit={handleGerarCodigo} className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-medium text-panel-sub mb-1">
-                      Seu número de WhatsApp com DDD
-                    </label>
-                    <input
-                      type="tel"
-                      required
-                      placeholder="Ex: (11) 98888-7777"
-                      value={telefone}
-                      onChange={(e) => setTelefone(formatarTelefoneInput(e.target.value))}
-                      className="w-full rounded-xl border border-panel-line bg-panel-bg px-3.5 py-2.5 text-sm text-panel-ink placeholder:text-panel-sub/50 focus:border-amber focus:outline-none"
-                    />
-                  </div>
+                <div className="space-y-4">
+                  {telefone && !editandoTelefone ? (
+                    <div className="rounded-2xl border border-panel-line bg-panel-bg/70 p-4 text-left">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-panel-sub">WhatsApp cadastrado:</span>
+                        <button
+                          type="button"
+                          onClick={() => setEditandoTelefone(true)}
+                          className="text-xs font-semibold text-amber-deep hover:underline"
+                        >
+                          Alterar número
+                        </button>
+                      </div>
+                      <div className="mt-1 flex items-center gap-2 font-mono text-base font-bold text-panel-ink">
+                        <span>📱</span>
+                        <span>{telefone}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleGerarCodigo} className="space-y-3">
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-xs font-medium text-panel-sub">
+                            Seu número de WhatsApp com DDD
+                          </label>
+                          {telefone && (
+                            <button
+                              type="button"
+                              onClick={() => setEditandoTelefone(false)}
+                              className="text-xs text-panel-sub hover:underline"
+                            >
+                              Cancelar
+                            </button>
+                          )}
+                        </div>
+                        <input
+                          type="tel"
+                          required
+                          autoFocus
+                          placeholder="Ex: (11) 98888-7777"
+                          value={telefone}
+                          onChange={(e) => setTelefone(formatarTelefoneInput(e.target.value))}
+                          className="w-full rounded-xl border border-panel-line bg-panel-bg px-3.5 py-2.5 text-sm text-panel-ink placeholder:text-panel-sub/50 focus:border-amber focus:outline-none"
+                        />
+                      </div>
+                    </form>
+                  )}
 
                   <button
-                    type="submit"
-                    disabled={carregando}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-amber py-2.5 text-xs font-bold text-night hover:bg-amber-hover transition shadow-sm disabled:opacity-50"
+                    type="button"
+                    onClick={() => handleGerarCodigo()}
+                    disabled={carregando || !telefone.replace(/\D/g, "")}
+                    className="w-full flex items-center justify-center gap-2 rounded-2xl bg-amber py-3.5 text-sm font-bold text-night hover:brightness-110 transition shadow-sm disabled:opacity-50"
                   >
                     {carregando ? (
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-night border-t-transparent" />
+                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-night border-t-transparent" />
                     ) : (
-                      <span>⚡ Gerar código de pareamento</span>
+                      <span>⚡ Conectar meu WhatsApp</span>
                     )}
                   </button>
 
-                  <p className="text-[11px] text-panel-sub text-center">
-                    Você receberá um código de 8 dígitos para digitar no seu WhatsApp.
+                  <p className="text-[11px] text-panel-sub text-center leading-relaxed">
+                    Ao clicar, o WhatsApp enviará uma notificação no seu aparelho para confirmar.
                   </p>
-                </form>
+                </div>
               ) : (
                 <div className="space-y-4 text-center">
+                  {/* NOTIFICAÇÃO OFICIAL NO CELULAR */}
+                  <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-left text-xs space-y-1">
+                    <div className="flex items-center gap-1.5 font-bold text-emerald-800">
+                      <span className="text-base animate-bounce">🔔</span> Notificação no seu celular
+                    </div>
+                    <p className="text-emerald-900 leading-relaxed">
+                      O WhatsApp acabou de enviar uma notificação no seu aparelho: <strong>&ldquo;Toque para confirmar o novo aparelho&rdquo;</strong>.
+                    </p>
+                  </div>
+
+                  {/* CÓDIGO EM DESTAQUE */}
                   <div className="rounded-2xl border border-amber/40 bg-amber/5 p-4 shadow-sm">
                     <span className="text-[11px] font-semibold text-amber uppercase tracking-wider block">
                       Seu código de conexão
                     </span>
-                    <div className="mt-2 font-mono text-2xl font-black text-panel-ink tracking-widest sm:text-3xl">
+                    <div className="mt-1 font-mono text-3xl font-black text-panel-ink tracking-widest sm:text-4xl">
                       {pairingCode}
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleCopiarCodigo}
-                      className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber px-4 py-1.5 text-xs font-bold text-night hover:bg-amber-hover transition"
-                    >
-                      <span>{copiado ? "Código copiado! ✓" : "Copiar código 📋"}</span>
-                    </button>
                   </div>
 
-                  <div className="rounded-xl border border-panel-line bg-panel-bg p-4 text-left text-xs space-y-2 text-panel-sub">
-                    <span className="font-bold text-panel-ink block">
-                      Como conectar no WhatsApp:
-                    </span>
-                    <ol className="space-y-2 text-panel-ink">
-                      <li className="flex items-start gap-2">
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber/20 font-bold text-amber text-[11px]">
-                          1
-                        </span>
-                        <span>Abra o <strong>WhatsApp</strong> no celular.</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber/20 font-bold text-amber text-[11px]">
-                          2
-                        </span>
-                        <span>Toque em <strong>Aparelhos conectados</strong> &gt; <strong>Conectar com número de telefone</strong>.</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber/20 font-bold text-amber text-[11px]">
-                          3
-                        </span>
-                        <span>Digite o código <strong>{pairingCode}</strong> acima.</span>
-                      </li>
-                    </ol>
-                  </div>
-
+                  {/* O BOTÃO MÁGICO */}
                   <button
                     type="button"
-                    onClick={() => setPairingCode(null)}
-                    className="text-xs text-panel-sub hover:text-panel-ink underline"
+                    onClick={handleCopiarEAbrirWhatsApp}
+                    className="w-full flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 hover:bg-emerald-400 py-3.5 text-sm font-bold text-white shadow-md transition-all active:scale-[0.98]"
                   >
-                    Trocar número ou gerar novo código
+                    <span className="text-lg">📲</span>
+                    <span>{copiado ? "Código copiado! Abrindo WhatsApp..." : "Copiar código e Abrir WhatsApp ↗"}</span>
                   </button>
+
+                  <p className="text-[11px] text-panel-sub text-center leading-relaxed">
+                    Caso a notificação não apareça na barra do seu celular: abra o <strong>WhatsApp &gt; Aparelhos conectados &gt; Conectar com número de telefone</strong> e cole o código.
+                  </p>
+
+                  <div className="pt-1 flex items-center justify-center gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setPairingCode(null)}
+                      className="text-xs text-panel-sub hover:text-panel-ink underline"
+                    >
+                      Trocar número ou gerar novo código
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
