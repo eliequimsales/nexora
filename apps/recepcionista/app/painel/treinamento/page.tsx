@@ -14,6 +14,7 @@ interface Item {
   question: string;
   answer: string;
   source: string;
+  approvedAt?: string;
 }
 
 interface Inconsistency {
@@ -24,6 +25,7 @@ interface Inconsistency {
 interface Report {
   stats: { totalConversations: number; resolvedByAttendant: number; sentToTeam: number };
   topGaps: Gap[];
+  approvedItems?: Item[];
   pendingItems: Item[];
   observations: Item[];
   inconsistencies: Inconsistency[];
@@ -33,12 +35,12 @@ interface Report {
 }
 
 const inputClass =
-  "w-full rounded-lg border border-panel-line bg-white px-3 py-2.5 text-sm text-panel-ink outline-none focus:border-amber";
+  "w-full rounded-xl border border-panel-line bg-white px-3 py-2.5 text-sm text-panel-ink outline-none focus:border-amber focus:ring-1 focus:ring-amber shadow-xs";
 
 function Card({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border border-panel-line bg-panel-card p-6">
-      <h2 className="font-display text-lg font-semibold">{title}</h2>
+    <section className="rounded-2xl border border-panel-line bg-panel-card p-6 shadow-xs">
+      <h2 className="font-display text-lg font-semibold text-panel-ink">{title}</h2>
       {hint && <p className="mt-1 text-sm text-panel-sub">{hint}</p>}
       <div className="mt-4 space-y-4">{children}</div>
     </section>
@@ -56,7 +58,7 @@ export default function TreinamentoPage() {
 
   function showThanks(message: string) {
     setThanks(message);
-    setTimeout(() => setThanks(""), 6000);
+    setTimeout(() => setThanks(""), 5000);
   }
 
   const load = useCallback(async () => {
@@ -75,7 +77,7 @@ export default function TreinamentoPage() {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: body ? JSON.stringify(body) : undefined,
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -90,10 +92,10 @@ export default function TreinamentoPage() {
   }
 
   if (!report) {
-    return <p className="p-8 text-center text-sm text-panel-sub">Preparando a reunião de treinamento...</p>;
+    return <p className="p-8 text-center text-sm text-panel-sub">Abrindo a central de ensino...</p>;
   }
 
-  const { stats, topGaps, pendingItems, observations, inconsistencies, interview, score, diary } = report;
+  const { stats, topGaps, approvedItems = [], pendingItems, observations, inconsistencies, interview, score, diary } = report;
 
   async function beginInterview() {
     if (!interview) return;
@@ -127,41 +129,215 @@ export default function TreinamentoPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold">Treinamento do Atendente</h1>
-        <p className="mt-1 text-sm text-panel-sub">
-          Seu Atendente trabalha, anota o que não sabe e aprende só o que você aprovar — igual a um
-          funcionário novo.
-        </p>
+      {/* Cabeçalho */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl font-bold text-panel-ink">Ensinar Atendente</h1>
+          <p className="mt-1 text-sm text-panel-sub">
+            Perguntas feitas no WhatsApp e no simulador que ele ainda não sabia responder.
+          </p>
+        </div>
+        {topGaps.length > 0 ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber/40 bg-amber/15 px-3 py-1.5 text-xs font-bold text-amber-deep">
+            <span className="h-2 w-2 rounded-full bg-amber animate-pulse" aria-hidden="true" />
+            🔔 {topGaps.length} {topGaps.length === 1 ? "dúvida para ensinar" : "dúvidas para ensinar"}
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800">
+            <span>✓</span> Em dia
+          </span>
+        )}
       </div>
 
-      {/* Apresentação do Atendente */}
-      <div className="rounded-2xl border border-amber/20 bg-amber/5 p-6">
-        <p className="text-sm leading-relaxed">
-          Olá! Nesta semana participei de <strong>{stats.totalConversations}</strong> atendimento
-          {stats.totalConversations === 1 ? "" : "s"} — resolvi{" "}
-          <strong>{stats.resolvedByAttendant}</strong> e precisei da equipe em{" "}
-          <strong>{stats.sentToTeam}</strong>.
-          {topGaps.length > 0 && " Gostaria de aprender algumas informações novas. 👇"}
-        </p>
+      {/* Saudação do atendente */}
+      <div className="flex items-start gap-3 rounded-2xl border border-amber/30 bg-amber/10 p-5">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber/20 text-lg" aria-hidden="true">
+          🙋‍♂️
+        </span>
+        <div className="text-sm leading-relaxed text-panel-ink">
+          <p className="font-semibold">Olá! Estou sempre aprendendo com você.</p>
+          <p className="mt-1 text-panel-sub">
+            Quando clientes me perguntam algo que não tenho certeza, anoto abaixo para você me ensinar. O que você me ensinar, passo a responder imediatamente no WhatsApp.
+          </p>
+        </div>
       </div>
 
       {error && <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       {thanks && (
-        <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+        <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-medium text-emerald-800">
           {thanks}
         </p>
       )}
 
-      {/* KUS: entrevista de integração (a empresa escolhe os assuntos) */}
+      {/* Dúvidas para ensinar agora */}
+      <Card
+        title="Dúvidas que o atendente quer aprender"
+        hint={
+          topGaps.length > 0
+            ? "Perguntas de clientes em aberto. Escreva como você gostaria que ele respondesse."
+            : undefined
+        }
+      >
+        {topGaps.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-panel-line bg-white/50 p-6 text-center">
+            <p className="text-sm font-semibold text-emerald-800">✓ Nenhuma dúvida pendente no momento!</p>
+            <p className="mt-1.5 text-xs text-panel-sub">
+              Quando clientes fizerem perguntas novas no WhatsApp ou no simulador, elas aparecem aqui com aviso no menu.
+            </p>
+          </div>
+        ) : (
+          topGaps.map((gap) => (
+            <div key={gap.id} className="rounded-xl border border-panel-line bg-white p-5 shadow-xs space-y-3">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-panel-sub">Pergunta do cliente</p>
+                  <p className="mt-0.5 text-base font-bold text-panel-ink">&ldquo;{gap.question}&rdquo;</p>
+                </div>
+                <span className="rounded-full bg-amber/15 px-2.5 py-0.5 text-xs font-semibold text-amber-deep">
+                  {gap.source === "INTERVIEW"
+                    ? "Integração"
+                    : gap.askCount === 1
+                      ? "1 pergunta recebida"
+                      : `${gap.askCount} perguntas recebidas`}
+                </span>
+              </div>
+
+              <div>
+                <label htmlFor={`gap-${gap.id}`} className="block text-xs font-semibold text-panel-sub mb-1">
+                  Como o atendente deve responder:
+                </label>
+                <textarea
+                  id={`gap-${gap.id}`}
+                  className={inputClass}
+                  rows={2}
+                  placeholder="Escreva a resposta que o atendente deve dar aos clientes..."
+                  value={answers[gap.id] ?? ""}
+                  onChange={(e) => setAnswers({ ...answers, [gap.id]: e.target.value })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() =>
+                    call(
+                      `/api/training/gaps/${gap.id}`,
+                      "PATCH",
+                      { action: "dispensar" },
+                      `d-${gap.id}`,
+                      "Dúvida dispensada.",
+                    )
+                  }
+                  disabled={busy === `d-${gap.id}`}
+                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-panel-sub transition hover:text-panel-ink hover:underline disabled:opacity-50"
+                >
+                  Não precisa responder
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const ans = answers[gap.id] ?? "";
+                    await call(
+                      "/api/training/teach",
+                      "POST",
+                      { gapId: gap.id, question: gap.question, answer: ans },
+                      gap.id,
+                      "Ensinado com sucesso! O atendente já sabe responder isso no WhatsApp. 🙌",
+                    );
+                    setAnswers((prev) => {
+                      const next = { ...prev };
+                      delete next[gap.id];
+                      return next;
+                    });
+                  }}
+                  disabled={busy === gap.id || !(answers[gap.id] ?? "").trim()}
+                  className="rounded-xl bg-amber px-4 py-2 text-xs font-bold text-night shadow-xs transition hover:brightness-110 disabled:opacity-50"
+                >
+                  {busy === gap.id ? "Ensinando..." : "Ensinar Atendente"}
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </Card>
+
+      {/* O que o atendente já aprendeu */}
+      {approvedItems.length > 0 && (
+        <Card
+          title="O que seu atendente já aprendeu"
+          hint="Perguntas e respostas que seu atendente já usa no WhatsApp."
+        >
+          <div className="divide-y divide-panel-line rounded-xl border border-panel-line bg-white">
+            {approvedItems.map((item) => (
+              <div key={item.id} className="p-4 flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-bold text-panel-ink">&ldquo;{item.question}&rdquo;</p>
+                  <p className="text-xs text-panel-sub leading-relaxed">{item.answer}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    call(
+                      `/api/training/items/${item.id}`,
+                      "DELETE",
+                      null,
+                      `del-${item.id}`,
+                      "Conhecimento removido com sucesso.",
+                    )
+                  }
+                  disabled={busy === `del-${item.id}`}
+                  className="shrink-0 rounded-lg px-2.5 py-1 text-xs font-medium text-panel-sub transition hover:text-red-700 hover:bg-red-50 disabled:opacity-50"
+                  title="Esquecer esta resposta"
+                >
+                  {busy === `del-${item.id}` ? "Removendo..." : "Excluir"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Inconsistências observadas da equipe */}
+      {inconsistencies.length > 0 && (
+        <Card
+          title="Respostas diferentes para a mesma pergunta"
+          hint="Sua equipe respondeu esta dúvida de formas diferentes. Escolha qual delas está correta para o atendente aprender."
+        >
+          {inconsistencies.map((group) => (
+            <div key={group.question} className="rounded-xl border border-panel-line bg-white p-4 space-y-3">
+              <p className="text-sm font-bold text-panel-ink">&ldquo;{group.question}&rdquo;</p>
+              <div className="space-y-2">
+                {group.options.map((option) => (
+                  <div
+                    key={option.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-panel-bg p-3"
+                  >
+                    <p className="text-xs text-panel-ink">{option.answer}</p>
+                    <button
+                      type="button"
+                      onClick={() => resolveInconsistency(group, option.id)}
+                      disabled={busy !== null}
+                      className="shrink-0 rounded-lg border border-amber px-3 py-1.5 text-xs font-semibold text-amber-deep transition hover:bg-amber hover:text-night disabled:opacity-50"
+                    >
+                      Esta está correta
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </Card>
+      )}
+
+      {/* Entrevista de integração inicial */}
       {interview && (
         <Card
           title="Entrevista de integração"
-          hint={`Preparei um roteiro com base no funcionamento comum de: ${interview.segmentName}. Desmarque o que não faz sentido — nada disso vira resposta sem o seu treinamento e aprovação.`}
+          hint={`Assuntos sugeridos para o seu ramo (${interview.segmentName}). Desmarque o que não se aplica ao seu negócio.`}
         >
           <div className="grid gap-2 sm:grid-cols-2">
             {interview.topics.map((t) => (
-              <label key={t.topic} className="flex items-start gap-2 text-sm">
+              <label key={t.topic} className="flex items-start gap-2 text-sm text-panel-ink">
                 <input
                   type="checkbox"
                   className="mt-0.5"
@@ -178,182 +354,36 @@ export default function TreinamentoPage() {
             ))}
           </div>
           <button
+            type="button"
             onClick={beginInterview}
             disabled={busy === "interview" || interview.topics.every((t) => excludedTopics.has(t.topic))}
-            className="rounded-lg bg-amber px-5 py-2.5 text-sm font-semibold text-night transition hover:brightness-110 disabled:opacity-50"
+            className="rounded-xl bg-amber px-5 py-2.5 text-sm font-bold text-night shadow-xs transition hover:brightness-110 disabled:opacity-50"
           >
             {busy === "interview" ? "Preparando..." : "Começar a entrevista"}
           </button>
         </Card>
       )}
 
-      {/* Hoje gostaria de aprender */}
-      <Card
-        title="Hoje gostaria de aprender"
-        hint={
-          topGaps.length
-            ? "As dúvidas de maior impacto, escolhidas pelo número de clientes que perguntaram."
-            : undefined
-        }
-      >
-        {topGaps.length === 0 ? (
-          <p className="text-sm text-panel-sub">
-            Nenhuma dúvida em aberto no momento. Quando clientes perguntarem algo que não sei, as
-            perguntas aparecem aqui.
-          </p>
-        ) : (
-          topGaps.map((gap) => (
-            <div key={gap.id} className="rounded-xl border border-panel-line p-4">
-              <p className="font-medium">&ldquo;{gap.question}&rdquo;</p>
-              <p className="mt-1 text-xs text-panel-sub">
-                {gap.source === "INTERVIEW"
-                  ? "Pergunta de integração — me ajuda a conhecer a empresa"
-                  : `Perguntado por ${gap.askCount} cliente${gap.askCount === 1 ? "" : "s"}`}
-              </p>
-              <textarea
-                className={`${inputClass} mt-3`}
-                rows={2}
-                placeholder="Escreva a resposta como você explicaria para um funcionário novo..."
-                value={answers[gap.id] ?? ""}
-                onChange={(e) => setAnswers({ ...answers, [gap.id]: e.target.value })}
-              />
-              <div className="mt-2 flex gap-2">
-                <button
-                  onClick={() =>
-                    call(
-                      "/api/training/teach",
-                      "POST",
-                      { gapId: gap.id, question: gap.question, answer: answers[gap.id] ?? "" },
-                      gap.id,
-                      "Anotei! Organizei sua resposta logo abaixo — revise e aprove para eu começar a usar.",
-                    )
-                  }
-                  disabled={busy === gap.id || !(answers[gap.id] ?? "").trim()}
-                  className="rounded-lg bg-amber px-4 py-2 text-sm font-semibold text-night transition hover:brightness-110 disabled:opacity-50"
-                >
-                  Ensinar
-                </button>
-                <button
-                  onClick={() => call(`/api/training/gaps/${gap.id}`, "PATCH", { action: "dispensar" }, `d-${gap.id}`)}
-                  disabled={busy === `d-${gap.id}`}
-                  className="rounded-lg border border-panel-line px-4 py-2 text-sm text-panel-sub transition hover:text-panel-ink"
-                >
-                  Não é relevante
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-      </Card>
-
-      {/* Inconsistências: mesma pergunta, respostas diferentes da equipe */}
-      {inconsistencies.length > 0 && (
-        <Card
-          title="Percebi respostas diferentes para a mesma pergunta"
-          hint="Sua equipe respondeu esta dúvida de formas diferentes. Qual delas está correta? A escolhida vira conhecimento; as outras são descartadas."
-        >
-          {inconsistencies.map((group) => (
-            <div key={group.question} className="rounded-xl border border-panel-line p-4">
-              <p className="font-medium">&ldquo;{group.question}&rdquo;</p>
-              <div className="mt-3 space-y-2">
-                {group.options.map((option) => (
-                  <div
-                    key={option.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-panel-bg p-3"
-                  >
-                    <p className="text-sm">{option.answer}</p>
-                    <button
-                      onClick={() => resolveInconsistency(group, option.id)}
-                      disabled={busy !== null}
-                      className="shrink-0 rounded-lg border border-amber px-3 py-1.5 text-xs font-semibold text-amber-deep transition hover:bg-amber hover:text-night disabled:opacity-50"
-                    >
-                      Esta está correta
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </Card>
-      )}
-
-      {/* Aguardando aprovação */}
-      {(pendingItems.length > 0 || observations.length > 0) && (
-        <Card
-          title="Aguardando sua aprovação"
-          hint="Nada entra no conhecimento do Atendente sem a sua confirmação. Revise, edite se precisar e aprove."
-        >
-          {[...pendingItems, ...observations].map((item) => {
-            const edit = edits[item.id] ?? { question: item.question, answer: item.answer };
-            const isObservation = item.source === "TEAM_OBSERVATION";
-            return (
-              <div key={item.id} className="rounded-xl border border-amber-300 bg-amber-50/50 p-4">
-                {isObservation && (
-                  <p className="mb-2 text-xs font-medium text-amber-700">
-                    Observei sua equipe respondendo isto a um cliente — quer que eu aprenda?
-                  </p>
-                )}
-                <input
-                  className={inputClass}
-                  value={edit.question}
-                  onChange={(e) => setEdits({ ...edits, [item.id]: { ...edit, question: e.target.value } })}
-                />
-                <textarea
-                  className={`${inputClass} mt-2`}
-                  rows={2}
-                  value={edit.answer}
-                  onChange={(e) => setEdits({ ...edits, [item.id]: { ...edit, answer: e.target.value } })}
-                />
-                <div className="mt-2 flex gap-2">
-                  <button
-                    onClick={() =>
-                      call(
-                        `/api/training/items/${item.id}`,
-                        "PATCH",
-                        { action: "aprovar", ...edit },
-                        item.id,
-                        "Obrigado! Agora consigo responder essa pergunta corretamente. 🙌",
-                      )
-                    }
-                    disabled={busy === item.id}
-                    className="rounded-lg bg-amber px-4 py-2 text-sm font-semibold text-night transition hover:brightness-110 disabled:opacity-50"
-                  >
-                    Aprovar — pode usar
-                  </button>
-                  <button
-                    onClick={() =>
-                      call(`/api/training/items/${item.id}`, "PATCH", { action: "rejeitar" }, `r-${item.id}`)
-                    }
-                    disabled={busy === `r-${item.id}`}
-                    className="rounded-lg border border-panel-line px-4 py-2 text-sm text-panel-sub transition hover:text-panel-ink"
-                  >
-                    Rejeitar
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </Card>
-      )}
-
       {/* Conhecimento do Atendente */}
-      <Card title="Conhecimento do Atendente" hint="Onde vale a pena investir alguns minutos de treinamento.">
+      <Card title="Preparo do Atendente" hint="Mostra o quanto ele está pronto para responder sobre seu negócio.">
         <div className="flex items-center gap-3">
-          <span className="font-mono text-4xl font-medium text-amber-deep">{score.overall}%</span>
-          {score.openGaps > 0 && (
+          <span className="font-mono text-3xl font-bold text-amber-deep">{score.overall}%</span>
+          {score.openGaps > 0 ? (
             <span className="text-sm text-panel-sub">
-              {score.openGaps} dúvida{score.openGaps === 1 ? "" : "s"} em aberto
+              {score.openGaps} dúvida{score.openGaps === 1 ? "" : "s"} em aberto para ensinar
             </span>
+          ) : (
+            <span className="text-sm text-emerald-700 font-semibold">Tudo em dia!</span>
           )}
         </div>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid gap-2 sm:grid-cols-2 pt-2">
           {score.areas.map((area) => (
             <div key={area.label} className="flex items-center gap-3">
-              <span className="w-44 shrink-0 text-sm text-panel-sub">{area.label}</span>
-              <div className="h-2 flex-1 overflow-hidden rounded-full bg-panel-bg">
-                <div className="h-full rounded-full bg-amber/80" style={{ width: `${area.pct}%` }} />
+              <span className="w-40 shrink-0 text-xs text-panel-sub">{area.label}</span>
+              <div className="h-2 flex-1 overflow-hidden rounded-full bg-panel-bg border border-panel-line">
+                <div className="h-full rounded-full bg-amber" style={{ width: `${area.pct}%` }} />
               </div>
-              <span className="w-10 text-right font-mono text-xs text-panel-sub">{area.pct}%</span>
+              <span className="w-9 text-right font-mono text-xs text-panel-sub">{area.pct}%</span>
             </div>
           ))}
         </div>
@@ -361,7 +391,7 @@ export default function TreinamentoPage() {
 
       {/* Diário */}
       <Card title="Diário do Atendente">
-        <ul className="space-y-2 text-sm leading-relaxed">
+        <ul className="space-y-2 text-xs text-panel-sub leading-relaxed">
           {diary.map((line, index) => (
             <li key={index}>• {line}</li>
           ))}

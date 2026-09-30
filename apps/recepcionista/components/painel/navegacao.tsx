@@ -6,9 +6,28 @@ import { usePathname } from "next/navigation";
 export interface NavItem {
   href: string;
   label: string;
+  badge?: number;
 }
 
 function iconeParaRota(href: string) {
+  if (href.includes("treinamento")) {
+    return (
+      <svg
+        className="h-4 w-4 shrink-0"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+        aria-hidden="true"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+        />
+      </svg>
+    );
+  }
   if (href.includes("clientes")) {
     return (
       <svg
@@ -148,6 +167,16 @@ export function PainelNavDesktop({ items }: { items: NavItem[] }) {
                 {iconeParaRota(item.href)}
               </span>
               <span>{item.label}</span>
+              {Boolean(item.badge && item.badge > 0) && (
+                <span
+                  className={`ml-1 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${
+                    ativo ? "bg-night text-amber" : "bg-amber text-night animate-pulse"
+                  }`}
+                  aria-label={`${item.badge} para ensinar`}
+                >
+                  {item.badge}
+                </span>
+              )}
             </Link>
           );
         })}
@@ -159,12 +188,21 @@ export function PainelNavDesktop({ items }: { items: NavItem[] }) {
 export function PainelNavMobile({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
 
+  const rotuloCurto = (href: string, label: string) => {
+    if (href.includes("atendente")) return "Atendente";
+    if (href.includes("treinamento")) return "Ensinar";
+    if (href.includes("clientes")) return "Clientes";
+    if (href.includes("agenda")) return "Agenda";
+    if (href.includes("assinatura")) return "Planos";
+    return label;
+  };
+
   return (
     <nav
       aria-label="Menu principal para celular"
-      className="border-b border-panel-line bg-panel-card px-3 py-2 sm:hidden"
+      className="border-b border-panel-line bg-panel-card px-2 py-1.5 sm:hidden"
     >
-      <div className="grid grid-cols-3 gap-1 rounded-2xl border border-panel-line/80 bg-panel-bg p-1 shadow-inner">
+      <div className="grid grid-cols-5 gap-1 rounded-2xl border border-panel-line/80 bg-panel-bg p-1 shadow-inner">
         {items.map((item) => {
           const ativo = estaAtivo(item.href, pathname);
           return (
@@ -172,12 +210,20 @@ export function PainelNavMobile({ items }: { items: NavItem[] }) {
               key={item.href}
               href={item.href}
               aria-current={ativo ? "page" : undefined}
-              className={`flex flex-col items-center justify-center gap-1 rounded-xl py-2 px-1 text-center transition-all duration-200 active:scale-[0.93] ${
+              className={`relative flex flex-col items-center justify-center gap-1 rounded-xl py-2 px-0.5 text-center transition-all duration-200 active:scale-[0.93] ${
                 ativo
                   ? "bg-amber text-night font-bold shadow-sm ring-1 ring-amber/50"
                   : "bg-panel-card/70 text-panel-sub border border-panel-line/40 hover:bg-panel-card hover:text-panel-ink"
               }`}
             >
+              {Boolean(item.badge && item.badge > 0) && (
+                <span
+                  className="absolute -top-1 -right-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber px-1 text-[10px] font-extrabold text-night shadow"
+                  aria-label={`${item.badge} para ensinar`}
+                >
+                  {item.badge}
+                </span>
+              )}
               <span
                 className={`transition-transform duration-200 ${
                   ativo ? "scale-110 text-night" : "text-panel-sub"
@@ -185,8 +231,8 @@ export function PainelNavMobile({ items }: { items: NavItem[] }) {
               >
                 {iconeParaRota(item.href)}
               </span>
-              <span className="text-[11px] font-semibold leading-tight tracking-tight">
-                {item.label}
+              <span className="text-[10px] font-semibold leading-tight tracking-tight truncate max-w-full">
+                {rotuloCurto(item.href, item.label)}
               </span>
               {ativo && (
                 <span

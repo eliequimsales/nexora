@@ -17,6 +17,7 @@ import { RastreadorCadastroNovo } from "@/components/painel/rastreador-cadastro-
 // As telas /painel/onda (Reativar clientes) e /painel/livro-caixa (Dinheiro recuperado) continuam acessíveis diretamente fora do menu.
 const NAV = [
   { href: "/painel/atendente", label: "Atendente Virtual" },
+  { href: "/painel/treinamento", label: "Ensinar Atendente" },
   { href: "/painel/clientes/importar", label: "Meus clientes" },
   { href: "/painel/agenda", label: "Agenda" },
   { href: "/painel/assinatura", label: "Planos" },
@@ -52,6 +53,15 @@ export default async function PainelLayout({ children }: { children: React.React
   const diasRestantes = company.trialEndsAt
     ? Math.max(1, Math.ceil((company.trialEndsAt.getTime() - agora.getTime()) / 86_400_000))
     : 7;
+
+  const duvidasPendentes = await prisma.knowledgeGap.count({
+    where: { companyId, status: "OPEN" },
+  });
+
+  const navItems = NAV.map((item) => ({
+    ...item,
+    badge: item.href === "/painel/treinamento" ? duvidasPendentes : undefined,
+  }));
 
   return (
     <div className="min-h-screen bg-panel-bg text-panel-ink">
@@ -116,7 +126,7 @@ export default async function PainelLayout({ children }: { children: React.React
                 Nexora
               </span>
             </Link>
-            <PainelNavDesktop items={NAV} />
+            <PainelNavDesktop items={navItems} />
           </div>
           <div className="flex items-center gap-3">
             <BotaoBaixarApp />
@@ -125,7 +135,7 @@ export default async function PainelLayout({ children }: { children: React.React
           </div>
         </div>
       </header>
-      <PainelNavMobile items={NAV} />
+      <PainelNavMobile items={navItems} />
       <main className="mx-auto max-w-page px-6 py-8">{children}</main>
       <BotaoFeedback
         emailPadrao={company.email}

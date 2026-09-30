@@ -148,18 +148,6 @@ export default function PaginaDoAtendente() {
         </div>
         <div className="flex items-center gap-3">
           {salvo && <span className="text-xs text-panel-sub">Salvo</span>}
-          {(tela.duvidasParaAprender?.length ?? 0) > 0 && (
-            <a
-              href="#duvidas-atendente"
-              className="inline-flex items-center gap-1.5 rounded-full border border-amber/40 bg-amber/15 px-3 py-1.5 text-xs font-bold text-amber-deep transition hover:bg-amber/25"
-            >
-              <span className="h-2 w-2 rounded-full bg-amber animate-pulse" aria-hidden="true" />
-              <span>
-                🔔 {tela.duvidasParaAprender!.length}{" "}
-                {tela.duvidasParaAprender!.length === 1 ? "coisa para aprender" : "coisas para aprender"}
-              </span>
-            </a>
-          )}
           {tela.acesso === "SEMANA_ACABOU" ? (
             <Link
               href="/painel/assinatura"

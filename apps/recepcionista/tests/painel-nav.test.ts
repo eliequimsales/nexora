@@ -27,13 +27,14 @@ const NAV = [...layout.matchAll(/\{\s*href:\s*"([^"]+)",\s*label:\s*"([^"]+)"\s*
 );
 
 describe("o menu do painel", () => {
-  it("tem exatamente quatro itens", () => {
-    expect(NAV).toHaveLength(4);
+  it("tem exatamente cinco itens", () => {
+    expect(NAV).toHaveLength(5);
   });
 
   it("segue a ordem do fluxo de valor", () => {
     expect(NAV.map((i) => i.href)).toEqual([
       "/painel/atendente",
+      "/painel/treinamento",
       "/painel/clientes/importar",
       "/painel/agenda",
       "/painel/assinatura",
@@ -42,6 +43,10 @@ describe("o menu do painel", () => {
 
   it("o Atendente se chama pelo que é", () => {
     expect(NAV.find((i) => i.href === "/painel/atendente")?.label).toBe("Atendente Virtual");
+  });
+
+  it("a aba de ensinar se chama Ensinar Atendente", () => {
+    expect(NAV.find((i) => i.href === "/painel/treinamento")?.label).toBe("Ensinar Atendente");
   });
 
   it("a aba de agenda se chama Agenda", () => {
@@ -56,7 +61,6 @@ describe("o menu do painel", () => {
     for (const fora of [
       "/painel/onda",
       "/painel/conversas",
-      "/painel/treinamento",
       "/painel/relatorios",
       "/painel/configuracoes",
       "/painel/livro-caixa",

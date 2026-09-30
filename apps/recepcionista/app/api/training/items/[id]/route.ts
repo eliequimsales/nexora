@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSessionCompanyId } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
 import { reviewKnowledgeItem } from "@/lib/training";
 import { reviewItemSchema } from "@/lib/validation";
@@ -30,5 +31,25 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   } catch (error) {
     await logError("training-review", error, companyId);
     return NextResponse.json({ error: "Erro ao salvar a decisão" }, { status: 500 });
+  }
+}
+
+/** Excluir um item de conhecimento já ensinado. */
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+  const companyId = await getSessionCompanyId();
+  if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+  if (!limitar("treino-item-delete", companyId, LIMITES.escrita)) {
+    return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
+  }
+
+  try {
+    await prisma.knowledgeItem.deleteMany({
+      where: { id: params.id, companyId },
+    });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    await logError("training-delete", error, companyId);
+    return NextResponse.json({ error: "Erro ao excluir o conhecimento" }, { status: 500 });
   }
 }

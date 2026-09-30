@@ -215,44 +215,59 @@ export async function getApprovedKnowledge(companyId: string, take = 50): Promis
 
 // ——— Reunião de treinamento ———
 
-const MAX_GAPS_PER_SESSION = 3; // nunca dezenas de perguntas: só as de maior impacto
+const MAX_GAPS_PER_SESSION = 50;
 
 export async function getTrainingReport(companyId: string) {
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-  const [totalConversations, sentToTeam, topGaps, pendingItems, observations, approvedCount, learnedThisWeek, profile] =
-    await Promise.all([
-      prisma.conversation.count({ where: { companyId, createdAt: { gte: since } } }),
-      prisma.conversation.count({
-        where: {
-          companyId,
-          createdAt: { gte: since },
-          OR: [{ status: { in: ["WAITING_HUMAN", "HUMAN"] } }, { messages: { some: { role: "HUMAN" } } }],
-        },
-      }),
-      prisma.knowledgeGap.findMany({
-        where: { companyId, status: "OPEN" },
-        orderBy: [{ askCount: "desc" }, { lastAskedAt: "desc" }],
-        take: MAX_GAPS_PER_SESSION,
-      }),
-      prisma.knowledgeItem.findMany({
-        where: { companyId, status: "PENDING_APPROVAL" },
-        orderBy: { createdAt: "desc" },
-        take: 20,
-      }),
-      prisma.knowledgeItem.findMany({
-        where: { companyId, status: "OBSERVED" },
-        orderBy: { createdAt: "desc" },
-        take: 30,
-      }),
-      prisma.knowledgeItem.count({ where: { companyId, status: "APPROVED" } }),
-      prisma.knowledgeItem.findMany({
-        where: { companyId, status: "APPROVED", approvedAt: { gte: since } },
-        select: { question: true },
-        take: 10,
-      }),
-      prisma.companyProfile.findUniqueOrThrow({ where: { companyId } }),
-    ]);
+  const [
+    totalConversations,
+    sentToTeam,
+    topGaps,
+    approvedItems,
+    pendingItems,
+    observations,
+    approvedCount,
+    learnedThisWeek,
+    profile,
+  ] = await Promise.all([
+    prisma.conversation.count({ where: { companyId, createdAt: { gte: since } } }),
+    prisma.conversation.count({
+      where: {
+        companyId,
+        createdAt: { gte: since },
+        OR: [{ status: { in: ["WAITING_HUMAN", "HUMAN"] } }, { messages: { some: { role: "HUMAN" } } }],
+      },
+    }),
+    prisma.knowledgeGap.findMany({
+      where: { companyId, status: "OPEN" },
+      orderBy: [{ askCount: "desc" }, { lastAskedAt: "desc" }],
+      take: MAX_GAPS_PER_SESSION,
+    }),
+    prisma.knowledgeItem.findMany({
+      where: { companyId, status: "APPROVED" },
+      orderBy: { approvedAt: "desc" },
+      take: 50,
+      select: { id: true, question: true, answer: true, source: true, approvedAt: true },
+    }),
+    prisma.knowledgeItem.findMany({
+      where: { companyId, status: "PENDING_APPROVAL" },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    }),
+    prisma.knowledgeItem.findMany({
+      where: { companyId, status: "OBSERVED" },
+      orderBy: { createdAt: "desc" },
+      take: 30,
+    }),
+    prisma.knowledgeItem.count({ where: { companyId, status: "APPROVED" } }),
+    prisma.knowledgeItem.findMany({
+      where: { companyId, status: "APPROVED", approvedAt: { gte: since } },
+      select: { question: true },
+      take: 10,
+    }),
+    prisma.companyProfile.findUniqueOrThrow({ where: { companyId } }),
+  ]);
 
   const openGaps = await prisma.knowledgeGap.count({ where: { companyId, status: "OPEN" } });
   const resolvedByAttendant = Math.max(0, totalConversations - sentToTeam);
@@ -281,6 +296,7 @@ export async function getTrainingReport(companyId: string) {
   return {
     stats: { totalConversations, resolvedByAttendant, sentToTeam },
     topGaps,
+    approvedItems,
     pendingItems,
     observations: observations.filter((o) => !conflictedIds.has(o.id)).slice(0, 10),
     inconsistencies,
@@ -291,10 +307,8 @@ export async function getTrainingReport(companyId: string) {
 }
 
 /**
- * Empresa respondeu uma dúvida no treinamento → o sistema ESTRUTURA a resposta
- * (pergunta canônica + resposta clara, preservando números/condições) e cria o
- * item AGUARDANDO APROVAÇÃO. Se a estruturação falhar, usa o texto original —
- * o treino nunca trava.
+ * Empresa respondeu uma dúvida no treinamento → aprende na hora como APPROVED
+ * e encerra a lacuna para não continuar pendente.
  */
 export async function teachAnswer(
   companyId: string,
@@ -316,16 +330,26 @@ export async function teachAnswer(
     await logError("training-structure", error, companyId);
   }
 
-  return prisma.knowledgeItem.create({
+  const item = await prisma.knowledgeItem.create({
     data: {
       companyId,
       question,
       answer,
       source: "TRAINING",
-      status: "PENDING_APPROVAL",
+      status: "APPROVED",
+      approvedAt: new Date(),
       gapId: input.gapId ?? null,
     },
   });
+
+  if (input.gapId) {
+    await prisma.knowledgeGap.updateMany({
+      where: { id: input.gapId, companyId },
+      data: { status: "ANSWERED" },
+    });
+  }
+
+  return item;
 }
 
 /** Aprovar (com edição opcional) ou rejeitar um item. Só APPROVED entra em uso. */
