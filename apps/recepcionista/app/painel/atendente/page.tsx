@@ -52,7 +52,7 @@ export default function PaginaDoAtendente() {
           return;
         }
         setTela(j);
-        setNome(j.nome);
+        setNome(j.nome || j.empresa || "");
         setJeito(j.jeito);
         setTestado(j.testado);
       } catch {

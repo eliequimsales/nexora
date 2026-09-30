@@ -820,39 +820,27 @@ export function Ajustes({
 
   return (
     <div className="space-y-4">
-      <section className="divide-y divide-panel-line rounded-2xl border border-panel-line bg-panel-card">
-        <Linha rotulo="Nome">
+      <section className="rounded-2xl border border-panel-line bg-panel-card p-4">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <label htmlFor="nome-negocio" className="text-sm font-bold text-panel-ink block">
+              Nome
+            </label>
+            <p className="text-xs text-panel-sub">
+              Nome do negócio ou atendente.
+            </p>
+          </div>
           <input
+            id="nome-negocio"
             value={nome}
             onChange={(e) => aoMudarNome(e.target.value.slice(0, 30))}
             maxLength={30}
-            placeholder="Sem nome"
-            aria-label="Nome do atendente"
+            placeholder={tela.empresa || "Nome da empresa"}
+            aria-label="Nome"
             autoComplete="off"
-            className="w-40 rounded-lg border border-panel-line bg-white px-3 py-1.5 text-right text-sm text-panel-ink placeholder:text-panel-sub/60 focus:border-amber focus:outline-none"
+            className="w-48 rounded-xl border border-panel-line bg-white px-3.5 py-2 text-right text-sm text-panel-ink placeholder:text-panel-sub/60 focus:border-amber focus:outline-none focus:ring-1 focus:ring-amber shadow-xs"
           />
-        </Linha>
-        <Linha rotulo="Jeito" empilhar>
-          <div role="radiogroup" aria-label="Jeito de falar" className="flex rounded-xl bg-panel-bg p-1 sm:inline-flex">
-            {JEITOS.map((j) => (
-              <button
-                key={j}
-                type="button"
-                role="radio"
-                aria-checked={jeito === j}
-                onClick={() => aoMudarJeito(j)}
-                className={`flex-auto rounded-lg px-2 py-1.5 text-xs font-semibold transition sm:flex-none sm:px-3 ${
-                  jeito === j ? "bg-white text-panel-ink shadow-sm" : "text-panel-sub hover:text-panel-ink"
-                }`}
-              >
-                {NOME_DO_JEITO[j]}
-              </button>
-            ))}
-          </div>
-        </Linha>
-        <Linha rotulo="Loja fechada" detalhe={tela.foraDoHorario}>
-          <span className="text-sm font-semibold text-emerald-700">responde na hora</span>
-        </Linha>
+        </div>
       </section>
 
       <SecaoOQueEleDeveSaber
