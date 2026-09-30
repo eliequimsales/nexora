@@ -122,7 +122,7 @@ export function Celular({
     estado?.tipo === "HORARIO" ? ["2", ...SUGESTOES.slice(1)] : estado?.tipo === "SERVICO" ? ["1", ...SUGESTOES.slice(1)] : SUGESTOES;
 
   return (
-    <div className="mx-auto w-full max-w-[420px]">
+    <div className="mx-auto w-full max-w-[420px] lg:sticky lg:top-6">
       {/* DISPOSITIVO SMARTPHONE ULTRA-REALISTA CENTRALIZADO (ESTILO LANDING PAGE) */}
       <div className="rounded-[3rem] border border-[#2A2E3D] bg-gradient-to-b from-[#2A2E3D] via-[#1A1D27] to-[#0E1017] p-3 shadow-2xl ring-1 ring-white/10">
         <div className="relative flex h-[580px] sm:h-[620px] flex-col overflow-hidden rounded-[2.35rem] bg-[#0B141A] border border-[#1E222D]">

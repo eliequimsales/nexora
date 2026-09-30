@@ -509,6 +509,16 @@ function ModalServicos({
   );
 }
 
+const TEMAS_RAPIDOS = [
+  { id: "atraso", rotulo: "⏱️ Tolerância de atraso", prefixo: "⏱️ Tolerância de atraso", exemplo: "Tolerância máxima de 15 minutos para atrasos." },
+  { id: "estacionamento", rotulo: "🚗 Estacionamento", prefixo: "🚗 Estacionamento", exemplo: "Estacionamento conveniado gratuito na rua lateral." },
+  { id: "pagamento", rotulo: "💳 Parcelamento e Pix", prefixo: "💳 Pagamento", exemplo: "Parcelamos em até 3x sem juros no cartão e Pix." },
+  { id: "marcas", rotulo: "🏷️ Marcas e produtos", prefixo: "🏷️ Produtos", exemplo: "Usamos produtos profissionais de alta qualidade." },
+  { id: "referencia", rotulo: "📍 Ponto de referência", prefixo: "📍 Localização", exemplo: "Estamos em frente à praça central, ao lado da farmácia." },
+  { id: "feriados", rotulo: "📅 Feriados", prefixo: "📅 Feriados", exemplo: "Não atendemos em feriados nacionais ou municipais." },
+  { id: "outro", rotulo: "✏️ Outro assunto", prefixo: "✦ Regra", exemplo: "" },
+];
+
 function SecaoOQueEleDeveSaber({
   descricao,
   aoSalvar,
@@ -518,21 +528,50 @@ function SecaoOQueEleDeveSaber({
 }) {
   const [texto, setTexto] = useState(descricao);
   const [salvo, setSalvo] = useState(false);
+  const [temaAtivo, setTemaAtivo] = useState<string | null>(null);
+  const [campoNovo, setCampoNovo] = useState("");
+  const [modoLivre, setModoLivre] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     setTexto(descricao);
   }, [descricao]);
 
-  function handleChange(valor: string) {
-    const limpo = valor.slice(0, 2000);
+  function salvarTexto(novo: string) {
+    const limpo = novo.slice(0, 2000);
     setTexto(limpo);
     clearTimeout(timer.current);
     timer.current = setTimeout(() => {
       aoSalvar(limpo);
       setSalvo(true);
       setTimeout(() => setSalvo(false), 2000);
-    }, 800);
+    }, 600);
+  }
+
+  const itens = texto
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  function adicionarItem(novo: string) {
+    const textoLimpo = novo.trim();
+    if (!textoLimpo) return;
+    const novosItens = [...itens, textoLimpo];
+    salvarTexto(novosItens.join("\n"));
+    setTemaAtivo(null);
+    setCampoNovo("");
+  }
+
+  function removerItem(indice: number) {
+    const novosItens = itens.filter((_, i) => i !== indice);
+    salvarTexto(novosItens.join("\n"));
+  }
+
+  function selecionarTema(id: string) {
+    const tema = TEMAS_RAPIDOS.find((t) => t.id === id);
+    if (!tema) return;
+    setTemaAtivo(id);
+    setCampoNovo(tema.exemplo);
   }
 
   return (
@@ -543,14 +582,23 @@ function SecaoOQueEleDeveSaber({
             <span className="text-amber">✦</span> Coisas que seu atendente deve saber sobre a empresa
           </h2>
           <p className="mt-0.5 text-xs text-panel-sub">
-            Regras de atendimento, estacionamento, marcas utilizadas e diferenciais.
+            Regras de atendimento, estacionamento, marcas e diferenciais.
           </p>
         </div>
-        {salvo && (
-          <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
-            Salvo
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {salvo && (
+            <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+              Salvo
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => setModoLivre(!modoLivre)}
+            className="text-[11px] font-semibold text-amber-deep hover:underline"
+          >
+            {modoLivre ? "Voltar para tópicos" : "Editar em texto livre"}
+          </button>
+        </div>
       </div>
 
       {/* BANNER EDUCATIVO / ORIENTAÇÃO */}
@@ -566,20 +614,121 @@ function SecaoOQueEleDeveSaber({
         </p>
       </div>
 
-      <div className="space-y-1.5">
-        <textarea
-          value={texto}
-          onChange={(e) => handleChange(e.target.value)}
-          maxLength={2000}
-          rows={4}
-          placeholder="Exemplo: Estacionamento grátis na rua lateral. Aceitamos Pix e cartão em 3x. Tolerância de 15 minutos para atrasos."
-          className="w-full rounded-xl border border-panel-line bg-white p-3.5 text-sm text-panel-ink placeholder:text-panel-sub/60 focus:border-amber focus:outline-none focus:ring-1 focus:ring-amber leading-relaxed resize-y"
-        />
-        <div className="flex items-center justify-between text-[11px] text-panel-sub">
-          <span>Salva sozinho enquanto você digita</span>
-          <span>{texto.length}/2000 letras</span>
+      {modoLivre ? (
+        <div className="space-y-1.5">
+          <textarea
+            value={texto}
+            onChange={(e) => salvarTexto(e.target.value)}
+            maxLength={2000}
+            rows={4}
+            placeholder="Exemplo: Estacionamento grátis na rua lateral. Aceitamos Pix e cartão em 3x. Tolerância de 15 minutos para atrasos."
+            className="w-full rounded-xl border border-panel-line bg-white p-3.5 text-sm text-panel-ink placeholder:text-panel-sub/60 focus:border-amber focus:outline-none focus:ring-1 focus:ring-amber leading-relaxed resize-y"
+          />
+          <div className="flex items-center justify-between text-[11px] text-panel-sub">
+            <span>Salva sozinho enquanto você digita</span>
+            <span>{texto.length}/2000 letras</span>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="space-y-3.5">
+          <div>
+            <p className="text-xs font-semibold text-panel-sub mb-2">
+              Escolha um tema para adicionar em segundos:
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {TEMAS_RAPIDOS.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => selecionarTema(t.id)}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                    temaAtivo === t.id
+                      ? "border-amber bg-amber/15 text-panel-ink font-semibold"
+                      : "border-panel-line bg-white text-panel-ink hover:border-amber/50 hover:bg-panel-bg"
+                  }`}
+                >
+                  + {t.rotulo}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {temaAtivo && (
+            <div className="rounded-xl border border-amber/40 bg-amber/5 p-3 space-y-2">
+              <p className="text-xs font-bold text-panel-ink">
+                Adicionar {TEMAS_RAPIDOS.find((t) => t.id === temaAtivo)?.rotulo}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="text"
+                  value={campoNovo}
+                  onChange={(e) => setCampoNovo(e.target.value.slice(0, 200))}
+                  maxLength={200}
+                  placeholder="Digite a regra ou informação para o atendente..."
+                  className="flex-1 rounded-lg border border-panel-line bg-white px-3 py-1.5 text-xs text-panel-ink focus:border-amber focus:outline-none"
+                />
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const prefixo = TEMAS_RAPIDOS.find((t) => t.id === temaAtivo)?.prefixo;
+                      const textoFinal = prefixo && !campoNovo.startsWith(prefixo)
+                        ? `${prefixo}: ${campoNovo}`
+                        : campoNovo;
+                      adicionarItem(textoFinal);
+                    }}
+                    disabled={!campoNovo.trim()}
+                    className="rounded-lg bg-amber px-3 py-1.5 text-xs font-bold text-night hover:brightness-110 disabled:opacity-40"
+                  >
+                    Adicionar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTemaAtivo(null);
+                      setCampoNovo("");
+                    }}
+                    className="rounded-lg border border-panel-line bg-white px-2.5 py-1.5 text-xs font-medium text-panel-sub hover:bg-panel-bg"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2 pt-1">
+            <p className="text-xs font-semibold text-panel-sub">
+              Informações cadastradas:
+            </p>
+            {itens.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-panel-line bg-white/50 p-4 text-center text-xs text-panel-sub">
+                Nenhuma informação cadastrada ainda. Escolha um tema acima para começar.
+              </p>
+            ) : (
+              <div className="space-y-1.5">
+                {itens.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-panel-line bg-white px-3.5 py-2.5 text-xs text-panel-ink shadow-sm"
+                  >
+                    <span className="flex-1 break-words">{item}</span>
+                    <button
+                      type="button"
+                      onClick={() => removerItem(idx)}
+                      aria-label="Remover informação"
+                      title="Remover informação"
+                      className="rounded-lg p-1 text-panel-sub transition hover:bg-red-50 hover:text-red-600"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   );
 }
