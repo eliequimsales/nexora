@@ -551,13 +551,16 @@ function temaJaCadastrado(temaId: string, lista: string[]): boolean {
   });
 }
 
-function SecaoOQueEleDeveSaber({
-  descricao,
-  aoSalvar,
+function SecaoOQueEleSabe({
+  tela,
+  aoAjustar,
+  onAbrirModalServicos,
 }: {
-  descricao: string;
-  aoSalvar: (texto: string) => void;
+  tela: TelaDoAtendente;
+  aoAjustar: (ajuste: Ajuste) => void;
+  onAbrirModalServicos: () => void;
 }) {
+  const descricao = tela.sabe.descricao ?? "";
   const [texto, setTexto] = useState(descricao);
   const [salvo, setSalvo] = useState(false);
   const [temaAtivo, setTemaAtivo] = useState<string | null>(null);
@@ -573,7 +576,7 @@ function SecaoOQueEleDeveSaber({
     setTexto(limpo);
     clearTimeout(timer.current);
     timer.current = setTimeout(() => {
-      aoSalvar(limpo);
+      aoAjustar({ descricao: limpo });
       setSalvo(true);
       setTimeout(() => setSalvo(false), 2000);
     }, 600);
@@ -602,169 +605,229 @@ function SecaoOQueEleDeveSaber({
     setCampoNovo(tema.exemplo);
   }
 
+  const servicos = tela.sabe.servicos.length;
+  const semPreco = tela.sabe.servicos.filter((s) => s.semPreco).length;
+  const perguntas = tela.sabe.perguntas.length;
+
   return (
-    <section className="rounded-2xl border border-panel-line bg-panel-card p-5 space-y-4">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-sm font-bold text-panel-ink flex items-center gap-1.5">
-            <span className="text-amber">✦</span> Coisas que seu atendente deve saber sobre a empresa
-          </h2>
-          <p className="mt-0.5 text-xs text-panel-sub">
-            Regras de atendimento, estacionamento, marcas e diferenciais.
+    <section className="divide-y divide-panel-line rounded-2xl border border-panel-line bg-panel-card shadow-xs">
+      {/* 1. Cabeçalho unificado */}
+      <div className="p-5 pb-4 space-y-3">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-bold text-panel-ink flex items-center gap-1.5">
+              <span className="text-amber">✦</span> O que seu atendente sabe responder
+            </h2>
+            <p className="mt-0.5 text-xs text-panel-sub">
+              Tudo o que ele usa no WhatsApp para atender clientes e tirar dúvidas.
+            </p>
+          </div>
+          {salvo && (
+            <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+              Salvo
+            </span>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-amber/30 bg-amber/5 p-3 text-xs text-panel-ink">
+          <div className="flex items-center gap-1.5 font-bold text-amber-deep">
+            <span>💡</span> Treine o atendente como um funcionário de verdade
+          </div>
+          <p className="mt-0.5 leading-relaxed text-panel-sub">
+            Ele só responde o que você cadastrar aqui e nunca inventa nada.
           </p>
         </div>
-        {salvo && (
-          <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
-            Salvo
-          </span>
-        )}
       </div>
 
-      {/* BANNER EDUCATIVO / ORIENTAÇÃO */}
-      <div className="rounded-xl border border-amber/30 bg-amber/5 p-3.5 text-xs text-panel-ink">
-        <div className="flex items-center gap-1.5 font-bold text-amber-deep">
-          <span>💡</span> Treine o seu atendente como se fosse um funcionário de verdade
+      {/* 2. Informações estruturadas principais */}
+      <div className="divide-y divide-panel-line">
+        <Dado ok rotulo="Horário" valor={tela.sabe.horario} href="/painel/configuracoes" acao="Mudar" />
+        <LinhaDoDado
+          ok={servicos > 0}
+          rotulo="Serviços"
+          valor={
+            servicos === 0 ? "nenhum" : `${plural(servicos, "serviço", "serviços")}${semPreco ? ` · ${semPreco} sem preço` : ""}`
+          }
+          aoClicar={onAbrirModalServicos}
+        >
+          <button
+            type="button"
+            onClick={onAbrirModalServicos}
+            className="text-xs font-semibold text-amber-deep hover:underline"
+          >
+            {servicos === 0 ? "Cadastrar" : "Mudar"}
+          </button>
+        </LinhaDoDado>
+        <DadoDoCadastro
+          rotulo="Endereço"
+          valor={tela.sabe.endereco}
+          exemplo="Rua, número e bairro"
+          aoSalvar={(endereco) => aoAjustar({ endereco })}
+        />
+        <DadoDoCadastro
+          rotulo="Pagamento"
+          valor={tela.sabe.pagamento}
+          exemplo="Pix, cartão e dinheiro"
+          aoSalvar={(pagamento) => aoAjustar({ pagamento })}
+        />
+        <Dado
+          ok={perguntas > 0}
+          rotulo="Perguntas"
+          valor={perguntas === 0 ? "nenhuma" : plural(perguntas, "resposta", "respostas")}
+          href="/painel/treinamento"
+          acao="Ensinar"
+        />
+      </div>
+
+      {/* 3. Regras de atendimento e diferenciais da empresa */}
+      <div className="p-5 space-y-3.5 bg-panel-bg/20">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-bold text-panel-ink">
+              Regras de atendimento e diferenciais
+            </p>
+            <p className="text-[11px] text-panel-sub">
+              Tolerância de atraso, estacionamento, marcas e regras da empresa.
+            </p>
+          </div>
+          {itens.length > 0 && (
+            <span className="text-[11px] font-medium text-panel-sub">
+              {itens.length} {itens.length === 1 ? "regra cadastrada" : "regras cadastradas"}
+            </span>
+          )}
         </div>
-        <p className="mt-1 leading-relaxed text-panel-sub">
-          O atendente só responde o que você ensinar aqui e nunca inventa nada.
-        </p>
-        <p className="mt-0.5 leading-relaxed text-panel-sub">
-          Se um cliente perguntar algo que ele não sabe, ele consulta você para aprender.
-        </p>
-      </div>
 
-      <div className="space-y-3.5">
         <div>
           <p className="text-xs font-semibold text-panel-sub mb-2">
             Escolha um tema para adicionar em segundos:
           </p>
-            <div className="flex flex-wrap gap-1.5">
-              {TEMAS_RAPIDOS.map((t) => {
-                const jaTem = temaJaCadastrado(t.id, itens);
-                if (jaTem) {
-                  return (
-                    <div
-                      key={t.id}
-                      title="Este assunto já está cadastrado abaixo"
-                      className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50/80 px-3 py-1 text-xs font-semibold text-emerald-800 select-none"
-                    >
-                      <span>✓ {t.rotulo}</span>
-                      <span className="rounded-full bg-emerald-100 px-1.5 py-0.2 text-[9px] font-bold text-emerald-900">
-                        já adicionado
-                      </span>
-                    </div>
-                  );
-                }
-
+          <div className="flex flex-wrap gap-1.5">
+            {TEMAS_RAPIDOS.map((t) => {
+              const jaTem = temaJaCadastrado(t.id, itens);
+              if (jaTem) {
                 return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => selecionarTema(t.id)}
-                    className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                      temaAtivo === t.id
-                        ? "border-amber bg-amber/15 text-panel-ink font-semibold"
-                        : "border-panel-line bg-white text-panel-ink hover:border-amber/50 hover:bg-panel-bg"
-                    }`}
-                  >
-                    + {t.rotulo}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {temaAtivo && (
-            <div className="rounded-xl border border-amber/40 bg-amber/5 p-3 space-y-2">
-              <p className="text-xs font-bold text-panel-ink">
-                Adicionar {TEMAS_RAPIDOS.find((t) => t.id === temaAtivo)?.rotulo}
-              </p>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="text"
-                  value={campoNovo}
-                  onChange={(e) => setCampoNovo(e.target.value.slice(0, 200))}
-                  maxLength={200}
-                  placeholder="Digite a regra ou informação para o atendente..."
-                  className="flex-1 rounded-lg border border-panel-line bg-white px-3 py-1.5 text-xs text-panel-ink focus:border-amber focus:outline-none"
-                />
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const prefixo = TEMAS_RAPIDOS.find((t) => t.id === temaAtivo)?.prefixo;
-                      const textoFinal = prefixo && !campoNovo.startsWith(prefixo)
-                        ? `${prefixo}: ${campoNovo}`
-                        : campoNovo;
-                      adicionarItem(textoFinal);
-                    }}
-                    disabled={!campoNovo.trim()}
-                    className="rounded-lg bg-amber px-3 py-1.5 text-xs font-bold text-night hover:brightness-110 disabled:opacity-40"
-                  >
-                    Adicionar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTemaAtivo(null);
-                      setCampoNovo("");
-                    }}
-                    className="rounded-lg border border-panel-line bg-white px-2.5 py-1.5 text-xs font-medium text-panel-sub hover:bg-panel-bg"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-2 pt-1">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-panel-sub">
-                Informações cadastradas ({itens.length}):
-              </p>
-              {itens.length > 0 && (
-                <span className="text-[11px] text-panel-sub">
-                  Cada regra é consultada pelo atendente
-                </span>
-              )}
-            </div>
-
-            {itens.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-panel-line bg-white/50 p-4 text-center text-xs text-panel-sub">
-                Nenhuma informação cadastrada ainda. Escolha um tema acima para começar.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {itens.map((item, idx) => (
                   <div
-                    key={idx}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-panel-line bg-white p-3 text-xs text-panel-ink shadow-xs transition hover:border-amber/40"
+                    key={t.id}
+                    title="Este assunto já está cadastrado abaixo"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50/80 px-3 py-1 text-xs font-semibold text-emerald-800 select-none"
                   >
-                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                      <span className="text-sm shrink-0 select-none">
-                        {item.slice(0, 2).match(/\p{Extended_Pictographic}/u) ? item.slice(0, 2) : "✦"}
-                      </span>
-                      <span className="flex-1 break-words font-medium leading-relaxed">
-                        {item.replace(/^[\p{Extended_Pictographic}\s✦]+/u, "")}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removerItem(idx)}
-                      aria-label="Remover informação"
-                      title="Remover informação"
-                      className="shrink-0 flex items-center gap-1 rounded-lg border border-panel-line px-2 py-1 text-[11px] font-medium text-panel-sub transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
-                    >
-                      <span>✕</span>
-                      <span className="hidden sm:inline">Remover</span>
-                    </button>
+                    <span>✓ {t.rotulo}</span>
+                    <span className="rounded-full bg-emerald-100 px-1.5 py-0.2 text-[9px] font-bold text-emerald-900">
+                      já adicionado
+                    </span>
                   </div>
-                ))}
-              </div>
-            )}
+                );
+              }
+
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => selecionarTema(t.id)}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                    temaAtivo === t.id
+                      ? "border-amber bg-amber/15 text-panel-ink font-semibold"
+                      : "border-panel-line bg-white text-panel-ink hover:border-amber/50 hover:bg-panel-bg"
+                  }`}
+                >
+                  + {t.rotulo}
+                </button>
+              );
+            })}
           </div>
         </div>
+
+        {temaAtivo && (
+          <div className="rounded-xl border border-amber/40 bg-amber/5 p-3 space-y-2">
+            <p className="text-xs font-bold text-panel-ink">
+              Adicionar {TEMAS_RAPIDOS.find((t) => t.id === temaAtivo)?.rotulo}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                value={campoNovo}
+                onChange={(e) => setCampoNovo(e.target.value.slice(0, 200))}
+                maxLength={200}
+                placeholder="Digite a regra ou informação para o atendente..."
+                className="flex-1 rounded-lg border border-panel-line bg-white px-3 py-1.5 text-xs text-panel-ink focus:border-amber focus:outline-none"
+              />
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const prefixo = TEMAS_RAPIDOS.find((t) => t.id === temaAtivo)?.prefixo;
+                    const textoFinal = prefixo && !campoNovo.startsWith(prefixo)
+                      ? `${prefixo}: ${campoNovo}`
+                      : campoNovo;
+                    adicionarItem(textoFinal);
+                  }}
+                  disabled={!campoNovo.trim()}
+                  className="rounded-lg bg-amber px-3 py-1.5 text-xs font-bold text-night hover:brightness-110 disabled:opacity-40"
+                >
+                  Adicionar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTemaAtivo(null);
+                    setCampoNovo("");
+                  }}
+                  className="rounded-lg border border-panel-line bg-white px-2.5 py-1.5 text-xs font-medium text-panel-sub hover:bg-panel-bg"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-2 pt-1">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-panel-sub">
+              Informações cadastradas ({itens.length}):
+            </p>
+            {itens.length > 0 && (
+              <span className="text-[11px] text-panel-sub">
+                Cada regra é consultada pelo atendente
+              </span>
+            )}
+          </div>
+
+          {itens.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-panel-line bg-white/50 p-4 text-center text-xs text-panel-sub">
+              Nenhuma informação cadastrada ainda. Escolha um tema acima para começar.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {itens.map((item, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-panel-line bg-white p-3 text-xs text-panel-ink shadow-xs transition hover:border-amber/40"
+                >
+                  <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                    <span className="text-sm shrink-0 select-none">
+                      {item.slice(0, 2).match(/\p{Extended_Pictographic}/u) ? item.slice(0, 2) : "✦"}
+                    </span>
+                    <span className="flex-1 break-words font-medium leading-relaxed">
+                      {item.replace(/^[\p{Extended_Pictographic}\s✦]+/u, "")}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removerItem(idx)}
+                    aria-label="Remover informação"
+                    title="Remover informação"
+                    className="shrink-0 flex items-center gap-1 rounded-lg border border-panel-line px-2 py-1 text-[11px] font-medium text-panel-sub transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+                  >
+                    <span>✕</span>
+                    <span className="hidden sm:inline">Remover</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </section>
   );
 }
@@ -788,9 +851,6 @@ export function Ajustes({
   aoAtualizarTela?: () => void;
 }) {
   const [modalServicosAberto, setModalServicosAberto] = useState(false);
-  const servicos = tela.sabe.servicos.length;
-  const semPreco = tela.sabe.servicos.filter((s) => s.semPreco).length;
-  const perguntas = tela.sabe.perguntas.length;
 
   return (
     <div className="space-y-4">
@@ -817,50 +877,11 @@ export function Ajustes({
         </div>
       </section>
 
-      <SecaoOQueEleDeveSaber
-        descricao={tela.sabe.descricao ?? ""}
-        aoSalvar={(descricao) => aoAjustar({ descricao })}
+      <SecaoOQueEleSabe
+        tela={tela}
+        aoAjustar={aoAjustar}
+        onAbrirModalServicos={() => setModalServicosAberto(true)}
       />
-
-      <section className="divide-y divide-panel-line rounded-2xl border border-panel-line bg-panel-card">
-        <p className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-panel-sub">O que ele sabe</p>
-        <Dado ok rotulo="Horário" valor={tela.sabe.horario} href="/painel/configuracoes" acao="Mudar" />
-        <LinhaDoDado
-          ok={servicos > 0}
-          rotulo="Serviços"
-          valor={
-            servicos === 0 ? "nenhum" : `${plural(servicos, "serviço", "serviços")}${semPreco ? ` · ${semPreco} sem preço` : ""}`
-          }
-          aoClicar={() => setModalServicosAberto(true)}
-        >
-          <button
-            type="button"
-            onClick={() => setModalServicosAberto(true)}
-            className="text-xs font-semibold text-amber-deep hover:underline"
-          >
-            {servicos === 0 ? "Cadastrar" : "Mudar"}
-          </button>
-        </LinhaDoDado>
-        <DadoDoCadastro
-          rotulo="Endereço"
-          valor={tela.sabe.endereco}
-          exemplo="Rua, número e bairro"
-          aoSalvar={(endereco) => aoAjustar({ endereco })}
-        />
-        <DadoDoCadastro
-          rotulo="Pagamento"
-          valor={tela.sabe.pagamento}
-          exemplo="Pix, cartão e dinheiro"
-          aoSalvar={(pagamento) => aoAjustar({ pagamento })}
-        />
-        <Dado
-          ok={perguntas > 0}
-          rotulo="Perguntas"
-          valor={perguntas === 0 ? "nenhuma" : plural(perguntas, "resposta", "respostas")}
-          href="/painel/treinamento"
-          acao="Ensinar"
-        />
-      </section>
 
       {modalServicosAberto && (
         <ModalServicos
