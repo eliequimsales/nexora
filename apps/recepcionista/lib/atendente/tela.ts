@@ -81,6 +81,11 @@ export type TelaDoAtendente = {
   contextoAgora: "FECHADO" | "EXPEDIENTE";
   /** As respostas livres estão funcionando? Sem elas, o resto continua. */
   respostasLivres: boolean;
+  duvidasParaAprender: {
+    id: string;
+    pergunta: string;
+    vezesPerguntada: number;
+  }[];
 };
 
 const DIA_MS = 86_400_000;
@@ -244,7 +249,7 @@ export async function telaDoAtendente(companyId: string, agora: Date = new Date(
   const desde = ultimoFechamento(fatos.horarios, fatos.diasFechados, agora);
   const naSemanaGratis = Boolean(!temPlano && uso.primeiraVezEm && acesso === "SEMANA_GRATIS");
 
-  const [doFechamento, pendentes, daSemana, exemplo] = await Promise.all([
+  const [doFechamento, pendentes, daSemana, exemplo, duvidasAbertas] = await Promise.all([
     desde
       ? prisma.atendenteAtendimento.findMany({
           where: { companyId, foraDoHorario: true, atualizadoEm: { gte: desde } },
@@ -276,6 +281,12 @@ export async function telaDoAtendente(companyId: string, agora: Date = new Date(
         })
       : Promise.resolve([]),
     exemploDaConversa(companyId, fatos, agora),
+    prisma.knowledgeGap.findMany({
+      where: { companyId, status: "OPEN" },
+      select: { id: true, question: true, askCount: true },
+      orderBy: [{ askCount: "desc" }, { lastAskedAt: "desc" }],
+      take: 5,
+    }),
   ]);
 
   return {
@@ -336,5 +347,10 @@ export async function telaDoAtendente(companyId: string, agora: Date = new Date(
     resultadoDaSemana: naSemanaGratis ? contar(daSemana) : null,
     contextoAgora: lojaFechada({ horarios: fatos.horarios, diasFechados: fatos.diasFechados, agora }) ? "FECHADO" : "EXPEDIENTE",
     respostasLivres: configuracaoDaIaFaltando() === null,
+    duvidasParaAprender: duvidasAbertas.map((d) => ({
+      id: d.id,
+      pergunta: d.question,
+      vezesPerguntada: d.askCount,
+    })),
   };
 }

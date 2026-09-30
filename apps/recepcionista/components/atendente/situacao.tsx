@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import type { TelaDoAtendente, Tom } from "@/lib/atendente/tela";
 import { emReais } from "@/lib/billing/preco";
 import { ModalConectarWhatsApp } from "@/components/painel/modal-conectar-whatsapp";
+import { SecaoDuvidasParaAprender } from "./ajustes";
 
 /**
  * DEPOIS DE LIGAR: COMO ELE ESTÁ E O QUE PRECISA DE VOCÊ.
@@ -120,6 +121,21 @@ export function Situacao({
           </p>
         )}
       </section>
+
+      {tela.duvidasParaAprender && tela.duvidasParaAprender.length > 0 && (
+        <SecaoDuvidasParaAprender
+          duvidas={tela.duvidasParaAprender}
+          nomeAtendente={tela.nome || "O atendente"}
+          aoAtualizar={() => {
+            fetch("/api/atendente")
+              .then((r) => r.json())
+              .then((j) => {
+                if (j) aoMudarTela(j);
+              })
+              .catch(() => {});
+          }}
+        />
+      )}
 
       {tela.precisaDeVoce.length > 0 && (
         <section className="rounded-2xl border border-panel-line bg-panel-card">

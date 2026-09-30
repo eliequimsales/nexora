@@ -492,12 +492,14 @@ describe("atender — anotações para o dono", () => {
     expect(registrarAtendimento).toHaveBeenCalledWith(expect.objectContaining({ urgente: true }));
   });
 
-  it("pergunta que ele não soube responder vira lacuna no Treinamento", async () => {
+  it("pergunta que ele não soube responder vira lacuna no Treinamento e consulta o dono", async () => {
     (generateReceptionistReply as Fn).mockRejectedValue(new Error("fora do ar"));
     conversaCom(msg("m1", "CUSTOMER", "vocês fazem progressiva?", new Date(AGORA.getTime() - MIN)));
     await rodar();
     expect((enviarWhatsApp as Fn).mock.calls[0][2]).toContain("não tenho confirmada");
     expect(recordKnowledgeGap).toHaveBeenCalledWith("c1", "vocês fazem progressiva?", expect.any(String));
+    expect((enviarWhatsApp as Fn).mock.calls[1][1]).toBe("5511977776666");
+    expect((enviarWhatsApp as Fn).mock.calls[1][2]).toContain("Você poderia me ensinar como responder");
   });
 });
 

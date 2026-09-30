@@ -562,7 +562,6 @@ function SecaoOQueEleDeveSaber({
   const [salvo, setSalvo] = useState(false);
   const [temaAtivo, setTemaAtivo] = useState<string | null>(null);
   const [campoNovo, setCampoNovo] = useState("");
-  const [modoLivre, setModoLivre] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
@@ -614,20 +613,11 @@ function SecaoOQueEleDeveSaber({
             Regras de atendimento, estacionamento, marcas e diferenciais.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {salvo && (
-            <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
-              Salvo
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={() => setModoLivre(!modoLivre)}
-            className="text-[11px] font-semibold text-amber-deep hover:underline"
-          >
-            {modoLivre ? "Voltar para tópicos" : "Editar em texto livre"}
-          </button>
-        </div>
+        {salvo && (
+          <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+            Salvo
+          </span>
+        )}
       </div>
 
       {/* BANNER EDUCATIVO / ORIENTAÇÃO */}
@@ -639,31 +629,15 @@ function SecaoOQueEleDeveSaber({
           O atendente só responde o que você ensinar aqui e nunca inventa nada.
         </p>
         <p className="mt-0.5 leading-relaxed text-panel-sub">
-          Quanto mais detalhes você colocar, melhor ele atenderá seus clientes.
+          Se um cliente perguntar algo que ele não sabe, ele consulta você para aprender.
         </p>
       </div>
 
-      {modoLivre ? (
-        <div className="space-y-1.5">
-          <textarea
-            value={texto}
-            onChange={(e) => salvarTexto(e.target.value)}
-            maxLength={2000}
-            rows={4}
-            placeholder="Exemplo: Estacionamento grátis na rua lateral. Aceitamos Pix e cartão em 3x. Tolerância de 15 minutos para atrasos."
-            className="w-full rounded-xl border border-panel-line bg-white p-3.5 text-sm text-panel-ink placeholder:text-panel-sub/60 focus:border-amber focus:outline-none focus:ring-1 focus:ring-amber leading-relaxed resize-y"
-          />
-          <div className="flex items-center justify-between text-[11px] text-panel-sub">
-            <span>Salva sozinho enquanto você digita</span>
-            <span>{texto.length}/2000 letras</span>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-3.5">
-          <div>
-            <p className="text-xs font-semibold text-panel-sub mb-2">
-              Escolha um tema para adicionar em segundos:
-            </p>
+      <div className="space-y-3.5">
+        <div>
+          <p className="text-xs font-semibold text-panel-sub mb-2">
+            Escolha um tema para adicionar em segundos:
+          </p>
             <div className="flex flex-wrap gap-1.5">
               {TEMAS_RAPIDOS.map((t) => {
                 const jaTem = temaJaCadastrado(t.id, itens);
@@ -791,7 +765,133 @@ function SecaoOQueEleDeveSaber({
             )}
           </div>
         </div>
-      )}
+    </section>
+  );
+}
+
+export function SecaoDuvidasParaAprender({
+  duvidas,
+  nomeAtendente,
+  aoAtualizar,
+}: {
+  duvidas: { id: string; pergunta: string; vezesPerguntada: number }[];
+  nomeAtendente: string;
+  aoAtualizar?: () => void;
+}) {
+  const [respostas, setRespostas] = useState<Record<string, string>>({});
+  const [salvando, setSalvando] = useState<string | null>(null);
+  const [aprendidos, setAprendidos] = useState<Set<string>>(new Set());
+
+  async function ensinar(id: string, pergunta: string) {
+    const resposta = respostas[id]?.trim();
+    if (!resposta) return;
+    setSalvando(id);
+    try {
+      const res = await fetch("/api/atendente/ensinar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gapId: id, question: pergunta, answer: resposta }),
+      });
+      if (res.ok) {
+        setAprendidos((prev) => new Set(prev).add(id));
+        setTimeout(() => {
+          aoAtualizar?.();
+        }, 1200);
+      }
+    } finally {
+      setSalvando(null);
+    }
+  }
+
+  async function dispensar(id: string) {
+    setSalvando(id);
+    try {
+      await fetch(`/api/training/gaps/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "dispensar" }),
+      });
+      aoAtualizar?.();
+    } finally {
+      setSalvando(null);
+    }
+  }
+
+  const pendentes = duvidas.filter((d) => !aprendidos.has(d.id));
+  if (pendentes.length === 0 && aprendidos.size === 0) return null;
+
+  return (
+    <section className="rounded-2xl border-2 border-amber/40 bg-amber/5 p-5 space-y-4">
+      <div className="flex items-start gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber/20 text-lg">
+          🙋‍♂️
+        </div>
+        <div>
+          <h2 className="text-sm font-bold text-panel-ink">
+            {nomeAtendente ? `${nomeAtendente} precisa que você o ensine` : "O atendente precisa da sua ajuda"}
+          </h2>
+          <p className="mt-0.5 text-xs text-panel-sub">
+            Clientes fizeram perguntas no WhatsApp que ele ainda não sabia responder.
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {pendentes.map((d) => (
+          <div key={d.id} className="rounded-xl border border-panel-line bg-white p-4 space-y-3 shadow-xs">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold text-panel-sub">Dúvida do cliente:</p>
+                <p className="mt-0.5 text-sm font-bold text-panel-ink">&ldquo;{d.pergunta}&rdquo;</p>
+              </div>
+              {d.vezesPerguntada > 1 && (
+                <span className="shrink-0 rounded-full bg-amber/15 px-2 py-0.5 text-[11px] font-semibold text-amber-deep">
+                  {d.vezesPerguntada} clientes
+                </span>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor={`resposta-${d.id}`} className="block text-xs font-semibold text-panel-sub mb-1">
+                Como você gostaria que ele respondesse?
+              </label>
+              <textarea
+                id={`resposta-${d.id}`}
+                rows={2}
+                value={respostas[d.id] ?? ""}
+                onChange={(e) => setRespostas({ ...respostas, [d.id]: e.target.value })}
+                placeholder="Exemplo: Sim, fazemos esse procedimento. Atendemos com hora marcada."
+                className="w-full rounded-xl border border-panel-line bg-panel-bg p-3 text-sm text-panel-ink placeholder:text-panel-sub/60 focus:border-amber focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber"
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-2 pt-1">
+              <button
+                type="button"
+                disabled={salvando === d.id}
+                onClick={() => dispensar(d.id)}
+                className="text-xs text-panel-sub hover:text-panel-ink transition"
+              >
+                Dispensar
+              </button>
+              <button
+                type="button"
+                disabled={salvando === d.id || !(respostas[d.id] ?? "").trim()}
+                onClick={() => ensinar(d.id, d.pergunta)}
+                className="rounded-xl bg-amber px-4 py-2 text-xs font-bold text-night transition hover:brightness-110 disabled:opacity-50"
+              >
+                {salvando === d.id ? "Ensinando..." : "Ensinar Atendente"}
+              </button>
+            </div>
+          </div>
+        ))}
+
+        {Array.from(aprendidos).map((id) => (
+          <div key={id} className="rounded-xl border border-emerald-500/30 bg-emerald-50/50 p-3 text-xs font-semibold text-emerald-700 flex items-center gap-2">
+            <span>✓</span> Ensinado com sucesso! O atendente já aprendeu essa resposta.
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
@@ -842,6 +942,14 @@ export function Ajustes({
           />
         </div>
       </section>
+
+      {tela.duvidasParaAprender && tela.duvidasParaAprender.length > 0 && (
+        <SecaoDuvidasParaAprender
+          duvidas={tela.duvidasParaAprender}
+          nomeAtendente={nome || tela.nome || "O atendente"}
+          aoAtualizar={aoAtualizarTela}
+        />
+      )}
 
       <SecaoOQueEleDeveSaber
         descricao={tela.sabe.descricao ?? ""}

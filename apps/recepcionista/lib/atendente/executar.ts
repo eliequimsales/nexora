@@ -419,7 +419,16 @@ export async function atender(
   if (saida.anotar) {
     await anotarNaConversa(saida.anotar.motivo);
     // Só pergunta vira lacuna: pedido de pessoa ou reclamação não é falta de conhecimento.
-    if (saida.anotar.pergunta) await recordKnowledgeGap(p.companyId, saida.anotar.pergunta, saida.anotar.motivo);
+    if (saida.anotar.pergunta) {
+      await recordKnowledgeGap(p.companyId, saida.anotar.pergunta, saida.anotar.motivo);
+      await consultarDonoSobreDuvida({
+        companyId: p.companyId,
+        instance,
+        pergunta: saida.anotar.pergunta,
+        cliente: clienteNome,
+        telefone: conversa.customerPhone,
+      });
+    }
   }
 
   if (saida.marcou) {
@@ -494,3 +503,40 @@ async function avisarDono(p: {
     }).catch((erro) => logError("atendente-urgencia-email", erro, p.companyId));
   }
 }
+
+/**
+ * Dúvida que o atendente não soube responder: consulta o dono pelo WhatsApp dele
+ * para pedir que o ensine a responder.
+ */
+async function consultarDonoSobreDuvida(p: {
+  companyId: string;
+  instance: string;
+  pergunta: string;
+  cliente: string | null;
+  telefone: string;
+}): Promise<void> {
+  const empresa = await prisma.company.findUnique({
+    where: { id: p.companyId },
+    select: { name: true, phone: true, email: true },
+  });
+  const numero = numeroDoDono(empresa?.phone);
+  if (numero && numero !== p.telefone) {
+    const quemPerguntou = p.cliente ? `O cliente ${p.cliente}` : "Um cliente";
+    const texto =
+      `Oi! ${quemPerguntou} acabou de me perguntar algo que eu ainda não sei responder:\n\n` +
+      `"${p.pergunta}"\n\n` +
+      `Você poderia me ensinar como responder isso? É só acessar o seu painel do Atendente para me ensinar!`;
+    await enviarWhatsApp(p.instance, numero, texto).catch((erro) =>
+      logError("atendente-consultar-dono", erro, p.companyId),
+    );
+  }
+
+  if (empresa?.email) {
+    await enviarEmail(empresa.email, {
+      assunto: "Dúvida no WhatsApp: me ensina como responder?",
+      corpo: `Um cliente (${p.cliente ?? telefoneFalado(p.telefone)}) perguntou:\n\n"${p.pergunta}"\n\nVocê pode me ensinar direto pelo seu painel para eu já aprender.`,
+      acao: { texto: "Ensinar Atendente", href: "/painel/atendente" },
+    }).catch((erro) => logError("atendente-consultar-dono-email", erro, p.companyId));
+  }
+}
+

@@ -7,6 +7,8 @@ vi.mock("@/lib/db", () => ({
   prisma: {
     companyProfile: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
     atendenteAtendimento: { updateMany: vi.fn() },
+    knowledgeItem: { create: vi.fn() },
+    knowledgeGap: { updateMany: vi.fn() },
   },
 }));
 vi.mock("@/lib/limites", async (original) => ({
@@ -39,6 +41,7 @@ import { NextResponse } from "next/server";
 import { GET, PUT } from "@/app/api/atendente/route";
 import { POST as LIGAR } from "@/app/api/atendente/ligar/route";
 import { POST as SIMULAR } from "@/app/api/atendente/simular/route";
+import { POST as ENSINAR } from "@/app/api/atendente/ensinar/route";
 import type { Livre } from "@/lib/agenda/livres";
 import { horariosLivres } from "@/lib/agenda/livres";
 import { marcarNaAgenda } from "@/lib/agenda/marcacao";
@@ -65,6 +68,8 @@ type Fn = Mock;
 const db = prisma as unknown as {
   companyProfile: { findUnique: Fn; update: Fn; updateMany: Fn };
   atendenteAtendimento: { updateMany: Fn };
+  knowledgeItem: { create: Fn };
+  knowledgeGap: { updateMany: Fn };
 };
 
 const RAIZ = join(__dirname, "..");
@@ -325,3 +330,45 @@ describe("POST /api/atendente/simular — o motor de verdade, sem enviar e sem m
     expect(leia("app/api/atendente/simular/route.ts")).not.toMatch(/enviarWhatsApp|sendWhatsAppText/);
   });
 });
+
+describe("POST /api/atendente/ensinar", () => {
+  it("grava resposta aprovada e conclui a dúvida", async () => {
+    const r = await ENSINAR(
+      new Request("http://localhost/api/atendente/ensinar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          gapId: "gap1",
+          question: "Vocês fazem clareamento?",
+          answer: "Sim, fazemos com hora marcada.",
+        }),
+      }),
+    );
+    expect(r.status).toBe(200);
+    expect(db.knowledgeItem.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        companyId: "c1",
+        question: "Vocês fazem clareamento?",
+        answer: "Sim, fazemos com hora marcada.",
+        status: "APPROVED",
+        gapId: "gap1",
+      }),
+    });
+    expect(db.knowledgeGap.updateMany).toHaveBeenCalledWith({
+      where: { id: "gap1", companyId: "c1" },
+      data: { status: "ANSWERED" },
+    });
+  });
+
+  it("recusa se faltar pergunta ou resposta", async () => {
+    const r = await ENSINAR(
+      new Request("http://localhost/api/atendente/ensinar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: "", answer: "" }),
+      }),
+    );
+    expect(r.status).toBe(400);
+  });
+});
+
