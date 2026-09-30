@@ -65,11 +65,37 @@ export async function GET(request: Request) {
 
   const desde = new Date(Date.now() - DIAS * 24 * 60 * 60 * 1000);
 
-  const linhas = await prisma.eventoFunil.groupBy({
-    by: ["nome", "criativo"],
-    where: { criadoEm: { gte: desde } },
-    _count: { _all: true },
-  });
+  const [
+    linhas,
+    totalEmpresas,
+    empresasAtivas,
+    totalConversas,
+    totalMensagens,
+    totalAtendimentos,
+    agendamentosAgregados,
+    totalGaps,
+    gapsAbertos,
+    totalAprendidos,
+    totalLeads,
+  ] = await Promise.all([
+    prisma.eventoFunil.groupBy({
+      by: ["nome", "criativo"],
+      where: { criadoEm: { gte: desde } },
+      _count: { _all: true },
+    }),
+    prisma.company.count(),
+    prisma.companyProfile.count({ where: { plantaoAtivo: true } }),
+    prisma.conversation.count(),
+    prisma.message.count(),
+    prisma.atendenteAtendimento.count(),
+    prisma.atendenteAtendimento.aggregate({
+      _sum: { marcados: true, valorMarcadoCents: true, respostas: true },
+    }),
+    prisma.knowledgeGap.count(),
+    prisma.knowledgeGap.count({ where: { status: "OPEN" } }),
+    prisma.knowledgeItem.count({ where: { status: "APPROVED" } }),
+    prisma.lead.count(),
+  ]);
 
   const total = (nome: string, criativo?: string | null) =>
     linhas
@@ -128,6 +154,18 @@ export async function GET(request: Request) {
           "",
         ]
       : []),
+    "────────────────────────────────────────",
+    "OPERAÇÃO & PRODUTO (BASE ATUAL)",
+    `Empresas cadastradas: ${totalEmpresas} (${empresasAtivas} com atendente ativo)`,
+    `Conversas criadas: ${totalConversas} | Mensagens: ${totalMensagens}`,
+    `Atendimentos registrados: ${totalAtendimentos}`,
+    `Respostas automáticas do atendente: ${agendamentosAgregados._sum.respostas ?? 0}`,
+    `Agendamentos marcados: ${agendamentosAgregados._sum.marcados ?? 0}`,
+    `Receita gerada em agendamentos: R$ ${(((agendamentosAgregados._sum.valorMarcadoCents ?? 0) / 100).toFixed(2))}`,
+    `Dúvidas do atendente: ${totalGaps} (${gapsAbertos} pendentes para ensinar, ${totalAprendidos} ensinadas)`,
+    `Leads identificados: ${totalLeads}`,
+    "────────────────────────────────────────",
+    "",
     "Sem evento nenhum? O app pode não ter recebido visita, ou o schema não",
     "chegou no banco. Confira nos logs se o `prisma db push` do boot passou.",
   ].join("\n");
