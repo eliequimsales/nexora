@@ -13,6 +13,7 @@ import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
 import { LIMITES, limitar } from "@/lib/limites";
 import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
+import { recordKnowledgeGap } from "@/lib/training";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -107,6 +108,13 @@ export async function POST(request: Request) {
     );
 
     await prisma.companyProfile.update({ where: { companyId }, data: { atendenteTestadoEm: agora } });
+
+    if (saida.anotar) {
+      const perguntaParaAprender = saida.anotar.pergunta || (pendentes.length > 0 ? pendentes[pendentes.length - 1] : null);
+      if (perguntaParaAprender && perguntaParaAprender.trim().length >= 4) {
+        await recordKnowledgeGap(companyId, perguntaParaAprender, saida.anotar.motivo || "Pergunta feita no simulador");
+      }
+    }
 
     return NextResponse.json({
       mensagens: saida.mensagens,

@@ -285,7 +285,7 @@ export async function telaDoAtendente(companyId: string, agora: Date = new Date(
       where: { companyId, status: "OPEN" },
       select: { id: true, question: true, askCount: true },
       orderBy: [{ askCount: "desc" }, { lastAskedAt: "desc" }],
-      take: 5,
+      take: 10,
     }),
   ]);
 

@@ -122,20 +122,18 @@ export function Situacao({
         )}
       </section>
 
-      {tela.duvidasParaAprender && tela.duvidasParaAprender.length > 0 && (
-        <SecaoDuvidasParaAprender
-          duvidas={tela.duvidasParaAprender}
-          nomeAtendente={tela.nome || "O atendente"}
-          aoAtualizar={() => {
-            fetch("/api/atendente")
-              .then((r) => r.json())
-              .then((j) => {
-                if (j) aoMudarTela(j);
-              })
-              .catch(() => {});
-          }}
-        />
-      )}
+      <SecaoDuvidasParaAprender
+        duvidas={tela.duvidasParaAprender ?? []}
+        nomeAtendente={tela.nome || "O atendente"}
+        aoAtualizar={() => {
+          fetch("/api/atendente")
+            .then((r) => r.json())
+            .then((j) => {
+              if (j) aoMudarTela(j);
+            })
+            .catch(() => {});
+        }}
+      />
 
       {tela.precisaDeVoce.length > 0 && (
         <section className="rounded-2xl border border-panel-line bg-panel-card">

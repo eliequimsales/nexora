@@ -818,22 +818,57 @@ export function SecaoDuvidasParaAprender({
   }
 
   const pendentes = duvidas.filter((d) => !aprendidos.has(d.id));
-  if (pendentes.length === 0 && aprendidos.size === 0) return null;
 
-  return (
-    <section className="rounded-2xl border-2 border-amber/40 bg-amber/5 p-5 space-y-4">
-      <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber/20 text-lg">
-          🙋‍♂️
+  if (pendentes.length === 0 && aprendidos.size === 0) {
+    return (
+      <section id="duvidas-atendente" className="rounded-2xl border border-panel-line bg-panel-card p-5 space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 text-lg">
+              🙋‍♂️
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-panel-ink">
+                Dúvidas do atendente
+              </h2>
+              <p className="mt-0.5 text-xs text-panel-sub">
+                Perguntas que ele não souber responder aparecem aqui para você ensinar.
+              </p>
+            </div>
+          </div>
+          <span className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
+            ✓ 0 pendências
+          </span>
         </div>
-        <div>
-          <h2 className="text-sm font-bold text-panel-ink">
-            {nomeAtendente ? `${nomeAtendente} precisa que você o ensine` : "O atendente precisa da sua ajuda"}
-          </h2>
-          <p className="mt-0.5 text-xs text-panel-sub">
-            Clientes fizeram perguntas no WhatsApp que ele ainda não sabia responder.
+        <div className="rounded-xl border border-dashed border-panel-line bg-white/50 p-4 text-center">
+          <p className="text-xs font-medium text-panel-ink">Nenhuma dúvida pendente no momento.</p>
+          <p className="mt-1 text-xs text-panel-sub">
+            Faça perguntas no WhatsApp ou no simulador. Se ele não souber, a dúvida aparece aqui com aviso.
           </p>
         </div>
+      </section>
+    );
+  }
+
+  return (
+    <section id="duvidas-atendente" className="rounded-2xl border-2 border-amber/40 bg-amber/5 p-5 space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber/20 text-lg">
+            🙋‍♂️
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-panel-ink">
+              {nomeAtendente ? `Dúvidas para ensinar a ${nomeAtendente}` : "Dúvidas do atendente para ensinar"}
+            </h2>
+            <p className="mt-0.5 text-xs text-panel-sub">
+              Perguntas feitas no WhatsApp ou no simulador que ele ainda não soube responder.
+            </p>
+          </div>
+        </div>
+        <span className="shrink-0 rounded-full bg-amber px-2.5 py-1 text-xs font-bold text-night shadow-xs animate-pulse">
+          🔔 {pendentes.length} {pendentes.length === 1 ? "para ensinar" : "para ensinar"}
+        </span>
       </div>
 
       <div className="space-y-3">
@@ -943,13 +978,11 @@ export function Ajustes({
         </div>
       </section>
 
-      {tela.duvidasParaAprender && tela.duvidasParaAprender.length > 0 && (
-        <SecaoDuvidasParaAprender
-          duvidas={tela.duvidasParaAprender}
-          nomeAtendente={nome || tela.nome || "O atendente"}
-          aoAtualizar={aoAtualizarTela}
-        />
-      )}
+      <SecaoDuvidasParaAprender
+        duvidas={tela.duvidasParaAprender ?? []}
+        nomeAtendente={nome || tela.nome || "O atendente"}
+        aoAtualizar={aoAtualizarTela}
+      />
 
       <SecaoOQueEleDeveSaber
         descricao={tela.sabe.descricao ?? ""}
@@ -987,6 +1020,26 @@ export function Ajustes({
           exemplo="Pix, cartão e dinheiro"
           aoSalvar={(pagamento) => aoAjustar({ pagamento })}
         />
+        <LinhaDoDado
+          ok={(tela.duvidasParaAprender?.length ?? 0) === 0}
+          rotulo="Dúvidas"
+          valor={
+            (tela.duvidasParaAprender?.length ?? 0) === 0
+              ? "nenhuma dúvida pendente"
+              : `${tela.duvidasParaAprender!.length} ${plural(tela.duvidasParaAprender!.length, "dúvida para ensinar", "dúvidas para ensinar")}`
+          }
+          aoClicar={() => {
+            document.getElementById("duvidas-atendente")?.scrollIntoView({ behavior: "smooth" });
+          }}
+        >
+          {(tela.duvidasParaAprender?.length ?? 0) > 0 ? (
+            <span className="rounded-full bg-amber px-2 py-0.5 text-xs font-bold text-night">
+              {tela.duvidasParaAprender!.length} para ensinar
+            </span>
+          ) : (
+            <span className="text-xs font-semibold text-emerald-700">Em dia</span>
+          )}
+        </LinhaDoDado>
         <Dado
           ok={perguntas > 0}
           rotulo="Perguntas"

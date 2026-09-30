@@ -8,7 +8,7 @@ vi.mock("@/lib/db", () => ({
     companyProfile: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
     atendenteAtendimento: { updateMany: vi.fn() },
     knowledgeItem: { create: vi.fn() },
-    knowledgeGap: { updateMany: vi.fn() },
+    knowledgeGap: { updateMany: vi.fn(), upsert: vi.fn() },
   },
 }));
 vi.mock("@/lib/limites", async (original) => ({
@@ -328,6 +328,26 @@ describe("POST /api/atendente/simular — o motor de verdade, sem enviar e sem m
 
   it("o simulador nunca chama o envio do WhatsApp", () => {
     expect(leia("app/api/atendente/simular/route.ts")).not.toMatch(/enviarWhatsApp|sendWhatsAppText/);
+  });
+
+  it("pergunta sem informação no simulador registra dúvida para aprender", async () => {
+    (generateReceptionistReply as Fn).mockResolvedValueOnce({
+      resposta: "Não tenho essa informação confirmada no momento.",
+      transferir_humano: true,
+      motivo_transferencia: "Não soube responder",
+      nome_cliente: "",
+      interesse: "",
+    });
+    const r = await SIMULAR(pedido({ mensagens: [{ de: "cliente", texto: "vocês colocam lente de resina?" }] }));
+    expect(r.status).toBe(200);
+    expect(db.knowledgeGap.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          companyId: "c1",
+          question: "vocês colocam lente de resina?",
+        }),
+      }),
+    );
   });
 });
 

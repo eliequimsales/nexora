@@ -333,10 +333,16 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
     }
 
     const convidou = /hor[aá]rios?/i.test(resposta.resposta) && resposta.resposta.trim().endsWith("?");
+    const expressouDuvida =
+      resposta.transferir_humano ||
+      /não (tenho|temos) (essa|esta) (informa|confirma)|não sei te informar|não consta no nosso|vou consultar a equipe|verificar com a equipe/i.test(
+        resposta.resposta,
+      );
+
     return saida({
       mensagens: comAbertura(resposta.resposta),
       estado: convidou ? convite() : null,
-      ...(resposta.transferir_humano
+      ...(expressouDuvida
         ? {
             anotar: {
               motivo: resposta.motivo_transferencia || "Pergunta que o atendente não soube responder",

@@ -148,6 +148,18 @@ export default function PaginaDoAtendente() {
         </div>
         <div className="flex items-center gap-3">
           {salvo && <span className="text-xs text-panel-sub">Salvo</span>}
+          {(tela.duvidasParaAprender?.length ?? 0) > 0 && (
+            <a
+              href="#duvidas-atendente"
+              className="inline-flex items-center gap-1.5 rounded-full border border-amber/40 bg-amber/15 px-3 py-1.5 text-xs font-bold text-amber-deep transition hover:bg-amber/25"
+            >
+              <span className="h-2 w-2 rounded-full bg-amber animate-pulse" aria-hidden="true" />
+              <span>
+                🔔 {tela.duvidasParaAprender!.length}{" "}
+                {tela.duvidasParaAprender!.length === 1 ? "coisa para aprender" : "coisas para aprender"}
+              </span>
+            </a>
+          )}
           {tela.acesso === "SEMANA_ACABOU" ? (
             <Link
               href="/painel/assinatura"
@@ -186,7 +198,15 @@ export default function PaginaDoAtendente() {
 
       {/* grid-cols-1 é minmax(0, 1fr): no celular a coluna encolhe até a tela, em vez de crescer até o item mais largo. */}
       <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
-        <Celular tela={tela} nome={nome} jeito={jeito} aoTestar={() => setTestado(true)} />
+        <Celular
+          tela={tela}
+          nome={nome}
+          jeito={jeito}
+          aoTestar={() => {
+            setTestado(true);
+            void recarregar();
+          }}
+        />
 
         <div className="space-y-4">
           <CartaoDaNoite />
