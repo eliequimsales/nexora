@@ -90,7 +90,15 @@ export function Celular({
       }
       const respostas: string[] = j.mensagens ?? [];
       const fonte = Array.isArray(j.fontes) ? j.fontes.join(" · ") : undefined;
-      const confirmou = Boolean(j.marcou || (j.mensagens && j.mensagens.some((m: string) => /confirmad|agendad|marcad/i.test(m))));
+      const confirmou = Boolean(
+        j.marcou ||
+          (j.mensagens &&
+            j.mensagens.some(
+              (m: string) =>
+                /(horário|agendamento|reserva|vaga)\s+(está\s+)?(confirmad|marcad)|está agendado|horário reservado/i.test(m) &&
+                !/não tenho confirmad|anotado para a equipe/i.test(m),
+            )),
+      );
       for (let i = 0; i < respostas.length; i++) {
         if (i > 0) await esperar(PAUSA_ENTRE_BOLHAS_MS);
         setTeste((atual) => [

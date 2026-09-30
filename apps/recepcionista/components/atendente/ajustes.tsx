@@ -519,6 +519,38 @@ const TEMAS_RAPIDOS = [
   { id: "outro", rotulo: "✏️ Outro assunto", prefixo: "✦ Regra", exemplo: "" },
 ];
 
+function extrairItens(textoBruto: string): string[] {
+  if (!textoBruto || !textoBruto.trim()) return [];
+  const linhas = textoBruto
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  if (linhas.length > 1) return linhas;
+
+  const unica = linhas[0] ?? "";
+  const partes = unica
+    .split(/(?=[⏱️🚗💳🏷️📍📅✏️✦🟣])|(?<=[.!?])\s+(?=[A-Za-zÀ-ÿ0-9\s]+:)/u)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  return partes.length > 1 ? partes : [unica];
+}
+
+function temaJaCadastrado(temaId: string, lista: string[]): boolean {
+  if (temaId === "outro") return false;
+  return lista.some((item) => {
+    const t = item.toLowerCase();
+    if (temaId === "atraso") return t.includes("tolerância") || t.includes("tolerancia") || t.includes("atraso");
+    if (temaId === "estacionamento") return t.includes("estacionamento");
+    if (temaId === "pagamento") return t.includes("parcelamento") || t.includes("pagamento") || t.includes("pix") || t.includes("cartão") || t.includes("cartao");
+    if (temaId === "marcas") return t.includes("marca") || t.includes("produto");
+    if (temaId === "referencia") return t.includes("referência") || t.includes("referencia") || t.includes("localização") || t.includes("localizacao");
+    if (temaId === "feriados") return t.includes("feriado");
+    return false;
+  });
+}
+
 function SecaoOQueEleDeveSaber({
   descricao,
   aoSalvar,
@@ -548,10 +580,7 @@ function SecaoOQueEleDeveSaber({
     }, 600);
   }
 
-  const itens = texto
-    .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean);
+  const itens = extrairItens(texto);
 
   function adicionarItem(novo: string) {
     const textoLimpo = novo.trim();
@@ -636,20 +665,38 @@ function SecaoOQueEleDeveSaber({
               Escolha um tema para adicionar em segundos:
             </p>
             <div className="flex flex-wrap gap-1.5">
-              {TEMAS_RAPIDOS.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => selecionarTema(t.id)}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                    temaAtivo === t.id
-                      ? "border-amber bg-amber/15 text-panel-ink font-semibold"
-                      : "border-panel-line bg-white text-panel-ink hover:border-amber/50 hover:bg-panel-bg"
-                  }`}
-                >
-                  + {t.rotulo}
-                </button>
-              ))}
+              {TEMAS_RAPIDOS.map((t) => {
+                const jaTem = temaJaCadastrado(t.id, itens);
+                if (jaTem) {
+                  return (
+                    <div
+                      key={t.id}
+                      title="Este assunto já está cadastrado abaixo"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50/80 px-3 py-1 text-xs font-semibold text-emerald-800 select-none"
+                    >
+                      <span>✓ {t.rotulo}</span>
+                      <span className="rounded-full bg-emerald-100 px-1.5 py-0.2 text-[9px] font-bold text-emerald-900">
+                        já adicionado
+                      </span>
+                    </div>
+                  );
+                }
+
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => selecionarTema(t.id)}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                      temaAtivo === t.id
+                        ? "border-amber bg-amber/15 text-panel-ink font-semibold"
+                        : "border-panel-line bg-white text-panel-ink hover:border-amber/50 hover:bg-panel-bg"
+                    }`}
+                  >
+                    + {t.rotulo}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -698,29 +745,45 @@ function SecaoOQueEleDeveSaber({
           )}
 
           <div className="space-y-2 pt-1">
-            <p className="text-xs font-semibold text-panel-sub">
-              Informações cadastradas:
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-panel-sub">
+                Informações cadastradas ({itens.length}):
+              </p>
+              {itens.length > 0 && (
+                <span className="text-[11px] text-panel-sub">
+                  Cada regra é consultada pelo atendente
+                </span>
+              )}
+            </div>
+
             {itens.length === 0 ? (
               <p className="rounded-xl border border-dashed border-panel-line bg-white/50 p-4 text-center text-xs text-panel-sub">
                 Nenhuma informação cadastrada ainda. Escolha um tema acima para começar.
               </p>
             ) : (
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {itens.map((item, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-panel-line bg-white px-3.5 py-2.5 text-xs text-panel-ink shadow-sm"
+                    className="flex items-center justify-between gap-3 rounded-xl border border-panel-line bg-white p-3 text-xs text-panel-ink shadow-xs transition hover:border-amber/40"
                   >
-                    <span className="flex-1 break-words">{item}</span>
+                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                      <span className="text-sm shrink-0 select-none">
+                        {item.slice(0, 2).match(/\p{Extended_Pictographic}/u) ? item.slice(0, 2) : "✦"}
+                      </span>
+                      <span className="flex-1 break-words font-medium leading-relaxed">
+                        {item.replace(/^[\p{Extended_Pictographic}\s✦]+/u, "")}
+                      </span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => removerItem(idx)}
                       aria-label="Remover informação"
                       title="Remover informação"
-                      className="rounded-lg p-1 text-panel-sub transition hover:bg-red-50 hover:text-red-600"
+                      className="shrink-0 flex items-center gap-1 rounded-lg border border-panel-line px-2 py-1 text-[11px] font-medium text-panel-sub transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
                     >
-                      ✕
+                      <span>✕</span>
+                      <span className="hidden sm:inline">Remover</span>
                     </button>
                   </div>
                 ))}
