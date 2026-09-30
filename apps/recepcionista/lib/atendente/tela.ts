@@ -61,6 +61,7 @@ export type TelaDoAtendente = {
     perguntas: string[];
     endereco: string;
     pagamento: string;
+    descricao: string;
     linkAgenda: string | null;
   };
   /** Quando a loja está fechada — e ele responde na hora: "seg a sáb: antes das 8h e depois das 18h · dom: o dia todo". */
@@ -319,6 +320,7 @@ export async function telaDoAtendente(companyId: string, agora: Date = new Date(
       perguntas: fatos.perguntas.map((p) => p.question).slice(0, 30),
       endereco: fatos.endereco,
       pagamento: fatos.pagamento,
+      descricao: fatos.descricao,
       linkAgenda: fatos.linkAgenda,
     },
     foraDoHorario: quandoAtendeTexto(fatos.horarios).join(" · "),

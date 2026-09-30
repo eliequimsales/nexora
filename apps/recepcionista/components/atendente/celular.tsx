@@ -7,19 +7,16 @@ import type { TelaDoAtendente } from "@/lib/atendente/tela";
 /**
  * O CELULAR — SIMULADOR ULTRA-REALISTA DO WHATSAPP.
  *
- * Abre com a conversa de exemplo: o nome, o jeito e os dados do negócio.
- * Mudou o nome ou o jeito, a conversa reflete na hora. Quando o dono escreve
- * ou clica nas opções rápidas, o motor de verdade simula a resposta em tempo real.
+ * Visual idêntico ao da landing page: smartphone moderno, sem barras de rolagem
+ * horizontais, mensagens perfeitamente alinhadas, opções clicáveis e selo de
+ * agendamento confirmado na agenda.
  */
 
-type Mensagem = { de: "cliente" | "atendente"; texto: string; fonte?: string };
+type Mensagem = { de: "cliente" | "atendente"; texto: string; fonte?: string; agendamentoConfirmado?: boolean };
 
 const SUGESTOES = ["🕒 Tem horário amanhã?", "💳 Quanto custa?", "📍 Onde fica?"];
 const PAUSA_ENTRE_BOLHAS_MS = 650;
 const esperar = (ms: number) => new Promise((resolver) => setTimeout(resolver, ms));
-
-const BOLHA_CLIENTE = "rounded-tl-xs bg-[#202C33] text-[#E9EDEF]";
-const BOLHA_ATENDENTE = "rounded-tr-xs bg-[#005C4B] text-[#E9EDEF]";
 
 function formatarHoraAgora(): string {
   const agora = new Date();
@@ -51,10 +48,15 @@ export function Celular({
     setHoraStatus(formatarHoraAgora());
   }, []);
 
-  const exemplo = useMemo<Mensagem[]>(
-    () => conversaDeExemplo(jeito, { ...tela.exemplo.dados, nome }),
-    [jeito, nome, tela.exemplo.dados],
-  );
+  const exemplo = useMemo<Mensagem[]>(() => {
+    const bolhas = conversaDeExemplo(jeito, { ...tela.exemplo.dados, nome });
+    return bolhas.map((b, idx) => ({
+      de: b.de,
+      texto: b.texto,
+      agendamentoConfirmado: idx === bolhas.length - 1 && b.de === "atendente",
+    }));
+  }, [jeito, nome, tela.exemplo.dados]);
+
   const mensagens = teste ?? exemplo;
 
   useEffect(() => {
@@ -78,7 +80,7 @@ export function Celular({
           estado,
           nome,
           jeito,
-          marcaDireto: tela.marcaDireto,
+          marcaDireto: true,
         }),
       });
       const j = await r.json().catch(() => null);
@@ -88,9 +90,18 @@ export function Celular({
       }
       const respostas: string[] = j.mensagens ?? [];
       const fonte = Array.isArray(j.fontes) ? j.fontes.join(" · ") : undefined;
+      const confirmou = Boolean(j.marcou || (j.mensagens && j.mensagens.some((m: string) => /confirmad|agendad|marcad/i.test(m))));
       for (let i = 0; i < respostas.length; i++) {
         if (i > 0) await esperar(PAUSA_ENTRE_BOLHAS_MS);
-        setTeste((atual) => [...(atual ?? []), { de: "atendente", texto: respostas[i], fonte }]);
+        setTeste((atual) => [
+          ...(atual ?? []),
+          {
+            de: "atendente",
+            texto: respostas[i],
+            fonte,
+            agendamentoConfirmado: i === respostas.length - 1 && confirmou,
+          },
+        ]);
       }
       setEstado(j.estado ?? null);
       aoTestar();
@@ -111,15 +122,15 @@ export function Celular({
     estado?.tipo === "HORARIO" ? ["2", ...SUGESTOES.slice(1)] : estado?.tipo === "SERVICO" ? ["1", ...SUGESTOES.slice(1)] : SUGESTOES;
 
   return (
-    <div className="mx-auto w-full max-w-[390px]">
-      {/* CHASSI SMARTPHONE PREMIUM */}
-      <div className="rounded-[2.85rem] border border-[#2A2E3D] bg-gradient-to-b from-[#2A2E3D] via-[#1A1D27] to-[#0E1017] p-2.5 shadow-2xl ring-1 ring-white/10">
-        <div className="relative flex h-[580px] flex-col overflow-hidden rounded-[2.35rem] border border-[#1E222D] bg-[#0B141A]">
+    <div className="mx-auto w-full max-w-[420px]">
+      {/* DISPOSITIVO SMARTPHONE ULTRA-REALISTA CENTRALIZADO (ESTILO LANDING PAGE) */}
+      <div className="rounded-[3rem] border border-[#2A2E3D] bg-gradient-to-b from-[#2A2E3D] via-[#1A1D27] to-[#0E1017] p-3 shadow-2xl ring-1 ring-white/10">
+        <div className="relative flex h-[580px] sm:h-[620px] flex-col overflow-hidden rounded-[2.35rem] bg-[#0B141A] border border-[#1E222D]">
           {/* BARRA DE STATUS DO DISPOSITIVO */}
           <div className="flex h-7 select-none items-center justify-between bg-[#202C33] px-6 pt-1 text-[11px] font-semibold text-white/80">
             <span>{horaStatus}</span>
-            <div className="flex h-3.5 w-20 items-center justify-center rounded-full bg-black/90">
-              <span className="h-1.5 w-1.5 rounded-full bg-black ring-1 ring-white/20" />
+            <div className="flex h-4 w-20 items-center justify-center rounded-full bg-black/90">
+              <span className="h-2 w-2 rounded-full bg-black ring-1 ring-white/10" />
             </div>
             <div className="flex items-center gap-1.5 text-xs text-white/90">
               <span className="text-[10px] font-bold">5G</span>
@@ -137,20 +148,20 @@ export function Celular({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
               <div className="relative shrink-0">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-amber to-amber-600 font-display text-sm font-bold text-night shadow-inner">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-amber to-amber-600 font-display text-base font-bold text-night shadow-inner">
                   {tela.empresa.trim().charAt(0).toUpperCase() || "N"}
                 </div>
-                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[#202C33] bg-[#25D366]" />
+                <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#202C33] bg-[#25D366]" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1">
-                  <p className="truncate text-xs font-bold text-[#E9EDEF]">{tela.empresa}</p>
+                  <p className="truncate text-sm font-bold text-[#E9EDEF]">{tela.empresa}</p>
                   <svg className="h-3.5 w-3.5 shrink-0 text-[#25D366]" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
                   </svg>
                 </div>
                 <p className="text-[11px] text-[#8696A0]">
-                  {digitando ? "digitando…" : teste ? "teste · nada é enviado" : "exemplo"}
+                  {digitando ? "digitando…" : teste ? "online agora" : "exemplo"}
                 </p>
               </div>
             </div>
@@ -161,7 +172,7 @@ export function Celular({
                   type="button"
                   onClick={recomecar}
                   aria-label="Recomeçar"
-                  title="Recomeçar"
+                  title="Recomeçar conversa"
                   className="rounded-full p-1.5 text-amber transition hover:bg-white/10"
                 >
                   <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -169,62 +180,81 @@ export function Celular({
                   </svg>
                 </button>
               )}
-              <svg className="h-4 w-4 text-[#8696A0]" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
-              </svg>
-              <svg className="h-3.5 w-3.5 text-[#8696A0]" fill="currentColor" viewBox="0 0 24 24">
-                <circle cx="12" cy="6" r="1.5" />
-                <circle cx="12" cy="12" r="1.5" />
-                <circle cx="12" cy="18" r="1.5" />
-              </svg>
+              <span className="rounded-full border border-[#2A3942] bg-[#182229] px-2 py-0.5 text-[10px] font-semibold text-[#8696A0]">
+                Ao vivo
+              </span>
             </div>
           </div>
 
-          {/* ÁREA DE CONVERSA COM FUNDO DO WHATSAPP */}
+          {/* ÁREA DE CONVERSA COM FUNDO DO WHATSAPP (SEM ROLAGEM HORIZONTAL) */}
           <div
             ref={rolagem}
-            className="flex-1 space-y-2.5 overflow-y-auto px-3.5 py-3 scroll-smooth"
+            className="flex-1 space-y-3 overflow-y-auto overflow-x-hidden px-3.5 py-4 scroll-smooth"
             style={{
               backgroundImage:
                 "radial-gradient(#182229 0.75px, transparent 0.75px), radial-gradient(#182229 0.75px, #0B141A 0.75px)",
-              backgroundSize: "28px 28px",
-              backgroundPosition: "0 0, 14px 14px",
+              backgroundSize: "30px 30px",
+              backgroundPosition: "0 0, 15px 15px",
             }}
             aria-live="polite"
           >
             <div className="flex justify-center">
-              <span className="rounded-lg bg-[#182229] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#8696A0] shadow-sm">
+              <span className="rounded-lg bg-[#182229] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#8696A0] shadow-sm">
                 HOJE
               </span>
             </div>
 
-            <div className="mx-auto max-w-[280px] rounded-lg bg-[#182229]/90 px-3 py-1.5 text-center text-[10px] leading-tight text-[#FFD279] shadow-sm">
-              🔒 As mensagens são protegidas e enviadas em tempo real.
+            <div className="mx-auto max-w-[290px] rounded-lg bg-[#182229]/90 px-3 py-1.5 text-center text-[10px] leading-tight text-[#FFD279] shadow-sm">
+              🔒 As mensagens são protegidas e enviadas em tempo real como no WhatsApp oficial.
             </div>
 
-            {mensagens.map((m, i) => (
-              <div key={i} className={m.de === "cliente" ? "flex justify-start" : "flex justify-end"}>
-                <div
-                  title={m.fonte}
-                  className={`relative max-w-[85%] rounded-2xl px-3.5 py-2 text-[12.5px] leading-snug shadow-sm ${m.de === "cliente" ? BOLHA_CLIENTE : BOLHA_ATENDENTE}`}
-                >
-                  <p className="whitespace-pre-line">{m.texto}</p>
-                  <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-[#8696A0]">
-                    <span>{horaStatus}</span>
-                    {m.de === "atendente" && (
-                      <span className="text-[#53BDEB] font-bold" title="Lida">✓✓</span>
+            {mensagens.map((m, i) => {
+              const ehCliente = m.de === "cliente";
+              return (
+                <div key={i} className={`flex flex-col ${ehCliente ? "items-end" : "items-start"}`}>
+                  <div
+                    title={m.fonte}
+                    className={`relative max-w-[88%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed shadow-md break-words [overflow-wrap:anywhere] ${
+                      ehCliente
+                        ? "rounded-tr-xs bg-[#005C4B] text-[#E9EDEF]"
+                        : "rounded-tl-xs bg-[#202C33] text-[#E9EDEF]"
+                    }`}
+                  >
+                    <p className="whitespace-pre-line break-words [overflow-wrap:anywhere]">{m.texto}</p>
+
+                    {/* SELO DE CONFIRMAÇÃO DE AGENDAMENTO AUTOMÁTICO (IGUAL NA LANDING) */}
+                    {m.agendamentoConfirmado && (
+                      <div className="mt-2.5 rounded-xl border border-[#25D366]/40 bg-[#0B141A]/70 p-2.5 text-xs text-[#E9EDEF]">
+                        <div className="flex items-center gap-1.5 font-bold text-[#25D366]">
+                          <span>✓</span> Horário reservado automaticamente
+                        </div>
+                        <p className="mt-1 text-[11px] text-[#8696A0]">
+                          Salvo na agenda da empresa! Cliente recebe confirmação e lembrete anti-falta.
+                        </p>
+                      </div>
                     )}
+
+                    <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-[#8696A0]">
+                      <span>{horaStatus}</span>
+                      {ehCliente && (
+                        <span className="font-bold text-[#53BDEB]" title="Lido">
+                          ✓✓
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {digitando && (
-              <div className="flex justify-end">
-                <div className="flex items-center gap-1 rounded-2xl rounded-tr-xs bg-[#005C4B] px-3.5 py-2.5 shadow-sm">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#25D366] animate-bounce [animation-delay:-0.3s]" />
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#25D366] animate-bounce [animation-delay:-0.15s]" />
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#25D366] animate-bounce" />
+              <div className="flex items-start">
+                <div className="rounded-2xl rounded-tl-xs bg-[#202C33] px-4 py-3 shadow-md">
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-[#8696A0] animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="h-2 w-2 rounded-full bg-[#8696A0] animate-bounce" style={{ animationDelay: "180ms" }} />
+                    <span className="h-2 w-2 rounded-full bg-[#8696A0] animate-bounce" style={{ animationDelay: "360ms" }} />
+                  </div>
                 </div>
               </div>
             )}
@@ -238,7 +268,7 @@ export function Celular({
                 type="button"
                 disabled={digitando}
                 onClick={() => enviar(s)}
-                className="shrink-0 rounded-full border border-[#00A884]/40 bg-[#111B21] px-3 py-1 text-[11px] font-medium text-[#E9EDEF] shadow-sm transition hover:border-[#00A884] hover:bg-[#005C4B]/30 hover:text-white disabled:opacity-40"
+                className="shrink-0 rounded-full border border-[#00A884]/40 bg-[#111B21] px-3 py-1 text-[11px] font-medium text-[#E9EDEF] shadow-sm transition hover:border-[#00A884] hover:bg-[#005C4B]/40 hover:text-white disabled:opacity-40"
               >
                 {s}
               </button>
@@ -251,9 +281,11 @@ export function Celular({
               e.preventDefault();
               void enviar(entrada);
             }}
-            className="flex items-center gap-2 border-t border-[#2A3942]/40 bg-[#202C33] px-3 py-2.5"
+            className="flex items-center gap-2 border-t border-[#2A3942]/50 bg-[#202C33] px-3 py-2.5"
           >
-            <span className="text-base select-none text-[#8696A0]">😊</span>
+            <span className="text-lg text-[#8696A0] select-none" aria-hidden="true">
+              😀
+            </span>
             <input
               value={entrada}
               onChange={(e) => setEntrada(e.target.value)}

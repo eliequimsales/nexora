@@ -37,6 +37,7 @@ export type Fatos = {
   diasFechados: string[];
   endereco: string;
   pagamento: string;
+  descricao: string;
   perguntas: Faq[];
   linkAgenda: string | null;
 };
@@ -69,6 +70,7 @@ export async function fatosDaEmpresa(companyId: string, sobrescrever: Sobrescrit
             diasFechados: true,
             address: true,
             paymentMethods: true,
+            description: true,
             faqs: true,
           },
         },
@@ -94,6 +96,7 @@ export async function fatosDaEmpresa(companyId: string, sobrescrever: Sobrescrit
     diasFechados: lerDiasFechados(perfil?.diasFechados),
     endereco: (perfil?.address ?? "").trim(),
     pagamento: (perfil?.paymentMethods ?? "").trim(),
+    descricao: (perfil?.description ?? "").trim(),
     perguntas: [...lerPerguntas(perfil?.faqs), ...treinamento],
     linkAgenda: appUrl && (empresa?.slug || companyId) ? `${appUrl}/agendar/${empresa?.slug || companyId}` : null,
   };
@@ -138,6 +141,10 @@ export function textoDosFatos(f: Fatos): string {
     `Endereço: ${f.endereco || "não cadastrado"}.`,
     `Formas de pagamento: ${f.pagamento || "não cadastradas"}.`,
   ];
+
+  if (f.descricao) {
+    linhas.push(`Informações adicionais da empresa (o que ela faz, regras, diferenciais): ${f.descricao}.`);
+  }
 
   if (f.perguntas.length) {
     linhas.push("Perguntas frequentes:");

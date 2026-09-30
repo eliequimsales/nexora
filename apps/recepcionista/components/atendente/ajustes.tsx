@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MINUTOS_SEM_RESPOSTA } from "@/lib/atendente/constantes";
 import { JEITOS, NOME_DO_JEITO, type Jeito } from "@/lib/atendente/jeitos";
 import type { TelaDoAtendente } from "@/lib/atendente/tela";
 import { emReais } from "@/lib/billing/preco";
@@ -15,7 +14,7 @@ import { emReais } from "@/lib/billing/preco";
  * mudou, está salvo — e o celular ao lado já mostra o efeito.
  */
 
-type Ajuste = Partial<{ marcaDireto: boolean; expediente: boolean; endereco: string; pagamento: string }>;
+type Ajuste = Partial<{ marcaDireto: boolean; expediente: boolean; endereco: string; pagamento: string; descricao: string }>;
 
 const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
 
@@ -510,6 +509,81 @@ function ModalServicos({
   );
 }
 
+function SecaoOQueEleDeveSaber({
+  descricao,
+  aoSalvar,
+}: {
+  descricao: string;
+  aoSalvar: (texto: string) => void;
+}) {
+  const [texto, setTexto] = useState(descricao);
+  const [salvo, setSalvo] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    setTexto(descricao);
+  }, [descricao]);
+
+  function handleChange(valor: string) {
+    const limpo = valor.slice(0, 2000);
+    setTexto(limpo);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      aoSalvar(limpo);
+      setSalvo(true);
+      setTimeout(() => setSalvo(false), 2000);
+    }, 800);
+  }
+
+  return (
+    <section className="rounded-2xl border border-panel-line bg-panel-card p-5 space-y-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-sm font-bold text-panel-ink flex items-center gap-1.5">
+            <span className="text-amber">✦</span> Coisas que seu atendente deve saber sobre a empresa
+          </h2>
+          <p className="mt-0.5 text-xs text-panel-sub">
+            Regras de atendimento, estacionamento, marcas utilizadas e diferenciais.
+          </p>
+        </div>
+        {salvo && (
+          <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+            Salvo
+          </span>
+        )}
+      </div>
+
+      {/* BANNER EDUCATIVO / ORIENTAÇÃO */}
+      <div className="rounded-xl border border-amber/30 bg-amber/5 p-3.5 text-xs text-panel-ink">
+        <div className="flex items-center gap-1.5 font-bold text-amber-deep">
+          <span>💡</span> Treine o seu atendente como se fosse um funcionário de verdade
+        </div>
+        <p className="mt-1 leading-relaxed text-panel-sub">
+          O atendente só responde o que você ensinar aqui e nunca inventa nada.
+        </p>
+        <p className="mt-0.5 leading-relaxed text-panel-sub">
+          Quanto mais detalhes você colocar, melhor ele atenderá seus clientes.
+        </p>
+      </div>
+
+      <div className="space-y-1.5">
+        <textarea
+          value={texto}
+          onChange={(e) => handleChange(e.target.value)}
+          maxLength={2000}
+          rows={4}
+          placeholder="Exemplo: Estacionamento grátis na rua lateral. Aceitamos Pix e cartão em 3x. Tolerância de 15 minutos para atrasos."
+          className="w-full rounded-xl border border-panel-line bg-white p-3.5 text-sm text-panel-ink placeholder:text-panel-sub/60 focus:border-amber focus:outline-none focus:ring-1 focus:ring-amber leading-relaxed resize-y"
+        />
+        <div className="flex items-center justify-between text-[11px] text-panel-sub">
+          <span>Salva sozinho enquanto você digita</span>
+          <span>{texto.length}/2000 letras</span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function Ajustes({
   tela,
   nome,
@@ -567,22 +641,12 @@ export function Ajustes({
         <Linha rotulo="Loja fechada" detalhe={tela.foraDoHorario}>
           <span className="text-sm font-semibold text-emerald-700">responde na hora</span>
         </Linha>
-        <Linha rotulo={`Loja aberta, sem resposta em ${MINUTOS_SEM_RESPOSTA} min`}>
-          <Chave
-            rotulo={`Responder com a loja aberta, sem resposta em ${MINUTOS_SEM_RESPOSTA} minutos`}
-            ligada={tela.expediente}
-            aoMudar={(expediente) => aoAjustar({ expediente })}
-          />
-        </Linha>
-        <Linha
-          rotulo="Agendamento no WhatsApp"
-          detalhe="O Atendente sempre envia o link da sua agenda para o cliente escolher o dia e horário."
-        >
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-            ✓ Sempre por link da agenda
-          </span>
-        </Linha>
       </section>
+
+      <SecaoOQueEleDeveSaber
+        descricao={tela.sabe.descricao ?? ""}
+        aoSalvar={(descricao) => aoAjustar({ descricao })}
+      />
 
       <section className="divide-y divide-panel-line rounded-2xl border border-panel-line bg-panel-card">
         <p className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-panel-sub">O que ele sabe</p>

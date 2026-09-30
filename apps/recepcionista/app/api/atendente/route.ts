@@ -59,6 +59,7 @@ export async function PUT(request: Request) {
       ...(a.expediente !== undefined ? { atendenteExpediente: a.expediente } : {}),
       ...(a.endereco !== undefined ? { address: a.endereco } : {}),
       ...(a.pagamento !== undefined ? { paymentMethods: a.pagamento } : {}),
+      ...(a.descricao !== undefined ? { description: a.descricao } : {}),
     };
 
     if (a.fecharHoje !== undefined) {

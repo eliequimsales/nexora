@@ -295,6 +295,14 @@ export function conversaDeExemplo(
   const t = textosDoJeito(jeito);
   const ap = apresentacao({ nome: d.nome, empresa: d.empresa });
   const link = d.linkAgenda || "https://meunexora.com.br/agendar";
+
+  const perguntaAgenda =
+    jeito === "DESCONTRAIDO"
+      ? `Tenho horários disponíveis amanhã às 10:30 e às 15:00 😄\n\nQuer agendar algum desses ou prefere fazer o agendamento você mesmo pela nossa agenda online?\n${link}`
+      : jeito === "DIRETO"
+        ? `Temos horários disponíveis amanhã às 10:30 e às 15:00.\n\nQual horário você prefere, ou prefere fazer o agendamento você mesmo pela nossa agenda online?\n${link}`
+        : `Temos horários disponíveis amanhã às 10:30 e às 15:00 💛\n\nQual horário você prefere, ou prefere fazer o agendamento você mesmo pela nossa agenda online?\n${link}`;
+
   return [
     {
       de: "cliente",
@@ -306,11 +314,11 @@ export function conversaDeExemplo(
     },
     {
       de: "atendente",
-      texto: t.conviteLink({ link, servico: d.servico }),
+      texto: perguntaAgenda,
     },
     {
       de: "cliente",
-      texto: "Perfeito, vou escolher o melhor horário no link!",
+      texto: "Pode ser às 15:00, por favor!",
     },
     {
       de: "atendente",
