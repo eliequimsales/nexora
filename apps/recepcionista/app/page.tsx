@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { DemoAtendente } from "@/components/demo-atendente";
+import { ProvaSocialNotion } from "@/components/prova-social-notion";
 import { CtaLink, TrackViewContent } from "@/components/funil";
 import { RodapeFunil } from "@/components/rodape-funil";
 import { TemaNexora } from "@/components/tema-nexora";
@@ -36,8 +37,8 @@ const PASSOS_ATENDENTE = [
     corpo: "Ele consulta sua grade livre em tempo real e nunca marca dois clientes no mesmo horário nem fura seu almoço.",
   },
   {
-    titulo: "Conecta o WhatsApp via QR Code",
-    corpo: "No seu próprio número de WhatsApp comercial. Você descansa e ele tira dúvidas, informa preços e agenda clientes.",
+    titulo: "Conecta no seu WhatsApp em 30 segundos",
+    corpo: "Direto pelo celular digitando um código seguro (sem precisar de câmera!) ou no computador via QR Code.",
   },
   {
     titulo: "Tira dúvidas com a sua empresa",
@@ -131,13 +132,21 @@ export default function Home({
               >
                 Ver demonstração ao vivo <span aria-hidden="true">↓</span>
               </a>
+              <a
+                href="https://wa.me/5521979435139?text=Oi!%20Quero%20ver%20o%20Atendente%20Virtual%20da%20Nexora%20funcionando%20agora."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-5 py-4 text-base font-semibold text-emerald-400 transition-all hover:bg-emerald-500/20 hover:border-emerald-500/60"
+              >
+                📱 Testar no WhatsApp real <span aria-hidden="true">↗</span>
+              </a>
             </div>
 
             {/* MICRO BADGES DE CONFIANÇA E RAPIDEZ */}
             <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-nx-secondary font-medium">
               <span className="flex items-center gap-1.5 text-nx-gold">
                 <span className="h-1.5 w-1.5 rounded-full bg-nx-gold animate-pulse" />
-                Pronto no seu WhatsApp em 2 minutos
+                Conecte no celular sem câmera
               </span>
               <span className="text-nx-muted">•</span>
               <span className="inline-flex items-center gap-1">
@@ -213,6 +222,9 @@ export default function Home({
             </div>
           </div>
         </section>
+
+        {/* PROVA SOCIAL ESTILO NOTION */}
+        <ProvaSocialNotion />
 
         {/* O QUE A NEXORA NÃO É */}
         <section id="nao-e" className="scroll-mt-20 border-t border-nx-border/80 px-6 py-24">
@@ -298,10 +310,18 @@ export default function Home({
       <RodapeFunil />
 
       {/* No celular o botão nunca sai da tela */}
-      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-nx-border bg-nx-bg/95 p-3 backdrop-blur-md sm:hidden">
-        <CtaLink href="/cadastro" ctaName="mobile_sticky_atendente" className={`${BOTAO_DOURADO} w-full px-5 py-3.5`}>
-          Ativar meu Atendente 24h grátis <span aria-hidden="true">→</span>
+      <div className="fixed inset-x-0 bottom-0 z-50 flex items-center gap-2 border-t border-nx-border bg-nx-bg/95 p-3 backdrop-blur-md sm:hidden">
+        <CtaLink href="/cadastro" ctaName="mobile_sticky_atendente" className={`${BOTAO_DOURADO} flex-1 px-4 py-3 text-xs font-bold`}>
+          Ativar 24h grátis →
         </CtaLink>
+        <a
+          href="https://wa.me/5521979435139?text=Oi!%20Quero%20ver%20o%20Atendente%20Virtual%20da%20Nexora%20funcionando%20agora."
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-nx-border-2 bg-nx-surface px-3 py-3 text-xs font-semibold text-nx-primary shrink-0"
+        >
+          💬 WhatsApp
+        </a>
       </div>
     </TemaNexora>
   );

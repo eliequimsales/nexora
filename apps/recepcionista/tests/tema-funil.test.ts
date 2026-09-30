@@ -70,6 +70,7 @@ const HOME = [
   // A demonstração do Atendente Virtual no hero (22/09/2026).
   "components/demo-atendente.tsx",
   "components/whatsapp-demo-card.tsx",
+  "components/prova-social-notion.tsx",
 ];
 const ACESSO = [
   "app/cadastro/page.tsx",

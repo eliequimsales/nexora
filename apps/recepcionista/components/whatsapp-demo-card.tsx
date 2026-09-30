@@ -30,10 +30,19 @@ export function WhatsAppDemoCard({ className = "", origem = "hero" }: WhatsAppDe
           <Link
             href="/#simulador"
             data-origem={origem}
-            className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-nx-gold px-5 py-3 text-xs sm:text-sm font-bold text-nx-bg shadow-nx-glow-sm transition-all hover:bg-nx-gold/90 hover:scale-[1.02] active:scale-[0.98]"
+            className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-nx-gold px-4 py-2.5 text-xs sm:text-sm font-bold text-nx-bg shadow-nx-glow-sm transition-all hover:bg-nx-gold/90 hover:scale-[1.02] active:scale-[0.98]"
           >
             💬 Testar no Simulador ao Vivo ↓
           </Link>
+          <a
+            href="https://wa.me/5521979435139?text=Oi!%20Quero%20ver%20o%20Atendente%20Virtual%20da%20Nexora%20funcionando%20agora."
+            target="_blank"
+            rel="noopener noreferrer"
+            data-origem={origem}
+            className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl border border-nx-border bg-nx-surface px-4 py-2.5 text-xs sm:text-sm font-semibold text-nx-primary transition-all hover:border-nx-gold/40 hover:bg-nx-surface-2"
+          >
+            📱 Abrir no meu WhatsApp ↗
+          </a>
         </div>
       </div>
 
