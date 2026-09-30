@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   idDoEnvio,
+  isPairingCode,
   parseConnectionUpdate,
   parseMensagemDoDono,
   parseQrUpdate,
@@ -215,5 +216,41 @@ describe("parseMensagemDoDono", () => {
 
   it("o leitor das mensagens do cliente continua ignorando as do dono", () => {
     expect(parseWebhookPayload(doDono())).toBeNull();
+  });
+});
+
+describe("isPairingCode", () => {
+  it("aceita código de pareamento padrão de 8 caracteres alfanuméricos", () => {
+    expect(isPairingCode("ABC123XY")).toBe(true);
+    expect(isPairingCode("7H8K9P2M")).toBe(true);
+  });
+
+  it("aceita código com traço intermediário", () => {
+    expect(isPairingCode("ABCD-1234")).toBe(true);
+  });
+
+  it("rejeita a string interna de QR Code bruto da Baileys/Evolution", () => {
+    const rawQr =
+      "2@j3y17BsNhLer3ENp3cPgY9amZsrZe/rbe2f6eC4jKpAc1mqmj7I3lHyv04D1Hw3JjHkcVwsWrNTIqpCU9Z1mdAcJ47NM9QpEBo=,tr+1ub5JaF6qsbbdyUo0jmm/pqlePV057Xw=";
+    expect(isPairingCode(rawQr)).toBe(false);
+  });
+
+  it("rejeita strings com arroba, vírgula, barra ou mais", () => {
+    expect(isPairingCode("2@j3y17B")).toBe(false);
+    expect(isPairingCode("ABC/1234")).toBe(false);
+    expect(isPairingCode("ABC+1234")).toBe(false);
+  });
+
+  it("rejeita códigos com comprimento fora da faixa válida (6 a 12 caracteres)", () => {
+    expect(isPairingCode("12345")).toBe(false); // curto demais
+    expect(isPairingCode("1234567890123")).toBe(false); // longo demais (13)
+  });
+
+  it("rejeita valores nulos, vazios ou de outros tipos", () => {
+    expect(isPairingCode(null)).toBe(false);
+    expect(isPairingCode(undefined)).toBe(false);
+    expect(isPairingCode("")).toBe(false);
+    expect(isPairingCode(12345678)).toBe(false);
+    expect(isPairingCode({})).toBe(false);
   });
 });

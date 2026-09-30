@@ -70,6 +70,20 @@ export function ModalConectarWhatsApp({
     }
   }, [pairingCode]);
 
+  const ehPairingCodeValido = (code: unknown): code is string => {
+    if (typeof code !== "string") return false;
+    const s = code.trim();
+    return (
+      s.length >= 6 &&
+      s.length <= 12 &&
+      !s.includes("@") &&
+      !s.includes(",") &&
+      !s.includes("/") &&
+      !s.includes("+") &&
+      /^[A-Za-z0-9-]+$/.test(s)
+    );
+  };
+
   const iniciarConexao = useCallback(async (phoneParam?: string) => {
     setCarregando(true);
     setErro("");
@@ -90,8 +104,13 @@ export function ModalConectarWhatsApp({
         setStatus("CONECTADO");
         aoConectarAgora.current?.();
       } else {
-        if (data.state?.pairingCode) {
+        if (ehPairingCodeValido(data.state?.pairingCode)) {
           setPairingCode(data.state.pairingCode);
+        } else {
+          setPairingCode(null);
+          if (data.state?.qrCode) {
+            setAba("QR");
+          }
         }
         if (data.state?.qrCode) {
           setQrCode(data.state.qrCode);
@@ -320,11 +339,11 @@ export function ModalConectarWhatsApp({
                   </div>
 
                   {/* CÓDIGO EM DESTAQUE */}
-                  <div className="rounded-2xl border border-amber/40 bg-amber/5 p-4 shadow-sm">
+                  <div className="rounded-2xl border border-amber/40 bg-amber/5 p-4 shadow-sm overflow-hidden max-w-full">
                     <span className="text-[11px] font-semibold text-amber uppercase tracking-wider block">
                       Seu código de conexão
                     </span>
-                    <div className="mt-1 font-mono text-3xl font-black text-panel-ink tracking-widest sm:text-4xl">
+                    <div className="mt-1 font-mono text-3xl font-black text-panel-ink tracking-widest sm:text-4xl break-all select-all">
                       {pairingCode}
                     </div>
                   </div>
@@ -350,6 +369,17 @@ export function ModalConectarWhatsApp({
                       className="text-xs text-panel-sub hover:text-panel-ink underline"
                     >
                       Trocar número ou gerar novo código
+                    </button>
+                    <span className="text-panel-sub/40 text-xs">•</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPairingCode(null);
+                        setAba("QR");
+                      }}
+                      className="text-xs text-panel-sub hover:text-panel-ink underline"
+                    >
+                      Prefiro escanear QR Code
                     </button>
                   </div>
                 </div>

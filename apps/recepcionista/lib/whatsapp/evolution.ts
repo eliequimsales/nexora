@@ -216,6 +216,19 @@ export async function getConnectionState(instance: string): Promise<string | nul
 }
 
 /**
+ * Valida se uma string é realmente um código de pareamento do WhatsApp (6 a 12 caracteres alfanuméricos).
+ * Impede que a string interna de QR Code bruto da Baileys/Evolution ("2@...", com mais de 100 caracteres)
+ * vaze como pairingCode.
+ */
+export function isPairingCode(code: unknown): code is string {
+  if (typeof code !== "string") return false;
+  const limpo = code.trim();
+  if (limpo.length < 6 || limpo.length > 12) return false;
+  if (limpo.includes("@") || limpo.includes(",") || limpo.includes("/") || limpo.includes("+")) return false;
+  return /^[A-Za-z0-9-]+$/.test(limpo);
+}
+
+/**
  * Inicia a conexão e retorna o QR Code (data URL base64) ou o Código de Pareamento (pairingCode).
  * Se o número já estiver conectado, retorna state "open" sem QR.
  */
@@ -224,10 +237,19 @@ export async function connectInstance(
   phone?: string,
 ): Promise<{ qrCode: string | null; pairingCode: string | null; state: string | null }> {
   const cleanPhone = phone ? phone.replace(/\D/g, "") : null;
-  const url = cleanPhone
-    ? `/instance/connect/${encodeURIComponent(instance)}?number=${encodeURIComponent(
-        cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`,
-      )}`
+  let fullPhone: string | null = null;
+  if (cleanPhone) {
+    if (cleanPhone.length === 10 || cleanPhone.length === 11) {
+      fullPhone = `55${cleanPhone}`;
+    } else if (cleanPhone.length >= 12 && cleanPhone.startsWith("55")) {
+      fullPhone = cleanPhone;
+    } else {
+      fullPhone = cleanPhone;
+    }
+  }
+
+  const url = fullPhone
+    ? `/instance/connect/${encodeURIComponent(instance)}?number=${encodeURIComponent(fullPhone)}`
     : `/instance/connect/${encodeURIComponent(instance)}`;
 
   const data = (await evoFetch(url)) as {
@@ -239,7 +261,13 @@ export async function connectInstance(
   };
 
   const qrCode = data.base64 ?? data.qrcode?.base64 ?? null;
-  const pairingCode = data.pairingCode ?? data.code ?? null;
+  const rawPairing = isPairingCode(data.pairingCode)
+    ? data.pairingCode
+    : isPairingCode(data.code)
+    ? data.code
+    : null;
+  const pairingCode = rawPairing ? rawPairing.replace(/[^A-Za-z0-9-]/g, "").toUpperCase() : null;
+
   return { qrCode, pairingCode, state: data.instance?.state ?? null };
 }
 
