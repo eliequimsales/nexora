@@ -37,10 +37,23 @@ interface Report {
 const inputClass =
   "w-full rounded-xl border border-panel-line bg-white px-3 py-2.5 text-sm text-panel-ink outline-none focus:border-amber focus:ring-1 focus:ring-amber shadow-xs";
 
-function Card({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+function Card({
+  title,
+  hint,
+  badge,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  badge?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <section className="rounded-2xl border border-panel-line bg-panel-card p-6 shadow-xs">
-      <h2 className="font-display text-lg font-semibold text-panel-ink">{title}</h2>
+      <div className="flex items-center gap-2.5">
+        <h2 className="font-display text-lg font-semibold text-panel-ink">{title}</h2>
+        {badge}
+      </div>
       {hint && <p className="mt-1 text-sm text-panel-sub">{hint}</p>}
       <div className="mt-4 space-y-4">{children}</div>
     </section>
@@ -95,7 +108,7 @@ export default function TreinamentoPage() {
     return <p className="p-8 text-center text-sm text-panel-sub">Abrindo a central de ensino...</p>;
   }
 
-  const { stats, topGaps, approvedItems = [], pendingItems, observations, inconsistencies, interview, score, diary } = report;
+  const { topGaps, approvedItems = [], pendingItems, observations, inconsistencies, interview, diary } = report;
 
   async function beginInterview() {
     if (!interview) return;
@@ -132,16 +145,28 @@ export default function TreinamentoPage() {
       {/* Cabeçalho */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold text-panel-ink">Ensinar Atendente</h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="font-display text-2xl font-bold text-panel-ink">Ensinar Atendente</h1>
+            {topGaps.length > 0 && (
+              <span
+                className="flex h-6 min-w-[24px] items-center justify-center rounded-full bg-amber px-1.5 text-xs font-black text-night shadow-xs animate-pulse"
+                title={`${topGaps.length} ${topGaps.length === 1 ? "dúvida para ensinar" : "dúvidas para ensinar"}`}
+              >
+                {topGaps.length}
+              </span>
+            )}
+          </div>
           <p className="mt-1 text-sm text-panel-sub">
             Perguntas feitas no WhatsApp e no simulador que ele ainda não sabia responder.
           </p>
         </div>
         {topGaps.length > 0 ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber/40 bg-amber/15 px-3 py-1.5 text-xs font-bold text-amber-deep">
-            <span className="h-2 w-2 rounded-full bg-amber animate-pulse" aria-hidden="true" />
-            🔔 {topGaps.length} {topGaps.length === 1 ? "dúvida para ensinar" : "dúvidas para ensinar"}
-          </span>
+          <div className="inline-flex items-center gap-2 rounded-full border border-amber/40 bg-amber/15 px-3.5 py-1.5 text-xs font-bold text-amber-deep shadow-xs">
+            <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber px-1 text-[11px] font-black text-night shadow-xs">
+              {topGaps.length}
+            </span>
+            <span>{topGaps.length === 1 ? "dúvida para ensinar" : "dúvidas para ensinar"}</span>
+          </div>
         ) : (
           <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800">
             <span>✓</span> Em dia
@@ -172,6 +197,16 @@ export default function TreinamentoPage() {
       {/* Dúvidas para ensinar agora */}
       <Card
         title="Dúvidas que o atendente quer aprender"
+        badge={
+          topGaps.length > 0 ? (
+            <span
+              className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber px-1 text-[11px] font-black text-night shadow-xs"
+              title={`${topGaps.length} ${topGaps.length === 1 ? "dúvida pendente" : "dúvidas pendentes"}`}
+            >
+              {topGaps.length}
+            </span>
+          ) : undefined
+        }
         hint={
           topGaps.length > 0
             ? "Perguntas de clientes em aberto. Escreva como você gostaria que ele respondesse."
@@ -364,30 +399,6 @@ export default function TreinamentoPage() {
         </Card>
       )}
 
-      {/* Conhecimento do Atendente */}
-      <Card title="Preparo do Atendente" hint="Mostra o quanto ele está pronto para responder sobre seu negócio.">
-        <div className="flex items-center gap-3">
-          <span className="font-mono text-3xl font-bold text-amber-deep">{score.overall}%</span>
-          {score.openGaps > 0 ? (
-            <span className="text-sm text-panel-sub">
-              {score.openGaps} dúvida{score.openGaps === 1 ? "" : "s"} em aberto para ensinar
-            </span>
-          ) : (
-            <span className="text-sm text-emerald-700 font-semibold">Tudo em dia!</span>
-          )}
-        </div>
-        <div className="grid gap-2 sm:grid-cols-2 pt-2">
-          {score.areas.map((area) => (
-            <div key={area.label} className="flex items-center gap-3">
-              <span className="w-40 shrink-0 text-xs text-panel-sub">{area.label}</span>
-              <div className="h-2 flex-1 overflow-hidden rounded-full bg-panel-bg border border-panel-line">
-                <div className="h-full rounded-full bg-amber" style={{ width: `${area.pct}%` }} />
-              </div>
-              <span className="w-9 text-right font-mono text-xs text-panel-sub">{area.pct}%</span>
-            </div>
-          ))}
-        </div>
-      </Card>
 
       {/* Diário */}
       <Card title="Diário do Atendente">
