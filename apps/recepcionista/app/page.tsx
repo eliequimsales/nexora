@@ -132,32 +132,6 @@ export default function Home({
               >
                 Ver demonstração ao vivo <span aria-hidden="true">↓</span>
               </a>
-              <a
-                href="https://wa.me/5521979435139?text=Oi!%20Quero%20ver%20o%20Atendente%20Virtual%20da%20Nexora%20funcionando%20agora."
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-5 py-4 text-base font-semibold text-emerald-400 transition-all hover:bg-emerald-500/20 hover:border-emerald-500/60"
-              >
-                📱 Testar no WhatsApp real <span aria-hidden="true">↗</span>
-              </a>
-            </div>
-
-            {/* MICRO BADGES DE CONFIANÇA E RAPIDEZ */}
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-nx-secondary font-medium">
-              <span className="flex items-center gap-1.5 text-nx-gold">
-                <span className="h-1.5 w-1.5 rounded-full bg-nx-gold animate-pulse" />
-                Conecte no celular sem câmera
-              </span>
-              <span className="text-nx-muted">•</span>
-              <span className="inline-flex items-center gap-1">
-                <span aria-hidden="true" className="text-nx-success font-bold">✓</span>
-                Primeira semana por nossa conta
-              </span>
-              <span className="text-nx-muted">•</span>
-              <span className="inline-flex items-center gap-1">
-                <span aria-hidden="true" className="text-nx-success font-bold">✓</span>
-                não pedimos cartão para começar
-              </span>
             </div>
 
             {/* SIMULADOR INTERATIVO NO WHATSAPP */}
@@ -167,6 +141,9 @@ export default function Home({
             </div>
           </div>
         </section>
+
+        {/* PROVA SOCIAL ESTILO NOTION — LOGO ABAIXO DA TELA DO WHATSAPP */}
+        <ProvaSocialNotion />
 
         {/* DIFERENCIAIS DO ATENDENTE VIRTUAL */}
         <section className="scroll-mt-20 border-t border-nx-border/80 bg-nx-surface-2/20 px-6 py-20">
@@ -222,9 +199,6 @@ export default function Home({
             </div>
           </div>
         </section>
-
-        {/* PROVA SOCIAL ESTILO NOTION */}
-        <ProvaSocialNotion />
 
         {/* O QUE A NEXORA NÃO É */}
         <section id="nao-e" className="scroll-mt-20 border-t border-nx-border/80 px-6 py-24">
@@ -293,7 +267,7 @@ export default function Home({
               Nunca mais perca clientes fora do horário.
             </h2>
             <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-nx-secondary sm:text-lg">
-              Crie sua conta em 15 segundos, sem cartão de crédito. Teste o Atendente 24h por {SEMANA_GRATIS_DIAS} dias ou até {SEMANA_GRATIS_CONVERSAS} conversas com as regras da sua empresa. Você só continua se gostar do resultado.
+              Crie sua conta em 15 segundos: não pedimos cartão para começar. A Primeira semana por nossa conta permite testar o Atendente 24h por {SEMANA_GRATIS_DIAS} dias ou até {SEMANA_GRATIS_CONVERSAS} conversas com as regras da sua empresa. Você só continua se gostar do resultado.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-4">
               <CtaLink href="/cadastro" ctaName="final" className={`${BOTAO_DOURADO} px-8 py-4 text-base sm:text-lg shadow-nx-glow-sm hover:scale-[1.02]`}>
@@ -314,14 +288,6 @@ export default function Home({
         <CtaLink href="/cadastro" ctaName="mobile_sticky_atendente" className={`${BOTAO_DOURADO} flex-1 px-4 py-3 text-xs font-bold`}>
           Ativar 24h grátis →
         </CtaLink>
-        <a
-          href="https://wa.me/5521979435139?text=Oi!%20Quero%20ver%20o%20Atendente%20Virtual%20da%20Nexora%20funcionando%20agora."
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-nx-border-2 bg-nx-surface px-3 py-3 text-xs font-semibold text-nx-primary shrink-0"
-        >
-          💬 WhatsApp
-        </a>
       </div>
     </TemaNexora>
   );
