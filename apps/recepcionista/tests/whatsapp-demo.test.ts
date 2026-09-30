@@ -59,7 +59,7 @@ describe("Canal de Demonstração no WhatsApp", () => {
     const demo = semQuebras(leia("components/demo-atendente.tsx"));
     expect(demo).toContain("Simulação interativa");
     expect(demo).toContain("/api/demo/chat");
-    expect(demo).toContain("Começar teste grátis");
+    expect(demo).toContain("Quero esse Atendente no meu WhatsApp");
   });
 
   it("a nova página de clínica (/clinica) existe e está pronta para anúncios nichados", () => {

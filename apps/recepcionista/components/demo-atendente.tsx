@@ -693,7 +693,7 @@ export function DemoAtendente({
           href="/cadastro"
           className="mt-3.5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-nx-gold px-5 py-3 text-sm font-bold text-nx-bg shadow-nx-glow-sm transition-all hover:bg-nx-gold/90 hover:scale-[1.01] active:scale-[0.98]"
         >
-          ✦ Começar teste grátis (Sem cartão) →
+          ✦ Quero esse Atendente no meu WhatsApp agora →
         </Link>
       </div>
 
