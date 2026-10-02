@@ -29,9 +29,63 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Nexora — recuperação de clientes inativos",
+  metadataBase: new URL("https://www.meunexora.com.br"),
+  title: "Nexora — Atendente Inteligente 24h no WhatsApp com IA",
   description:
-    "A Nexora descobre quais clientes pararam de voltar e te entrega a mensagem pronta para trazer cada um. Diagnóstico grátis, sem cartão.",
+    "O Atendente Inteligente que aprende com a sua empresa e atende no WhatsApp quando você não pode. Nunca mais perca um cliente fora do horário ou de madrugada. Primeira semana por nossa conta, sem cartão.",
+  keywords: [
+    "atendente virtual whatsapp",
+    "ia para whatsapp",
+    "inteligencia artificial whatsapp",
+    "agendamento automatico whatsapp",
+    "atendimento 24h whatsapp",
+    "chatbot humanizado sem menu",
+    "ia para clinicas",
+    "ia para barbearias e saloes",
+    "nexora",
+    "nexora atendente",
+  ],
+  authors: [{ name: "Nexora Tecnologia" }],
+  creator: "Nexora",
+  publisher: "Nexora",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    url: "https://www.meunexora.com.br",
+    siteName: "Nexora",
+    title: "Nexora — Atendente Inteligente 24h no WhatsApp com IA",
+    description:
+      "O Atendente Inteligente que aprende com a sua empresa e atende no WhatsApp quando você não pode. Primeira semana por nossa conta, sem cartão.",
+    images: [
+      {
+        url: "/icons/icon-512.png",
+        width: 512,
+        height: 512,
+        alt: "Nexora Atendente Inteligente 24h",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Nexora — Atendente Inteligente 24h no WhatsApp com IA",
+    description:
+      "Atendimento 24 horas no WhatsApp sem perder clientes. Primeira semana por nossa conta, sem cartão.",
+    images: ["/icons/icon-512.png"],
+  },
+  alternates: {
+    canonical: "https://www.meunexora.com.br",
+  },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
