@@ -86,6 +86,9 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://www.meunexora.com.br",
   },
+  verification: {
+    google: "MUTwc9lOAMqNPO3mfpK-JcmhXgnPYGuSpG98RdJnoog",
+  },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
