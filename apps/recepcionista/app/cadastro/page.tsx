@@ -13,7 +13,7 @@ import { registrar } from "@/components/funil";
 
 export default function CadastroPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -110,6 +110,26 @@ export default function CadastroPage() {
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 className="w-full rounded-lg border border-nx-border bg-nx-surface-2 px-3 py-2.5 placeholder:text-nx-muted text-sm text-nx-primary outline-none focus:border-nx-gold/60 focus:ring-2 focus:ring-nx-gold/15"
               />
+            </div>
+
+            <div>
+              <label htmlFor="company-phone" className="mb-1 block text-xs font-semibold text-nx-primary">
+                Seu WhatsApp comercial (com DDD) <span className="text-nx-gold">*</span>
+              </label>
+              <input
+                id="company-phone"
+                type="tel"
+                required
+                autoComplete="tel"
+                placeholder="(11) 99999-9999"
+                value={form.phone}
+                onFocus={aoFocarCampo}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                className="w-full rounded-lg border border-nx-border bg-nx-surface-2 px-3 py-2.5 placeholder:text-nx-muted text-sm text-nx-primary outline-none focus:border-nx-gold/60 focus:ring-2 focus:ring-nx-gold/15"
+              />
+              <p className="mt-1 text-[11px] text-nx-secondary">
+                Onde você vai ativar o seu atendente e receber o suporte direto.
+              </p>
             </div>
 
             <div>
