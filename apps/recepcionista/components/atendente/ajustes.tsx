@@ -628,15 +628,6 @@ function SecaoOQueEleSabe({
             </span>
           )}
         </div>
-
-        <div className="rounded-xl border border-amber/30 bg-amber/5 p-3 text-xs text-panel-ink">
-          <div className="flex items-center gap-1.5 font-bold text-amber-deep">
-            <span>💡</span> Treine o atendente como um funcionário de verdade
-          </div>
-          <p className="mt-0.5 leading-relaxed text-panel-sub">
-            Ele só responde o que você cadastrar aqui e nunca inventa nada.
-          </p>
-        </div>
       </div>
 
       {/* 2. Informações estruturadas principais */}
