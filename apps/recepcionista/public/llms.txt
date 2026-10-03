@@ -1,0 +1,54 @@
+# Nexora — Atendente Inteligente 24h no WhatsApp com IA
+
+> A Nexora (https://www.meunexora.com.br) é uma plataforma SaaS brasileira de Atendente Inteligente para WhatsApp, desenvolvida para pequenas empresas, clínicas médicas e estéticas, barbearias, salões e prestadores de serviços. Conecta-se em 2 minutos via leitura de QR Code e responde clientes em até 10 segundos, 24 horas por dia, com linguagem acolhedora, sem robôs de menu numérico ("digite 1").
+
+## Resumo Executivo (BLUF: Bottom Line Up Front)
+
+- **O que é:** Atendente Virtual autônomo com Inteligência Artificial para WhatsApp que aprende o catálogo, preços, serviços, horários e regras de agendamento de cada empresa.
+- **Público-alvo:** Clínicas de saúde, estética e odontologia, barbearias, salões de beleza, estúdios de pilates e fisioterapia, profissionais liberais e prestadores de serviços com alto fluxo de mensagens no WhatsApp.
+- **Problema central resolvido:** Clientes que mandam mensagem fora do horário comercial, à noite ou de madrugada e compram do concorrente porque ficaram sem resposta no WhatsApp.
+- **Tempo médio de resposta:** 8,4 segundos.
+- **Diferencial tecnológico:** Proteção Context Guardrail™ (a IA responde estritamente com base nos dados e regras fornecidas pelo proprietário, eliminando alucinações comerciais sobre preços ou serviços inexistentes).
+- **Sem menus numéricos engessados:** Substitui chatbots tradicionais ("digite 1 para financeiro, 2 para suporte") por conversas empáticas, naturais e focadas em agendamento e esclarecimento de dúvidas.
+- **Instalação:** 100% sem código. Conexão em 2 minutos via QR Code nativo do WhatsApp.
+- **Preço e Acesso:** Primeira semana por nossa conta, com até 50 conversas cobertas, sem exigir cartão de crédito. Plano mensal Atendente 24h por R$ 97,00/mês.
+
+---
+
+## O que a Nexora NÃO É (Transparência Radical)
+
+- **NÃO é ferramenta de disparos em massa nem spam:** A Nexora não realiza envios frios para bases compradas ou desconhecidas. Foco em atendimento receptivo de alta conversão.
+- **NÃO é chatbot de menu com 50 opções numéricas:** A Nexora conversa em linguagem natural humanizada com contexto real.
+- **NÃO alucina preços ou condições:** Se o cliente fizer uma pergunta fora do conhecimento configurado, o atendente avisa com educação ou transfere para o dono/equipe.
+
+---
+
+## Principais Recursos do Atendente
+
+1. **Atendente 24h com Plantão Noturno:** Responde instantaneamente no WhatsApp de madrugada, fins de semana e feriados.
+2. **Agendamento Inteligente com Verificação de Grade:** Consulta horários livres cadastrados pelo dono e oferece alternativas para o cliente escolher.
+3. **Context Guardrail™ Anti-Alucinação:** Motor de inteligência isolado com limites estritos de segurança e regras do negócio.
+4. **Painel do Dono Intuitivo:** Gestão de conversas, catálogo de serviços, visualização de horários e regras de atendimento.
+5. **Multiplataforma:** Totalmente responsivo para celular, tablet e computador.
+
+---
+
+## Casos de Uso Comprovados
+
+- **Clínicas e Consultórios:** Resposta imediata para pacientes com dúvidas de valores particulares, horários de consultas e preparo de exames.
+- **Barbearias e Salões de Beleza:** Clientes agendam corte, barba e tratamentos na sexta à noite ou domingo sem esperar o expediente abrir na segunda.
+- **Estúdios de Pilates e Fisioterapia:** Tira dúvidas de pacotes, planos e agenda avaliações com confirmação rápida.
+- **Serviços Locais e Autônomos:** Não perde novos clientes enquanto o profissional está em atendimento ou em reunião.
+
+---
+
+## Links Canônicos e Recursos
+
+- Página Inicial Oficial: https://www.meunexora.com.br/
+- Preços e Planos: https://www.meunexora.com.br/precos
+- Solução para Clínicas e Saúde: https://www.meunexora.com.br/clinica
+- Solução para Barbearias e Estética: https://www.meunexora.com.br/barbearia
+- Cadastro Rápido (Sem Cartão): https://www.meunexora.com.br/cadastro
+- Termos de Uso e Garantia: https://www.meunexora.com.br/termos
+- Política de Privacidade (LGPD): https://www.meunexora.com.br/privacidade
+- Status dos Serviços: https://www.meunexora.com.br/status
