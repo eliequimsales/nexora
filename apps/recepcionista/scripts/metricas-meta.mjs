@@ -148,7 +148,14 @@ async function main() {
     ...extrairMetricas(ad),
   }));
 
-  console.log("📊 [1] DESEMPENHO DE HOJE (01/10/2026):");
+  const dataHojeStr = resHoje?.data?.[0]?.date_start
+    ? resHoje.data[0].date_start.split("-").reverse().join("/")
+    : "Hoje";
+  const dataOntemStr = resOntem?.data?.[0]?.date_start
+    ? resOntem.data[0].date_start.split("-").reverse().join("/")
+    : "Ontem";
+
+  console.log(`📊 [1] DESEMPENHO DE HOJE (${dataHojeStr}):`);
   if (hoje) {
     console.log(`• Gasto: R$ ${hoje.spend.toFixed(2)}`);
     console.log(`• Impressões: ${hoje.impressions} | Alcance: ${hoje.reach} pessoas`);
@@ -174,7 +181,7 @@ async function main() {
   }
 
   console.log("\n----------------------------------------------------------------------");
-  console.log("📅 [3] COMPARATIVO COM ONTEM (30/09/2026):");
+  console.log(`📅 [3] COMPARATIVO COM ONTEM (${dataOntemStr}):`);
   if (ontem) {
     console.log(`• Gasto ontem: R$ ${ontem.spend.toFixed(2)}`);
     console.log(`• Cliques: ${ontem.clicks} (CTR: ${ontem.ctr.toFixed(2)}% | CPC: R$ ${ontem.cpc.toFixed(2)})`);

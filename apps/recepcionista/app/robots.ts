@@ -26,6 +26,7 @@ export default function robots(): MetadataRoute.Robots {
       // Agentes de Busca Generativa (GEO)
       {
         userAgent: [
+          "ChatGPT-User",
           "GPTBot",
           "OAI-SearchBot",
           "PerplexityBot",
@@ -36,6 +37,8 @@ export default function robots(): MetadataRoute.Robots {
           "Applebot-Extended",
           "Meta-ExternalAgent",
           "cohere-ai",
+          "Bytespider",
+          "Diffbot",
         ],
         allow: "/",
         disallow: ["/painel/", "/api/", "/admin/"],
