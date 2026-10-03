@@ -1,13 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("next/headers", () => ({
-  headers: vi.fn().mockReturnValue(new Headers({ "x-forwarded-for": "127.0.0.1" })),
-  cookies: vi.fn().mockReturnValue({
-    get: vi.fn(),
-    set: vi.fn(),
-  }),
-}));
-
 vi.mock("next/navigation", () => ({
   redirect: vi.fn().mockImplementation((url: string) => {
     const error = new Error(`NEXT_REDIRECT:${url}`);
@@ -62,6 +54,7 @@ import { getSessionCompanyId, createSessionToken, setSessionCookie } from "@/lib
 import { rateLimit } from "@/lib/rate-limit";
 import { redirect } from "next/navigation";
 import ComecarPage from "@/app/comecar/page";
+import { GET as comecarRouteGET } from "@/app/api/auth/comecar/route";
 import { POST as salvarContaPOST } from "@/app/api/auth/salvar-conta/route";
 
 type Fn = ReturnType<typeof vi.fn>;
@@ -73,7 +66,14 @@ const db = prisma as unknown as {
   };
 };
 
-describe("Entrada Instantânea (/comecar) — Sem atrito e com isolamento estrito", () => {
+describe("Página /comecar", () => {
+  it("redireciona para o Route Handler /api/auth/comecar", () => {
+    expect(() => ComecarPage()).toThrow("NEXT_REDIRECT:/api/auth/comecar");
+    expect(redirect).toHaveBeenCalledWith("/api/auth/comecar");
+  });
+});
+
+describe("Entrada Instantânea (/api/auth/comecar) — Sem atrito e com isolamento estrito", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (getSessionCompanyId as Fn).mockResolvedValue(null);
@@ -86,7 +86,8 @@ describe("Entrada Instantânea (/comecar) — Sem atrito e com isolamento estrit
   });
 
   it("visitante sem sessão ativa recebe nova empresa isolada e cookie de sessão", async () => {
-    await expect(ComecarPage()).rejects.toThrow("NEXT_REDIRECT:/painel/atendente?origem=instantaneo");
+    const req = new Request("https://www.meunexora.com.br/api/auth/comecar");
+    const res = await comecarRouteGET(req);
 
     expect(db.company.create).toHaveBeenCalledTimes(1);
     const dadosCriacao = db.company.create.mock.calls[0][0].data;
@@ -104,26 +105,31 @@ describe("Entrada Instantânea (/comecar) — Sem atrito e com isolamento estrit
     // Garante geração de token JWT assinado
     expect(createSessionToken).toHaveBeenCalledWith("comp_convidado_123", 0);
     expect(setSessionCookie).toHaveBeenCalledWith("mock_jwt_token");
-    expect(redirect).toHaveBeenCalledWith("/painel/atendente?origem=instantaneo");
+
+    // Redireciona para o painel com indicação de origem
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe("https://www.meunexora.com.br/painel/atendente?origem=instantaneo");
   });
 
   it("visitante com sessão ativa NÃO recria empresa e vai direto ao painel", async () => {
     (getSessionCompanyId as Fn).mockResolvedValue("empresa_ja_logada_999");
 
-    await expect(ComecarPage()).rejects.toThrow("NEXT_REDIRECT:/painel/atendente");
+    const req = new Request("https://www.meunexora.com.br/api/auth/comecar");
+    const res = await comecarRouteGET(req);
 
     // Nenhuma empresa criada no banco
     expect(db.company.create).not.toHaveBeenCalled();
-    expect(redirect).toHaveBeenCalledWith("/painel/atendente");
+    expect(res.headers.get("location")).toBe("https://www.meunexora.com.br/painel/atendente");
   });
 
   it("aplica rate limit contra flood de criação de contas anônimas", async () => {
     (rateLimit as Fn).mockReturnValue(false);
 
-    await expect(ComecarPage()).rejects.toThrow("NEXT_REDIRECT:/cadastro?erro=limite");
+    const req = new Request("https://www.meunexora.com.br/api/auth/comecar");
+    const res = await comecarRouteGET(req);
 
     expect(db.company.create).not.toHaveBeenCalled();
-    expect(redirect).toHaveBeenCalledWith("/cadastro?erro=limite");
+    expect(res.headers.get("location")).toBe("https://www.meunexora.com.br/cadastro?erro=limite");
   });
 });
 

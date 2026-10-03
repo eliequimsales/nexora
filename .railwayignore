@@ -1,0 +1,6 @@
+node_modules
+.git
+.next
+apps/motion-ad
+scripts/disparo
+*.log
