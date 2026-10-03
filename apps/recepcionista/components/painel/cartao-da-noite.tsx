@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { GatilhoDaNoite } from "@/lib/plantao/noite";
+import { ModalConectarWhatsApp } from "@/components/painel/modal-conectar-whatsapp";
 
 const CHAVE_DISPENSADO = "nexora:aviso-noite-dispensado";
 
@@ -18,6 +19,7 @@ export function CartaoDaNoite({ inicial }: { inicial?: GatilhoDaNoite | null }) 
   const [dados, setDados] = useState<GatilhoDaNoite | null>(inicial ?? null);
   const [carregando, setCarregando] = useState(!inicial);
   const [dispensado, setDispensado] = useState(false);
+  const [conectando, setConectando] = useState(false);
 
   useEffect(() => {
     try {
@@ -101,19 +103,33 @@ export function CartaoDaNoite({ inicial }: { inicial?: GatilhoDaNoite | null }) 
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2.5">
-          <Link
-            href="/painel/atendente"
+          <button
+            type="button"
+            onClick={() => setConectando(true)}
             className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-700"
           >
             Ativar Atendente Virtual <span aria-hidden="true" className="ml-1">→</span>
-          </Link>
-          <Link
-            href="/painel/configuracoes"
+          </button>
+          <button
+            type="button"
+            onClick={() => setConectando(true)}
             className="inline-flex items-center justify-center rounded-xl border border-panel-line bg-panel-card px-3.5 py-2 text-xs font-medium text-panel-ink transition hover:bg-panel-bg"
           >
             Conectar WhatsApp
-          </Link>
+          </button>
         </div>
+
+        <ModalConectarWhatsApp
+          aberto={conectando}
+          aoFechar={() => setConectando(false)}
+          aoConectar={() => {
+            setConectando(false);
+            setDados((d) => (d ? { ...d, whatsappConectado: true } : d));
+            if (typeof window !== "undefined") {
+              window.location.reload();
+            }
+          }}
+        />
       </section>
     );
   }
