@@ -873,7 +873,7 @@ export default function Home({
             >
               Entrar
             </Link>
-            <CtaLink href="/cadastro" ctaName="header" className={`${BOTAO_DOURADO} px-4 py-2 text-sm`}>
+            <CtaLink href="/comecar" ctaName="header" className={`${BOTAO_DOURADO} px-4 py-2 text-sm`}>
               Começar grátis <span aria-hidden="true">→</span>
             </CtaLink>
           </div>
@@ -899,16 +899,21 @@ export default function Home({
               A Nexora atende no seu WhatsApp em segundos, tira dúvidas de preços e garante o cliente enquanto você descansa.
             </p>
 
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-              <CtaLink href="/cadastro" ctaName="hero_atendente" className={`${BOTAO_DOURADO} px-8 py-4 text-base shadow-nx-glow-sm hover:scale-[1.02]`}>
-                Ativar meu Atendente 24h grátis <span aria-hidden="true">→</span>
-              </CtaLink>
-              <a
-                href="#atendente"
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-nx-border-2 bg-nx-surface/60 px-6 py-4 text-base font-medium text-nx-primary transition-all hover:border-nx-gold/40 hover:bg-nx-surface"
-              >
-                Ver demonstração ao vivo <span aria-hidden="true">↓</span>
-              </a>
+            <div className="mt-8 flex flex-col items-center justify-center">
+              <div className="flex flex-wrap items-center justify-center gap-4">
+                <CtaLink href="/comecar" ctaName="hero_atendente" className={`${BOTAO_DOURADO} px-8 py-4 text-base shadow-nx-glow-sm hover:scale-[1.02]`}>
+                  Ativar meu Atendente 24h grátis <span aria-hidden="true">→</span>
+                </CtaLink>
+                <a
+                  href="#atendente"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-nx-border-2 bg-nx-surface/60 px-6 py-4 text-base font-medium text-nx-primary transition-all hover:border-nx-gold/40 hover:bg-nx-surface"
+                >
+                  Ver demonstração ao vivo <span aria-hidden="true">↓</span>
+                </a>
+              </div>
+              <p className="mt-3 text-xs text-nx-secondary">
+                ⚡ Acesso imediato • Sem formulários • Sem cartão
+              </p>
             </div>
 
             {/* SIMULADOR INTERATIVO NO WHATSAPP */}
@@ -1005,7 +1010,7 @@ export default function Home({
               Crie sua conta em 15 segundos: não pedimos cartão para começar. A Primeira semana por nossa conta permite testar o Atendente 24h por {SEMANA_GRATIS_DIAS} dias ou até {SEMANA_GRATIS_CONVERSAS} conversas com as regras da sua empresa. Você só continua se gostar do resultado.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-4">
-              <CtaLink href="/cadastro" ctaName="final" className={`${BOTAO_DOURADO} px-8 py-4 text-base sm:text-lg shadow-nx-glow-sm hover:scale-[1.02]`}>
+              <CtaLink href="/comecar" ctaName="final" className={`${BOTAO_DOURADO} px-8 py-4 text-base sm:text-lg shadow-nx-glow-sm hover:scale-[1.02]`}>
                 Ativar meu Atendente 24h grátis <span aria-hidden="true">→</span>
               </CtaLink>
               <Link href="/precos" className="text-sm font-semibold text-nx-gold transition-colors hover:underline">
@@ -1020,7 +1025,7 @@ export default function Home({
 
       {/* No celular o botão nunca sai da tela */}
       <div className="fixed inset-x-0 bottom-0 z-50 flex items-center gap-2 border-t border-nx-border bg-nx-bg/95 p-3 backdrop-blur-md sm:hidden">
-        <CtaLink href="/cadastro" ctaName="mobile_sticky_atendente" className={`${BOTAO_DOURADO} flex-1 px-4 py-3 text-xs font-bold`}>
+        <CtaLink href="/comecar" ctaName="mobile_sticky_atendente" className={`${BOTAO_DOURADO} flex-1 px-4 py-3 text-xs font-bold`}>
           Ativar 24h grátis →
         </CtaLink>
       </div>

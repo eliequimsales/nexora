@@ -83,13 +83,29 @@ export default function CadastroPage() {
             </p>
           </div>
 
-          {/* GOOGLE BUTTON EM DESTAQUE (MODO 1-CLIQUE SEM ATRITO) */}
-          <div className="rounded-xl border border-nx-gold/40 bg-nx-gold/10 p-3.5 text-center">
+          {/* ACESSO INSTANTÂNEO DIRETO NO PRODUTO */}
+          <div className="mb-3.5 rounded-xl border border-nx-gold/40 bg-nx-gold/10 p-3.5 text-center">
             <p className="text-[11px] font-bold uppercase tracking-wider text-nx-gold">
-              ⚡ Mais Rápido • 1 Clique
+              ⚡ Teste Instantâneo
             </p>
             <p className="mt-0.5 mb-2.5 text-[11px] text-nx-secondary">
-              Entre direto com o Google sem precisar inventar senha
+              Quer ver o Atendente funcionando antes de preencher formulário?
+            </p>
+            <Link
+              href="/comecar"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-nx-gold px-4 py-2.5 text-xs font-bold text-nx-bg transition hover:bg-nx-gold/90 shadow-nx-glow-sm"
+            >
+              Entrar direto no Atendente sem cadastro →
+            </Link>
+          </div>
+
+          {/* GOOGLE BUTTON EM DESTAQUE (MODO 1-CLIQUE SEM ATRITO) */}
+          <div className="rounded-xl border border-nx-border bg-nx-surface-2/60 p-3.5 text-center">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-nx-primary">
+              Ou cadastre com o Google
+            </p>
+            <p className="mt-0.5 mb-2.5 text-[11px] text-nx-secondary">
+              Entre com sua conta Google sem precisar inventar senha
             </p>
             <GoogleButton label="Cadastrar com o Google" />
           </div>

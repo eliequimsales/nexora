@@ -52,6 +52,8 @@ export type TelaDoAtendente = {
   temPlanoCompleto: boolean;
   estado: { texto: string; tom: Tom };
   uso: { texto: string; conversasNoMes: number; teto: number };
+  isGuest?: boolean;
+  email?: string;
   /** A conversa do passo 1: dados de verdade, ou de exemplo — e a tela diz qual. */
   exemplo: { ehExemplo: boolean; dados: Parameters<typeof conversaDeExemplo>[1] };
   sabe: {
@@ -223,7 +225,7 @@ async function exemploDaConversa(companyId: string, fatos: Fatos, agora: Date): 
 const CONTAGEM = { respostas: true, marcados: true, valorMarcadoCents: true } as const;
 
 export async function telaDoAtendente(companyId: string, agora: Date = new Date()): Promise<TelaDoAtendente> {
-  const [fatos, perfil, estadoDaConta, uso, temPlanoCompleto] = await Promise.all([
+  const [fatos, perfil, estadoDaConta, uso, temPlanoCompleto, conta] = await Promise.all([
     fatosDaEmpresa(companyId),
     prisma.companyProfile.findUnique({
       where: { companyId },
@@ -232,6 +234,10 @@ export async function telaDoAtendente(companyId: string, agora: Date = new Date(
     estadoDaEmpresa(companyId),
     usoDoAtendente(companyId, agora),
     empresaTemPlanoCompleto(companyId, agora),
+    prisma.company.findUnique({
+      where: { id: companyId },
+      select: { email: true },
+    }),
   ]);
 
   const acesso: Acesso = acessoDoAtendente({
@@ -352,5 +358,7 @@ export async function telaDoAtendente(companyId: string, agora: Date = new Date(
       pergunta: d.question,
       vezesPerguntada: d.askCount,
     })),
+    isGuest: Boolean(conta?.email && conta.email.includes("@temporario.meunexora.com.br")),
+    email: conta?.email ?? "",
   };
 }

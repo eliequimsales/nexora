@@ -9,6 +9,7 @@ import { Celular } from "@/components/atendente/celular";
 import { Ligar } from "@/components/atendente/ligar";
 import { Situacao } from "@/components/atendente/situacao";
 import { CartaoDaNoite } from "@/components/painel/cartao-da-noite";
+import { ModalSalvarConta } from "@/components/painel/modal-salvar-conta";
 
 /**
  * ATENDENTE VIRTUAL — UMA TELA SÓ, QUE SE EXPLICA SOZINHA.
@@ -37,6 +38,7 @@ export default function PaginaDoAtendente() {
   const [jeito, setJeito] = useState<Jeito>("ACOLHEDOR");
   const [testado, setTestado] = useState(false);
   const [salvo, setSalvo] = useState(false);
+  const [salvarAberto, setSalvarAberto] = useState(false);
   const esperaDoNome = useRef<ReturnType<typeof setTimeout>>();
   const esperaDoSalvo = useRef<ReturnType<typeof setTimeout>>();
 
@@ -164,6 +166,29 @@ export default function PaginaDoAtendente() {
         </div>
       </header>
 
+      {tela.isGuest && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber/40 bg-amber/10 p-4 text-sm text-panel-ink">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber text-xs font-bold text-night" aria-hidden="true">
+              ⚡
+            </span>
+            <div>
+              <p className="font-semibold text-panel-ink">Modo teste sem cadastro</p>
+              <p className="text-xs text-panel-sub">
+                Seu atendente já está funcionando. Salve seu acesso para não perder seus dados.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSalvarAberto(true)}
+            className="rounded-lg bg-amber px-3.5 py-1.5 text-xs font-bold text-night hover:brightness-110 shadow-sm"
+          >
+            Salvar meu acesso
+          </button>
+        </div>
+      )}
+
       {tela.acesso === "SEMANA_ACABOU" && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber/30 bg-amber/5 p-4 text-sm">
           <p className="text-panel-ink">
@@ -213,6 +238,15 @@ export default function PaginaDoAtendente() {
           )}
         </div>
       </div>
+
+      <ModalSalvarConta
+        aberto={salvarAberto}
+        aoFechar={() => setSalvarAberto(false)}
+        nomePadrao={nome}
+        aoSalvarSucesso={(novoEmail) => {
+          setTela((prev) => (prev ? { ...prev, isGuest: false, email: novoEmail } : null));
+        }}
+      />
     </div>
   );
 }
