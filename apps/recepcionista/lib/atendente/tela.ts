@@ -40,6 +40,7 @@ export type Contagem = { conversas: number; marcados: number; valorMarcadoCents:
 
 export type TelaDoAtendente = {
   empresa: string;
+  empresaTelefone?: string;
   nome: string;
   jeito: Jeito;
   marcaDireto: boolean;
@@ -236,7 +237,7 @@ export async function telaDoAtendente(companyId: string, agora: Date = new Date(
     empresaTemPlanoCompleto(companyId, agora),
     prisma.company.findUnique({
       where: { id: companyId },
-      select: { email: true },
+      select: { email: true, phone: true },
     }),
   ]);
 
@@ -297,6 +298,7 @@ export async function telaDoAtendente(companyId: string, agora: Date = new Date(
 
   return {
     empresa: fatos.empresa,
+    empresaTelefone: conta?.phone ?? "",
     nome: fatos.nome,
     jeito: fatos.jeito,
     marcaDireto: fatos.marcaDireto,

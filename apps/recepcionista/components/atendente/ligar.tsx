@@ -137,7 +137,12 @@ export function Ligar({
           {erro}
         </p>
       )}
-      <ModalConectarWhatsApp aberto={conectando} aoFechar={fecharConexao} aoConectar={conectou} />
+      <ModalConectarWhatsApp
+        aberto={conectando}
+        aoFechar={fecharConexao}
+        aoConectar={conectou}
+        telefonePadrao={tela.empresaTelefone}
+      />
     </section>
   );
 }

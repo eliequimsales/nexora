@@ -41,6 +41,14 @@ export async function GET(request: Request) {
   }
 
   try {
+    const { searchParams } = new URL(request.url);
+    const empresaParam = searchParams.get("empresa")?.trim();
+    const telefoneParam = searchParams.get("telefone")?.trim();
+    const ramoParam = searchParams.get("ramo")?.trim();
+
+    const nomeEmpresa = empresaParam && empresaParam.length <= 100 ? empresaParam : "Minha Empresa";
+    const telefoneEmpresa = telefoneParam && telefoneParam.length <= 25 ? telefoneParam.replace(/[^\d+() -]/g, "") : "";
+
     const randomHex = randomBytes(8).toString("hex");
     const tempEmail = `convidado_${randomHex}@temporario.meunexora.com.br`;
     const randomPassword = randomBytes(32).toString("hex");
@@ -48,15 +56,20 @@ export async function GET(request: Request) {
 
     const company = await prisma.company.create({
       data: {
-        name: "Minha Empresa",
+        name: nomeEmpresa,
         email: tempEmail,
-        phone: "",
+        phone: telefoneEmpresa,
         passwordHash,
         termosAceitosEm: new Date(),
         termosVersao: VERSAO_DOCUMENTOS,
         ipAceite: ip,
         trialEndsAt: relogioDoCadastro(VERSAO_DOCUMENTOS, new Date()),
-        profile: { create: {} },
+        profile: {
+          create: {
+            atendenteNome: nomeEmpresa !== "Minha Empresa" ? nomeEmpresa : undefined,
+            description: ramoParam ? `Ramo: ${ramoParam.slice(0, 150)}` : undefined,
+          },
+        },
       },
       select: { id: true, sessaoEpoca: true },
     });

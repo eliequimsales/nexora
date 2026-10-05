@@ -171,7 +171,12 @@ export function Situacao({
         </section>
       )}
 
-      <ModalConectarWhatsApp aberto={conectando} aoFechar={fecharConexao} aoConectar={conectou} />
+      <ModalConectarWhatsApp
+        aberto={conectando}
+        aoFechar={fecharConexao}
+        aoConectar={conectou}
+        telefonePadrao={tela.empresaTelefone}
+      />
     </div>
   );
 }
