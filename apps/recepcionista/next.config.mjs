@@ -8,6 +8,11 @@ const nextConfig = {
   async redirects() {
     return [
       {
+        source: "/ativar",
+        destination: "/comecar",
+        permanent: false,
+      },
+      {
         source: "/:path*",
         has: [
           {
