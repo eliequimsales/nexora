@@ -77,9 +77,16 @@ export async function connectWhatsApp(companyId: string, phone?: string): Promis
 
   try {
     await createInstance(name);
-    await setWebhook(name, webhookUrl());
+    try {
+      await setWebhook(name, webhookUrl());
+    } catch (whErr) {
+      await logError("whatsapp-webhook-set", whErr, companyId).catch(() => {});
+    }
     const result = await connectInstance(name, phone);
     pairingCode = result.pairingCode;
+
+    // Garante que o webhook está configurado após a inicialização da conexão
+    setWebhook(name, webhookUrl()).catch(() => {});
 
     if (result.state === "open") {
       await saveState(companyId, {

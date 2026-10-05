@@ -190,8 +190,8 @@ export async function sendWhatsAppText(
 }
 
 /**
- * Cria a instância na Evolution. Se já existir, segue em frente sem erro
- * (a Evolution devolve 403/409 com "already in use").
+ * Cria a instância na Evolution. Se já existir ou estiver acessível, segue em frente sem erro
+ * (a Evolution devolve 400/403/409 quando já existe ou sob conflito de integração/sessão).
  */
 export async function createInstance(instance: string): Promise<void> {
   try {
@@ -201,8 +201,35 @@ export async function createInstance(instance: string): Promise<void> {
     });
   } catch (error) {
     const message = String(error).toLowerCase();
-    if (message.includes("already") || message.includes("in use") || message.includes("403")) return;
-    throw error;
+    if (
+      message.includes("already") ||
+      message.includes("in use") ||
+      message.includes("403") ||
+      message.includes("integrationsession") ||
+      message.includes("p2025")
+    ) {
+      return;
+    }
+
+    // Se deu outro erro (ex: 400 Bad Request), verifica se a instância já responde no connectionState
+    try {
+      const state = await getConnectionState(instance);
+      if (state !== null) return;
+    } catch {
+      // Ignora erro de verificação
+    }
+
+    // Se estiver em estado quebrado, tenta remover e recriar limpa uma única vez
+    try {
+      await deleteInstance(instance).catch(() => {});
+      await evoFetch("/instance/create", {
+        method: "POST",
+        body: { instanceName: instance, qrcode: true, integration: "WHATSAPP-BAILEYS" },
+      });
+      return;
+    } catch {
+      throw error;
+    }
   }
 }
 
