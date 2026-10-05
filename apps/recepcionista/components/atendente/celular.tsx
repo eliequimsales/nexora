@@ -113,6 +113,9 @@ export function Celular({
       }
       setEstado(j.estado ?? null);
       aoTestar();
+      if (j.anotou && typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("duvidas-atualizadas"));
+      }
     } catch {
       setErro("Sem conexão agora. Tente de novo.");
     } finally {

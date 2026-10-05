@@ -104,6 +104,30 @@ function saida(s: Partial<SaidaDoMotor> & { mensagens: string[] }): SaidaDoMotor
   return { estado: null, fontes: [], usouIa: false, ...s };
 }
 
+function encontrarFaqDireta(
+  texto: string,
+  perguntas: { question: string; answer: string }[],
+): { question: string; answer: string } | null {
+  if (!perguntas || !perguntas.length) return null;
+  const limpo = texto.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").trim();
+  const palavrasTexto = new Set(limpo.split(/\s+/).filter((w) => w.length >= 3));
+
+  for (const p of perguntas) {
+    const qLimpo = p.question.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").trim();
+    if (limpo === qLimpo || (limpo.length >= 6 && qLimpo.includes(limpo)) || (qLimpo.length >= 6 && limpo.includes(qLimpo))) {
+      return p;
+    }
+    const palavrasQ = qLimpo.split(/\s+/).filter((w) => w.length >= 3);
+    if (palavrasQ.length > 0 && palavrasTexto.size > 0) {
+      const comuns = palavrasQ.filter((w) => palavrasTexto.has(w));
+      if (comuns.length >= Math.min(2, palavrasQ.length)) {
+        return p;
+      }
+    }
+  }
+  return null;
+}
+
 export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): Promise<SaidaDoMotor> {
   const { fatos, agora } = e;
   const t = textosDoJeito(fatos.jeito);
@@ -364,6 +388,25 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
     agora,
   });
 
+  // Se o cliente fez uma pergunta direta que a empresa já ensinou no Treinamento ou FAQ,
+  // responde na hora com o conhecimento aprovado do dono, sem risco de alucinação.
+  if (
+    intencao.tipo !== "URGENCIA" &&
+    intencao.tipo !== "DESMARCAR" &&
+    intencao.tipo !== "PESSOA" &&
+    intencao.tipo !== "RECLAMACAO" &&
+    intencao.tipo !== "ESCOLHA"
+  ) {
+    const faqEncontrada = encontrarFaqDireta(e.texto, fatos.perguntas);
+    if (faqEncontrada) {
+      return saida({
+        mensagens: comAbertura(`${faqEncontrada.answer} ${t.convite}`),
+        estado: convite(),
+        fontes: [`Dúvida que você ensinou: "${faqEncontrada.question}"`],
+      });
+    }
+  }
+
   switch (intencao.tipo) {
     case "URGENCIA":
       // Antes de qualquer apresentação: quem escreve isso não quer saber quem é o atendente.
@@ -438,15 +481,18 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
           fontes: ["Preços dos serviços da sua agenda"],
         });
       }
-      return naoSei("Perguntou preço", e.texto);
+      // Se não há serviços com preço na agenda, consulta as dúvidas treinadas ou a IA livre
+      return livre();
     }
 
     case "FUNCIONAMENTO":
-      return saida({
-        mensagens: comAbertura(`Funcionamos ${horarioFalado(fatos.horarios)}. ${t.convite}`),
-        estado: convite(),
-        fontes: ["Horário do seu cadastro"],
-      });
+      return fatos.horarios.length
+        ? saida({
+            mensagens: comAbertura(`Funcionamos ${horarioFalado(fatos.horarios)}. ${t.convite}`),
+            estado: convite(),
+            fontes: ["Horário do seu cadastro"],
+          })
+        : livre();
 
     case "ENDERECO":
       return fatos.endereco
@@ -455,7 +501,7 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
             estado: convite(),
             fontes: ["Endereço do seu cadastro"],
           })
-        : naoSei("Perguntou o endereço", e.texto);
+        : livre();
 
     case "PAGAMENTO":
       return fatos.pagamento
@@ -464,7 +510,7 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
             estado: convite(),
             fontes: ["Formas de pagamento do seu cadastro"],
           })
-        : naoSei("Perguntou as formas de pagamento", e.texto);
+        : livre();
 
     case "SAUDACAO":
       return saida({ mensagens: [abertura ? `${abertura} ${t.convite}` : t.convite], estado: convite() });

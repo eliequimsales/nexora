@@ -76,7 +76,12 @@ export default function TreinamentoPage() {
 
   const load = useCallback(async () => {
     const res = await fetch("/api/training");
-    if (res.ok) setReport(await res.json());
+    if (res.ok) {
+      setReport(await res.json());
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("duvidas-atualizadas"));
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -99,6 +104,9 @@ export default function TreinamentoPage() {
       }
       if (thanksMessage) showThanks(thanksMessage);
       await load();
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("duvidas-atualizadas"));
+      }
     } finally {
       setBusy(null);
     }

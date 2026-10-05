@@ -2,11 +2,45 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export interface NavItem {
   href: string;
   label: string;
   badge?: number;
+}
+
+function useTreinamentoBadge(initialBadge?: number) {
+  const [count, setCount] = useState<number>(initialBadge ?? 0);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    let ativo = true;
+
+    async function atualizar() {
+      try {
+        const res = await fetch("/api/training/count");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (ativo && typeof data.count === "number") {
+          setCount(data.count);
+        }
+      } catch {}
+    }
+
+    void atualizar();
+    const timer = setInterval(() => void atualizar(), 8000);
+    const handler = () => void atualizar();
+    window.addEventListener("duvidas-atualizadas", handler);
+
+    return () => {
+      ativo = false;
+      clearInterval(timer);
+      window.removeEventListener("duvidas-atualizadas", handler);
+    };
+  }, [pathname]);
+
+  return count;
 }
 
 function iconeParaRota(href: string) {
@@ -146,12 +180,15 @@ function estaAtivo(href: string, pathname: string): boolean {
 
 export function PainelNavDesktop({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
+  const initialTreinamento = items.find((i) => i.href === "/painel/treinamento")?.badge;
+  const liveBadge = useTreinamentoBadge(initialTreinamento);
 
   return (
     <nav aria-label="Menu principal" className="hidden items-center sm:flex">
       <div className="flex items-center gap-1 rounded-xl border border-panel-line/70 bg-panel-bg/80 p-1">
         {items.map((item) => {
           const ativo = estaAtivo(item.href, pathname);
+          const badge = item.href === "/painel/treinamento" ? liveBadge : (item.badge ?? 0);
           return (
             <Link
               key={item.href}
@@ -167,14 +204,14 @@ export function PainelNavDesktop({ items }: { items: NavItem[] }) {
                 {iconeParaRota(item.href)}
               </span>
               <span>{item.label}</span>
-              {Boolean(item.badge && item.badge > 0) && (
+              {Boolean(badge > 0) && (
                 <span
-                  className={`ml-1 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${
+                  className={`ml-1 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-black shadow-xs ${
                     ativo ? "bg-night text-amber" : "bg-amber text-night animate-pulse"
                   }`}
-                  aria-label={`${item.badge} para ensinar`}
+                  aria-label={`${badge} para ensinar`}
                 >
-                  {item.badge}
+                  {badge}
                 </span>
               )}
             </Link>
@@ -187,6 +224,8 @@ export function PainelNavDesktop({ items }: { items: NavItem[] }) {
 
 export function PainelNavMobile({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
+  const initialTreinamento = items.find((i) => i.href === "/painel/treinamento")?.badge;
+  const liveBadge = useTreinamentoBadge(initialTreinamento);
 
   const rotuloCurto = (href: string, label: string) => {
     if (href.includes("atendente")) return "Atendente";
@@ -205,6 +244,7 @@ export function PainelNavMobile({ items }: { items: NavItem[] }) {
       <div className="grid grid-cols-5 gap-1 rounded-2xl border border-panel-line/80 bg-panel-bg p-1 shadow-inner">
         {items.map((item) => {
           const ativo = estaAtivo(item.href, pathname);
+          const badge = item.href === "/painel/treinamento" ? liveBadge : (item.badge ?? 0);
           return (
             <Link
               key={item.href}
@@ -216,12 +256,12 @@ export function PainelNavMobile({ items }: { items: NavItem[] }) {
                   : "bg-panel-card/70 text-panel-sub border border-panel-line/40 hover:bg-panel-card hover:text-panel-ink"
               }`}
             >
-              {Boolean(item.badge && item.badge > 0) && (
+              {Boolean(badge > 0) && (
                 <span
-                  className="absolute -top-1 -right-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber px-1 text-[10px] font-extrabold text-night shadow"
-                  aria-label={`${item.badge} para ensinar`}
+                  className="absolute -top-1 -right-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber px-1 text-[10px] font-black text-night shadow-xs animate-pulse"
+                  aria-label={`${badge} para ensinar`}
                 >
-                  {item.badge}
+                  {badge}
                 </span>
               )}
               <span
