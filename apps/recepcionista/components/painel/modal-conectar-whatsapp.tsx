@@ -96,7 +96,11 @@ export function ModalConectarWhatsApp({
       });
       const data = await res.json();
       if (!res.ok) {
-        setErro(data.error ?? "Não consegui gerar o código agora. Tenta de novo?");
+        if (res.status === 401 || data.error === "Não autenticado") {
+          setErro("Sua sessão expirou. Clique abaixo para entrar novamente.");
+        } else {
+          setErro(data.error ?? "Não consegui gerar o código agora. Tenta de novo?");
+        }
         setStatus("ERRO");
         return;
       }
@@ -247,13 +251,22 @@ export function ModalConectarWhatsApp({
           ) : erro ? (
             <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-5 text-center">
               <p className="text-xs font-medium text-red-400">{erro}</p>
-              <button
-                type="button"
-                onClick={() => (aba === "CODIGO" ? iniciarConexao(telefone) : iniciarConexao())}
-                className="mt-3 rounded-lg bg-red-500/20 px-4 py-2 text-xs font-bold text-red-300 transition hover:bg-red-500/30"
-              >
-                Tentar novamente
-              </button>
+              {erro.includes("expirou") || erro.includes("autenticado") ? (
+                <a
+                  href="/login"
+                  className="mt-3 inline-block rounded-xl bg-amber px-5 py-2.5 text-xs font-bold text-night transition hover:brightness-110 shadow-sm"
+                >
+                  Entrar na minha conta
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => (aba === "CODIGO" ? iniciarConexao(telefone) : iniciarConexao())}
+                  className="mt-3 rounded-lg bg-red-500/20 px-4 py-2 text-xs font-bold text-red-300 transition hover:bg-red-500/30"
+                >
+                  Tentar novamente
+                </button>
+              )}
             </div>
           ) : aba === "CODIGO" ? (
             /* ========================================================================= */
