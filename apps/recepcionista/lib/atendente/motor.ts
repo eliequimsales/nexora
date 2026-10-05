@@ -104,27 +104,104 @@ function saida(s: Partial<SaidaDoMotor> & { mensagens: string[] }): SaidaDoMotor
   return { estado: null, fontes: [], usouIa: false, ...s };
 }
 
+const SINONIMOS_PRECO = new Set([
+  "preco", "precos", "valor", "valores", "custa", "custo", "quanto", "tabela",
+  "mensalidade", "investimento", "cobranca", "cobra", "cobram", "tarifa"
+]);
+const SINONIMOS_HORARIO = new Set([
+  "horario", "horarios", "hora", "horas", "abre", "fecha", "aberto", "fechado", "funcionamento", "expediente", "atendimento"
+]);
+const SINONIMOS_ENDERECO = new Set([
+  "endereco", "localizacao", "local", "fica", "onde", "rua", "bairro", "cidade", "chegar"
+]);
+const SINONIMOS_PAGAMENTO = new Set([
+  "pagamento", "pagar", "pix", "cartao", "debito", "credito", "dinheiro", "parcela", "parcelamento"
+]);
+
+function normalizarParaBusca(txt: string): string {
+  return (txt || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function encontrarFaqDireta(
   texto: string,
   perguntas: { question: string; answer: string }[],
 ): { question: string; answer: string } | null {
   if (!perguntas || !perguntas.length) return null;
-  const limpo = texto.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").trim();
-  const palavrasTexto = new Set(limpo.split(/\s+/).filter((w) => w.length >= 3));
+  const limpo = normalizarParaBusca(texto);
+  if (!limpo) return null;
+  const palavrasTexto = limpo.split(/\s+/).filter((w) => w.length >= 2);
+  const setPalavrasTexto = new Set(palavrasTexto);
 
+  const temPrecoTexto = palavrasTexto.some((w) => SINONIMOS_PRECO.has(w));
+  const temHorarioTexto = palavrasTexto.some((w) => SINONIMOS_HORARIO.has(w));
+  const temEnderecoTexto = palavrasTexto.some((w) => SINONIMOS_ENDERECO.has(w));
+  const temPagamentoTexto = palavrasTexto.some((w) => SINONIMOS_PAGAMENTO.has(w));
+
+  // 1. Prioridade máxima: correspondência exata ou contenção direta da pergunta
   for (const p of perguntas) {
-    const qLimpo = p.question.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").trim();
-    if (limpo === qLimpo || (limpo.length >= 6 && qLimpo.includes(limpo)) || (qLimpo.length >= 6 && limpo.includes(qLimpo))) {
+    const qLimpo = normalizarParaBusca(p.question);
+    if (!qLimpo) continue;
+    if (limpo === qLimpo || (limpo.length >= 5 && qLimpo.includes(limpo)) || (qLimpo.length >= 5 && limpo.includes(qLimpo))) {
       return p;
     }
-    const palavrasQ = qLimpo.split(/\s+/).filter((w) => w.length >= 3);
-    if (palavrasQ.length > 0 && palavrasTexto.size > 0) {
-      const comuns = palavrasQ.filter((w) => palavrasTexto.has(w));
-      if (comuns.length >= Math.min(2, palavrasQ.length)) {
-        return p;
-      }
+  }
+
+  // 2. Sobreposição de palavras-chave da dúvida
+  let melhorCandidato: { p: { question: string; answer: string }; pontos: number } | null = null;
+  for (const p of perguntas) {
+    const qLimpo = normalizarParaBusca(p.question);
+    const palavrasQ = qLimpo.split(/\s+/).filter((w) => w.length >= 2);
+    if (!palavrasQ.length) continue;
+
+    const comuns = palavrasQ.filter((w) => setPalavrasTexto.has(w));
+    let pontos = comuns.length * 2;
+
+    const temPrecoQ = palavrasQ.some((w) => SINONIMOS_PRECO.has(w));
+    if (temPrecoTexto && temPrecoQ) pontos += 4;
+
+    const temHorarioQ = palavrasQ.some((w) => SINONIMOS_HORARIO.has(w));
+    if (temHorarioTexto && temHorarioQ) pontos += 4;
+
+    const temEnderecoQ = palavrasQ.some((w) => SINONIMOS_ENDERECO.has(w));
+    if (temEnderecoTexto && temEnderecoQ) pontos += 4;
+
+    const temPagamentoQ = palavrasQ.some((w) => SINONIMOS_PAGAMENTO.has(w));
+    if (temPagamentoTexto && temPagamentoQ) pontos += 4;
+
+    // Se o cliente perguntou preço e a resposta do item contém menção direta a valor/preço/reais
+    if (temPrecoTexto && (/r\$|\breais\b|\b\d+\b/i.test(p.answer) || temPrecoQ)) {
+      pontos += 3;
+    }
+
+    if (pontos >= 3 && (!melhorCandidato || pontos > melhorCandidato.pontos)) {
+      melhorCandidato = { p, pontos };
     }
   }
+
+  if (melhorCandidato) return melhorCandidato.p;
+
+  // 3. Se o cliente perguntou especificamente sobre preço ("qual o preço", "quanto custa")
+  // e temos um item de FAQ sobre preço, devolve-o diretamente
+  if (temPrecoTexto) {
+    const faqComPreco = perguntas.find((p) => {
+      const q = normalizarParaBusca(p.question);
+      const a = normalizarParaBusca(p.answer);
+      return (
+        q.split(/\s+/).some((w) => SINONIMOS_PRECO.has(w)) ||
+        a.includes("reais") ||
+        a.includes("r$") ||
+        /\d{2,}/.test(a)
+      );
+    });
+    if (faqComPreco) return faqComPreco;
+  }
+
   return null;
 }
 
@@ -351,6 +428,10 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
       return { ...naoSei("Pergunta que o atendente não soube responder", e.texto), usouIa: true };
     }
 
+    if (!resposta || !resposta.resposta) {
+      return { ...naoSei("Pergunta que o atendente não soube responder", e.texto), usouIa: true };
+    }
+
     // O verificador: todo número da resposta precisa existir nos fatos.
     if (numerosSemFonte(resposta.resposta, textoFatos).length > 0) {
       return { ...naoSei("A resposta tinha informação que não está no seu cadastro", e.texto), usouIa: true };
@@ -453,10 +534,20 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
       return pedirHorario(intencao.servicoId, intencao.pedido, intencao.profissional);
 
     case "PRECO": {
-      const servicoId = intencao.servicoId ?? (fatos.servicos.length === 1 ? fatos.servicos[0].id : undefined);
-      const servico = servicoId ? fatos.servicos.find((s) => s.id === servicoId) : undefined;
-      if (servico) {
-        if (servico.precoCents > 0) {
+      // 1. Dúvida direta ensinada pelo dono tem prioridade máxima
+      const faqPreco = encontrarFaqDireta(e.texto, fatos.perguntas);
+      if (faqPreco) {
+        return saida({
+          mensagens: comAbertura(`${faqPreco.answer} ${t.convite}`),
+          estado: convite(),
+          fontes: [`Dúvida que você ensinou: "${faqPreco.question}"`],
+        });
+      }
+
+      // 2. Se o cliente especificou um serviço no texto (ex: "preço do corte")
+      if (intencao.servicoId) {
+        const servico = fatos.servicos.find((s) => s.id === intencao.servicoId);
+        if (servico && servico.precoCents > 0) {
           return saida({
             mensagens: comAbertura(
               `${t.preco({ servico: servico.nome, preco: precoFalado(servico.precoCents), duracao: duracaoFalada(servico.duracaoMin) })} ${t.convite}`,
@@ -465,14 +556,40 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
             fontes: [`Preço e duração do serviço ${servico.nome}`],
           });
         }
-        return saida({
-          mensagens: comAbertura(t.semPreco(servico.nome)),
-          anotar: { motivo: `Perguntou o valor de ${servico.nome}`, pergunta: e.texto },
-          fontes: ["Anotado para você responder"],
-        });
+        // Se o serviço citado não tem preço na agenda, procura se o dono ensinou nas perguntas
+        const faqDoServico = fatos.perguntas.find((p) =>
+          normalizarParaBusca(p.question).includes(normalizarParaBusca(servico?.nome ?? "")) ||
+          normalizarParaBusca(p.answer).includes(normalizarParaBusca(servico?.nome ?? ""))
+        );
+        if (faqDoServico) {
+          return saida({
+            mensagens: comAbertura(`${faqDoServico.answer} ${t.convite}`),
+            estado: convite(),
+            fontes: [`Dúvida que você ensinou: "${faqDoServico.question}"`],
+          });
+        }
+        if (servico) {
+          return saida({
+            mensagens: comAbertura(t.semPreco(servico.nome)),
+            anotar: { motivo: `Perguntou o valor de ${servico.nome}`, pergunta: e.texto },
+            fontes: ["Anotado para você responder"],
+          });
+        }
       }
+
+      // 3. Pergunta geral de preço ("qual o preço", "quanto custa", "valores"):
       const comPreco = fatos.servicos.filter((s) => s.precoCents > 0).slice(0, MAX_SERVICOS_NA_LISTA);
-      if (comPreco.length) {
+      if (comPreco.length > 0) {
+        if (comPreco.length === 1) {
+          const s = comPreco[0];
+          return saida({
+            mensagens: comAbertura(
+              `${t.preco({ servico: s.nome, preco: precoFalado(s.precoCents), duracao: duracaoFalada(s.duracaoMin) })} ${t.convite}`,
+            ),
+            estado: convite(),
+            fontes: [`Preço do serviço ${s.nome}`],
+          });
+        }
         return saida({
           mensagens: comAbertura(
             `Valores: ${comPreco.map((s) => `${s.nome} — ${precoFalado(s.precoCents)}`).join("; ")}. ${t.convite}`,
@@ -481,7 +598,8 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
           fontes: ["Preços dos serviços da sua agenda"],
         });
       }
-      // Se não há serviços com preço na agenda, consulta as dúvidas treinadas ou a IA livre
+
+      // 4. Se não há serviços com preço na agenda, consulta as informações da empresa ou IA livre
       return livre();
     }
 

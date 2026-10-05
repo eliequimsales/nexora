@@ -38,6 +38,9 @@ export type Fatos = {
   endereco: string;
   pagamento: string;
   descricao: string;
+  pricingInfo?: string;
+  serviceRules?: string;
+  productsServices?: string;
   perguntas: Faq[];
   linkAgenda: string | null;
 };
@@ -72,6 +75,9 @@ export async function fatosDaEmpresa(companyId: string, sobrescrever: Sobrescrit
             paymentMethods: true,
             description: true,
             faqs: true,
+            pricingInfo: true,
+            serviceRules: true,
+            productsServices: true,
           },
         },
       },
@@ -97,6 +103,9 @@ export async function fatosDaEmpresa(companyId: string, sobrescrever: Sobrescrit
     endereco: (perfil?.address ?? "").trim(),
     pagamento: (perfil?.paymentMethods ?? "").trim(),
     descricao: (perfil?.description ?? "").trim(),
+    pricingInfo: (perfil?.pricingInfo ?? "").trim(),
+    serviceRules: (perfil?.serviceRules ?? "").trim(),
+    productsServices: (perfil?.productsServices ?? "").trim(),
     perguntas: [...lerPerguntas(perfil?.faqs), ...treinamento],
     linkAgenda: appUrl && (empresa?.slug || companyId) ? `${appUrl}/agendar/${empresa?.slug || companyId}` : null,
   };
@@ -144,6 +153,18 @@ export function textoDosFatos(f: Fatos): string {
 
   if (f.descricao) {
     linhas.push(`Informações adicionais da empresa (o que ela faz, regras, diferenciais): ${f.descricao}.`);
+  }
+
+  if (f.pricingInfo) {
+    linhas.push(`Preços, planos e valores informados pelo dono: ${f.pricingInfo}.`);
+  }
+
+  if (f.productsServices) {
+    linhas.push(`Produtos e serviços da empresa: ${f.productsServices}.`);
+  }
+
+  if (f.serviceRules) {
+    linhas.push(`Regras e diferenciais do atendimento: ${f.serviceRules}.`);
   }
 
   if (f.perguntas.length) {

@@ -110,6 +110,7 @@ describe("textoDosFatos — o que a IA recebe e o verificador confere", () => {
     diasFechados: [],
     endereco: "Rua das Flores, 100",
     pagamento: "Pix e cartão",
+    descricao: "",
     perguntas: [{ question: "Tem estacionamento?", answer: "Sim, conveniado." }],
     linkAgenda: "https://app.exemplo/agendar/barbearia-do-leo",
   };

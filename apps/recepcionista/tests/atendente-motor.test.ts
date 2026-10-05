@@ -52,6 +52,7 @@ const FATOS: Fatos = {
   diasFechados: [],
   endereco: "Rua das Flores, 100",
   pagamento: "Pix e cartão",
+  descricao: "",
   perguntas: [{ question: "Tem estacionamento?", answer: "Sim, conveniado na rua de trás." }],
   linkAgenda: "https://app.exemplo/agendar/barbearia-do-leo",
 };
@@ -259,10 +260,43 @@ describe("preço, horário, endereço e pagamento — do cadastro, sem IA", () =
     expect((await responder(entrada("aceita pix?"), deps)).mensagens[0]).toContain("Pix e cartão");
   });
 
-  it("sem endereço cadastrado, diz que não tem e anota", async () => {
-    const s = await responder(entrada("onde fica?", { fatos: { ...FATOS, endereco: "" } }), deps);
-    expect(s.mensagens[0]).toContain("não tenho confirmada");
-    expect(s.anotar).toBeDefined();
+  it("dúvida ensinada sobre preço responde na hora com o valor ensinado", async () => {
+    const fatos = {
+      ...FATOS,
+      perguntas: [
+        { question: "Qual o preço do plano?", answer: "Nosso plano sai por R$ 740,00 por mês." },
+      ],
+    };
+    const s = await responder(entrada("qual o preço?", { fatos }), deps);
+    expect(s.mensagens[0]).toContain("740,00");
+    expect(s.fontes[0]).toContain("Dúvida que você ensinou");
+  });
+
+  it("sinônimos de preço (quanto custa / qual o valor) acham a resposta ensinada", async () => {
+    const fatos = {
+      ...FATOS,
+      perguntas: [
+        { question: "Tabela de preços", answer: "O valor é 740 reais." },
+      ],
+    };
+    const s1 = await responder(entrada("quanto custa?", { fatos }), deps);
+    expect(s1.mensagens[0]).toContain("740 reais");
+
+    const s2 = await responder(entrada("qual o valor?", { fatos }), deps);
+    expect(s2.mensagens[0]).toContain("740 reais");
+  });
+
+  it("quando há serviço padrão sem preço e o dono ensinou preço nas perguntas, não diz que falta preço", async () => {
+    const fatos = {
+      ...FATOS,
+      servicos: [{ id: "serv_default", nome: "Atendimento", precoCents: 0, duracaoMin: 30 }],
+      perguntas: [
+        { question: "Qual o valor cobrado?", answer: "Trabalhamos com o plano de R$ 740,00." },
+      ],
+    };
+    const s = await responder(entrada("qual o preço", { fatos }), deps);
+    expect(s.mensagens[0]).toContain("740,00");
+    expect(s.mensagens[0]).not.toContain("O valor de Atendimento eu não tenho confirmado");
   });
 });
 

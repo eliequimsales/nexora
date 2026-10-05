@@ -17,13 +17,26 @@ const HORA = /\b([01]?\d|2[0-3])(?:h([0-5]\d)?|:([0-5]\d))(?![\d/])/gi;
 const DATA = /\b(\d{1,2})\/(\d{1,2})\b/g;
 const DURACAO = /\b(\d{1,3})\s?(?:min|minutos)\b/gi;
 
+const PRECO_PREFIXADO = /(?:\b(?:pre[çc]o|valor|custa|plano|mensalidade)\s*(?:é|e|de|:)?\s*)(\d{1,6}(?:,\d{1,2})?)\b/gi;
+
 function centavos(texto: string): number {
-  const numero = texto.replace(/R\$|reais/gi, "").replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
+  const numero = texto
+    .replace(/(?:pre[çc]o|valor|custa|plano|mensalidade)\s*(?:é|e|de|:)?\s*/gi, "")
+    .replace(/R\$|reais/gi, "")
+    .replace(/\s/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
   return Math.round(Number(numero) * 100);
 }
 
 function valoresDeDinheiro(texto: string): Set<number> {
-  return new Set([...texto.matchAll(DINHEIRO)].map((m) => centavos(m[0])));
+  const valores = new Set([...texto.matchAll(DINHEIRO)].map((m) => centavos(m[0])));
+  for (const m of texto.matchAll(PRECO_PREFIXADO)) {
+    const limpo = m[1].replace(",", ".");
+    const n = Number(limpo);
+    if (!isNaN(n) && n > 0) valores.add(Math.round(n * 100));
+  }
+  return valores;
 }
 
 function valoresDePorcentagem(texto: string): Set<number> {

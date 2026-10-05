@@ -101,6 +101,7 @@ const FATOS: Fatos = {
   diasFechados: [],
   endereco: "Rua das Flores, 100",
   pagamento: "Pix e cartão",
+  descricao: "",
   perguntas: [],
   linkAgenda: null,
 };
