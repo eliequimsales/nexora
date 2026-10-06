@@ -630,6 +630,30 @@ function SecaoOQueEleSabe({
         </div>
       </div>
 
+      {/* Banner da Onda do Mar (Configuração Conversacional) */}
+      <div className="bg-gradient-to-r from-amber/15 via-amber/10 to-transparent p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-panel-line">
+        <div className="flex items-center gap-2.5">
+          <span className="text-lg" aria-hidden="true">🌊</span>
+          <div>
+            <p className="text-xs font-bold text-panel-ink">Configure como uma onda do mar</p>
+            <p className="text-[11px] text-panel-sub">
+              Prefere não preencher campos? Fale com a atendente no celular ao lado: ela anota tudo pelo chat.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("ativar-modo-ensinar"));
+            }
+          }}
+          className="shrink-0 rounded-lg bg-amber px-3 py-1.5 text-xs font-bold text-night hover:brightness-110 shadow-xs"
+        >
+          Ensinar pelo chat
+        </button>
+      </div>
+
       {/* 2. Informações estruturadas principais */}
       <div className="divide-y divide-panel-line">
         <Dado ok rotulo="Horário" valor={tela.sabe.horario} href="/painel/configuracoes" acao="Mudar" />
