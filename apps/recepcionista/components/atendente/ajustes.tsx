@@ -175,7 +175,7 @@ function DadoDoCadastro({
   }
 
   return (
-    <LinhaDoDado ok={Boolean(valor)} rotulo={rotulo} valor={valor || "falta"}>
+    <LinhaDoDado ok={Boolean(valor)} rotulo={rotulo} valor={valor || "Opcional"}>
       <button
         type="button"
         onClick={() => {
@@ -637,7 +637,7 @@ function SecaoOQueEleSabe({
           ok={servicos > 0}
           rotulo="Serviços"
           valor={
-            servicos === 0 ? "nenhum" : `${plural(servicos, "serviço", "serviços")}${semPreco ? ` · ${semPreco} sem preço` : ""}`
+            servicos === 0 ? "Atendimento padrão" : `${plural(servicos, "serviço", "serviços")}${semPreco ? ` · ${semPreco} sem preço` : ""}`
           }
           aoClicar={onAbrirModalServicos}
         >
@@ -646,7 +646,7 @@ function SecaoOQueEleSabe({
             onClick={onAbrirModalServicos}
             className="text-xs font-semibold text-amber-deep hover:underline"
           >
-            {servicos === 0 ? "Cadastrar" : "Mudar"}
+            {servicos === 0 ? "Personalizar" : "Mudar"}
           </button>
         </LinhaDoDado>
         <DadoDoCadastro
@@ -664,9 +664,9 @@ function SecaoOQueEleSabe({
         <Dado
           ok={perguntas > 0}
           rotulo="Perguntas"
-          valor={perguntas === 0 ? "nenhuma" : plural(perguntas, "resposta", "respostas")}
+          valor={perguntas === 0 ? "Respostas automáticas" : plural(perguntas, "resposta", "respostas")}
           href="/painel/treinamento"
-          acao="Ensinar"
+          acao={perguntas === 0 ? "Adicionar" : "Ensinar"}
         />
       </div>
 

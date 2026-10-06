@@ -13,6 +13,7 @@ import { VERSAO_DOCUMENTOS } from "@/lib/legal/identidade";
 import { relogioDoCadastro } from "@/lib/billing/relogio";
 import { appRedirect } from "@/lib/google";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { obterPresetDoRamo } from "@/lib/onboarding/presets";
 
 export const dynamic = "force-dynamic";
 
@@ -24,11 +25,56 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(request: Request) {
   const ip = clientIp(request);
+  const { searchParams } = new URL(request.url);
+  const empresaParam = searchParams.get("empresa")?.trim();
+  const telefoneParam = searchParams.get("telefone")?.trim();
+  const ramoParam = searchParams.get("ramo")?.trim();
 
-  // 1. Se já tem sessão válida ativa, entra direto nela sem criar conta duplicada
+  // 1. Se já tem sessão válida ativa:
   try {
     const existingCompanyId = await getSessionCompanyId();
     if (existingCompanyId) {
+      if (ramoParam) {
+        const countServices = await prisma.service.count({ where: { companyId: existingCompanyId } });
+        if (countServices === 0) {
+          const preset = obterPresetDoRamo(ramoParam);
+          await prisma.company.update({
+            where: { id: existingCompanyId },
+            data: {
+              ...(empresaParam ? { name: empresaParam } : { name: preset.nomeEmpresa }),
+              profile: {
+                update: {
+                  atendenteNome: preset.atendenteNome,
+                  description: preset.description,
+                  address: preset.endereco,
+                  paymentMethods: preset.pagamento,
+                  serviceRules: preset.serviceRules,
+                },
+              },
+            },
+          });
+          await prisma.service.createMany({
+            data: preset.servicos.map((s, idx) => ({
+              companyId: existingCompanyId,
+              name: s.name,
+              durationMin: s.durationMin,
+              priceCents: s.priceCents,
+              order: idx,
+              active: true,
+            })),
+          });
+          await prisma.knowledgeItem.createMany({
+            data: preset.duvidas.map((d) => ({
+              companyId: existingCompanyId,
+              question: d.question,
+              answer: d.answer,
+              source: "TRAINING",
+              status: "APPROVED",
+              approvedAt: new Date(),
+            })),
+          });
+        }
+      }
       return NextResponse.redirect(appRedirect("/painel/atendente", request.url));
     }
   } catch {
@@ -41,12 +87,9 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { searchParams } = new URL(request.url);
-    const empresaParam = searchParams.get("empresa")?.trim();
-    const telefoneParam = searchParams.get("telefone")?.trim();
-    const ramoParam = searchParams.get("ramo")?.trim();
-
-    const nomeEmpresa = empresaParam && empresaParam.length <= 100 ? empresaParam : "Minha Empresa";
+    const hasPreset = Boolean(ramoParam);
+    const preset = hasPreset ? obterPresetDoRamo(ramoParam) : null;
+    const nomeEmpresa = empresaParam && empresaParam.length <= 100 ? empresaParam : (preset ? preset.nomeEmpresa : "Minha Empresa");
     const telefoneEmpresa = telefoneParam && telefoneParam.length <= 25 ? telefoneParam.replace(/[^\d+() -]/g, "") : "";
 
     const randomHex = randomBytes(8).toString("hex");
@@ -65,14 +108,47 @@ export async function GET(request: Request) {
         ipAceite: ip,
         trialEndsAt: relogioDoCadastro(VERSAO_DOCUMENTOS, new Date()),
         profile: {
-          create: {
-            atendenteNome: nomeEmpresa !== "Minha Empresa" ? nomeEmpresa : undefined,
-            description: ramoParam ? `Ramo: ${ramoParam.slice(0, 150)}` : undefined,
-          },
+          create: preset
+            ? {
+                atendenteNome: preset.atendenteNome,
+                description: preset.description,
+                address: preset.endereco,
+                paymentMethods: preset.pagamento,
+                serviceRules: preset.serviceRules,
+              }
+            : {},
         },
       },
       select: { id: true, sessaoEpoca: true },
     });
+
+    // Cria serviços inteligentes de referência do segmento
+    if (preset && preset.servicos.length > 0) {
+      await prisma.service.createMany({
+        data: preset.servicos.map((s, idx) => ({
+          companyId: company.id,
+          name: s.name,
+          durationMin: s.durationMin,
+          priceCents: s.priceCents,
+          order: idx,
+          active: true,
+        })),
+      });
+    }
+
+    // Cria conhecimento inicial do atendente (aprovado) para responder na hora
+    if (preset && preset.duvidas.length > 0) {
+      await prisma.knowledgeItem.createMany({
+        data: preset.duvidas.map((d) => ({
+          companyId: company.id,
+          question: d.question,
+          answer: d.answer,
+          source: "TRAINING",
+          status: "APPROVED",
+          approvedAt: new Date(),
+        })),
+      });
+    }
 
     const token = await createSessionToken(company.id, company.sessaoEpoca);
     setSessionCookie(token);
