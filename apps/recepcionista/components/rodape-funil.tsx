@@ -54,6 +54,9 @@ export function RodapeFunil({ nota }: { nota?: string }) {
               {link.texto}
             </Link>
           ))}
+          <Link href="/comparativo" className="transition-colors hover:text-nx-primary">
+            Comparativo
+          </Link>
           <a href={linkDeSuporte(FORNECEDOR)} className="transition-colors hover:text-nx-primary">
             Suporte
           </a>

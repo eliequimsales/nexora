@@ -98,6 +98,8 @@ const DIAGNOSTICO = [
 const NICHO = ["app/barbearia/page.tsx", "app/clinica/page.tsx"];
 /** A tabela de preços, para quem foi procurar: mesma cara da home. */
 const PRECOS = ["app/precos/page.tsx"];
+/** Página de comparativo técnico de mercado e E-E-A-T. */
+const COMPARATIVO = ["app/comparativo/page.tsx"];
 const FUNIL = [
   "components/tema-nexora.tsx",
   ...HOME,
@@ -105,6 +107,7 @@ const FUNIL = [
   ...DIAGNOSTICO,
   ...NICHO,
   ...PRECOS,
+  ...COMPARATIVO,
 ];
 
 describe("a página de preços", () => {
@@ -118,6 +121,15 @@ describe("a página de preços", () => {
 
 describe("as páginas de nicho", () => {
   for (const arquivo of NICHO) {
+    it(`${arquivo} usa só o tema do funil e recebe o TemaNexora`, () => {
+      expect(achadosDoTemaAntigo(arquivo)).toEqual([]);
+      aplicaTema(arquivo);
+    });
+  }
+});
+
+describe("a página de comparativo", () => {
+  for (const arquivo of COMPARATIVO) {
     it(`${arquivo} usa só o tema do funil e recebe o TemaNexora`, () => {
       expect(achadosDoTemaAntigo(arquivo)).toEqual([]);
       aplicaTema(arquivo);
