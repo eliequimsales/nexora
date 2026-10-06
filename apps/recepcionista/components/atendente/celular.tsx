@@ -415,9 +415,7 @@ export function Celular({
             </div>
 
             <div className="mx-auto max-w-[290px] rounded-lg bg-[#182229]/90 px-3 py-1.5 text-center text-[10px] leading-tight text-[#FFD279] shadow-sm">
-              {modo === "ensinar"
-                ? "🌊 Onda do Mar: ensine serviços, horários e regras em uma conversa só."
-                : "🔒 Mensagens protegidas e enviadas em tempo real como no WhatsApp oficial."}
+              🔒 As mensagens são protegidas e enviadas em tempo real como no WhatsApp oficial.
             </div>
 
             {modo === "ensinar"
