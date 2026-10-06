@@ -136,9 +136,29 @@ export function extrairHeuristica(texto: string): DadosExtraidos {
     dados.pagamento = pagamentosDetectados.join(", ");
   }
 
-  // 6. Regras da empresa
-  if (/toler[aâ]ncia|atraso|cancelamento|reagendamento|estacionamento/i.test(limpo)) {
+  // 6. Regras da empresa, descontos, políticas e dúvidas diretas
+  const ehRegraOuDuvida =
+    /desconto|promo[çc][aã]o|toler[aâ]ncia|atraso|cancel|remarc|reagend|estacion|vaga|wifi|caf[eé]|pet|crian[çc]|feriad|domingo|conv[eê]nio|particular|cortesia|brinde|gr[aá]tis|gratuito|meia|hor[aá]rio/i.test(
+      limpo,
+    );
+
+  if (ehRegraOuDuvida) {
     dados.regras = limpo;
+    if (!dados.perguntaResposta) {
+      dados.perguntaResposta = {
+        pergunta: limpo,
+        resposta: `Sim, ${limpo}.`,
+      };
+    }
+  }
+
+  // 7. Se não encaixou em serviço com preço, endereço nem horário, mas o dono digitou uma frase (>= 4 caracteres)
+  if (!dados.servicos && !dados.endereco && !dados.horarios && !dados.pagamento && !dados.perguntaResposta && limpo.length >= 4) {
+    dados.regras = limpo;
+    dados.perguntaResposta = {
+      pergunta: limpo,
+      resposta: limpo,
+    };
   }
 
   return dados;
@@ -323,7 +343,7 @@ export async function processarEntrevistaDono({
       update: { description: descAtual },
     });
     salvou.regras = true;
-    confirmacoes.push("Regras da empresa adicionadas com sucesso.");
+    confirmacoes.push(`Salvei a regra: "${dados.regras}".`);
   }
 
   // 6. Salvar Pergunta & Resposta Treinada
@@ -338,8 +358,28 @@ export async function processarEntrevistaDono({
         approvedAt: new Date(),
       },
     });
+
+    const pLimpa = dados.perguntaResposta.pergunta.replace(/\?+$/, "").trim();
+    if (/desconto|promo/i.test(pLimpa) && !pLimpa.includes("?")) {
+      const pInterrogativa = `Tem desconto ${pLimpa.replace(/tem\s+desconto/i, "").trim()}?`;
+      try {
+        await prisma.knowledgeItem.create({
+          data: {
+            companyId,
+            question: pInterrogativa,
+            answer: dados.perguntaResposta.resposta,
+            source: "TRAINING",
+            status: "APPROVED",
+            approvedAt: new Date(),
+          },
+        });
+      } catch {
+        // silencioso
+      }
+    }
+
     salvou.pergunta = true;
-    confirmacoes.push(`Decorei! Quando perguntarem sobre "${dados.perguntaResposta.pergunta}", já sei exatamente o que responder. 🧠`);
+    confirmacoes.push(`Quando perguntarem sobre "${dados.perguntaResposta.pergunta}", já sei exatamente o que responder! 🧠`);
   }
 
   // Verifica o estado atualizado dos fatos para saber qual é o próximo passo
@@ -355,24 +395,25 @@ export async function processarEntrevistaDono({
   let sugestoes: string[] = [];
 
   if (!respostaFinal) {
-    const prefixo = confirmacoes.length > 0 ? confirmacoes.join(" ") + " " : "";
-
-    if (!temServicos) {
-      respostaFinal = `${prefixo}Quais são os principais serviços que vocês oferecem e quanto custa cada um?`;
+    if (confirmacoes.length > 0) {
+      respostaFinal = `${confirmacoes.join(" ")} Se quiser me ensinar mais alguma regra ou já testar no simulador, é só falar!`;
+      sugestoes = ["Testar como Cliente", "Adicionar mais um serviço", "Outra regra"];
+    } else if (!temServicos) {
+      respostaFinal = "Quais são os principais serviços que vocês oferecem e quanto custa cada um?";
       sugestoes = ["Corte R$ 45 e Barba R$ 35", "Consulta R$ 150", "Manicure R$ 35"];
     } else if (!temHorario || !temEndereco) {
-      respostaFinal = `${prefixo}E onde fica o seu espaço ou qual endereço informo aos clientes? Quais dias e horários vocês atendem?`;
+      respostaFinal = "Onde fica o seu espaço ou qual endereço informo aos clientes? Quais dias e horários vocês atendem?";
       sugestoes = [
         "Seg a Sex 9h às 18h na Av. Paulista, 1000",
         "Seg a Sáb 8h às 19h",
         "Atendimento 100% online",
       ];
     } else if (!temPagamento) {
-      respostaFinal = `${prefixo}Quais formas de pagamento você aceita (Pix, cartão, dinheiro)? Tem alguma tolerância de atraso?`;
+      respostaFinal = "Quais formas de pagamento você aceita (Pix, cartão, dinheiro)? Tem alguma tolerância de atraso?";
       sugestoes = ["Aceito Pix, cartão e dinheiro", "Pix e Cartão (tolerância de 15 min)"];
     } else {
-      respostaFinal = `${prefixo}Tudo pronto! 🎉 Sua empresa já está com todas as informações essenciais cadastradas. Veja só ao lado como ficou bonito! Você já pode clicar em 'Testar como Cliente' para experimentar como eu atendo ou em 'Ligar no WhatsApp' para começar!`;
-      sugestoes = ["Testar agendamento", "Adicionar mais um serviço", "Quando perguntarem X, responda Y"];
+      respostaFinal = "Entendido! Salvei essa informação. Pode me mandar qualquer outro serviço, horário ou regra que já aprendo na hora!";
+      sugestoes = ["Testar como Cliente", "Adicionar mais um serviço", "Outra regra"];
     }
   } else {
     if (!temServicos) {

@@ -86,6 +86,13 @@ describe("Entrevista da Onda do Mar — Extração Heurística", () => {
     expect(res.perguntaResposta?.pergunta).toContain("estacionamento");
     expect(res.perguntaResposta?.resposta).toContain("convênio");
   });
+
+  it("extrai regras diretas como desconto em horário específico", () => {
+    const res = extrairHeuristica("7 e meia tem desconto");
+    expect(res.regras).toContain("7 e meia tem desconto");
+    expect(res.perguntaResposta).toBeDefined();
+    expect(res.perguntaResposta?.pergunta).toContain("7 e meia tem desconto");
+  });
 });
 
 describe("Formatação de Horários", () => {
@@ -113,6 +120,17 @@ describe("Processamento da Entrevista", () => {
     expect(res.salvou.servicos).toBe(2);
     expect(res.resposta).toBeDefined();
     expect(res.resposta.length).toBeGreaterThan(10);
+  });
+
+  it("processa regra como '7 e meia tem desconto' e confirma que aprendeu", async () => {
+    const res = await processarEntrevistaDono({
+      companyId: "comp_123",
+      mensagem: "7 e meia tem desconto",
+    });
+
+    expect(res.salvou.regras).toBe(true);
+    expect(res.salvou.pergunta).toBe(true);
+    expect(res.resposta).toContain("7 e meia tem desconto");
   });
 
   it("gera mensagem inicial com base nos dados faltantes da empresa", async () => {

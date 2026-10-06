@@ -320,7 +320,10 @@ export async function jsonCompletion(
       : {
           url: "https://api.groq.com/openai/v1/chat/completions",
           apiKey: requireEnv("GROQ_API_KEY"),
-          model: process.env.GROQ_MODEL || "openai/gpt-oss-20b",
+          model:
+            process.env.GROQ_MODEL && process.env.GROQ_MODEL !== "openai/gpt-oss-20b"
+              ? process.env.GROQ_MODEL
+              : "llama-3.3-70b-versatile",
         };
 
   const res = await fetch(cfg.url, {
@@ -376,7 +379,10 @@ export async function generateReceptionistReply(input: ReceptionistInput): Promi
           name: "Groq",
           url: "https://api.groq.com/openai/v1/chat/completions",
           apiKey: requireEnv("GROQ_API_KEY"),
-          model: process.env.GROQ_MODEL || "openai/gpt-oss-20b",
+          model:
+            process.env.GROQ_MODEL && process.env.GROQ_MODEL !== "openai/gpt-oss-20b"
+              ? process.env.GROQ_MODEL
+              : "llama-3.3-70b-versatile",
         },
         input,
       );
