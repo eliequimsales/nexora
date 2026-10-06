@@ -15,12 +15,6 @@ import type { TelaDoAtendente } from "@/lib/atendente/tela";
 type Mensagem = { de: "cliente" | "atendente"; texto: string; fonte?: string; agendamentoConfirmado?: boolean };
 
 const SUGESTOES = ["🕒 Tem horário amanhã?", "💳 Quanto custa?", "📍 Onde fica?"];
-const SUGESTOES_ENSINAR = [
-  "✂️ Corte R$ 45 e Barba R$ 35",
-  "🕒 Seg a Sex das 09h às 19h",
-  "💳 Aceitamos Pix e Cartão",
-  "📍 Rua Central, 120 - Centro",
-];
 const PAUSA_ENTRE_BOLHAS_MS = 650;
 const esperar = (ms: number) => new Promise((resolver) => setTimeout(resolver, ms));
 
@@ -30,8 +24,6 @@ function formatarHoraAgora(): string {
   const m = String(agora.getMinutes()).padStart(2, "0");
   return `${h}:${m}`;
 }
-
-type ModoCelular = "TESTE" | "ENSINAR";
 
 export function Celular({
   tela,
@@ -44,15 +36,7 @@ export function Celular({
   jeito: Jeito;
   aoTestar: () => void;
 }) {
-  const semServicos = !tela.sabe.servicos.length || tela.sabe.servicos.every((s) => s.semPreco);
-  const [modo, setModo] = useState<ModoCelular>(semServicos ? "ENSINAR" : "TESTE");
   const [teste, setTeste] = useState<Mensagem[] | null>(null);
-  const [historicoEnsinar, setHistoricoEnsinar] = useState<Mensagem[]>([
-    {
-      de: "atendente",
-      texto: `Olá! Sou o atendente da ${tela.empresa || "sua empresa"} 💛. Me conta em uma frase: quais serviços você atende e quanto cobra?`,
-    },
-  ]);
   const [estado, setEstado] = useState<{ tipo?: string } | null>(null);
   const [entrada, setEntrada] = useState("");
   const [digitando, setDigitando] = useState(false);
@@ -73,7 +57,7 @@ export function Celular({
     }));
   }, [jeito, nome, tela.exemplo.dados]);
 
-  const mensagens = modo === "ENSINAR" ? historicoEnsinar : (teste ?? exemplo);
+  const mensagens = teste ?? exemplo;
 
   useEffect(() => {
     rolagem.current?.scrollTo({ top: rolagem.current.scrollHeight, behavior: "smooth" });
@@ -83,43 +67,6 @@ export function Celular({
     const limpo = texto.replace(/^[^\p{L}\p{N}]+/u, "").trim();
     if (!limpo || digitando) return;
 
-    if (modo === "ENSINAR") {
-      const atualizado: Mensagem[] = [...historicoEnsinar, { de: "cliente", texto: limpo }];
-      setHistoricoEnsinar(atualizado);
-      setEntrada("");
-      setErro("");
-      setDigitando(true);
-      try {
-        const r = await fetch("/api/atendente/ensinar-conversando", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ texto: limpo }),
-        });
-        const j = await r.json().catch(() => null);
-        if (!r.ok || !j) {
-          setErro(j?.error ?? "Não consegui salvar agora. Tente de novo.");
-          return;
-        }
-        setHistoricoEnsinar((atual) => [
-          ...atual,
-          {
-            de: "atendente",
-            texto: j.resposta ?? "Entendido! Já gravei essas informações no sistema.",
-          },
-        ]);
-        aoTestar();
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("duvidas-atualizadas"));
-        }
-      } catch {
-        setErro("Sem conexão agora. Tente de novo.");
-      } finally {
-        setDigitando(false);
-      }
-      return;
-    }
-
-    // Modo TESTE como cliente
     const historico: Mensagem[] = [...(teste ?? []), { de: "cliente", texto: limpo }];
     setTeste(historico);
     setEntrada("");
@@ -183,59 +130,20 @@ export function Celular({
   }
 
   function recomecar() {
-    if (modo === "ENSINAR") {
-      setHistoricoEnsinar([
-        {
-          de: "atendente",
-          texto: `Olá! Sou o atendente da ${tela.empresa || "sua empresa"} 💛. Me conta em uma frase: quais serviços você atende e quanto cobra?`,
-        },
-      ]);
-    } else {
-      setTeste(null);
-      setEstado(null);
-    }
+    setTeste(null);
+    setEstado(null);
     setErro("");
   }
 
   const sugestoes =
-    modo === "ENSINAR"
-      ? SUGESTOES_ENSINAR
-      : estado?.tipo === "HORARIO"
-        ? ["2", ...SUGESTOES.slice(1)]
-        : estado?.tipo === "SERVICO"
-          ? ["1", ...SUGESTOES.slice(1)]
-          : SUGESTOES;
+    estado?.tipo === "HORARIO"
+      ? ["2", ...SUGESTOES.slice(1)]
+      : estado?.tipo === "SERVICO"
+        ? ["1", ...SUGESTOES.slice(1)]
+        : SUGESTOES;
 
   return (
     <div className="mx-auto w-full max-w-[420px] lg:sticky lg:top-6">
-      {/* SELETOR DE MODO: TESTAR COMO CLIENTE VS ENSINAR CONVERSANDO */}
-      <div className="mb-3 flex items-center justify-center p-1 rounded-2xl bg-panel-card border border-panel-line shadow-xs">
-        <button
-          type="button"
-          onClick={() => setModo("TESTE")}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold transition ${
-            modo === "TESTE"
-              ? "bg-amber text-night shadow-sm"
-              : "text-panel-sub hover:text-panel-ink hover:bg-panel-bg"
-          }`}
-        >
-          <span>💬</span>
-          <span>Testar como Cliente</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setModo("ENSINAR")}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold transition ${
-            modo === "ENSINAR"
-              ? "bg-amber text-night shadow-sm"
-              : "text-panel-sub hover:text-panel-ink hover:bg-panel-bg"
-          }`}
-        >
-          <span>⚡</span>
-          <span>Ensinar Conversando</span>
-        </button>
-      </div>
-
       {/* DISPOSITIVO SMARTPHONE ULTRA-REALISTA CENTRALIZADO (ESTILO LANDING PAGE) */}
       <div className="rounded-[3rem] border border-[#2A2E3D] bg-gradient-to-b from-[#2A2E3D] via-[#1A1D27] to-[#0E1017] p-3 shadow-2xl ring-1 ring-white/10">
         <div className="relative flex h-[580px] sm:h-[620px] flex-col overflow-hidden rounded-[2.35rem] bg-[#0B141A] border border-[#1E222D]">
@@ -274,19 +182,13 @@ export function Celular({
                   </svg>
                 </div>
                 <p className="text-[11px] text-[#8696A0]">
-                  {digitando
-                    ? "digitando…"
-                    : modo === "ENSINAR"
-                      ? "assistente de ensino"
-                      : teste
-                        ? "online agora"
-                        : "exemplo"}
+                  {digitando ? "digitando…" : teste ? "online agora" : "exemplo"}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-2 text-[#A7B2B8]">
-              {(teste || modo === "ENSINAR") && (
+              {teste && (
                 <button
                   type="button"
                   onClick={recomecar}
@@ -409,11 +311,7 @@ export function Celular({
               value={entrada}
               onChange={(e) => setEntrada(e.target.value)}
               maxLength={500}
-              placeholder={
-                modo === "ENSINAR"
-                  ? "Diga seus serviços, preços ou horários…"
-                  : "Escreva como um cliente no WhatsApp…"
-              }
+              placeholder="Escreva como um cliente no WhatsApp…"
               aria-label="Mensagem de teste"
               className="min-w-0 flex-1 rounded-full bg-[#2A3942] px-3.5 py-1.5 text-xs text-[#E9EDEF] placeholder:text-[#8696A0] focus:outline-none focus:ring-1 focus:ring-[#00A884]"
             />
