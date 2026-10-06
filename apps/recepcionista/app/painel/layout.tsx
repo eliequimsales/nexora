@@ -2,11 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionCompanyId } from "@/lib/auth";
 import { estadoDaConta } from "@/lib/billing/acesso";
-import { avisoDaPrimeiraOnda } from "@/lib/billing/primeira-onda";
-import { primeiraOndaDaEmpresa } from "@/lib/billing/primeira-onda-da-conta";
 import { prisma } from "@/lib/db";
-import { emailConfigurado } from "@/lib/reengajamento/email";
-import { AvisoVerificarEmail } from "./aviso-verificar";
 import { LogoutButton } from "@/components/logout-button";
 import { BotaoBaixarApp } from "@/components/install-prompt";
 import { PainelNavDesktop, PainelNavMobile } from "@/components/painel/navegacao";
@@ -47,9 +43,6 @@ export default async function PainelLayout({ children }: { children: React.React
 
   const agora = new Date();
   const estado = estadoDaConta(company, agora);
-  // A conta sem plano sabe sempre em que ponto está a primeira Onda.
-  const avisoGratis =
-    estado === "GRATIS" ? avisoDaPrimeiraOnda(await primeiraOndaDaEmpresa(companyId, agora)) : null;
   const diasRestantes = company.trialEndsAt
     ? Math.max(1, Math.ceil((company.trialEndsAt.getTime() - agora.getTime()) / 86_400_000))
     : 7;
@@ -66,23 +59,6 @@ export default async function PainelLayout({ children }: { children: React.React
   return (
     <div className="min-h-screen bg-panel-bg text-panel-ink">
       <RastreadorCadastroNovo />
-      {/*
-        Aviso de e-mail não confirmado.
-      */}
-      {!company.emailVerificadoEm && <AvisoVerificarEmail semEnvioDeEmail={!emailConfigurado()} />}
-
-      {/* A primeira Onda por nossa conta: disponível, em andamento ou usada. */}
-      {avisoGratis && (
-        <div className="border-b border-amber/30 bg-amber/10 px-4 py-2 text-center text-xs font-medium text-panel-ink sm:text-sm">
-          <span>{avisoGratis.texto}</span>{" "}
-          <Link
-            href={avisoGratis.acao.href}
-            className="ml-2 inline-flex items-center font-bold text-amber hover:underline"
-          >
-            {avisoGratis.acao.texto} →
-          </Link>
-        </div>
-      )}
 
       {/* Banner de Teste Grátis */}
       {estado === "TRIAL" && (

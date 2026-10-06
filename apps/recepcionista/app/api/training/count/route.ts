@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionCompanyId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { limitar, LIMITES, respostaDeLimite } from "@/lib/limites";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,10 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ count: 0 });
+
+  if (!limitar("training-count", companyId, LIMITES.leitura)) {
+    return respostaDeLimite(LIMITES.leitura);
+  }
 
   try {
     const count = await prisma.knowledgeGap.count({

@@ -205,10 +205,9 @@ describe("a primeira Onda nos lugares certos", () => {
 });
 
 describe("o painel mostra a primeira Onda", () => {
-  it("o topo do painel avisa a conta GRATIS em que ponto ela está", () => {
+  it("o topo do painel mantém a barra limpa sem poluição visual", () => {
     const layout = leia("app/painel/layout.tsx");
-    expect(layout).toContain("avisoDaPrimeiraOnda(");
-    expect(layout).toMatch(/estado === "GRATIS"/);
+    expect(layout).not.toContain("avisoGratis");
   });
 
   it("a tela não oferece mais o lote expandido de 25", () => {

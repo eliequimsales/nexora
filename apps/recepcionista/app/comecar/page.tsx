@@ -8,11 +8,10 @@ export const dynamic = "force-dynamic";
  * Encaminha imediatamente para o Route Handler /api/auth/comecar,
  * onde a sessão instantânea é criada e os cookies HttpOnly são atribuídos.
  */
-export default function ComecarPage({
-  searchParams,
-}: {
+export default function ComecarPage(props: {
   searchParams?: { [key: string]: string | string[] | undefined };
 }) {
+  const searchParams = props?.searchParams;
   const query = new URLSearchParams();
   if (searchParams) {
     for (const [key, val] of Object.entries(searchParams)) {

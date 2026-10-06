@@ -50,7 +50,7 @@ export function Celular({
   const [historicoEnsinar, setHistoricoEnsinar] = useState<Mensagem[]>([
     {
       de: "atendente",
-      texto: `Olá! Sou seu atendente virtual da ${tela.empresa || "sua empresa"} 💛.\n\nVamos deixar seu atendimento pronto em 30 segundos, sem você precisar preencher formulários? Me conta em uma frase: quais serviços você atende e quanto cobra?`,
+      texto: `Olá! Sou o atendente da ${tela.empresa || "sua empresa"} 💛. Me conta em uma frase: quais serviços você atende e quanto cobra?`,
     },
   ]);
   const [estado, setEstado] = useState<{ tipo?: string } | null>(null);
@@ -187,7 +187,7 @@ export function Celular({
       setHistoricoEnsinar([
         {
           de: "atendente",
-          texto: `Olá! Sou seu atendente virtual da ${tela.empresa || "sua empresa"} 💛.\n\nMe conta em uma frase: quais serviços você atende e quanto cobra? Eu já configuro tudo para você.`,
+          texto: `Olá! Sou o atendente da ${tela.empresa || "sua empresa"} 💛. Me conta em uma frase: quais serviços você atende e quanto cobra?`,
         },
       ]);
     } else {

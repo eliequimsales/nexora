@@ -143,20 +143,6 @@ export function ModalSalvarConta({
               />
             </div>
 
-            <div>
-              <label htmlFor="salvar-nome" className="mb-1 block text-xs font-semibold text-panel-ink">
-                Nome da empresa (opcional)
-              </label>
-              <input
-                id="salvar-nome"
-                type="text"
-                placeholder="Nome da sua clínica ou negócio"
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                className="w-full rounded-lg border border-panel-line bg-white px-3 py-2 text-sm text-panel-ink outline-none focus:border-amber focus:ring-1 focus:ring-amber"
-              />
-            </div>
-
             {erro && <p role="alert" className="text-xs font-medium text-red-600">{erro}</p>}
 
             <div className="mt-5 flex gap-2 pt-2">

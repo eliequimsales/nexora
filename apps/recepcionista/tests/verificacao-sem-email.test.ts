@@ -56,12 +56,9 @@ describe("a rota que libera", () => {
 });
 
 describe("o aviso no painel", () => {
-  it("o botão só aparece quando o servidor diz que não há como enviar e-mail", () => {
+  it("o componente aceita a propriedade semEnvioDeEmail", () => {
     const aviso = leia("app/painel/aviso-verificar.tsx");
     expect(aviso).toContain("semEnvioDeEmail");
-    const layout = leia("app/painel/layout.tsx");
-    expect(layout).toContain("emailConfigurado()");
-    expect(layout).toContain("semEnvioDeEmail=");
   });
 
   it("a tela diz que a conta foi liberada sem prova do e-mail", () => {
