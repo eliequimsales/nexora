@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { obterLinkWhatsAppDemo } from "@/lib/whatsapp/demo";
 interface WhatsAppDemoCardProps {
   className?: string;
   origem?: "hero" | "cadastro" | "atendente" | "precos";
