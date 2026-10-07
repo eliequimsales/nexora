@@ -9,9 +9,9 @@
  * a fricção de conversão cai a quase zero.
  */
 
-export const WHATSAPP_DEMO_DEFAULT_NUMBER = "5521979435139";
+export const WHATSAPP_DEMO_DEFAULT_NUMBER = "5521966106737";
 export const WHATSAPP_DEMO_DEFAULT_TEXT =
-  "Oi! Quero ver o Atendente Virtual da Nexora funcionando agora.";
+  "Oi! Vi o anúncio da Nexora e quero ver como ela atenderia na minha empresa.";
 
 export function limparNumeroWhatsApp(bruto: string | null | undefined): string | null {
   const limpo = (bruto ?? "").replace(/\D/g, "");

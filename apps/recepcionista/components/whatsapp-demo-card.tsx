@@ -35,7 +35,7 @@ export function WhatsAppDemoCard({ className = "", origem = "hero" }: WhatsAppDe
             💬 Testar no Simulador ao Vivo ↓
           </Link>
           <a
-            href="https://wa.me/5521979435139?text=Oi!%20Quero%20ver%20o%20Atendente%20Virtual%20da%20Nexora%20funcionando%20agora."
+            href={obterLinkWhatsAppDemo()}
             target="_blank"
             rel="noopener noreferrer"
             data-origem={origem}
