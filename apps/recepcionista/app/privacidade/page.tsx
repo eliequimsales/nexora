@@ -5,6 +5,9 @@ import { PRIVACIDADE } from "@/lib/legal/privacidade";
 export const metadata: Metadata = {
   title: "Política de Privacidade — Nexora",
   description: "Que dados a Nexora trata, com base em quê, quem mais recebe, em que país, e como exercer seus direitos.",
+  alternates: {
+    canonical: "/privacidade",
+  },
 };
 
 // A identificação do fornecedor vem das variáveis do servidor (lib/legal/identidade.ts).

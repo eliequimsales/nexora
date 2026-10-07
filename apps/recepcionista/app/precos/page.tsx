@@ -27,6 +27,9 @@ import { TAMANHO_DA_ONDA } from "@/lib/recuperacao/onda";
 export const metadata: Metadata = {
   title: "Preços da Nexora — Planos simples e transparentes",
   description: `Comece com a primeira semana grátis sem cartão de crédito. Nexora Atendente por ${emReais(PRECO_MENSAL_CENTS)}/mês e Nexora Completo por ${emReais(PRECO_COMPLETO_CENTS)}/mês, com Garantia de Satisfação de ${GARANTIA_DIAS} dias.`,
+  alternates: {
+    canonical: "/precos",
+  },
 };
 
 const BOTAO_DOURADO =

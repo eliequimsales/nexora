@@ -9,6 +9,9 @@ export const metadata: Metadata = {
   title: "Sobre — Nexora",
   description:
     "Quem presta o serviço, por que a Nexora existe, o que ela se recusa a fazer e como falar com a gente.",
+  alternates: {
+    canonical: "/sobre",
+  },
 };
 
 // Quem presta o serviço vem das variáveis do servidor (lib/legal/identidade.ts).

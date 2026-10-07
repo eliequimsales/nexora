@@ -17,6 +17,9 @@ export const metadata: Metadata = {
   title: "Nexora para Clínicas e Salões — Atendente Inteligente 24h no WhatsApp",
   description:
     "Para clínicas de estética e salões: o Atendente Inteligente que atende no seu WhatsApp 24h, responde sobre procedimentos, valores e fecha agendamentos à noite e aos finais de semana.",
+  alternates: {
+    canonical: "/clinica",
+  },
 };
 
 /**

@@ -17,6 +17,9 @@ export const metadata: Metadata = {
   title: "Nexora para barbearia — traga de volta o cliente que parou de vir",
   description:
     "Para barbearia: descubra quais clientes pararam de voltar e receba toda segunda a mensagem pronta para chamar cada um. Diagnóstico grátis, sem cartão.",
+  alternates: {
+    canonical: "/barbearia",
+  },
 };
 
 /**

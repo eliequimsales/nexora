@@ -9,6 +9,9 @@ import { statusAgora } from "@/lib/status/verificar";
 export const metadata: Metadata = {
   title: "Status — Nexora",
   description: "O serviço conferido agora: painel, pagamentos, e-mails e WhatsApp.",
+  alternates: {
+    canonical: "/status",
+  },
 };
 
 // Confere na hora em que a página abre. Gerada no build, mostraria o dia do build.

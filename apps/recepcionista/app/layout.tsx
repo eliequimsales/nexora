@@ -84,7 +84,7 @@ export const metadata: Metadata = {
     images: ["/icons/icon-512.png"],
   },
   alternates: {
-    canonical: "https://www.meunexora.com.br",
+    canonical: "/",
   },
   verification: {
     google: "MUTwc9lOAMqNPO3mfpK-JcmhXgnPYGuSpG98RdJnoog",
