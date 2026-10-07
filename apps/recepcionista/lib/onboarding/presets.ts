@@ -25,6 +25,101 @@ export function obterPresetDoRamo(ramoOuTexto?: string | null): PresetNicho {
     .normalize("NFD")
     .replace(/\p{M}/gu, "");
 
+  // 0. Nexora Tecnologia (Comercial / Demonstração)
+  if (/nexora/i.test(limpo)) {
+    return {
+      nomeEmpresa: "Nexora",
+      atendenteNome: "Sofia da Nexora",
+      description:
+        "Atendente Inteligente 24h no WhatsApp para pequenas empresas, clínicas e prestadores de serviços. Conduz o lead para testar gratuitamente por 7 dias em https://www.meunexora.com.br/ativar sem pedir cartão de crédito.",
+      endereco: "Atendimento 100% online em todo o Brasil — www.meunexora.com.br",
+      pagamento: "Pix e Cartão de Crédito",
+      serviceRules: "⚡ Resposta imediata 24 horas por dia. 7 dias de teste grátis sem cartão.",
+      servicos: [
+        { name: "Plano Atendente 24h (Mensal)", durationMin: 15, priceCents: 9700 },
+        { name: "Plano Completo Atendente + Resgate (Mensal)", durationMin: 15, priceCents: 19700 },
+        { name: "Demonstração Gratuita de 7 Dias", durationMin: 15, priceCents: 0 },
+      ],
+      duvidas: [
+        {
+          question: "Oi! Vi o anúncio da Nexora e quero ver como ela atenderia na minha empresa.",
+          answer:
+            "Olá! 👋 Viu a velocidade dessa resposta? Se fossem 23h ou um domingo, seu cliente receberia essa mesma atenção na sua empresa. Qual é o ramo do seu negócio (ex: clínica, estética, barbearia, consultório, serviços)?",
+        },
+        {
+          question: "Clínica",
+          answer:
+            "Clínicas e consultórios perdem até 40% das consultas fora do horário. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis, sem pedir cartão: 👉 https://www.meunexora.com.br/ativar?ramo=clinica",
+        },
+        {
+          question: "Barbearia",
+          answer:
+            "Salões e barbearias perdem muitos clientes que tentam agendar à noite. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis, sem pedir cartão: 👉 https://www.meunexora.com.br/ativar?ramo=barbearia",
+        },
+        {
+          question: "Estética",
+          answer:
+            "Espaços de estética perdem clientes toda semana que tentam agendar fora do expediente. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis: 👉 https://www.meunexora.com.br/ativar?ramo=estetica",
+        },
+        {
+          question: "Odontologia",
+          answer:
+            "Consultórios odontológicos perdem pacientes de alto valor fora do horário comercial. Já deixei seu Atendente pré-configurado com 7 dias grátis sem cartão: 👉 https://www.meunexora.com.br/ativar?ramo=odonto",
+        },
+        {
+          question: "Consultório",
+          answer:
+            "Consultórios perdem muitos agendamentos fora do horário de atendimento. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis, sem pedir cartão: 👉 https://www.meunexora.com.br/ativar?ramo=clinica",
+        },
+        {
+          question: "Dentista",
+          answer:
+            "Consultórios odontológicos perdem pacientes de alto valor fora do expediente. Já deixei seu Atendente pré-configurado com 7 dias grátis sem cartão: 👉 https://www.meunexora.com.br/ativar?ramo=odonto",
+        },
+        {
+          question: "Salão",
+          answer:
+            "Salões de beleza perdem agendamentos todos os dias fora do expediente. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis, sem pedir cartão: 👉 https://www.meunexora.com.br/ativar?ramo=barbearia",
+        },
+        {
+          question: "Pet shop",
+          answer:
+            "Pet shops e veterinárias perdem muitos clientes fora do horário. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis, sem pedir cartão: 👉 https://www.meunexora.com.br/ativar?ramo=clinica",
+        },
+        {
+          question: "Serviços",
+          answer:
+            "Empresas de serviços perdem orçamentos valiosos toda noite e fim de semana. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis, sem pedir cartão: 👉 https://www.meunexora.com.br/ativar?ramo=servicos",
+        },
+        {
+          question: "Quanto custa o plano?",
+          answer:
+            "A primeira semana é por nossa conta, 100% grátis e sem pedir cartão. Depois, o plano do Atendente 24h é apenas R$ 97/mês (no Pix ou Cartão), sem contrato e sem fidelidade.",
+        },
+        {
+          question: "Como funciona o teste grátis?",
+          answer:
+            "Você ganha 7 dias de acesso completo para testar na prática com seus clientes. Não precisa cadastrar cartão de crédito. Você só decide se continua depois de ver os resultados.",
+        },
+        {
+          question: "Como conecta no WhatsApp?",
+          answer:
+            "Leva menos de 1 minuto! Você conecta pelo celular digitando um código seguro de 8 dígitos ou pelo computador escaneando o QR Code, idêntico ao WhatsApp Web. Não precisa de computador ligado nem equipamentos caros.",
+        },
+        {
+          question: "O atendente inventa respostas?",
+          answer:
+            "Não! A Nexora usa guardrails de contexto e proteção anti-alucinação. Ele só responde os preços, serviços e regras cadastrados. Se não souber algo, anota a pendência para você responder.",
+        },
+        {
+          question: "Precisa de computador ligado?",
+          answer:
+            "Não precisa! A Nexora roda 100% em servidores em nuvem de alta velocidade. Seu WhatsApp fica atendendo 24 horas por dia mesmo com celular desligado ou sem bateria.",
+        },
+      ],
+    };
+  }
+
   // 1. Odontologia e Consultórios Dentários
   if (/odonto|dentist|dente/i.test(limpo)) {
     return {

@@ -221,7 +221,20 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
         apresentacao: apresentacao({ nome: fatos.nome, empresa: fatos.empresa }),
       })} ${e.contexto === "FECHADO" ? t.contextoFechado(volta) : t.contextoExpediente}`
     : null;
-  const comAbertura = (texto: string) => (abertura ? [abertura, texto] : [texto]);
+  const comAbertura = (texto: string) => {
+    if (!abertura) return [texto];
+    if (/^(ol[aá]|oi|bom dia|boa tarde|boa noite)\b/i.test(texto.trim())) {
+      return [texto];
+    }
+    return [abertura, texto];
+  };
+  const formatarRespostaFaq = (resposta: string) => {
+    const r = resposta.trim();
+    if (r.endsWith("?") || r.includes("http://") || r.includes("https://") || /qual\b|como\b|👉/i.test(r)) {
+      return r;
+    }
+    return `${r} ${t.convite}`;
+  };
   const convite = (): EstadoDaConversa => ({ tipo: "CONVITE", criadoEm: agoraIso });
   const naoSei = (motivo: string, pergunta?: string): SaidaDoMotor =>
     saida({
@@ -481,7 +494,7 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
     const faqEncontrada = encontrarFaqDireta(e.texto, fatos.perguntas);
     if (faqEncontrada) {
       return saida({
-        mensagens: comAbertura(`${faqEncontrada.answer} ${t.convite}`),
+        mensagens: comAbertura(formatarRespostaFaq(faqEncontrada.answer)),
         estado: convite(),
         fontes: [`Dúvida que você ensinou: "${faqEncontrada.question}"`],
       });
@@ -538,7 +551,7 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
       const faqPreco = encontrarFaqDireta(e.texto, fatos.perguntas);
       if (faqPreco) {
         return saida({
-          mensagens: comAbertura(`${faqPreco.answer} ${t.convite}`),
+          mensagens: comAbertura(formatarRespostaFaq(faqPreco.answer)),
           estado: convite(),
           fontes: [`Dúvida que você ensinou: "${faqPreco.question}"`],
         });

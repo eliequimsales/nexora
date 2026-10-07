@@ -641,17 +641,31 @@ function SecaoOQueEleSabe({
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            if (typeof window !== "undefined") {
-              window.dispatchEvent(new CustomEvent("ativar-modo-ensinar"));
-            }
-          }}
-          className="shrink-0 rounded-lg bg-amber px-3 py-1.5 text-xs font-bold text-night hover:brightness-110 shadow-xs"
-        >
-          Ensinar pelo chat
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={async () => {
+              if (confirm("Deseja aplicar as regras e planos oficiais da Nexora?")) {
+                await fetch("/api/atendente/configurar-nexora", { method: "POST" });
+                window.location.reload();
+              }
+            }}
+            className="shrink-0 rounded-lg border border-amber/40 bg-white px-3 py-1.5 text-xs font-bold text-panel-ink hover:bg-amber/10 shadow-xs"
+          >
+            Regras da Nexora
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("ativar-modo-ensinar"));
+              }
+            }}
+            className="shrink-0 rounded-lg bg-amber px-3 py-1.5 text-xs font-bold text-night hover:brightness-110 shadow-xs"
+          >
+            Ensinar pelo chat
+          </button>
+        </div>
       </div>
 
       {/* 2. Informações estruturadas principais */}
