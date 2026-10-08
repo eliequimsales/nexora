@@ -183,19 +183,33 @@ export async function recordKnowledgeGap(
 /**
  * Registra como OBSERVAÇÃO a resposta que a equipe deu a um cliente.
  * Vira sugestão na reunião de treinamento — nunca aprendizado automático.
+ * A estruturação é feita ANTES da exibição, garantindo que o dono veja e aprove
+ * exatamente a resposta que o atendente utilizará (WYSIWYG).
  */
 export async function recordTeamObservation(
   companyId: string,
   question: string,
   answer: string,
+  conversationId?: string,
 ): Promise<void> {
   try {
-    const q = question.trim().slice(0, MAX_QUESTION_LENGTH);
-    const a = answer.trim().slice(0, MAX_ANSWER_LENGTH);
+    let q = question.trim().slice(0, MAX_QUESTION_LENGTH);
+    let a = answer.trim().slice(0, MAX_ANSWER_LENGTH);
     if (q.length < 4 || a.length < 2) return;
 
+    // Organiza a proposta antes de exibir ao empresário
+    try {
+      const structured = await structureTrainedAnswer(q, a);
+      q = structured.question.slice(0, MAX_QUESTION_LENGTH);
+      a = structured.answer.slice(0, MAX_ANSWER_LENGTH);
+    } catch {
+      // Falha graciosa: mantém original
+    }
+
+    const source = conversationId ? `TEAM_OBSERVATION:${conversationId}` : "TEAM_OBSERVATION";
+
     await prisma.knowledgeItem.create({
-      data: { companyId, question: q, answer: a, source: "TEAM_OBSERVATION", status: "OBSERVED" },
+      data: { companyId, question: q, answer: a, source, status: "OBSERVED" },
     });
   } catch (error) {
     await logError("training-observation", error, companyId);
@@ -367,28 +381,18 @@ export async function reviewKnowledgeItem(
     return;
   }
 
-  let finalQuestion = edits?.question?.trim() || item.question;
-  let finalAnswer = edits?.answer?.trim() || item.answer;
-
-  // Se o usuário aprovou diretamente com "Usar sempre" sem edição manual,
-  // estrutura a resposta para transformar linguagem coloquial em regra clara
-  if (!edits?.answer?.trim()) {
-    try {
-      const structured = await structureTrainedAnswer(finalQuestion, finalAnswer);
-      finalQuestion = structured.question.slice(0, MAX_QUESTION_LENGTH);
-      finalAnswer = structured.answer.slice(0, MAX_ANSWER_LENGTH);
-    } catch {
-      // Fallback gracioso caso a IA esteja offline ou sem chave
-    }
-  }
+  // O dono aprova EXATAMENTE o texto exibido na tela ou com as edições manuais que realizou.
+  // Zero reescrita oculta após a aprovação (WYSIWYG)!
+  const question = (edits?.question?.trim() || item.question).slice(0, MAX_QUESTION_LENGTH);
+  const answer = (edits?.answer?.trim() || item.answer).slice(0, MAX_ANSWER_LENGTH);
 
   await prisma.knowledgeItem.update({
     where: { id: item.id },
     data: {
       status: "APPROVED",
       approvedAt: new Date(),
-      question: finalQuestion.slice(0, MAX_QUESTION_LENGTH),
-      answer: finalAnswer.slice(0, MAX_ANSWER_LENGTH),
+      question,
+      answer,
     },
   });
 

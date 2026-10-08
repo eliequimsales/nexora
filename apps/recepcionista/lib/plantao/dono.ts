@@ -67,6 +67,97 @@ export function ehSaudacaoOuDescarte(texto: string): boolean {
   return false;
 }
 
+/**
+ * Associa a resposta do dono à pergunta correta quando o cliente fez mais de uma pergunta.
+ * Exemplo: cliente pergunta "Quanto custa o clareamento?" e depois "Aceitam Unimed?".
+ * Se o dono responde "O clareamento é R$ 350", associa ao preço do clareamento, NÃO ao convênio.
+ */
+export function selecionarPerguntaParaResposta(
+  perguntasCliente: string[],
+  respostaDono: string,
+): string {
+  if (perguntasCliente.length === 0) return "";
+  if (perguntasCliente.length === 1) return perguntasCliente[0];
+
+  const normalizar = (s: string) =>
+    s
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const stopWords = new Set([
+    "a", "o", "as", "os", "de", "do", "da", "dos", "das", "em", "no", "na",
+    "nos", "nas", "por", "pelo", "pela", "pelos", "pelas", "com", "sem",
+    "um", "uma", "uns", "umas", "e", "ou", "que", "se", "para", "pra",
+    "tem", "voce", "voces", "vc", "vcs", "eu", "ele", "ela",
+    "me", "te", "nos", "lhe", "lhes", "meu", "minha", "seu", "sua",
+    "qual", "quais", "quanto", "quantos", "quanta", "quantas", "como",
+    "onde", "quando", "quem", "por que", "porque", "eh", "sao", "foi",
+  ]);
+
+  const respNorm = normalizar(respostaDono);
+  const tokensResp = respNorm
+    .split(" ")
+    .filter((w) => w.length >= 3 && !stopWords.has(w));
+  const tokensRespSet = new Set(tokensResp);
+
+  // Heurísticas semânticas temáticas
+  const temPreco = /\b(r\$|\$|reais|custa|valor|preco|cobramos|sai por|\d+)\b/i.test(respostaDono);
+  const temConvenio = /\b(unimed|bradesco|amil|sulamerica|notredame|convenio|plano|particular)\b/i.test(respNorm);
+  const temHorario = /\b(hora|horario|segunda|terca|quarta|quinta|sexta|sabado|domingo|aberto|fechado|as \d+|\d+h)\b/i.test(respNorm);
+  const temEndereco = /\b(rua|av|avenida|bairro|numero|local|endereco|fica em|fica na|fica no|perto)\b/i.test(respNorm);
+
+  let melhorIndice = 0;
+  let melhorScore = -1;
+
+  for (let i = 0; i < perguntasCliente.length; i++) {
+    const perg = perguntasCliente[i];
+    const pergNorm = normalizar(perg);
+    const tokensPerg = pergNorm.split(" ").filter((w) => w.length >= 3 && !stopWords.has(w));
+
+    let score = 0;
+
+    // 1. Sobreposição de palavras-chave
+    for (const t of tokensPerg) {
+      if (tokensRespSet.has(t)) {
+        score += t.length >= 5 ? 3 : 2;
+      } else if (tokensResp.some((r) => r.includes(t) || t.includes(r))) {
+        score += 1;
+      }
+    }
+
+    // 2. Alinhamento de Preço / Valor
+    if (temPreco && /\b(quanto|custa|valor|preco|tabela|pagar|cobre|orcamento)\b/i.test(pergNorm)) {
+      score += 4;
+    }
+
+    // 3. Alinhamento de Convênio / Plano
+    if (temConvenio && /\b(convenio|plano|unimed|bradesco|amil|aceita|atende)\b/i.test(pergNorm)) {
+      score += 4;
+    }
+
+    // 4. Alinhamento de Horário / Agendamento
+    if (temHorario && /\b(quando|horario|hora|aberto|funciona|atende|atendimento|abre|fecha|agenda|marcar)\b/i.test(pergNorm)) {
+      score += 4;
+    }
+
+    // 5. Alinhamento de Endereço / Localização
+    if (temEndereco && /\b(onde|local|localizacao|endereco|fica|como chego)\b/i.test(pergNorm)) {
+      score += 4;
+    }
+
+    if (score > melhorScore) {
+      melhorScore = score;
+      melhorIndice = i;
+    }
+  }
+
+  return perguntasCliente[melhorIndice];
+}
+
 export type DependenciasDoDono = {
   ehEnvioDaNexora: (instance: string, messageId: string) => Promise<boolean>;
   esperar: (ms: number) => Promise<void>;
@@ -159,21 +250,28 @@ export const dependenciasReais: DependenciasDoDono = {
         select: { role: true, content: true, createdAt: true },
       });
 
-      // Localiza a pergunta real do cliente (ignorando saudações isoladas como "Oi")
+      // Localiza perguntas substantivas do cliente na ordem cronológica recente
       const mensagensCliente = mensagensRecentes.filter((m) => m.role === "CUSTOMER");
-      const perguntaSubstantiva = mensagensCliente.find((m) => !ehSaudacaoOuDescarte(m.content));
-      const perguntaCliente = (perguntaSubstantiva ?? mensagensCliente[0])?.content?.trim();
+      const duvidasSubstantivas = mensagensCliente
+        .map((m) => m.content.trim())
+        .filter((c) => !ehSaudacaoOuDescarte(c));
+
+      // Seleciona com precisão semântica qual pergunta do cliente o dono realmente respondeu
+      const perguntaCliente =
+        selecionarPerguntaParaResposta(duvidasSubstantivas, conteudo) ||
+        mensagensCliente[0]?.content?.trim();
 
       if (perguntaCliente && perguntaCliente.length >= 4) {
         const quinzeMinutosAtras = new Date(Date.now() - 15 * 60_000);
+        const sourceConversa = `TEAM_OBSERVATION:${conversa.id}`;
 
-        // Se o dono já respondeu a esta mesma pergunta nos últimos 15 minutos,
-        // junta as mensagens complementares em vez de fragmentar em múltiplos cards
+        // Agrupamento estritamente ISOLADO para esta conversa específica:
+        // respostas de clientes distintos NUNCA são mescladas entre si
         const observacaoRecente = await prisma.knowledgeItem.findFirst({
           where: {
             companyId: perfil.companyId,
+            source: sourceConversa,
             status: "OBSERVED",
-            question: perguntaCliente.slice(0, 300),
             createdAt: { gte: quinzeMinutosAtras },
           },
           orderBy: { createdAt: "desc" },
@@ -192,6 +290,7 @@ export const dependenciasReais: DependenciasDoDono = {
             perfil.companyId,
             perguntaCliente,
             conteudo,
+            conversa.id,
           );
         }
       }

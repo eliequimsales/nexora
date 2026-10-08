@@ -41,6 +41,7 @@ export default function PaginaDoAtendente() {
   const [testado, setTestado] = useState(false);
   const [salvo, setSalvo] = useState(false);
   const [salvarAberto, setSalvarAberto] = useState(false);
+  const [abaAtiva, setAbaAtiva] = useState<"simulador" | "sabe">("simulador");
   const esperaDoNome = useRef<ReturnType<typeof setTimeout>>();
   const esperaDoSalvo = useRef<ReturnType<typeof setTimeout>>();
 
@@ -150,7 +151,7 @@ export default function PaginaDoAtendente() {
           <h1 className="font-display text-2xl text-panel-ink">Atendente Virtual</h1>
           <p className="mt-1 text-sm text-panel-sub">Responde seus clientes no WhatsApp quando você não pode.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           {salvo && <span className="text-xs text-panel-sub">Salvo</span>}
           {tela.acesso === "SEMANA_ACABOU" ? (
             <Link
@@ -165,6 +166,23 @@ export default function PaginaDoAtendente() {
               {pilula.texto}
             </span>
           )}
+
+          <button
+            type="button"
+            onClick={() => setAbaAtiva((a) => (a === "simulador" ? "sabe" : "simulador"))}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-bold transition shadow-xs ${
+              abaAtiva === "sabe"
+                ? "border-amber bg-amber text-night"
+                : "border-panel-line bg-panel-card text-panel-ink hover:bg-panel-bg"
+            }`}
+          >
+            <span>{abaAtiva === "sabe" ? "📱 Voltar ao Simulador" : "📋 O que meu Atendente sabe"}</span>
+            {tela.sabe.servicos.length > 0 && (
+              <span className="rounded-full bg-black/10 px-1.5 py-0.5 text-[10px]">
+                {tela.sabe.servicos.length}
+              </span>
+            )}
+          </button>
         </div>
       </header>
 
@@ -211,38 +229,82 @@ export default function PaginaDoAtendente() {
         </p>
       )}
 
-      {/* grid-cols-1 é minmax(0, 1fr): no celular a coluna encolhe até a tela, em vez de crescer até o item mais largo. */}
-      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
-        <Celular
-          tela={tela}
-          nome={nome}
-          jeito={jeito}
-          aoTestar={() => {
-            setTestado(true);
-            void recarregar();
-          }}
-        />
+      {/* CONTEÚDO PRINCIPAL: SIMULADOR CENTRALIZADO OU PAINEL DE CONHECIMENTO */}
+      {abaAtiva === "simulador" ? (
+        <div className="grid grid-cols-1 items-start gap-6 mx-auto w-full max-w-2xl">
+          <Celular
+            tela={tela}
+            nome={nome}
+            jeito={jeito}
+            aoTestar={() => {
+              setTestado(true);
+              void recarregar();
+            }}
+            aoAjustar={ajustar}
+            aoAtualizarTela={recarregar}
+            aoAbrirSabe={() => setAbaAtiva("sabe")}
+          />
 
-        <div className="space-y-4">
-          <CartaoDaNoite />
-
-          {tela.observacoesPassivas && tela.observacoesPassivas.length > 0 && (
-            <AprendizadoPassivo
-              observacoes={tela.observacoesPassivas}
-              aoAtualizar={recarregar}
-            />
+          {!tela.ligado && (
+            <div className="rounded-2xl border border-panel-line bg-panel-card p-5 shadow-xs">
+              <Ligar tela={tela} testado={testado} aoMudarTela={setTela} />
+            </div>
           )}
+
+          {tela.ligado && (
+            <div className="rounded-2xl border border-panel-line bg-panel-card p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className={`h-2.5 w-2.5 rounded-full ${pilula.ponto}`} />
+                <div>
+                  <p className="text-xs font-bold text-panel-ink">{nome || "Atendente"} está ativa no WhatsApp</p>
+                  <p className="text-[11px] text-panel-sub">Atendendo mensagens e dúvidas dos clientes</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAbaAtiva("sabe")}
+                className="text-xs font-semibold text-amber-deep hover:underline"
+              >
+                Ver configurações completas ›
+              </button>
+            </div>
+          )}
+
+          <div className="text-center pt-1">
+            <button
+              type="button"
+              onClick={() => setAbaAtiva("sabe")}
+              className="inline-flex items-center gap-2 rounded-xl border border-panel-line bg-panel-card px-4 py-2 text-xs font-semibold text-panel-sub hover:text-panel-ink hover:bg-panel-bg transition shadow-xs"
+            >
+              <span>📋</span>
+              <span>Ver catálogo completo e regras da empresa ({tela.sabe.servicos.length} serviços)</span>
+            </button>
+          </div>
+
+          <CartaoDaNoite />
+        </div>
+      ) : (
+        <div className="mx-auto w-full max-w-3xl space-y-6">
+          <div className="flex items-center justify-between rounded-2xl border border-amber/30 bg-amber/10 p-4 shadow-xs">
+            <div>
+              <h2 className="text-sm font-bold text-panel-ink">Tudo o que a Nexora sabe sobre seu negócio</h2>
+              <p className="text-xs text-panel-sub">Serviços, horários, endereço, formas de pagamento e conduta.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAbaAtiva("simulador")}
+              className="rounded-xl bg-panel-ink text-white px-3.5 py-2 text-xs font-bold hover:brightness-110 shadow-sm"
+            >
+              📱 Abrir Simulador WhatsApp
+            </button>
+          </div>
 
           <MicroDecisoes tela={tela} aoAjustar={ajustar} />
 
           {tela.ligado ? <Situacao tela={tela} aoMudarTela={setTela} /> : ajustes}
 
-          {(!tela.ligado || tela.acesso === "SEMANA_ACABOU") && (
-            <Ligar tela={tela} testado={testado} aoMudarTela={setTela} />
-          )}
-
           {tela.ligado && (
-            <details className="group rounded-2xl border border-panel-line bg-panel-card">
+            <details className="group rounded-2xl border border-panel-line bg-panel-card" open>
               <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-panel-ink">
                 <span className="mr-2 inline-block text-panel-sub transition group-open:rotate-90">›</span>
                 Ajustar nome, jeito e dados completos
@@ -250,8 +312,12 @@ export default function PaginaDoAtendente() {
               <div className="border-t border-panel-line p-4">{ajustes}</div>
             </details>
           )}
+
+          {(!tela.ligado || tela.acesso === "SEMANA_ACABOU") && (
+            <Ligar tela={tela} testado={testado} aoMudarTela={setTela} />
+          )}
         </div>
-      </div>
+      )}
 
       <ModalSalvarConta
         aberto={salvarAberto}
