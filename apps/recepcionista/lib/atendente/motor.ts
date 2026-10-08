@@ -223,14 +223,22 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
     : null;
   const comAbertura = (texto: string) => {
     if (!abertura) return [texto];
-    if (/^(ol[aá]|oi|bom dia|boa tarde|boa noite)\b/i.test(texto.trim())) {
+    if (
+      /^(ol[aá]|oi|bom dia|boa tarde|boa noite)/i.test(texto.trim()) ||
+      texto.trim().includes("Viu a velocidade")
+    ) {
       return [texto];
     }
     return [abertura, texto];
   };
   const formatarRespostaFaq = (resposta: string) => {
     const r = resposta.trim();
-    if (r.endsWith("?") || r.includes("http://") || r.includes("https://") || /qual\b|como\b|👉/i.test(r)) {
+    if (
+      r.endsWith("?") ||
+      r.includes("http://") ||
+      r.includes("https://") ||
+      /qual\b|como\b|👉|gr[aá]tis|plano|mensal|semana|ativar|r\$/i.test(r)
+    ) {
       return r;
     }
     return `${r} ${t.convite}`;
