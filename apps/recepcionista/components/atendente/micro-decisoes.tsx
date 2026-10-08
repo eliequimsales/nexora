@@ -145,7 +145,7 @@ export function MicroDecisoes({
             ) : (
               <p>
                 👉 <strong>Como ela vai funcionar:</strong> O atendente cuida de tudo 24h. Durante o
-                expediente, se um cliente chamar e você não responder em até 3 minutos, ele assume.
+                expediente, se um cliente chamar e você não responder em até 5 minutos, ele assume.
               </p>
             )}
           </div>

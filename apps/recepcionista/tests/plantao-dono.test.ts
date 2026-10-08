@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   ESPERA_DO_ECO_MS,
+  ehSaudacaoOuDescarte,
   registrarMensagemDoDono,
   type DependenciasDoDono,
 } from "@/lib/plantao/dono";
@@ -126,5 +127,35 @@ describe("o webhook e o banco", () => {
     };
     await registrarMensagemDoDono(msg({ text: "Cobramos R$ 150 a consulta" }), deps, AGORA);
     expect(textoRecebido).toBe("Cobramos R$ 150 a consulta");
+  });
+
+  it("encaminha messageId para garantir idempotência contra retries", async () => {
+    let idRecebido: string | null | undefined;
+    const { deps } = falsas();
+    deps.marcarQueODonoAssumiu = async (_instance, _phone, _quando, _texto, messageId) => {
+      idRecebido = messageId;
+      return true;
+    };
+    await registrarMensagemDoDono(msg({ messageId: "3EB0UNIQUE_999" }), deps, AGORA);
+    expect(idRecebido).toBe("3EB0UNIQUE_999");
+  });
+});
+
+describe("ehSaudacaoOuDescarte", () => {
+  it("identifica saudações, despedidas e confirmações como não substantivas", () => {
+    expect(ehSaudacaoOuDescarte("Olá")).toBe(true);
+    expect(ehSaudacaoOuDescarte("Oi, tudo bem?")).toBe(true);
+    expect(ehSaudacaoOuDescarte("Bom dia!")).toBe(true);
+    expect(ehSaudacaoOuDescarte("Até amanhã")).toBe(true);
+    expect(ehSaudacaoOuDescarte("Ok")).toBe(true);
+    expect(ehSaudacaoOuDescarte("Valeu, obrigado")).toBe(true);
+    expect(ehSaudacaoOuDescarte("Combinado")).toBe(true);
+  });
+
+  it("reconhece respostas reais e informativas como substantivas", () => {
+    expect(ehSaudacaoOuDescarte("Custa R$ 100 a consulta")).toBe(false);
+    expect(ehSaudacaoOuDescarte("Atendemos aos sábados das 9h às 14h")).toBe(false);
+    expect(ehSaudacaoOuDescarte("Aceitamos Pix, cartão e dinheiro")).toBe(false);
+    expect(ehSaudacaoOuDescarte("Fica na Av. Paulista, 1000")).toBe(false);
   });
 });

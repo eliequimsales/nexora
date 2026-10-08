@@ -296,7 +296,8 @@ const STRUCTURER_PROMPT = `Você organiza o manual interno de uma empresa. Receb
 
 Devolva SOMENTE um JSON válido: {"pergunta": "...", "resposta": "..."}
 - "pergunta": a dúvida reescrita de forma canônica e clara, na voz do cliente.
-- "resposta": a informação organizada em 1 a 3 frases objetivas, pronta para um atendente usar.
+- "resposta": a informação organizada em 1 a 3 frases objetivas, pronta para um atendente usar para futuros clientes.
+- Se a resposta contiver termos circunstanciais como "hoje", "pra você", "agora", organize a resposta como política ou condição clara (ex.: "O valor especial é R$ 80" ou indique a condição promocional), sem manter vícios pessoais como "faço para você".
 - Preserve EXATAMENTE todos os números, valores, faixas, prazos e condições informados (ex.: "até 4 unidades: R$ 800; acima disso: orçamento com a equipe").
 - NUNCA invente, complete ou deduza nada que a empresa não escreveu.`;
 
