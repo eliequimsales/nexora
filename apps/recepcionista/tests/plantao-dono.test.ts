@@ -112,8 +112,19 @@ describe("o webhook e o banco", () => {
     expect(conversa).toMatch(/donoAssumiuEm\s+DateTime\?/);
   });
 
-  it("o dono guarda só telefone e hora — nunca o texto da mensagem dele", () => {
+  it("o dono salva a resposta e gera observação de aprendizado passivo", () => {
     const dono = semComentarios(readFileSync(join(RAIZ, "lib/plantao/dono.ts"), "utf8"));
-    expect(dono).not.toMatch(/message\.create|content:/);
+    expect(dono).toContain("recordTeamObservation");
+  });
+
+  it("encaminha o texto da resposta do dono para aprendizado", async () => {
+    let textoRecebido: string | null | undefined;
+    const { deps } = falsas();
+    deps.marcarQueODonoAssumiu = async (_instance, _phone, _quando, texto) => {
+      textoRecebido = texto;
+      return true;
+    };
+    await registrarMensagemDoDono(msg({ text: "Cobramos R$ 150 a consulta" }), deps, AGORA);
+    expect(textoRecebido).toBe("Cobramos R$ 150 a consulta");
   });
 });

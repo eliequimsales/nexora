@@ -188,6 +188,7 @@ describe("parseMensagemDoDono", () => {
       phone: "5511999998888",
       messageId: "3EB0DONO",
       enviadaEm: new Date(1790000000 * 1000),
+      text: "Oi, vocês atendem sábado?",
     });
   });
 

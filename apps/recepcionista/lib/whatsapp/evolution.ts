@@ -80,6 +80,8 @@ export interface MensagemDoDono {
   messageId: string | null;
   /** Quando a mensagem saiu, pelo relógio do WhatsApp. null quando não veio. */
   enviadaEm: Date | null;
+  /** O texto que o dono digitou no celular (se for mensagem de texto). */
+  text?: string | null;
 }
 
 function lerHorario(valor: unknown): Date | null {
@@ -112,11 +114,15 @@ export function parseMensagemDoDono(payload: unknown): MensagemDoDono | null {
   const phone = jid.split("@")[0].replace(/\D/g, "");
   if (phone.length < 8) return null;
 
+  const rawText = data.message?.conversation ?? data.message?.extendedTextMessage?.text ?? "";
+  const text = rawText.trim().slice(0, MAX_TEXT_LENGTH) || null;
+
   return {
     instance,
     phone,
     messageId: data.key.id ?? null,
     enviadaEm: lerHorario(data.messageTimestamp),
+    text,
   };
 }
 

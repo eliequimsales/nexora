@@ -89,6 +89,11 @@ export type TelaDoAtendente = {
     pergunta: string;
     vezesPerguntada: number;
   }[];
+  observacoesPassivas: {
+    id: string;
+    pergunta: string;
+    resposta: string;
+  }[];
 };
 
 const DIA_MS = 86_400_000;
@@ -256,7 +261,7 @@ export async function telaDoAtendente(companyId: string, agora: Date = new Date(
   const desde = ultimoFechamento(fatos.horarios, fatos.diasFechados, agora);
   const naSemanaGratis = Boolean(!temPlano && uso.primeiraVezEm && acesso === "SEMANA_GRATIS");
 
-  const [doFechamento, pendentes, daSemana, exemplo, duvidasAbertas] = await Promise.all([
+  const [doFechamento, pendentes, daSemana, exemplo, duvidasAbertas, observacoesPassivas] = await Promise.all([
     desde
       ? prisma.atendenteAtendimento.findMany({
           where: { companyId, foraDoHorario: true, atualizadoEm: { gte: desde } },
@@ -293,6 +298,12 @@ export async function telaDoAtendente(companyId: string, agora: Date = new Date(
       select: { id: true, question: true, askCount: true },
       orderBy: [{ askCount: "desc" }, { lastAskedAt: "desc" }],
       take: 10,
+    }),
+    prisma.knowledgeItem.findMany({
+      where: { companyId, status: "OBSERVED" },
+      select: { id: true, question: true, answer: true },
+      orderBy: { createdAt: "desc" },
+      take: 5,
     }),
   ]);
 
@@ -359,6 +370,11 @@ export async function telaDoAtendente(companyId: string, agora: Date = new Date(
       id: d.id,
       pergunta: d.question,
       vezesPerguntada: d.askCount,
+    })),
+    observacoesPassivas: observacoesPassivas.map((o) => ({
+      id: o.id,
+      pergunta: o.question,
+      resposta: o.answer,
     })),
     isGuest: Boolean(conta?.email && conta.email.includes("@temporario.meunexora.com.br")),
     email: conta?.email ?? "",

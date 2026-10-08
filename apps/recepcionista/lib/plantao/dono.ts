@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import type { MensagemDoDono } from "@/lib/whatsapp/evolution";
 import { ehEnvioDaNexora } from "@/lib/whatsapp/envio";
+import { recordTeamObservation } from "@/lib/training";
 
 /**
  * O DONO ASSUMIU A CONVERSA?
@@ -24,7 +25,7 @@ export type DependenciasDoDono = {
   ehEnvioDaNexora: (instance: string, messageId: string) => Promise<boolean>;
   esperar: (ms: number) => Promise<void>;
   /** Marca a hora na conversa com esse telefone. false quando a conexão não é de empresa nenhuma. */
-  marcarQueODonoAssumiu: (instance: string, phone: string, quando: Date) => Promise<boolean>;
+  marcarQueODonoAssumiu: (instance: string, phone: string, quando: Date, texto?: string | null) => Promise<boolean>;
 };
 
 export type ResultadoDoDono = "ECO_DA_NEXORA" | "DONO_ASSUMIU" | "ANTIGA" | "SEM_EMPRESA";
@@ -42,28 +43,63 @@ export async function registrarMensagemDoDono(
     if (await deps.ehEnvioDaNexora(msg.instance, msg.messageId)) return "ECO_DA_NEXORA";
   }
 
-  const marcou = await deps.marcarQueODonoAssumiu(msg.instance, msg.phone, msg.enviadaEm ?? agora);
+  const marcou = await deps.marcarQueODonoAssumiu(
+    msg.instance,
+    msg.phone,
+    msg.enviadaEm ?? agora,
+    msg.text,
+  );
   return marcou ? "DONO_ASSUMIU" : "SEM_EMPRESA";
 }
 
 export const dependenciasReais: DependenciasDoDono = {
   ehEnvioDaNexora,
   esperar: (ms) => new Promise((resolver) => setTimeout(resolver, ms)),
-  async marcarQueODonoAssumiu(instance, phone, quando) {
+  async marcarQueODonoAssumiu(instance, phone, quando, texto) {
     const perfil = await prisma.companyProfile.findUnique({
       where: { whatsappInstance: instance },
       select: { companyId: true },
     });
     if (!perfil) return false;
 
-    // Cria a conversa quando é o dono quem começa: se o cliente responder às
-    // 22h15 uma conversa que o dono abriu às 22h10, o Plantão precisa saber que
-    // tem gente cuidando dela. Só telefone e hora — o texto do dono não é salvo.
-    await prisma.conversation.upsert({
+    // Cria ou atualiza a conversa quando o dono responde ou inicia pelo celular
+    const conversa = await prisma.conversation.upsert({
       where: { companyId_customerPhone: { companyId: perfil.companyId, customerPhone: phone } },
       create: { companyId: perfil.companyId, customerPhone: phone, donoAssumiuEm: quando },
       update: { donoAssumiuEm: quando },
+      select: { id: true },
     });
+
+    // Se o dono enviou mensagem de texto, salva no histórico da conversa como HUMAN
+    // e extrai a resposta para sugerir aprendizado passivo no treinamento (status OBSERVED).
+    if (texto && texto.trim()) {
+      const conteudo = texto.trim();
+      await prisma.message.create({
+        data: {
+          conversationId: conversa.id,
+          role: "HUMAN",
+          content: conteudo,
+        },
+      });
+
+      const ultimaPerguntaCliente = await prisma.message.findFirst({
+        where: {
+          conversationId: conversa.id,
+          role: "CUSTOMER",
+        },
+        orderBy: { createdAt: "desc" },
+        select: { content: true },
+      });
+
+      if (ultimaPerguntaCliente && ultimaPerguntaCliente.content) {
+        await recordTeamObservation(
+          perfil.companyId,
+          ultimaPerguntaCliente.content,
+          conteudo,
+        );
+      }
+    }
+
     return true;
   },
 };

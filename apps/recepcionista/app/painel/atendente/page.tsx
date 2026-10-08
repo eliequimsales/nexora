@@ -5,8 +5,10 @@ import { useEffect, useRef, useState } from "react";
 import type { Jeito } from "@/lib/atendente/jeitos";
 import type { TelaDoAtendente, Tom } from "@/lib/atendente/tela";
 import { Ajustes } from "@/components/atendente/ajustes";
+import { AprendizadoPassivo } from "@/components/atendente/aprendizado-passivo";
 import { Celular } from "@/components/atendente/celular";
 import { Ligar } from "@/components/atendente/ligar";
+import { MicroDecisoes } from "@/components/atendente/micro-decisoes";
 import { Situacao } from "@/components/atendente/situacao";
 import { CartaoDaNoite } from "@/components/painel/cartao-da-noite";
 import { ModalSalvarConta } from "@/components/painel/modal-salvar-conta";
@@ -223,15 +225,27 @@ export default function PaginaDoAtendente() {
 
         <div className="space-y-4">
           <CartaoDaNoite />
+
+          {tela.observacoesPassivas && tela.observacoesPassivas.length > 0 && (
+            <AprendizadoPassivo
+              observacoes={tela.observacoesPassivas}
+              aoAtualizar={recarregar}
+            />
+          )}
+
+          <MicroDecisoes tela={tela} aoAjustar={ajustar} />
+
           {tela.ligado ? <Situacao tela={tela} aoMudarTela={setTela} /> : ajustes}
+
           {(!tela.ligado || tela.acesso === "SEMANA_ACABOU") && (
             <Ligar tela={tela} testado={testado} aoMudarTela={setTela} />
           )}
+
           {tela.ligado && (
             <details className="group rounded-2xl border border-panel-line bg-panel-card">
               <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-panel-ink">
                 <span className="mr-2 inline-block text-panel-sub transition group-open:rotate-90">›</span>
-                Ajustar nome, jeito e dados
+                Ajustar nome, jeito e dados completos
               </summary>
               <div className="border-t border-panel-line p-4">{ajustes}</div>
             </details>

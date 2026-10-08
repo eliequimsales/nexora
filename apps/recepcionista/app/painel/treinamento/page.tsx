@@ -202,6 +202,166 @@ export default function TreinamentoPage() {
         </p>
       )}
 
+      {/* Respostas observadas no WhatsApp */}
+      {observations && observations.length > 0 && (
+        <Card
+          title="Respostas capturadas do seu WhatsApp"
+          badge={
+            <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-100 px-1 text-[11px] font-black text-emerald-800 shadow-xs">
+              {observations.length}
+            </span>
+          }
+          hint="Perguntas que você mesmo respondeu aos clientes pelo WhatsApp. Aprova com 1 toque para o atendente usar sempre, ajuste se necessário ou descarte se for uma exceção."
+        >
+          <div className="space-y-3">
+            {observations.map((obs) => {
+              const estaEditando = edits[obs.id] !== undefined;
+              return (
+                <div key={obs.id} className="rounded-xl border border-panel-line bg-white p-4 space-y-3">
+                  {estaEditando ? (
+                    <div className="space-y-2.5">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-panel-sub uppercase">
+                          Pergunta do cliente:
+                        </label>
+                        <input
+                          type="text"
+                          value={edits[obs.id]?.question ?? obs.question}
+                          onChange={(e) =>
+                            setEdits((prev) => ({
+                              ...prev,
+                              [obs.id]: {
+                                question: e.target.value,
+                                answer: prev[obs.id]?.answer ?? obs.answer,
+                              },
+                            }))
+                          }
+                          className={inputClass}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-panel-sub uppercase">
+                          Resposta para o atendente usar:
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={edits[obs.id]?.answer ?? obs.answer}
+                          onChange={(e) =>
+                            setEdits((prev) => ({
+                              ...prev,
+                              [obs.id]: {
+                                question: prev[obs.id]?.question ?? obs.question,
+                                answer: e.target.value,
+                              },
+                            }))
+                          }
+                          className={inputClass}
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={busy === `obs-${obs.id}`}
+                          onClick={() =>
+                            call(
+                              `/api/training/items/${obs.id}`,
+                              "PATCH",
+                              {
+                                action: "aprovar",
+                                question: edits[obs.id]?.question,
+                                answer: edits[obs.id]?.answer,
+                              },
+                              `obs-${obs.id}`,
+                              "Resposta corrigida e aprovada! O atendente já aprendeu.",
+                            )
+                          }
+                          className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                          Salvar e Usar Sempre
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEdits((prev) => {
+                              const next = { ...prev };
+                              delete next[obs.id];
+                              return next;
+                            });
+                          }}
+                          className="rounded-lg border border-panel-line px-3 py-1.5 text-xs font-semibold text-panel-sub hover:text-panel-ink"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-1 text-xs">
+                        <p className="text-panel-sub">
+                          Cliente perguntou:{" "}
+                          <span className="font-semibold text-panel-ink">&ldquo;{obs.question}&rdquo;</span>
+                        </p>
+                        <p className="text-panel-sub">
+                          Você respondeu:{" "}
+                          <span className="font-bold text-emerald-800">&ldquo;{obs.answer}&rdquo;</span>
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          disabled={busy !== null}
+                          onClick={() =>
+                            call(
+                              `/api/training/items/${obs.id}`,
+                              "PATCH",
+                              { action: "aprovar" },
+                              `obs-app-${obs.id}`,
+                              "Aprendido! O atendente já usa essa resposta no WhatsApp.",
+                            )
+                          }
+                          className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 transition disabled:opacity-50"
+                        >
+                          ✓ Usar sempre
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy !== null}
+                          onClick={() =>
+                            setEdits((prev) => ({
+                              ...prev,
+                              [obs.id]: { question: obs.question, answer: obs.answer },
+                            }))
+                          }
+                          className="rounded-lg border border-panel-line bg-white px-3 py-1.5 text-xs font-semibold text-panel-ink hover:border-amber transition disabled:opacity-50"
+                        >
+                          ✏️ Corrigir
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy !== null}
+                          onClick={() =>
+                            call(
+                              `/api/training/items/${obs.id}`,
+                              "PATCH",
+                              { action: "rejeitar" },
+                              `obs-rej-${obs.id}`,
+                              "Descartado. Essa resposta não será usada como regra geral.",
+                            )
+                          }
+                          className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-panel-sub hover:text-red-700 transition disabled:opacity-50"
+                        >
+                          ✕ Vale só para este caso
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
       {/* Dúvidas para ensinar agora */}
       <Card
         title="Dúvidas que o atendente quer aprender"
