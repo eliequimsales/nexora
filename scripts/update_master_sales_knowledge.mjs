@@ -7,11 +7,15 @@ const MASTER_COMPANY_ID = 'cmr6swe6z001ym7xu4lcxpxs7';
 const RESPOSTAS_DE_CONVERSAO = [
   {
     question: 'Quanto custa?',
-    answer: 'O Atendente custa R$ 97 por mês e inclui até 200 conversas mensais (sem contrato e sem fidelidade). Cada pessoa atendida em um dia conta como uma conversa. Você pode experimentar 7 dias grátis sem cadastrar cartão: 👉 https://www.meunexora.com.br/ativar',
+    answer: 'O plano do Atendente 24h é apenas R$ 97 por mês (no Pix ou Cartão) com conversas ILIMITADAS. Sem limite de mensagens, sem contrato e sem fidelidade: seu atendente responde dia e noite sem parar enquanto sua assinatura estiver ativa. Você pode testar 7 dias grátis sem cartão: 👉 https://www.meunexora.com.br/ativar',
+  },
+  {
+    question: 'Quanto custa o plano?',
+    answer: 'O plano do Atendente 24h é apenas R$ 97 por mês (no Pix ou Cartão) com conversas ILIMITADAS. Sem limite de mensagens, sem contrato e sem fidelidade: seu atendente responde dia e noite sem parar enquanto sua assinatura estiver ativa. Você pode testar 7 dias grátis sem cartão: 👉 https://www.meunexora.com.br/ativar',
   },
   {
     question: 'Como funciona o teste grátis?',
-    answer: 'O teste começa quando você liga o Atendente e dura 7 dias (ou até 50 conversas atendidas). Não pede cartão nem cobra nada ao terminar. Você testa na prática e só decide se continua depois: 👉 https://www.meunexora.com.br/ativar',
+    answer: 'Você ganha 7 dias grátis de acesso completo para ver o Atendente respondendo seus clientes no WhatsApp ao vivo. Não pede cartão de crédito e não cobra nada ao terminar: 👉 https://www.meunexora.com.br/ativar',
   },
   {
     question: 'Precisa de outro chip ou número?',

@@ -44,7 +44,7 @@ export function acessoDoAtendente(p: {
   agora: Date;
 }): Acesso {
   if (COM_PLANO.includes(p.estado)) {
-    return p.conversasNoMes < TETO_CONVERSAS_MES ? "INCLUIDO" : "TETO";
+    return "INCLUIDO";
   }
   // Nunca ligou: a semana começa quando ligar.
   if (!p.primeiraVezEm) return "SEMANA_GRATIS";

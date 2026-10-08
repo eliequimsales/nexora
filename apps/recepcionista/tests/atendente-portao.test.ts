@@ -41,11 +41,11 @@ const ctx = (p: Partial<Parameters<typeof decidirQuando>[0]> = {}): Parameters<t
 describe("acessoDoAtendente", () => {
   const base = { primeiraVezEm: null, conversasNaSemana: 0, conversasNoMes: 0, agora: TERCA_22H };
 
-  it("no plano, incluído até o teto de conversas do mês", () => {
+  it("no plano, incluído com conversas ilimitadas no mês", () => {
     for (const estado of ["ATIVO", "PASSE", "TRIAL", "TOLERANCIA", "CANCELADO_COM_ACESSO"] as const) {
       expect(acessoDoAtendente({ ...base, estado }), estado).toBe("INCLUIDO");
     }
-    expect(acessoDoAtendente({ ...base, estado: "ATIVO", conversasNoMes: TETO_CONVERSAS_MES })).toBe("TETO");
+    expect(acessoDoAtendente({ ...base, estado: "ATIVO", conversasNoMes: 50_000 })).toBe("INCLUIDO");
   });
 
   it("quem paga nunca cai na semana grátis, nem depois de usar a dele", () => {

@@ -204,11 +204,9 @@ describe("planejar — se e quando o Atendente responde", () => {
     expect(planejar(planoBase({ temWhatsApp: false }))).toEqual({ acao: "SILENCIO", motivo: "SEM_WHATSAPP" });
   });
 
-  it("teto do mês: conversa nova recebe o aviso uma vez; a que já estava sendo atendida continua", () => {
-    const noTeto = { conversasNoMes: TETO_CONVERSAS_MES, conversasNaSemana: 0, primeiraVezEm: null };
-    expect(planejar(planoBase({ uso: noTeto }))).toEqual({ acao: "AVISO_DO_TETO" });
-    expect(planejar(planoBase({ uso: noTeto, respostasHoje: 0 }))).toEqual({ acao: "SILENCIO", motivo: "TETO_AVISADO" });
-    expect(planejar(planoBase({ uso: noTeto, respostasHoje: 3 }))).toMatchObject({ acao: "RESPONDER" });
+  it("no plano ativo, as conversas são ilimitadas mesmo com volume alto", () => {
+    const usoAlto = { conversasNoMes: 50_000, conversasNaSemana: 0, primeiraVezEm: null };
+    expect(planejar(planoBase({ uso: usoAlto }))).toMatchObject({ acao: "RESPONDER" });
   });
 
   it("sem plano, depois da semana grátis: silêncio", () => {
@@ -504,16 +502,13 @@ describe("atender — anotações para o dono", () => {
   });
 });
 
-describe("atender — teto do mês e limite do dia, sem passar pelo motor", () => {
-  it("teto: texto fixo com a apresentação, uma vez, anotado para o dono e sem contar como conversa", async () => {
-    (usoDoAtendente as Fn).mockResolvedValue({ conversasNoMes: TETO_CONVERSAS_MES, conversasNaSemana: 0, primeiraVezEm: null });
+describe("atender — limite do dia e conversas contínuas", () => {
+  it("no plano ativo, responde normalmente mesmo com volume alto no mês", async () => {
+    (usoDoAtendente as Fn).mockResolvedValue({ conversasNoMes: 50_000, conversasNaSemana: 0, primeiraVezEm: null });
     conversaCom(msg("m1", "CUSTOMER", "tem horário amanhã?", new Date(AGORA.getTime() - MIN)));
     const r = await rodar();
-    expect(r).toEqual({ acao: "RESPONDEU", mensagens: 1 });
-    expect((enviarWhatsApp as Fn).mock.calls[0][2]).toContain("Eu sou Bia");
-    expect(horariosLivres).not.toHaveBeenCalled();
-    expect(generateReceptionistReply).not.toHaveBeenCalled();
-    expect(registrarAtendimento).toHaveBeenCalledWith(expect.objectContaining({ respostas: 0, precisaDoDono: true }));
+    expect(r).toEqual({ acao: "RESPONDEU", mensagens: 2 });
+    expect(enviarWhatsApp).toHaveBeenCalled();
   });
 
   it("limite do dia: \"deixei anotado\" uma vez, e a conta de respostas passa do limite", async () => {
