@@ -32,7 +32,7 @@ export const VALIDADE_DA_OFERTA_MS = 2 * HORA_MS;
  * Quem escreve "oi", "tudo bem?" e "tem horário amanhã?" em três mensagens
  * recebe uma resposta só, para as três: a mais nova espera este tanto e responde.
  */
-export const ESPERA_DA_RAJADA_MS = 2_000;
+export const ESPERA_DA_RAJADA_MS = 1_200;
 
 /** O resgate roda a cada minuto. */
 export const INTERVALO_DO_RESGATE_MS = MINUTO_MS;

@@ -131,7 +131,7 @@ export function obterPresetDoRamo(ramoOuTexto?: string | null): PresetNicho {
       serviceRules: "⏱️ Tolerância de atraso: 15 minutos",
       servicos: [
         { name: "Consulta e Avaliação", durationMin: 30, priceCents: 0 },
-        { name: "Limpeza Dental", durationMin: 40, priceCents: 15000 },
+        { name: "Limpeza Dental", durationMin: 40, priceCents: 0 },
       ],
       duvidas: [
         {
@@ -152,7 +152,7 @@ export function obterPresetDoRamo(ramoOuTexto?: string | null): PresetNicho {
       pagamento: "Pix, Cartão de Crédito e Débito",
       serviceRules: "⏱️ Tolerância de atraso: 15 minutos",
       servicos: [
-        { name: "Consulta", durationMin: 30, priceCents: 20000 },
+        { name: "Consulta", durationMin: 30, priceCents: 0 },
         { name: "Retorno", durationMin: 20, priceCents: 0 },
       ],
       duvidas: [
@@ -175,7 +175,7 @@ export function obterPresetDoRamo(ramoOuTexto?: string | null): PresetNicho {
       serviceRules: "⏱️ Tolerância de atraso: 15 minutos",
       servicos: [
         { name: "Avaliação Estética", durationMin: 30, priceCents: 0 },
-        { name: "Limpeza de Pele Profunda", durationMin: 60, priceCents: 18000 },
+        { name: "Limpeza de Pele Profunda", durationMin: 60, priceCents: 0 },
       ],
       duvidas: [
         {
@@ -196,9 +196,9 @@ export function obterPresetDoRamo(ramoOuTexto?: string | null): PresetNicho {
       pagamento: "Pix, Cartão e Dinheiro",
       serviceRules: "⏱️ Tolerância de atraso: 15 minutos",
       servicos: [
-        { name: "Corte de Cabelo", durationMin: 30, priceCents: 4500 },
-        { name: "Barba Completa", durationMin: 30, priceCents: 3500 },
-        { name: "Combo Corte + Barba", durationMin: 50, priceCents: 7500 },
+        { name: "Corte de Cabelo", durationMin: 30, priceCents: 0 },
+        { name: "Barba Completa", durationMin: 30, priceCents: 0 },
+        { name: "Combo Corte + Barba", durationMin: 50, priceCents: 0 },
       ],
       duvidas: [
         {

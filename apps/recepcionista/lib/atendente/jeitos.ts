@@ -158,10 +158,10 @@ const ACOLHEDOR: Textos = {
   reclamacao: (volta) =>
     `Sinto muito por isso. Anotei tudo para a equipe, e alguém fala com você ${volta ?? "assim que puder"}.`,
   naoSei: (volta) =>
-    `Essa eu não tenho confirmada aqui. Deixei anotado para a equipe te responder ${volta ?? "assim que puder"}.`,
+    `Essa eu não tenho confirmada aqui. Deixei anotado para a equipe te responder ${volta ?? "assim que puder"}. Quer que eu te mostre os horários livres?`,
   preco: (p) => `${p.servico} sai por ${p.preco}${p.duracao ? ` e leva ${p.duracao}` : ""}.`,
   semPreco: (servico) =>
-    `O valor de ${servico} eu não tenho confirmado aqui. Deixei anotado para a equipe te passar certinho.`,
+    `O valor de ${servico} eu não tenho confirmado aqui. Deixei anotado para a equipe te passar certinho. Quer que eu te mostre os horários livres?`,
   agradecimento: "Imagina! Qualquer coisa, é só chamar 💛",
   teto: (p) =>
     `Oi! ${p.apresentacao}. Recebi sua mensagem e a equipe te responde ${p.volta ?? "assim que puder"}.`,
@@ -195,9 +195,11 @@ const DIRETO: Textos = {
       ? `Certo. A equipe volta ${volta} e vai falar com você.`
       : "Certo. Avisei a equipe, e alguém responde por aqui em breve.",
   reclamacao: (volta) => `Lamento. Registrei para a equipe, que fala com você ${volta ?? "em breve"}.`,
-  naoSei: (volta) => `Não tenho essa informação confirmada. Anotei para a equipe responder ${volta ?? "em breve"}.`,
+  naoSei: (volta) =>
+    `Não tenho essa informação confirmada. Anotei para a equipe responder ${volta ?? "em breve"}. Quer ver os horários livres?`,
   preco: (p) => `${p.servico}: ${p.preco}${p.duracao ? `, ${p.duracao}` : ""}.`,
-  semPreco: (servico) => `Não tenho o valor de ${servico} confirmado. Anotei para a equipe informar.`,
+  semPreco: (servico) =>
+    `Não tenho o valor de ${servico} confirmado. Anotei para a equipe informar. Quer ver os horários livres?`,
   agradecimento: "Por nada. Qualquer coisa, estou por aqui.",
   teto: (p) =>
     `Olá. ${p.apresentacao}. Sua mensagem foi registrada e a equipe responde ${p.volta ?? "em breve"}.`,
@@ -231,9 +233,10 @@ const DESCONTRAIDO: Textos = {
   reclamacao: (volta) =>
     `Poxa, sinto muito. Anotei tudo pro pessoal, e alguém fala com você ${volta ?? "assim que der"}.`,
   naoSei: (volta) =>
-    `Essa eu não sei te dizer com certeza. Deixei anotado pro pessoal te responder ${volta ?? "assim que der"}.`,
+    `Essa eu não sei te dizer com certeza. Deixei anotado pro pessoal te responder ${volta ?? "assim que der"}. Bora ver um horário?`,
   preco: (p) => `${p.servico} sai ${p.preco}${p.duracao ? ` e leva ${p.duracao}` : ""}.`,
-  semPreco: (servico) => `O valor de ${servico} eu não tenho certinho aqui. Deixei anotado pro pessoal te passar.`,
+  semPreco: (servico) =>
+    `O valor de ${servico} eu não tenho certinho aqui. Deixei anotado pro pessoal te passar. Bora ver um horário?`,
   agradecimento: "Tamo junto! Qualquer coisa, chama aqui 😄",
   teto: (p) => `Opa! ${p.apresentacao}. Recebi sua mensagem e o pessoal te responde ${p.volta ?? "assim que der"}.`,
   limiteDoDia: (volta) => `Deixei tudo anotado pro pessoal, que te responde ${volta ?? "assim que der"}.`,
