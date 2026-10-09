@@ -217,9 +217,6 @@ export function Celular({
     }
   }
 
-  async function alternarFecharHoje() {
-    await executarAjuste({ fecharHoje: !tela.sabe.fechadoHoje });
-  }
 
   // Envio no modo ENSINO (Onda do Mar)
   async function enviarEnsino(texto: string) {
@@ -1018,27 +1015,6 @@ export function Celular({
                     )}
                   </div>
                 </div>
-
-                {/* Linha de status do uso e botão Fechar Hoje */}
-                <div className="flex items-center justify-between border-t border-[#2A3942]/60 pt-2.5 text-xs">
-                  <span className="text-[#8696A0] truncate max-w-[260px]" title={tela.uso.texto}>
-                    {tela.uso.texto}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => void alternarFecharHoje()}
-                    className="rounded-lg border border-[#2A3942] bg-[#0B141A] px-3 py-1.5 text-xs font-semibold text-[#E9EDEF] hover:border-amber transition"
-                  >
-                    {tela.sabe.fechadoHoje ? "Reabrir hoje" : "Fechar hoje"}
-                  </button>
-                </div>
-
-                {tela.enquantoFechado && tela.enquantoFechado.conversas > 0 && (
-                  <p className="text-xs text-emerald-400">
-                    Desde que você fechou: {tela.enquantoFechado.conversas} conversas
-                    {tela.enquantoFechado.marcados > 0 ? ` · ${tela.enquantoFechado.marcados} marcados` : ""}
-                  </p>
-                )}
               </div>
 
               {/* CLIENTES QUE PRECISAM DE VOCÊ */}
