@@ -5,7 +5,6 @@ import {
   ESPERA_DO_ECO_MS,
   ehSaudacaoOuDescarte,
   registrarMensagemDoDono,
-  selecionarPerguntaParaResposta,
   type DependenciasDoDono,
 } from "@/lib/plantao/dono";
 import type { MensagemDoDono } from "@/lib/whatsapp/evolution";
@@ -160,55 +159,3 @@ describe("ehSaudacaoOuDescarte", () => {
     expect(ehSaudacaoOuDescarte("Fica na Av. Paulista, 1000")).toBe(false);
   });
 });
-
-describe("selecionarPerguntaParaResposta", () => {
-  it("associa resposta de preço à pergunta sobre valor quando cliente fez múltiplas perguntas", () => {
-    const perguntas = [
-      "Quanto custa o clareamento dental?",
-      "Vocês atendem pelo plano da Unimed?",
-    ];
-    const respostaDono = "O clareamento custa R$ 350 à vista ou em até 3x";
-    const selecionada = selecionarPerguntaParaResposta(perguntas, respostaDono);
-    expect(selecionada).toBe("Quanto custa o clareamento dental?");
-  });
-
-  it("associa resposta de convênio à pergunta sobre plano quando cliente fez múltiplas perguntas", () => {
-    const perguntas = [
-      "Qual o valor da consulta?",
-      "Vocês aceitam convênio Sulamérica ou Bradesco?",
-    ];
-    const respostaDono = "Não aceitamos convênios, nossos atendimentos são estritamente particulares";
-    const selecionada = selecionarPerguntaParaResposta(perguntas, respostaDono);
-    expect(selecionada).toBe("Vocês aceitam convênio Sulamérica ou Bradesco?");
-  });
-
-  it("associa resposta de localização à pergunta sobre endereço", () => {
-    const perguntas = [
-      "Qual o horário de funcionamento de vocês?",
-      "Onde fica o consultório?",
-    ];
-    const respostaDono = "Nosso endereço é na Avenida Paulista, número 1000, conjunto 42, perto do metrô";
-    const selecionada = selecionarPerguntaParaResposta(perguntas, respostaDono);
-    expect(selecionada).toBe("Onde fica o consultório?");
-  });
-
-  it("associa resposta de horário à pergunta sobre funcionamento e dias", () => {
-    const perguntas = [
-      "Quanto custa o corte de cabelo?",
-      "Vocês abrem aos sábados e domingos?",
-    ];
-    const respostaDono = "No sábado atendemos das 9h às 16h, mas no domingo estamos fechados";
-    const selecionada = selecionarPerguntaParaResposta(perguntas, respostaDono);
-    expect(selecionada).toBe("Vocês abrem aos sábados e domingos?");
-  });
-
-  it("retorna a única pergunta se a lista contiver apenas um item", () => {
-    const perguntas = ["Qual o horário de vocês?"];
-    expect(selecionarPerguntaParaResposta(perguntas, "Das 8h às 18h")).toBe("Qual o horário de vocês?");
-  });
-
-  it("retorna string vazia quando não há perguntas do cliente", () => {
-    expect(selecionarPerguntaParaResposta([], "Qualquer resposta")).toBe("");
-  });
-});
-

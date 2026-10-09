@@ -3,16 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { conversaDeExemplo, type Jeito } from "@/lib/atendente/jeitos";
 import type { TelaDoAtendente } from "@/lib/atendente/tela";
-import { ehCondicaoPontual } from "@/components/atendente/aprendizado-passivo";
 
 /**
- * O CELULAR — SIMULADOR ULTRA-REALISTA DO WHATSAPP COM CONFIGURAÇÃO INTEGRADA.
+ * O CELULAR — SIMULADOR ULTRA-REALISTA DO WHATSAPP.
  *
- * Suporta três dinâmicas integradas no centro do atendimento:
- * 1. 💬 "Testar como Cliente": o dono testa exatamente como o cliente conversa.
- *    Em cada resposta, ele pode tocar em "Ajustar esta resposta" para mudar regras na hora.
- * 2. 💡 "Aprendizado Passivo": sugestões observadas no WhatsApp real para aprovar com 1 toque.
- * 3. 🎓 "Ensinar Atendente": conversa direta para adicionar serviços, horários e regras.
+ * Suporta dois modos integrados:
+ * 1. 🎓 "Ensinar Atendente" (Configuração da Onda do Mar): o dono conversa com a atendente,
+ *    que cadastra serviços, horários, endereço e regras em tempo real no banco.
+ * 2. 💬 "Testar como Cliente": o dono testa como seus clientes vão ser atendidos.
  */
 
 type MensagemCliente = {
@@ -44,17 +42,11 @@ export function Celular({
   nome,
   jeito,
   aoTestar,
-  aoAjustar,
-  aoAtualizarTela,
-  aoAbrirSabe,
 }: {
   tela: TelaDoAtendente;
   nome: string;
   jeito: Jeito;
   aoTestar: () => void;
-  aoAjustar?: (dados: Record<string, unknown>) => Promise<void>;
-  aoAtualizarTela?: () => Promise<void>;
-  aoAbrirSabe?: () => void;
 }) {
   const semServicos = tela.sabe.servicos.length === 0;
 
@@ -64,22 +56,6 @@ export function Celular({
   // Estados do modo CLIENTE
   const [teste, setTeste] = useState<MensagemCliente[] | null>(null);
   const [estadoCliente, setEstadoCliente] = useState<{ tipo?: string } | null>(null);
-
-  // Estados do Ajuste Interativo dentro do Chat (Modo Cliente)
-  const [ajustandoIndice, setAjustandoIndice] = useState<number | null>(null);
-  const [etapaAjuste, setEtapaAjuste] = useState<"escolha" | "confirmacao" | "sucesso">("escolha");
-  const [regraProposta, setRegraProposta] = useState<{
-    titulo: string;
-    descricao: string;
-    acao: () => Promise<void>;
-  } | null>(null);
-  const [textoPersonalizado, setTextoPersonalizado] = useState("");
-  const [salvandoAjuste, setSalvandoAjuste] = useState(false);
-  const [perguntaParaRepetir, setPerguntaParaRepetir] = useState<string | null>(null);
-
-  // Estados do Aprendizado Passivo no Chat
-  const [ocupadoObs, setOcupadoObs] = useState(false);
-  const [obsSucesso, setObsSucesso] = useState<string | null>(null);
 
   // Estados do modo ENSINO
   const saudacaoInicialEnsino = useMemo(() => {
@@ -224,7 +200,7 @@ export function Celular({
           estado: estadoEfetivo,
           nome,
           jeito,
-          marcaDireto: tela.marcaDireto,
+          marcaDireto: true,
         }),
       });
       const j = await r.json().catch(() => null);
@@ -282,66 +258,6 @@ export function Celular({
     setErro("");
   }
 
-  async function aprovarObs(id: string) {
-    setOcupadoObs(true);
-    setObsSucesso(null);
-    try {
-      const res = await fetch(`/api/training/items/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "aprovar" }),
-      });
-      if (res.ok) {
-        setObsSucesso("✓ Resposta aprovada! Agora seu atendente vai usá-la com outros clientes.");
-        if (aoAtualizarTela) await aoAtualizarTela();
-        aoTestar();
-        setTimeout(() => setObsSucesso(null), 3500);
-      }
-    } finally {
-      setOcupadoObs(false);
-    }
-  }
-
-  async function rejeitarObs(id: string) {
-    setOcupadoObs(true);
-    setObsSucesso(null);
-    try {
-      const res = await fetch(`/api/training/items/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "rejeitar" }),
-      });
-      if (res.ok) {
-        setObsSucesso("✓ Resposta descartada. Não será usada como regra geral.");
-        if (aoAtualizarTela) await aoAtualizarTela();
-        setTimeout(() => setObsSucesso(null), 3500);
-      }
-    } finally {
-      setOcupadoObs(false);
-    }
-  }
-
-  async function salvarRegraPersonalizada(regra: string) {
-    if (!aoAjustar) return;
-    const descAtual = tela.sabe.descricao || "";
-    const novaDescricao = descAtual
-      ? `${descAtual}\n\n✦ Regra: ${regra}`
-      : `✦ Regra: ${regra}`;
-    await aoAjustar({ descricao: novaDescricao });
-  }
-
-  function abrirAjuste(idx: number) {
-    if (ajustandoIndice === idx) {
-      setAjustandoIndice(null);
-      return;
-    }
-    setAjustandoIndice(idx);
-    setEtapaAjuste("escolha");
-    setRegraProposta(null);
-    setTextoPersonalizado("");
-    setPerguntaParaRepetir(null);
-  }
-
   const sugestoes =
     modo === "ensinar"
       ? sugestoesEnsino
@@ -352,9 +268,9 @@ export function Celular({
           : SUGESTOES_CLIENTE;
 
   return (
-    <div className="mx-auto w-full max-w-[560px] md:max-w-[620px]">
-      {/* SELETOR DE MODO SUPERIOR (ONDA DO MAR vs CLIENTE vs DADOS) */}
-      <div className="mb-2.5 flex items-center justify-between gap-1.5 rounded-2xl border border-panel-line bg-panel-card p-1 shadow-xs">
+    <div className="mx-auto w-full max-w-[420px] lg:sticky lg:top-6">
+      {/* SELETOR DE MODO SUPERIOR (ONDA DO MAR vs CLIENTE) */}
+      <div className="mb-2.5 flex items-center justify-between rounded-2xl border border-panel-line bg-panel-card p-1 shadow-xs">
         <button
           type="button"
           onClick={() => {
@@ -388,22 +304,11 @@ export function Celular({
           <span>💬</span>
           <span>Testar como Cliente</span>
         </button>
-        {aoAbrirSabe && (
-          <button
-            type="button"
-            onClick={aoAbrirSabe}
-            className="flex items-center justify-center gap-1 rounded-xl py-2 px-2.5 text-xs font-semibold text-panel-sub hover:text-panel-ink hover:bg-panel-bg transition"
-            title="Ver catálogo e configurações completos"
-          >
-            <span>📋</span>
-            <span className="hidden sm:inline">O que ela sabe</span>
-          </button>
-        )}
       </div>
 
       {/* DISPOSITIVO SMARTPHONE ULTRA-REALISTA CENTRALIZADO */}
       <div className="rounded-[3rem] border border-[#2A2E3D] bg-gradient-to-b from-[#2A2E3D] via-[#1A1D27] to-[#0E1017] p-3 shadow-2xl ring-1 ring-white/10">
-        <div className="relative flex h-[620px] sm:h-[660px] flex-col overflow-hidden rounded-[2.35rem] bg-[#0B141A] border border-[#1E222D]">
+        <div className="relative flex h-[580px] sm:h-[620px] flex-col overflow-hidden rounded-[2.35rem] bg-[#0B141A] border border-[#1E222D]">
           {/* BARRA DE STATUS DO DISPOSITIVO */}
           <div className="flex h-7 select-none items-center justify-between bg-[#202C33] px-6 pt-1 text-[11px] font-semibold text-white/80">
             <span>{horaStatus}</span>
@@ -509,69 +414,11 @@ export function Celular({
               </span>
             </div>
 
-            {/* AVISO CLARO DE MODO: TESTE COMO CLIENTE vs ENSINAR */}
-            {modo === "cliente" ? (
-              <div className="mx-auto max-w-[340px] rounded-lg bg-[#182229]/95 px-3 py-1.5 text-center text-[10px] text-[#8696A0] shadow-sm flex items-center justify-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#00A884] shrink-0" />
-                <span><strong>Modo Teste:</strong> Digite como cliente. Clique em <em>Ajustar esta resposta</em> para ensinar novas regras.</span>
-              </div>
-            ) : (
-              <div className="mx-auto max-w-[290px] rounded-lg bg-[#182229]/90 px-3 py-1.5 text-center text-[10px] leading-tight text-[#FFD279] shadow-sm">
-                💬 Ensine serviços, horários e regras conversando direto no chat.
-              </div>
-            )}
-
-            {/* CARD DE APRENDIZADO PASSIVO DENTRO DO CHAT */}
-            {tela.observacoesPassivas && tela.observacoesPassivas.length > 0 && (
-              <div className="mx-auto max-w-[96%] rounded-2xl border border-amber/40 bg-[#1A1D27] p-3 text-xs shadow-md animate-in fade-in duration-300">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber text-[10px] font-bold text-night">
-                    💡
-                  </span>
-                  <span className="font-bold text-amber">Aprendi com seu WhatsApp</span>
-                  {ehCondicaoPontual(tela.observacoesPassivas[0].resposta) && (
-                    <span className="ml-auto rounded-full bg-amber/20 px-2 py-0.5 text-[9px] font-bold text-amber-300">
-                      ⚠️ Condição especial?
-                    </span>
-                  )}
-                </div>
-
-                <div className="mt-2 space-y-1 text-[11px]">
-                  <p className="text-[#8696A0]">Quando um cliente perguntou:</p>
-                  <p className="font-medium text-[#E9EDEF] italic">"{tela.observacoesPassivas[0].pergunta}"</p>
-                  <p className="mt-1 text-[#8696A0]">Você respondeu:</p>
-                  <p className="font-medium text-emerald-300">"{tela.observacoesPassivas[0].resposta}"</p>
-                </div>
-
-                {obsSucesso ? (
-                  <p className="mt-2 text-[11px] font-semibold text-emerald-400">{obsSucesso}</p>
-                ) : (
-                  <>
-                    <p className="mt-2 text-[10px] text-[#8696A0]">
-                      Posso usar essa resposta nos próximos atendimentos?
-                    </p>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        disabled={ocupadoObs}
-                        onClick={() => aprovarObs(tela.observacoesPassivas[0].id)}
-                        className="rounded-lg bg-emerald-600 px-3 py-1 font-bold text-white hover:bg-emerald-500 disabled:opacity-50 transition"
-                      >
-                        ✓ Usar sempre
-                      </button>
-                      <button
-                        type="button"
-                        disabled={ocupadoObs}
-                        onClick={() => rejeitarObs(tela.observacoesPassivas[0].id)}
-                        className="rounded-lg bg-[#2A3942] px-2.5 py-1 text-[#8696A0] hover:text-white disabled:opacity-50 transition"
-                      >
-                        ✕ Só desta vez
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
+            <div className="mx-auto max-w-[290px] rounded-lg bg-[#182229]/90 px-3 py-1.5 text-center text-[10px] leading-tight text-[#FFD279] shadow-sm">
+              {modo === "ensinar"
+                ? "💬 Ensine serviços, horários e regras conversando direto no chat."
+                : "🔒 As mensagens são protegidas e enviadas em tempo real como no WhatsApp oficial."}
+            </div>
 
             {modo === "ensinar"
               ? mensagensEnsino.map((m, i) => {
@@ -634,23 +481,6 @@ export function Celular({
                           </div>
                         )}
 
-                        {/* BOTÃO INTERATIVO: AJUSTAR ESTA RESPOSTA */}
-                        {!ehCliente && (
-                          <div className="mt-2 flex items-center justify-between border-t border-white/5 pt-1.5">
-                            <button
-                              type="button"
-                              onClick={() => abrirAjuste(i)}
-                              className="inline-flex items-center gap-1 rounded-lg bg-amber/15 px-2 py-0.5 text-[11px] font-semibold text-amber hover:bg-amber/25 transition"
-                            >
-                              <span>✏️</span>
-                              <span>{ajustandoIndice === i ? "Fechar ajuste" : "Ajustar esta resposta"}</span>
-                            </button>
-                            <span className="text-[10px] text-[#8696A0]">
-                              {m.fonte ? `Fonte: ${m.fonte}` : "Nexora"}
-                            </span>
-                          </div>
-                        )}
-
                         <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-[#8696A0]">
                           <span>{horaStatus}</span>
                           {ehCliente && (
@@ -660,278 +490,6 @@ export function Celular({
                           )}
                         </div>
                       </div>
-
-                      {/* CARD INTERATIVO DE AJUSTE DIRETO NA CONVERSA */}
-                      {!ehCliente && ajustandoIndice === i && (() => {
-                        let perguntaCliente = "";
-                        for (let j = i - 1; j >= 0; j--) {
-                          if (mensagensExibidas[j]?.de === "cliente") {
-                            perguntaCliente = mensagensExibidas[j].texto;
-                            break;
-                          }
-                        }
-                        const ctx = `${perguntaCliente} ${m.texto}`.toLowerCase();
-                        const ehHorario = /hor[aá]rio|amanh[aã]|agenda|marcar|data|vaga|atend|livre|marcado|agendado/.test(ctx);
-                        const ehPreco = /pre[çc]o|valor|custa|quanto|pagamento|pix|cart[aã]o|cobram/.test(ctx);
-
-                        return (
-                          <div className="mt-2 w-full max-w-[92%] rounded-2xl border border-amber/40 bg-[#161C22] p-3 text-xs text-[#E9EDEF] shadow-lg animate-in fade-in zoom-in-95 duration-200">
-                            {etapaAjuste === "escolha" && (
-                              <div className="space-y-2.5">
-                                <div className="flex items-center justify-between">
-                                  <span className="font-bold text-amber flex items-center gap-1.5">
-                                    <span>⚡</span> Como a Nexora deve responder a isso?
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={() => setAjustandoIndice(null)}
-                                    className="text-[11px] text-[#8696A0] hover:text-white"
-                                  >
-                                    ✕
-                                  </button>
-                                </div>
-
-                                {perguntaCliente && (
-                                  <p className="text-[11px] text-[#8696A0]">
-                                    Para a dúvida: <strong className="text-white">"{perguntaCliente}"</strong>
-                                  </p>
-                                )}
-
-                                <div className="space-y-1.5 pt-1">
-                                  {ehHorario && (
-                                    <>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setRegraProposta({
-                                            titulo: "Eu confirmo antes",
-                                            descricao: "Vou receber o pedido do cliente, conferir os detalhes e aguardar você aprovar antes de marcar. Nada entra na agenda sem seu aval.",
-                                            acao: async () => {
-                                              if (aoAjustar) await aoAjustar({ marcaDireto: false });
-                                            },
-                                          });
-                                          setEtapaAjuste("confirmacao");
-                                        }}
-                                        className="w-full text-left rounded-xl border border-[#2A3942] bg-[#202C33] p-2 hover:border-amber/50 hover:bg-[#25333B] transition"
-                                      >
-                                        <p className="font-bold text-white text-[11px]">👉 Quero confirmar os horários pessoalmente</p>
-                                        <p className="text-[10px] text-[#8696A0]">Avisar o cliente que o agendamento precisa de confirmação da equipe.</p>
-                                      </button>
-
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setRegraProposta({
-                                            titulo: "Nexora confirma direto",
-                                            descricao: "Vou consultar seus horários livres em tempo real e confirmar a reserva diretamente para o cliente.",
-                                            acao: async () => {
-                                              if (aoAjustar) await aoAjustar({ marcaDireto: true });
-                                            },
-                                          });
-                                          setEtapaAjuste("confirmacao");
-                                        }}
-                                        className="w-full text-left rounded-xl border border-[#2A3942] bg-[#202C33] p-2 hover:border-amber/50 hover:bg-[#25333B] transition"
-                                      >
-                                        <p className="font-bold text-white text-[11px]">⚡ A Nexora pode confirmar direto na agenda</p>
-                                        <p className="text-[10px] text-[#8696A0]">Reserva o horário na hora caso esteja livre.</p>
-                                      </button>
-                                    </>
-                                  )}
-
-                                  {ehPreco && (
-                                    <>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setRegraProposta({
-                                            titulo: "Valores sob avaliação",
-                                            descricao: "Vou informar com gentileza que valores e orçamentos exatos dependem de avaliação presencial e convidar o cliente a agendar.",
-                                            acao: async () => {
-                                              await salvarRegraPersonalizada("Valores e orçamentos são informados apenas presencialmente após avaliação.");
-                                            },
-                                          });
-                                          setEtapaAjuste("confirmacao");
-                                        }}
-                                        className="w-full text-left rounded-xl border border-[#2A3942] bg-[#202C33] p-2 hover:border-amber/50 hover:bg-[#25333B] transition"
-                                      >
-                                        <p className="font-bold text-white text-[11px]">💳 Informar valor apenas em avaliação presencial</p>
-                                        <p className="text-[10px] text-[#8696A0]">Não passar preço por WhatsApp antes da consulta.</p>
-                                      </button>
-
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setRegraProposta({
-                                            titulo: "Formas de pagamento",
-                                            descricao: "Vou informar que aceitamos Pix, dinheiro e cartão de crédito em até 3x sem juros.",
-                                            acao: async () => {
-                                              if (aoAjustar) await aoAjustar({ pagamento: "Pix, dinheiro e cartão de crédito em até 3x sem juros" });
-                                            },
-                                          });
-                                          setEtapaAjuste("confirmacao");
-                                        }}
-                                        className="w-full text-left rounded-xl border border-[#2A3942] bg-[#202C33] p-2 hover:border-amber/50 hover:bg-[#25333B] transition"
-                                      >
-                                        <p className="font-bold text-white text-[11px]">💳 Aceitamos Pix, cartão e parcelamento</p>
-                                        <p className="text-[10px] text-[#8696A0]">Atualiza as opções de pagamento aceitas.</p>
-                                      </button>
-                                    </>
-                                  )}
-
-                                  {!ehHorario && !ehPreco && (
-                                    <>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setRegraProposta({
-                                            titulo: "Chamar atendente humano",
-                                            descricao: `Quando o cliente perguntar sobre ${perguntaCliente || "este assunto"}, vou avisar que nossa equipe humana vai assumir o atendimento.`,
-                                            acao: async () => {
-                                              await salvarRegraPersonalizada(`Quando o cliente perguntar sobre ${perguntaCliente || "esse assunto"}, avise que a equipe humana entrará em contato.`);
-                                            },
-                                          });
-                                          setEtapaAjuste("confirmacao");
-                                        }}
-                                        className="w-full text-left rounded-xl border border-[#2A3942] bg-[#202C33] p-2 hover:border-amber/50 hover:bg-[#25333B] transition"
-                                      >
-                                        <p className="font-bold text-white text-[11px]">👤 Chamar um atendente humano</p>
-                                        <p className="text-[10px] text-[#8696A0]">Não responder sozinho e avisar a equipe.</p>
-                                      </button>
-
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setRegraProposta({
-                                            titulo: "Resposta mais curta e objetiva",
-                                            descricao: "Vou passar a responder de forma mais rápida, direta e objetiva, sem mensagens longas.",
-                                            acao: async () => {
-                                              if (aoAjustar) await aoAjustar({ jeito: "DIRETO" });
-                                            },
-                                          });
-                                          setEtapaAjuste("confirmacao");
-                                        }}
-                                        className="w-full text-left rounded-xl border border-[#2A3942] bg-[#202C33] p-2 hover:border-amber/50 hover:bg-[#25333B] transition"
-                                      >
-                                        <p className="font-bold text-white text-[11px]">⚡ Resposta mais curta e direta</p>
-                                        <p className="text-[10px] text-[#8696A0]">Muda o tom para mais conciso.</p>
-                                      </button>
-                                    </>
-                                  )}
-                                </div>
-
-                                {/* Entrada personalizada */}
-                                <div className="pt-2 border-t border-[#2A3942]">
-                                  <label className="text-[10px] font-semibold text-[#8696A0] block mb-1">
-                                    Ou escreva com suas próprias palavras:
-                                  </label>
-                                  <div className="flex gap-1.5">
-                                    <input
-                                      type="text"
-                                      value={textoPersonalizado}
-                                      onChange={(e) => setTextoPersonalizado(e.target.value)}
-                                      placeholder="Ex: Não atendemos aos sábados…"
-                                      className="flex-1 rounded-lg bg-[#202C33] border border-[#2A3942] px-2.5 py-1 text-xs text-white placeholder:text-[#8696A0] focus:outline-none focus:border-amber"
-                                    />
-                                    <button
-                                      type="button"
-                                      disabled={!textoPersonalizado.trim()}
-                                      onClick={() => {
-                                        const regra = textoPersonalizado.trim();
-                                        setRegraProposta({
-                                          titulo: "Regra personalizada",
-                                          descricao: `Vou seguir sua instrução: "${regra}"`,
-                                          acao: async () => {
-                                            await salvarRegraPersonalizada(regra);
-                                          },
-                                        });
-                                        setEtapaAjuste("confirmacao");
-                                      }}
-                                      className="rounded-lg bg-amber px-2.5 py-1 text-xs font-bold text-night hover:brightness-110 disabled:opacity-40"
-                                    >
-                                      Propor
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {etapaAjuste === "confirmacao" && regraProposta && (
-                              <div className="space-y-2.5">
-                                <p className="font-bold text-amber flex items-center gap-1.5">
-                                  <span>🤖</span> A Nexora vai se comportar assim:
-                                </p>
-                                <div className="rounded-xl bg-[#0B141A] p-2.5 text-xs text-[#E9EDEF] border border-[#2A3942]">
-                                  <p className="font-semibold text-white mb-1">{regraProposta.titulo}</p>
-                                  <p className="text-[#A7B2B8] leading-relaxed">{regraProposta.descricao}</p>
-                                </div>
-                                <p className="text-[11px] text-[#8696A0]">Está certo? Posso aplicar essa regra agora?</p>
-
-                                <div className="flex items-center gap-2 pt-1">
-                                  <button
-                                    type="button"
-                                    disabled={salvandoAjuste}
-                                    onClick={async () => {
-                                      setSalvandoAjuste(true);
-                                      try {
-                                        await regraProposta.acao();
-                                        if (aoAtualizarTela) await aoAtualizarTela();
-                                        setPerguntaParaRepetir(perguntaCliente || m.texto);
-                                        setEtapaAjuste("sucesso");
-                                      } finally {
-                                        setSalvandoAjuste(false);
-                                      }
-                                    }}
-                                    className="rounded-lg bg-amber px-3.5 py-1.5 font-bold text-night hover:brightness-110 disabled:opacity-50 transition"
-                                  >
-                                    {salvandoAjuste ? "Salvando…" : "✓ Confirmar regra"}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    disabled={salvandoAjuste}
-                                    onClick={() => setEtapaAjuste("escolha")}
-                                    className="rounded-lg border border-[#2A3942] bg-[#202C33] px-3 py-1.5 text-xs text-[#8696A0] hover:text-white"
-                                  >
-                                    Voltar
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-
-                            {etapaAjuste === "sucesso" && (
-                              <div className="space-y-2.5">
-                                <p className="font-bold text-emerald-400 flex items-center gap-1.5">
-                                  <span>✅</span> Regra atualizada com sucesso!
-                                </p>
-                                <p className="text-[11px] text-[#A7B2B8]">
-                                  A Sofia já assimilou essa conduta e vai utilizá-la a partir de agora.
-                                </p>
-                                <div className="flex items-center gap-2 pt-1">
-                                  {perguntaParaRepetir && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const p = perguntaParaRepetir;
-                                        setAjustandoIndice(null);
-                                        void enviarCliente(p);
-                                      }}
-                                      className="rounded-lg bg-[#00A884] px-3.5 py-1.5 font-bold text-white hover:brightness-110 shadow-sm transition"
-                                    >
-                                      🔄 Testar novamente agora
-                                    </button>
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={() => setAjustandoIndice(null)}
-                                    className="rounded-lg border border-[#2A3942] bg-[#202C33] px-3 py-1.5 text-xs text-[#8696A0] hover:text-white"
-                                  >
-                                    Concluir
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })()}
                     </div>
                   );
                 })}
