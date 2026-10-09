@@ -4,12 +4,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { Jeito } from "@/lib/atendente/jeitos";
 import type { TelaDoAtendente, Tom } from "@/lib/atendente/tela";
-import { Ajustes } from "@/components/atendente/ajustes";
 import { AprendizadoPassivo } from "@/components/atendente/aprendizado-passivo";
 import { Celular } from "@/components/atendente/celular";
-import { Ligar } from "@/components/atendente/ligar";
-import { MicroDecisoes } from "@/components/atendente/micro-decisoes";
-import { Situacao } from "@/components/atendente/situacao";
 import { CartaoDaNoite } from "@/components/painel/cartao-da-noite";
 import { ModalSalvarConta } from "@/components/painel/modal-salvar-conta";
 
@@ -131,17 +127,6 @@ export default function PaginaDoAtendente() {
   }
 
   const pilula = PILULA[tela.estado.tom];
-  const ajustes = (
-    <Ajustes
-      tela={tela}
-      nome={nome}
-      jeito={jeito}
-      aoMudarNome={mudarNome}
-      aoMudarJeito={mudarJeito}
-      aoAjustar={(dados) => void ajustar(dados)}
-      aoAtualizarTela={recarregar}
-    />
-  );
 
   return (
     <div className="space-y-6">
@@ -212,7 +197,16 @@ export default function PaginaDoAtendente() {
       )}
 
       {/* grid-cols-1 é minmax(0, 1fr): no celular a coluna encolhe até a tela, em vez de crescer até o item mais largo. */}
-      <div className="grid grid-cols-1 items-start gap-8 max-w-2xl mx-auto">
+      <div className="grid grid-cols-1 items-start gap-5 max-w-2xl mx-auto">
+        <CartaoDaNoite />
+
+        {tela.observacoesPassivas && tela.observacoesPassivas.length > 0 && (
+          <AprendizadoPassivo
+            observacoes={tela.observacoesPassivas}
+            aoAtualizar={recarregar}
+          />
+        )}
+
         <Celular
           tela={tela}
           nome={nome}
@@ -226,31 +220,6 @@ export default function PaginaDoAtendente() {
           aoMudarJeito={mudarJeito}
           aoAtualizarTela={recarregar}
         />
-
-        <div className="w-full space-y-4">
-          <CartaoDaNoite />
-
-          {tela.observacoesPassivas && tela.observacoesPassivas.length > 0 && (
-            <AprendizadoPassivo
-              observacoes={tela.observacoesPassivas}
-              aoAtualizar={recarregar}
-            />
-          )}
-
-          <details className="group rounded-2xl border border-panel-line bg-panel-card">
-            <summary className="cursor-pointer list-none px-5 py-4 text-xs font-semibold text-panel-sub hover:text-panel-ink flex items-center justify-between">
-              <span>Configurações em lista fora do celular</span>
-              <span className="transition group-open:rotate-90">›</span>
-            </summary>
-            <div className="space-y-4 border-t border-panel-line p-4">
-              <MicroDecisoes tela={tela} aoAjustar={ajustar} />
-              {tela.ligado ? <Situacao tela={tela} aoMudarTela={setTela} /> : ajustes}
-              {(!tela.ligado || tela.acesso === "SEMANA_ACABOU") && (
-                <Ligar tela={tela} testado={testado} aoMudarTela={setTela} />
-              )}
-            </div>
-          </details>
-        </div>
       </div>
 
       <ModalSalvarConta

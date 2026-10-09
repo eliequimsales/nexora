@@ -355,6 +355,28 @@ export function Celular({
     void executarAjuste({ descricao: novas.join("\n") });
   }
 
+  async function alternarLigado(novoEstado: boolean) {
+    try {
+      const r = await fetch("/api/atendente/ligar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ligar: novoEstado }),
+      });
+      const j = await r.json().catch(() => null);
+      if (r.ok && j) {
+        aoAtualizarTela?.();
+      } else if (r.status === 409 && j?.faltando === "WHATSAPP") {
+        setModalConectarAberto(true);
+      }
+    } catch {
+      setErro("Sem conexão agora. Tente de novo.");
+    }
+  }
+
+  async function alternarFecharHoje() {
+    await executarAjuste({ fecharHoje: !tela.sabe.fechadoHoje });
+  }
+
   const sugestoes =
     modoChat === "ensinar"
       ? sugestoesEnsino
@@ -787,37 +809,98 @@ export function Celular({
                 </div>
               </div>
 
-              {/* STATUS DE CONEXÃO DO WHATSAPP */}
-              <div className="rounded-2xl border border-[#2A3942] bg-[#182229] p-3.5 shadow-sm">
+              {/* STATUS DE CONEXÃO DO WHATSAPP E ATENDIMENTO */}
+              <div className="rounded-2xl border border-[#2A3942] bg-[#182229] p-3.5 space-y-3 shadow-sm">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span
                       className={`h-2.5 w-2.5 rounded-full ${
-                        tela.whatsappLigado ? "bg-[#25D366] animate-pulse" : "bg-red-500"
+                        tela.whatsappLigado && tela.ligado
+                          ? "bg-[#25D366] animate-pulse"
+                          : "bg-red-500"
                       }`}
                     />
                     <div>
                       <p className="text-xs font-bold text-[#E9EDEF]">
-                        {tela.whatsappLigado ? "WhatsApp Ligado" : "WhatsApp Desligado"}
+                        {tela.ligado ? "Atendente Ligado" : "Atendente Desligado"}
                       </p>
                       <p className="text-[10px] text-[#8696A0]">
                         {tela.whatsappLigado
-                          ? "Atendendo no seu número oficial"
-                          : "Conecte para responder seus clientes"}
+                          ? "Conectado no seu WhatsApp"
+                          : "WhatsApp não está ligado"}
                       </p>
                     </div>
                   </div>
-                  {!tela.whatsappLigado && (
-                    <button
-                      type="button"
-                      onClick={() => setModalConectarAberto(true)}
-                      className="rounded-xl bg-[#00A884] px-3 py-1.5 text-xs font-bold text-white shadow hover:brightness-110 transition"
-                    >
-                      Ligar agora
-                    </button>
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    {!tela.whatsappLigado ? (
+                      <button
+                        type="button"
+                        onClick={() => setModalConectarAberto(true)}
+                        className="rounded-xl bg-[#00A884] px-3 py-1.5 text-xs font-bold text-white shadow hover:brightness-110 transition"
+                      >
+                        Ligar WhatsApp
+                      </button>
+                    ) : tela.ligado ? (
+                      <button
+                        type="button"
+                        onClick={() => void alternarLigado(false)}
+                        className="rounded-xl border border-[#2A3942] px-2.5 py-1 text-[11px] font-semibold text-[#8696A0] hover:text-red-400 transition"
+                      >
+                        Desligar
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => void alternarLigado(true)}
+                        className="rounded-xl bg-[#00A884] px-3 py-1.5 text-xs font-bold text-white shadow hover:brightness-110 transition"
+                      >
+                        Ligar Atendente
+                      </button>
+                    )}
+                  </div>
                 </div>
+
+                {/* Linha de status do uso e botão Fechar Hoje */}
+                <div className="flex items-center justify-between border-t border-[#2A3942]/60 pt-2 text-[11px]">
+                  <span className="text-[#8696A0] truncate max-w-[200px]" title={tela.uso.texto}>
+                    {tela.uso.texto}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void alternarFecharHoje()}
+                    className="rounded-lg border border-[#2A3942] bg-[#0B141A] px-2.5 py-1 text-[10px] font-semibold text-[#E9EDEF] hover:border-amber transition"
+                  >
+                    {tela.sabe.fechadoHoje ? "Reabrir hoje" : "Fechar hoje"}
+                  </button>
+                </div>
+
+                {tela.enquantoFechado && tela.enquantoFechado.conversas > 0 && (
+                  <p className="text-[10px] text-emerald-400">
+                    Desde que você fechou: {tela.enquantoFechado.conversas} conversas
+                    {tela.enquantoFechado.marcados > 0 ? ` · ${tela.enquantoFechado.marcados} marcados` : ""}
+                  </p>
+                )}
               </div>
+
+              {/* CLIENTES QUE PRECISAM DE VOCÊ */}
+              {tela.precisaDeVoce && tela.precisaDeVoce.length > 0 && (
+                <div className="rounded-2xl border border-amber/50 bg-amber/10 p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber">
+                      ⚠️ Precisa de você ({tela.precisaDeVoce.length})
+                    </span>
+                    <a
+                      href={`/painel/conversas/${tela.precisaDeVoce[0].conversationId}`}
+                      className="text-[11px] font-bold text-amber underline"
+                    >
+                      Ver conversa ›
+                    </a>
+                  </div>
+                  <p className="text-[11px] text-[#E9EDEF] truncate">
+                    {tela.precisaDeVoce[0].cliente}: {tela.precisaDeVoce[0].motivo}
+                  </p>
+                </div>
+              )}
 
               {/* MICRO-DECISÕES DO ATENDENTE */}
               <div className="rounded-2xl border border-[#2A3942] bg-[#182229] p-3.5 space-y-3 shadow-sm">
