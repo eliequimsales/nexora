@@ -555,86 +555,9 @@ export function Celular({
             </div>
           )}
 
-          {/* CONTEÚDO PRINCIPAL: MODO CHAT OU INFORMAÇÕES DO NEGÓCIO */}
+          {/* CONTEÚDO PRINCIPAL: MODO CHAT OU PERFIL DO NEGÓCIO */}
           {abaAtiva === "chat" ? (
             <>
-              {/* STATUS REAL DE CONEXÃO DO WHATSAPP (SEM JARGÃO) */}
-              {!tela.whatsappLigado ? (
-                <div className="flex items-center justify-between gap-2 border-b border-amber/40 bg-amber/15 px-3.5 py-2 text-xs">
-                  <span className="text-amber-200 font-medium">
-                    ⚠️ WhatsApp ainda não conectado
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setModalConectarAberto(true)}
-                    className="rounded-lg bg-amber px-2.5 py-1 text-xs font-bold text-night shadow hover:brightness-110"
-                  >
-                    Conectar meu WhatsApp
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between gap-2 border-b border-emerald-500/30 bg-[#0B141A] px-3.5 py-1.5 text-[11px]">
-                  <span className="text-emerald-400 font-medium flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    WhatsApp conectado no seu número
-                  </span>
-                  <span className="text-[#8696A0]">
-                    {tela.ligado ? "Atendendo agora" : "Pausado"}
-                  </span>
-                </div>
-              )}
-
-              {/* BARRA DE MICRO-DECISÕES RÁPIDAS COM PREVIEW DE RESPOSTA */}
-              <div className="border-b border-[#1E222D] bg-[#182229] p-3 space-y-2.5 text-xs">
-                {/* Decisão 1: Quem confirma agendamentos */}
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-[#E9EDEF]">Quem confirma os agendamentos?</span>
-                    <span className="text-[10px] text-[#8696A0]">Escolha em um clique</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void executarAjuste({ marcaDireto: false })}
-                      className={`rounded-xl p-2 text-left text-xs font-semibold transition border ${
-                        !tela.marcaDireto
-                          ? "border-amber bg-amber/15 text-amber ring-1 ring-amber"
-                          : "border-[#2A3942] bg-[#0B141A] text-[#8696A0] hover:text-[#E9EDEF]"
-                      }`}
-                    >
-                      Eu aprovo os pedidos
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void executarAjuste({ marcaDireto: true })}
-                      className={`rounded-xl p-2 text-left text-xs font-semibold transition border ${
-                        tela.marcaDireto
-                          ? "border-amber bg-amber/15 text-amber ring-1 ring-amber"
-                          : "border-[#2A3942] bg-[#0B141A] text-[#8696A0] hover:text-[#E9EDEF]"
-                      }`}
-                    >
-                      O atendente confirma horários disponíveis
-                    </button>
-                  </div>
-
-                  {/* Resposta de exemplo correspondente */}
-                  <div className="rounded-lg bg-[#0B141A] p-2 text-[11px] text-[#FFD279] leading-tight">
-                    {!tela.marcaDireto ? (
-                      <p>
-                        👉 <strong>Exemplo:</strong> “Recebi seu pedido para amanhã. Vou confirmar a disponibilidade e te aviso por aqui.”
-                      </p>
-                    ) : (
-                      <p>
-                        👉 <strong>Exemplo:</strong> “Perfeito! Seu horário para amanhã às 14h está confirmado na agenda. Te aguardo!”
-                        <span className="block mt-0.5 text-[10px] text-[#8696A0]">
-                          (Requer agenda com horários livres configurados)
-                        </span>
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
               {/* SUB-SELETOR: ENSINAR vs TESTAR COMO CLIENTE */}
               <div className="flex border-b border-[#1E222D] bg-[#111B21] px-3 py-1.5 text-xs">
                 <button
