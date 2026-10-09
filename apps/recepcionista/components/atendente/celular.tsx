@@ -68,6 +68,7 @@ export function Celular({
   aoAjustar,
   aoMudarNome,
   aoAtualizarTela,
+  abaInicial = "perfil",
 }: {
   tela: TelaDoAtendente;
   nome: string;
@@ -77,11 +78,12 @@ export function Celular({
   aoMudarNome?: (novo: string) => void;
   aoMudarJeito?: (novo: Jeito) => void;
   aoAtualizarTela?: () => void;
+  abaInicial?: "chat" | "perfil";
 }) {
   const semServicos = tela.sabe.servicos.length === 0;
 
-  // Visualização ativa: Conversa ou Informações do meu negócio
-  const [abaAtiva, setAbaAtiva] = useState<"chat" | "perfil">("chat");
+  // Visualização ativa: Conversa ou Informações do meu negócio (inicia em Perfil Comercial & Dados)
+  const [abaAtiva, setAbaAtiva] = useState<"chat" | "perfil">(abaInicial);
 
   // Modo do chat: cliente ou ensino direto
   const [modoChat, setModoChat] = useState<"ensinar" | "cliente">(() => (semServicos ? "ensinar" : "cliente"));
