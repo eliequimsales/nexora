@@ -51,7 +51,13 @@ function extrairRegras(textoBruto?: string | null): string[] {
   return textoBruto
     .split(/\r?\n/)
     .map((l) => l.trim())
-    .filter(Boolean);
+    .filter(
+      (l) =>
+        Boolean(l) &&
+        !l.endsWith("?") &&
+        !/^(oq|o que|como|quando|onde|qual|quanto|por que|pq)\b/i.test(l) &&
+        !/posso te ensinar|o que você faz|como funciona/i.test(l),
+    );
 }
 
 export function Celular({

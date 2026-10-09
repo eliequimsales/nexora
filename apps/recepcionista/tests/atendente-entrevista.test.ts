@@ -93,6 +93,24 @@ describe("Entrevista da Onda do Mar — Extração Heurística", () => {
     expect(res.perguntaResposta).toBeDefined();
     expect(res.perguntaResposta?.pergunta).toContain("7 e meia tem desconto");
   });
+
+  it("não salva dúvidas do dono como regra ('oq eu posso te ensinar?') e responde com orientação amigável", () => {
+    const res = extrairHeuristica("oq eu posso te ensinar?");
+    expect(res.regras).toBeUndefined();
+    expect(res.perguntaResposta).toBeUndefined();
+    expect(res.servicos).toBeUndefined();
+    expect(res.endereco).toBeUndefined();
+    expect(res.horarios).toBeUndefined();
+    expect(res.respostaParaDono).toBeDefined();
+    expect(res.respostaParaDono?.toLowerCase()).toMatch(/posso aprender|ensinar|serviço|preço/);
+  });
+
+  it("não salva perguntas genéricas como regra ('como funciona?')", () => {
+    const res = extrairHeuristica("como funciona?");
+    expect(res.regras).toBeUndefined();
+    expect(res.perguntaResposta).toBeUndefined();
+    expect(res.respostaParaDono).toBeDefined();
+  });
 });
 
 describe("Formatação de Horários", () => {
@@ -131,6 +149,22 @@ describe("Processamento da Entrevista", () => {
     expect(res.salvou.regras).toBe(true);
     expect(res.salvou.pergunta).toBe(true);
     expect(res.resposta).toContain("7 e meia tem desconto");
+  });
+
+  it("quando o dono pergunta 'oq eu posso te ensinar?', responde como IA sem salvar regras no banco", async () => {
+    const res = await processarEntrevistaDono({
+      companyId: "comp_123",
+      mensagem: "oq eu posso te ensinar?",
+    });
+
+    expect(res.salvou.regras).toBe(false);
+    expect(res.salvou.pergunta).toBe(false);
+    expect(res.salvou.servicos).toBe(0);
+    expect(res.salvou.endereco).toBe(false);
+    expect(res.salvou.horarios).toBe(false);
+    expect(res.salvou.pagamento).toBe(false);
+    expect(res.resposta).toBeDefined();
+    expect(res.resposta.toLowerCase()).toMatch(/posso aprender|ensinar|serviço|preço/);
   });
 
   it("gera mensagem inicial com base nos dados faltantes da empresa", async () => {

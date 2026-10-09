@@ -47,11 +47,53 @@ export interface DadosExtraidos {
 }
 
 /**
+/**
+ * Identifica se a mensagem é uma pergunta, pedido de ajuda ou saudação do empresário.
+ * Nessas situações, o assistente NUNCA deve gravar a mensagem como regra ou serviço.
+ */
+export function ehPerguntaOuOrientacaoDoDono(texto: string): boolean {
+  const t = texto.toLowerCase().trim();
+  // Perguntas sobre o que ensinar, o que faz ou como funciona
+  if (
+    /o\s*q(?:ue)?\s+(?:eu\s+)?posso\s+(?:te\s+)?ensinar/i.test(t) ||
+    /o\s*q(?:ue)?\s+(?:voc[eê]|vc)\s+(?:sabe|faz|precisa|quer|espera|aprende)/i.test(t) ||
+    /o\s*q(?:ue)?\s+(?:eu\s+)?(?:devo|preciso|posso)\s+(?:te\s+)?(?:falar|dizer|passar|mandar|ensinar)/i.test(t) ||
+    /como\s+(?:te\s+)?ensino|como\s+funciona|o\s*q(?:ue)?\s+falta|o\s*q(?:ue)?\s+est[aá]\s+faltando/i.test(t) ||
+    /como\s+cadastr|me\s+ajuda|o\s*q(?:ue)?\s+d[aá]\s+pra/i.test(t) ||
+    /^(oi|ol[aá]|bom dia|boa tarde|boa noite|e a[ií]|opa|fala a[ií])\b[?!.]*$/i.test(t)
+  ) {
+    return true;
+  }
+  // Se termina com ? e começa com palavras interrogativas (e não é instrução de FAQ)
+  if (t.endsWith("?") && !/quando|se pergunt|responda|diga|informe/i.test(t)) {
+    if (/^(o\s*que|oq|como|qual|quais|onde|quando|quem|por\s*que|pq)\b/i.test(t)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Parser heurístico determinístico (fallback quando IA não estiver configurada ou falhar).
  */
 export function extrairHeuristica(texto: string): DadosExtraidos {
   const limpo = texto.trim();
   const dados: DadosExtraidos = {};
+
+  // Se o dono estiver apenas perguntando o que ensinar ou tirando dúvida
+  if (ehPerguntaOuOrientacaoDoDono(limpo)) {
+    return {
+      respostaParaDono:
+        "Você pode me ensinar tudo sobre o seu negócio!\n\n" +
+        "1. 🏷️ Serviços e preços (ex: 'Corte R$ 50, Barba R$ 35')\n" +
+        "2. 📅 Dias e horários (ex: 'Seg a sex das 9h às 18h')\n" +
+        "3. 📍 Endereço (ex: 'Av. Paulista, 1000' ou 'Atendimento online')\n" +
+        "4. 💳 Formas de pagamento (ex: 'Pix, cartão e dinheiro')\n" +
+        "5. ⏱️ Regras e tolerâncias (ex: 'Tolerância de 15 min para atrasos')\n\n" +
+        "É só me mandar qualquer uma dessas informações que eu aprendo na hora! O que você gostaria de cadastrar agora?",
+      proximaEtapa: "SERVICOS",
+    };
+  }
 
   // 1. Pergunta & Resposta ("quando perguntarem X, responda Y" ou "se perguntarem X, diga Y")
   const regexQA = /(?:quando|se)\s+(?:perguntarem|perguntar|falarem|disserem)\s+(?:sobre\s+)?(.+?)[,:\-]\s*(?:responda|diga|fale|informe)\s+(.+)/i;
@@ -136,8 +178,9 @@ export function extrairHeuristica(texto: string): DadosExtraidos {
     dados.pagamento = pagamentosDetectados.join(", ");
   }
 
-  // 6. Regras da empresa, descontos, políticas e dúvidas diretas
+  // 6. Regras da empresa, descontos, políticas e dúvidas diretas (somente afirmativas)
   const ehRegraOuDuvida =
+    !limpo.endsWith("?") &&
     /desconto|promo[çc][aã]o|toler[aâ]ncia|atraso|cancel|remarc|reagend|estacion|vaga|wifi|caf[eé]|pet|crian[çc]|feriad|domingo|conv[eê]nio|particular|cortesia|brinde|gr[aá]tis|gratuito|meia|hor[aá]rio/i.test(
       limpo,
     );
@@ -152,8 +195,18 @@ export function extrairHeuristica(texto: string): DadosExtraidos {
     }
   }
 
-  // 7. Se não encaixou em serviço com preço, endereço nem horário, mas o dono digitou uma frase (>= 4 caracteres)
-  if (!dados.servicos && !dados.endereco && !dados.horarios && !dados.pagamento && !dados.perguntaResposta && limpo.length >= 4) {
+  // 7. Frase afirmativa de regra longa sem pergunta nem saudação
+  if (
+    !dados.servicos &&
+    !dados.endereco &&
+    !dados.horarios &&
+    !dados.pagamento &&
+    !dados.regras &&
+    !dados.perguntaResposta &&
+    limpo.length >= 12 &&
+    !limpo.endsWith("?") &&
+    !/^(oi|ol[aá]|bom dia|boa tarde|boa noite|ok|sim|n[aã]o|obrigad)/i.test(limpo)
+  ) {
     dados.regras = limpo;
     dados.perguntaResposta = {
       pergunta: limpo,
@@ -164,25 +217,40 @@ export function extrairHeuristica(texto: string): DadosExtraidos {
   return dados;
 }
 
-const SYSTEM_PROMPT_EXTRAIR = `Você é o assistente de onboarding inteligente da Nexora.
-Sua missão é extrair dados de configuração da empresa que o dono digitar em linguagem natural e responder de forma calorosa, humana e objetiva.
+const SYSTEM_PROMPT_EXTRAIR = `Você é o assistente inteligente de onboarding e configuração da Nexora.
+O empresário (dono do negócio) está conversando com você no WhatsApp para te ensinar sobre a empresa dele.
+
+REGRA FUNDAMENTAL:
+1. Se o dono fizer uma PERGUNTA, PEDIDO DE AJUDA ou SAUDAÇÃO para você (ex: "o que eu posso te ensinar?", "como funciona?", "o que você faz?", "o que está faltando?", "olá", "ajuda"):
+   - Defina "ehPerguntaDoDono": true
+   - DEIXE "regras", "servicos", "endereco", "horarios", "pagamento" e "perguntaResposta" como null.
+   - NUNCA salve perguntas que o dono fez para você como regras!
+   - Em "respostaParaDono", responda diretamente e com simpatia à dúvida dele, orientando o que ele pode te ensinar com exemplos reais (serviços e preços, dias e horários, endereço, formas de pagamento e regras como tolerância de atraso).
+
+2. Se o dono estiver ENVIANDO DADOS da empresa (serviços com preços, horários, endereço, formas de pagamento, regras de tolerância/cancelamento, ou como responder a clientes):
+   - Defina "ehPerguntaDoDono": false
+   - Extraia os dados nos campos correspondentes.
+   - Preços em centavos (ex: R$ 45 = 4500). Duração padrão 30 min se não informada.
+   - "regras": apenas para políticas reais da empresa (ex: "tolerância de 15 minutos", "não aceitamos cheques"). NUNCA para conversas com o dono.
+   - "perguntaResposta": apenas quando o dono ensinar como responder aos CLIENTES dele (ex: "se o cliente perguntar de desconto...").
+   - "respostaParaDono": confirme carinhosamente o que foi aprendido.
 
 Retorne SEMPRE um JSON válido com esta estrutura exata:
 {
-  "servicos": [{"name": string, "priceCents": number, "durationMin": number}], // se houver serviços mencionados
-  "endereco": string | null, // se endereço ou menção a atendimento online for dito
-  "horarios": { "diasSemana": [0..6], "abre": "HH:MM", "fecha": "HH:MM" } | null, // 0=domingo, 1=segunda, ..., 6=sabado
-  "pagamento": string | null, // ex: "Pix, cartão e dinheiro"
-  "regras": string | null, // regras de cancelamento, atraso ou diferenciais
-  "perguntaResposta": { "pergunta": string, "resposta": string } | null, // quando ensinar como responder a uma dúvida
-  "respostaParaDono": string, // sua resposta carinhosa ao dono, confirmando o que cadastrou e perguntando o que falta
+  "ehPerguntaDoDono": boolean,
+  "servicos": [{"name": string, "priceCents": number, "durationMin": number}] | null,
+  "endereco": string | null,
+  "horarios": { "diasSemana": [0..6], "abre": "HH:MM", "fecha": "HH:MM" } | null,
+  "pagamento": string | null,
+  "regras": string | null,
+  "perguntaResposta": { "pergunta": string, "resposta": string } | null,
+  "respostaParaDono": string,
   "proximaEtapa": "SERVICOS" | "ENDERECO_HORARIOS" | "PAGAMENTO_REGRAS" | "CONCLUIDO"
 }
 
 Diretrizes:
-- Extraia preços em centavos (ex: R$ 45 = 4500). Se a duração não for informada, use 30.
 - Na resposta, NUNCA use termos técnicos de programação ou banco de dados. Fale como uma secretária executiva pronta para começar a trabalhar.
-- Seja breve (2 a 4 frases).`;
+- Seja breve, acolhedor e direto (2 a 4 frases).`;
 
 /**
  * Executa a extração usando IA (jsonCompletion) com fallback imediato para heurística pura.
@@ -193,6 +261,29 @@ export async function extrairDadosDaMensagem(
 ): Promise<DadosExtraidos> {
   const heuristica = extrairHeuristica(mensagem);
 
+  // Se a heurística já detectou que é uma dúvida ou pergunta do dono, responde imediatamente sem gravar nada
+  if (ehPerguntaOuOrientacaoDoDono(mensagem)) {
+    try {
+      const contexto = (historico ?? [])
+        .slice(-4)
+        .map((h) => `${h.de === "dono" ? "Dono" : "Atendente"}: ${h.texto}`)
+        .join("\n");
+
+      const promptUsuario = `Histórico recente:\n${contexto || "Início da conversa"}\n\nNova mensagem do dono:\n"${mensagem}"`;
+      const rawJson = await jsonCompletion(SYSTEM_PROMPT_EXTRAIR, promptUsuario, 512);
+      const parsed = JSON.parse(rawJson) as DadosExtraidos & { ehPerguntaDoDono?: boolean };
+      if (parsed.respostaParaDono && parsed.respostaParaDono.trim().length > 10) {
+        return {
+          respostaParaDono: parsed.respostaParaDono.trim(),
+          proximaEtapa: parsed.proximaEtapa ?? "SERVICOS",
+        };
+      }
+    } catch {
+      // fallback heurística
+    }
+    return heuristica;
+  }
+
   try {
     const contexto = (historico ?? [])
       .slice(-4)
@@ -201,18 +292,34 @@ export async function extrairDadosDaMensagem(
 
     const promptUsuario = `Histórico recente:\n${contexto || "Início da conversa"}\n\nNova mensagem do dono:\n"${mensagem}"`;
     const rawJson = await jsonCompletion(SYSTEM_PROMPT_EXTRAIR, promptUsuario, 512);
-    const parsed = JSON.parse(rawJson) as DadosExtraidos;
+    const parsed = JSON.parse(rawJson) as DadosExtraidos & { ehPerguntaDoDono?: boolean };
 
-    // Mescla dados de IA com heurística para garantir que nada foi perdido
+    // Se a IA detectou que o dono fez uma pergunta para ela
+    if (parsed.ehPerguntaDoDono) {
+      return {
+        respostaParaDono: parsed.respostaParaDono || heuristica.respostaParaDono,
+        proximaEtapa: parsed.proximaEtapa ?? "SERVICOS",
+      };
+    }
+
+    const temDadosIa = Boolean(
+      (parsed.servicos && parsed.servicos.length > 0) ||
+        parsed.endereco ||
+        parsed.horarios ||
+        parsed.pagamento ||
+        parsed.regras ||
+        parsed.perguntaResposta,
+    );
+
     return {
       servicos: parsed.servicos && parsed.servicos.length > 0 ? parsed.servicos : heuristica.servicos,
       endereco: parsed.endereco || heuristica.endereco,
       horarios: parsed.horarios || heuristica.horarios,
       pagamento: parsed.pagamento || heuristica.pagamento,
-      regras: parsed.regras || heuristica.regras,
-      perguntaResposta: parsed.perguntaResposta || heuristica.perguntaResposta,
-      respostaParaDono: parsed.respostaParaDono,
-      proximaEtapa: parsed.proximaEtapa,
+      regras: temDadosIa ? (parsed.regras ?? undefined) : heuristica.regras,
+      perguntaResposta: temDadosIa ? (parsed.perguntaResposta ?? undefined) : heuristica.perguntaResposta,
+      respostaParaDono: parsed.respostaParaDono || heuristica.respostaParaDono,
+      proximaEtapa: parsed.proximaEtapa || heuristica.proximaEtapa,
     };
   } catch {
     return heuristica;
