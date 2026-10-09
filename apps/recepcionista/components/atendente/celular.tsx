@@ -411,16 +411,16 @@ export function Celular({
   const semPreco = tela.sabe.servicos.filter((s) => s.semPreco).length;
 
   return (
-    <div className="mx-auto w-full max-w-[620px]">
-      {/* ABAS SUPERIORES COM TOQUE ESPAÇOSO */}
-      <div className="mb-3.5 flex items-center justify-between rounded-2xl border border-panel-line bg-panel-card p-1.5 shadow-xs">
+    <div className="mx-auto w-full max-w-[440px]">
+      {/* ABAS SUPERIORES DO WHATSAPP (CONVERSA vs PERFIL COMERCIAL) */}
+      <div className="mb-3 flex items-center justify-between rounded-2xl border border-panel-line bg-panel-card p-1 shadow-xs">
         <button
           type="button"
           onClick={() => {
             setAbaAtiva("chat");
             setErro("");
           }}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 px-4 text-xs sm:text-sm font-semibold transition ${
+          className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 px-3 text-xs font-semibold transition ${
             abaAtiva === "chat"
               ? "bg-[#00A884] text-white shadow-xs"
               : "text-panel-sub hover:text-panel-ink hover:bg-panel-bg"
@@ -435,23 +435,23 @@ export function Celular({
             setAbaAtiva("perfil");
             setErro("");
           }}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 px-4 text-xs sm:text-sm font-semibold transition ${
+          className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 px-3 text-xs font-semibold transition ${
             abaAtiva === "perfil"
               ? "bg-amber text-night shadow-xs"
               : "text-panel-sub hover:text-panel-ink hover:bg-panel-bg"
           }`}
         >
           <span>🏢</span>
-          <span>Informações do meu negócio</span>
+          <span>Perfil Comercial & Dados</span>
           {semServicos && (
             <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" title="Configure aqui" />
           )}
         </button>
       </div>
 
-      {/* DISPOSITIVO AMPLIADO COM FORMATO WHATSAPP FAMILIAR */}
-      <div className="rounded-[2.5rem] border border-[#2A2E3D] bg-gradient-to-b from-[#2A2E3D] via-[#1A1D27] to-[#0E1017] p-3.5 shadow-2xl ring-1 ring-white/10">
-        <div className="relative flex h-[660px] sm:h-[700px] flex-col overflow-hidden rounded-[2rem] bg-[#0B141A] border border-[#1E222D]">
+      {/* DISPOSITIVO SMARTPHONE ULTRA-REALISTA */}
+      <div className="rounded-[3rem] border border-[#2A2E3D] bg-gradient-to-b from-[#2A2E3D] via-[#1A1D27] to-[#0E1017] p-3 shadow-2xl ring-1 ring-white/10">
+        <div className="relative flex h-[620px] sm:h-[640px] flex-col overflow-hidden rounded-[2.35rem] bg-[#0B141A] border border-[#1E222D]">
           {/* BARRA DE STATUS DO DISPOSITIVO */}
           <div className="flex h-7 select-none items-center justify-between bg-[#202C33] px-6 pt-1 text-[11px] font-semibold text-white/80">
             <span>{horaStatus}</span>
@@ -469,7 +469,7 @@ export function Celular({
 
           {/* CABEÇALHO DO WHATSAPP */}
           {abaAtiva === "chat" ? (
-            <div className="flex items-center justify-between border-b border-[#2A3942]/60 bg-[#202C33] px-3.5 py-2.5 shadow-sm">
+            <div className="flex items-center justify-between border-b border-[#2A3942]/60 bg-[#202C33] px-3 py-2.5 shadow-sm">
               <button
                 type="button"
                 onClick={() => setAbaAtiva("perfil")}
@@ -527,24 +527,24 @@ export function Celular({
                   onClick={() => setAbaAtiva("perfil")}
                   className="rounded-full border border-[#2A3942] bg-[#182229] px-2.5 py-1 text-xs font-semibold text-[#E9EDEF] hover:border-amber hover:text-amber transition"
                 >
-                  Informações ›
+                  Perfil ›
                 </button>
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-between border-b border-[#2A3942]/60 bg-[#202C33] px-3.5 py-2.5 shadow-sm">
+            <div className="flex items-center justify-between border-b border-[#2A3942]/60 bg-[#202C33] px-3 py-2.5 shadow-sm">
               <button
                 type="button"
                 onClick={() => setAbaAtiva("chat")}
-                className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-[#00A884] hover:text-white transition"
+                className="flex items-center gap-2 text-xs font-semibold text-[#00A884] hover:text-white transition"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
                 <span>Voltar para o chat</span>
               </button>
-              <span className="text-xs sm:text-sm font-bold text-[#E9EDEF]">Informações do meu negócio</span>
-              <span className="w-12 text-right text-[11px] text-[#8696A0]">Dados</span>
+              <span className="text-xs font-bold text-[#E9EDEF]">Perfil Comercial</span>
+              <span className="text-[10px] text-[#25D366] font-semibold">✓ Verificado</span>
             </div>
           )}
 

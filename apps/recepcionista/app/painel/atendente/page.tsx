@@ -197,7 +197,7 @@ export default function PaginaDoAtendente() {
       )}
 
       {/* grid-cols-1 é minmax(0, 1fr): no celular a coluna encolhe até a tela, em vez de crescer até o item mais largo. */}
-      <div className="grid grid-cols-1 items-start gap-5 max-w-2xl mx-auto">
+      <div className="grid grid-cols-1 items-start gap-5 max-w-[440px] mx-auto">
         <CartaoDaNoite />
 
         {tela.observacoesPassivas && tela.observacoesPassivas.length > 0 && (
