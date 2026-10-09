@@ -212,7 +212,7 @@ export default function PaginaDoAtendente() {
       )}
 
       {/* grid-cols-1 é minmax(0, 1fr): no celular a coluna encolhe até a tela, em vez de crescer até o item mais largo. */}
-      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 items-start gap-8 max-w-2xl mx-auto">
         <Celular
           tela={tela}
           nome={nome}
@@ -221,9 +221,13 @@ export default function PaginaDoAtendente() {
             setTestado(true);
             void recarregar();
           }}
+          aoAjustar={(dados) => void ajustar(dados)}
+          aoMudarNome={mudarNome}
+          aoMudarJeito={mudarJeito}
+          aoAtualizarTela={recarregar}
         />
 
-        <div className="space-y-4">
+        <div className="w-full space-y-4">
           <CartaoDaNoite />
 
           {tela.observacoesPassivas && tela.observacoesPassivas.length > 0 && (
@@ -233,23 +237,19 @@ export default function PaginaDoAtendente() {
             />
           )}
 
-          <MicroDecisoes tela={tela} aoAjustar={ajustar} />
-
-          {tela.ligado ? <Situacao tela={tela} aoMudarTela={setTela} /> : ajustes}
-
-          {(!tela.ligado || tela.acesso === "SEMANA_ACABOU") && (
-            <Ligar tela={tela} testado={testado} aoMudarTela={setTela} />
-          )}
-
-          {tela.ligado && (
-            <details className="group rounded-2xl border border-panel-line bg-panel-card">
-              <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-panel-ink">
-                <span className="mr-2 inline-block text-panel-sub transition group-open:rotate-90">›</span>
-                Ajustar nome, jeito e dados completos
-              </summary>
-              <div className="border-t border-panel-line p-4">{ajustes}</div>
-            </details>
-          )}
+          <details className="group rounded-2xl border border-panel-line bg-panel-card">
+            <summary className="cursor-pointer list-none px-5 py-4 text-xs font-semibold text-panel-sub hover:text-panel-ink flex items-center justify-between">
+              <span>Configurações em lista fora do celular</span>
+              <span className="transition group-open:rotate-90">›</span>
+            </summary>
+            <div className="space-y-4 border-t border-panel-line p-4">
+              <MicroDecisoes tela={tela} aoAjustar={ajustar} />
+              {tela.ligado ? <Situacao tela={tela} aoMudarTela={setTela} /> : ajustes}
+              {(!tela.ligado || tela.acesso === "SEMANA_ACABOU") && (
+                <Ligar tela={tela} testado={testado} aoMudarTela={setTela} />
+              )}
+            </div>
+          </details>
         </div>
       </div>
 

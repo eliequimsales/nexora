@@ -197,7 +197,7 @@ type ItemServico = {
   priceCents: number;
 };
 
-function ModalServicos({
+export function ModalServicos({
   aoFechar,
   aoAtualizar,
 }: {

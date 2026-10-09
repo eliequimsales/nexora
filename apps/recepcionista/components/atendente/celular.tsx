@@ -3,14 +3,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { conversaDeExemplo, type Jeito } from "@/lib/atendente/jeitos";
 import type { TelaDoAtendente } from "@/lib/atendente/tela";
+import { ModalServicos } from "@/components/atendente/ajustes";
+import { ModalConectarWhatsApp } from "@/components/painel/modal-conectar-whatsapp";
 
 /**
  * O CELULAR — SIMULADOR ULTRA-REALISTA DO WHATSAPP.
  *
- * Suporta dois modos integrados:
- * 1. 🎓 "Ensinar Atendente" (Configuração da Onda do Mar): o dono conversa com a atendente,
- *    que cadastra serviços, horários, endereço e regras em tempo real no banco.
- * 2. 💬 "Testar como Cliente": o dono testa como seus clientes vão ser atendidos.
+ * Reúne a experiência completa de atendimento e configuração dentro do WhatsApp:
+ * 1. 💬 Conversa: Teste em tempo real com o motor de atendimento ou ensino.
+ * 2. 🏢 Perfil Comercial & Dados: Configuração imersiva dentro do WhatsApp
+ *    (status de conexão, micro-decisões, serviços, horários, endereço e regras).
  */
 
 type MensagemCliente = {
@@ -37,28 +39,68 @@ function formatarHoraAgora(): string {
   return `${h}:${m}`;
 }
 
+const TEMAS_RAPIDOS = [
+  { id: "atraso", rotulo: "⏱️ Tolerância de atraso", prefixo: "⏱️ Tolerância: ", exemplo: "Tolerância de 15 minutos para atrasos." },
+  { id: "estacionamento", rotulo: "🚗 Estacionamento", prefixo: "🚗 Estacionamento: ", exemplo: "Estacionamento conveniado gratuito na rua lateral." },
+  { id: "pagamento", rotulo: "💳 Parcelamento e Pix", prefixo: "💳 Pagamento: ", exemplo: "Parcelamos em até 3x sem juros no cartão e Pix." },
+  { id: "marcas", rotulo: "🏷️ Marcas e produtos", prefixo: "🏷️ Produtos: ", exemplo: "Usamos produtos de primeira qualidade." },
+  { id: "referencia", rotulo: "📍 Ponto de referência", prefixo: "📍 Localização: ", exemplo: "Estamos em frente à praça central." },
+];
+
+function extrairRegras(textoBruto?: string | null): string[] {
+  if (!textoBruto || !textoBruto.trim()) return [];
+  return textoBruto
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+}
+
 export function Celular({
   tela,
   nome,
   jeito,
   aoTestar,
+  aoAjustar,
+  aoMudarNome,
+  aoAtualizarTela,
 }: {
   tela: TelaDoAtendente;
   nome: string;
   jeito: Jeito;
   aoTestar: () => void;
+  aoAjustar?: (dados: Record<string, unknown>) => void;
+  aoMudarNome?: (novo: string) => void;
+  aoMudarJeito?: (novo: Jeito) => void;
+  aoAtualizarTela?: () => void;
 }) {
   const semServicos = tela.sabe.servicos.length === 0;
 
-  // Se a empresa ainda não tem serviços cadastrados, começa automaticamente em "ensinar"
-  const [modo, setModo] = useState<"ensinar" | "cliente">(() => (semServicos ? "ensinar" : "cliente"));
+  // Visualização ativa dentro do smartphone: Conversa ou Perfil Comercial
+  const [abaAtiva, setAbaAtiva] = useState<"chat" | "perfil">("chat");
+
+  // Sub-modo do chat: ensinar conversando ou testar como cliente
+  const [modoChat, setModoChat] = useState<"ensinar" | "cliente">(() => (semServicos ? "ensinar" : "cliente"));
+
+  // Modais abertos a partir do WhatsApp
+  const [modalServicosAberto, setModalServicosAberto] = useState(false);
+  const [modalConectarAberto, setModalConectarAberto] = useState(false);
+
+  // Estados de edição inline dentro do perfil do WhatsApp
+  const [editandoNome, setEditandoNome] = useState(false);
+  const [nomeTemp, setNomeTemp] = useState(nome || tela.empresa);
+  const [editandoEndereco, setEditandoEndereco] = useState(false);
+  const [enderecoTemp, setEnderecoTemp] = useState(tela.sabe.endereco || "");
+  const [editandoPagamento, setEditandoPagamento] = useState(false);
+  const [pagamentoTemp, setPagamentoTemp] = useState(tela.sabe.pagamento || "");
+  const [temaRegraAtivo, setTemaRegraAtivo] = useState<string | null>(null);
+  const [novaRegraInput, setNovaRegraInput] = useState("");
 
   // Estados do modo CLIENTE
   const [teste, setTeste] = useState<MensagemCliente[] | null>(null);
   const [estadoCliente, setEstadoCliente] = useState<{ tipo?: string } | null>(null);
 
   // Estados do modo ENSINO
-  const saudacaoInicialEnsino = useMemo(() => {
+  const primeiraMsgEnsino = useMemo(() => {
     if (semServicos) {
       return "Oi! 👋 Me conta: quais serviços você mais vende e quanto custa cada um?";
     }
@@ -66,7 +108,7 @@ export function Celular({
   }, [semServicos]);
 
   const [mensagensEnsino, setMensagensEnsino] = useState<MensagemEnsino[]>([
-    { de: "atendente", texto: saudacaoInicialEnsino },
+    { de: "atendente", texto: primeiraMsgEnsino },
   ]);
 
   const [sugestoesEnsino, setSugestoesEnsino] = useState<string[]>(
@@ -88,10 +130,23 @@ export function Celular({
     setHoraStatus(formatarHoraAgora());
   }, []);
 
-  // Evento externo para focar e abrir o modo ensinar
+  useEffect(() => {
+    setNomeTemp(nome || tela.empresa);
+  }, [nome, tela.empresa]);
+
+  useEffect(() => {
+    setEnderecoTemp(tela.sabe.endereco || "");
+  }, [tela.sabe.endereco]);
+
+  useEffect(() => {
+    setPagamentoTemp(tela.sabe.pagamento || "");
+  }, [tela.sabe.pagamento]);
+
+  // Listener para ativar ensino pelo chat
   useEffect(() => {
     const onAtivarEnsinar = () => {
-      setModo("ensinar");
+      setAbaAtiva("chat");
+      setModoChat("ensinar");
       setTimeout(() => campoInput.current?.focus(), 150);
     };
     window.addEventListener("ativar-modo-ensinar", onAtivarEnsinar);
@@ -108,11 +163,37 @@ export function Celular({
     }));
   }, [jeito, nome, tela.exemplo.dados]);
 
-  const mensagensExibidas = modo === "ensinar" ? mensagensEnsino : (teste ?? exemploCliente);
+  const mensagensExibidas = modoChat === "ensinar" ? mensagensEnsino : (teste ?? exemploCliente);
 
   useEffect(() => {
     rolagem.current?.scrollTo({ top: rolagem.current.scrollHeight, behavior: "smooth" });
-  }, [mensagensExibidas.length, digitando, modo]);
+  }, [mensagensExibidas.length, digitando, modoChat, abaAtiva]);
+
+  // Salvar ajustes direto
+  async function executarAjuste(dados: Record<string, unknown>) {
+    setErro("");
+    try {
+      if (aoAjustar) {
+        await aoAjustar(dados);
+      } else {
+        const r = await fetch("/api/atendente", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dados),
+        });
+        if (!r.ok) {
+          const j = await r.json().catch(() => null);
+          setErro(j?.error ?? "Não consegui salvar agora. Tente de novo.");
+          return;
+        }
+      }
+      setNotificacaoSalvo(true);
+      setTimeout(() => setNotificacaoSalvo(false), 2000);
+      aoAtualizarTela?.();
+    } catch {
+      setErro("Sem conexão agora. Tente de novo.");
+    }
+  }
 
   // Envio no modo ENSINO (Onda do Mar)
   async function enviarEnsino(texto: string) {
@@ -167,8 +248,8 @@ export function Celular({
       if (algoSalvo) {
         setNotificacaoSalvo(true);
         setTimeout(() => setNotificacaoSalvo(false), 2500);
-        // Atualiza a tela inteira (painel à direita) em tempo real!
         aoTestar();
+        aoAtualizarTela?.();
       }
     } catch {
       setErro("Sem conexão agora. Tente de novo.");
@@ -200,7 +281,7 @@ export function Celular({
           estado: estadoEfetivo,
           nome,
           jeito,
-          marcaDireto: true,
+          marcaDireto: tela.marcaDireto ?? true,
         }),
       });
       const j = await r.json().catch(() => null);
@@ -244,8 +325,8 @@ export function Celular({
   }
 
   function recomecar() {
-    if (modo === "ensinar") {
-      setMensagensEnsino([{ de: "atendente", texto: saudacaoInicialEnsino }]);
+    if (modoChat === "ensinar") {
+      setMensagensEnsino([{ de: "atendente", texto: primeiraMsgEnsino }]);
       setSugestoesEnsino(
         semServicos
           ? ["Corte R$ 45 e Barba R$ 35", "Consulta R$ 150", "Manicure R$ 35"]
@@ -258,8 +339,24 @@ export function Celular({
     setErro("");
   }
 
+  const regrasAtuais = useMemo(() => extrairRegras(tela.sabe.descricao), [tela.sabe.descricao]);
+
+  function adicionarRegra(texto: string) {
+    const limpo = texto.trim();
+    if (!limpo) return;
+    const novas = [...regrasAtuais, limpo];
+    void executarAjuste({ descricao: novas.join("\n") });
+    setTemaRegraAtivo(null);
+    setNovaRegraInput("");
+  }
+
+  function removerRegra(indice: number) {
+    const novas = regrasAtuais.filter((_, i) => i !== indice);
+    void executarAjuste({ descricao: novas.join("\n") });
+  }
+
   const sugestoes =
-    modo === "ensinar"
+    modoChat === "ensinar"
       ? sugestoesEnsino
       : estadoCliente?.tipo === "HORARIO"
         ? ["2", ...SUGESTOES_CLIENTE.slice(1)]
@@ -267,48 +364,51 @@ export function Celular({
           ? ["1", ...SUGESTOES_CLIENTE.slice(1)]
           : SUGESTOES_CLIENTE;
 
+  const totalServicos = tela.sabe.servicos.length;
+  const semPreco = tela.sabe.servicos.filter((s) => s.semPreco).length;
+
   return (
-    <div className="mx-auto w-full max-w-[420px] lg:sticky lg:top-6">
-      {/* SELETOR DE MODO SUPERIOR (ONDA DO MAR vs CLIENTE) */}
-      <div className="mb-2.5 flex items-center justify-between rounded-2xl border border-panel-line bg-panel-card p-1 shadow-xs">
+    <div className="mx-auto w-full max-w-[440px]">
+      {/* ABAS SUPERIORES DO WHATSAPP (CONVERSA vs PERFIL COMERCIAL) */}
+      <div className="mb-3 flex items-center justify-between rounded-2xl border border-panel-line bg-panel-card p-1 shadow-xs">
         <button
           type="button"
           onClick={() => {
-            setModo("ensinar");
+            setAbaAtiva("chat");
             setErro("");
           }}
           className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 px-3 text-xs font-semibold transition ${
-            modo === "ensinar"
-              ? "bg-amber text-night shadow-xs"
-              : "text-panel-sub hover:text-panel-ink hover:bg-panel-bg"
-          }`}
-        >
-          <span>🎓</span>
-          <span>Ensinar Atendente</span>
-          {semServicos && (
-            <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" title="Comece por aqui" />
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setModo("cliente");
-            setErro("");
-          }}
-          className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 px-3 text-xs font-semibold transition ${
-            modo === "cliente"
+            abaAtiva === "chat"
               ? "bg-[#00A884] text-white shadow-xs"
               : "text-panel-sub hover:text-panel-ink hover:bg-panel-bg"
           }`}
         >
           <span>💬</span>
-          <span>Testar como Cliente</span>
+          <span>Conversa / Teste</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setAbaAtiva("perfil");
+            setErro("");
+          }}
+          className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 px-3 text-xs font-semibold transition ${
+            abaAtiva === "perfil"
+              ? "bg-amber text-night shadow-xs"
+              : "text-panel-sub hover:text-panel-ink hover:bg-panel-bg"
+          }`}
+        >
+          <span>🏢</span>
+          <span>Perfil Comercial & Dados</span>
+          {semServicos && (
+            <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" title="Configure aqui" />
+          )}
         </button>
       </div>
 
-      {/* DISPOSITIVO SMARTPHONE ULTRA-REALISTA CENTRALIZADO */}
+      {/* DISPOSITIVO SMARTPHONE ULTRA-REALISTA */}
       <div className="rounded-[3rem] border border-[#2A2E3D] bg-gradient-to-b from-[#2A2E3D] via-[#1A1D27] to-[#0E1017] p-3 shadow-2xl ring-1 ring-white/10">
-        <div className="relative flex h-[580px] sm:h-[620px] flex-col overflow-hidden rounded-[2.35rem] bg-[#0B141A] border border-[#1E222D]">
+        <div className="relative flex h-[620px] sm:h-[640px] flex-col overflow-hidden rounded-[2.35rem] bg-[#0B141A] border border-[#1E222D]">
           {/* BARRA DE STATUS DO DISPOSITIVO */}
           <div className="flex h-7 select-none items-center justify-between bg-[#202C33] px-6 pt-1 text-[11px] font-semibold text-white/80">
             <span>{horaStatus}</span>
@@ -325,261 +425,710 @@ export function Celular({
           </div>
 
           {/* CABEÇALHO DO WHATSAPP */}
-          <div className="flex items-center justify-between border-b border-[#2A3942]/60 bg-[#202C33] px-3 py-2.5 shadow-sm">
-            <div className="flex min-w-0 items-center gap-2.5">
-              <svg className="h-4 w-4 text-[#8696A0]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-              <div className="relative shrink-0">
-                <div
-                  className={`flex h-10 w-10 items-center justify-center rounded-full font-display text-base font-bold text-night shadow-inner ${
-                    modo === "ensinar"
-                      ? "bg-gradient-to-br from-amber to-amber-500 ring-2 ring-amber/40"
-                      : "bg-gradient-to-br from-amber to-amber-600"
-                  }`}
-                >
-                  {modo === "ensinar" ? "⚡" : tela.empresa.trim().charAt(0).toUpperCase() || "N"}
+          {abaAtiva === "chat" ? (
+            <div className="flex items-center justify-between border-b border-[#2A3942]/60 bg-[#202C33] px-3 py-2.5 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setAbaAtiva("perfil")}
+                title="Clique para ver perfil e dados comerciais"
+                className="flex min-w-0 flex-1 items-center gap-2.5 text-left transition hover:opacity-85"
+              >
+                <div className="relative shrink-0">
+                  <div
+                    className={`flex h-10 w-10 items-center justify-center rounded-full font-display text-base font-bold text-night shadow-inner ${
+                      modoChat === "ensinar"
+                        ? "bg-gradient-to-br from-amber to-amber-500 ring-2 ring-amber/40"
+                        : "bg-gradient-to-br from-amber to-amber-600"
+                    }`}
+                  >
+                    {modoChat === "ensinar" ? "⚡" : tela.empresa.trim().charAt(0).toUpperCase() || "N"}
+                  </div>
+                  <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#202C33] bg-[#25D366]" />
                 </div>
-                <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#202C33] bg-[#25D366]" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1">
-                  <p className="truncate text-sm font-bold text-[#E9EDEF]">
-                    {modo === "ensinar" ? `${nome.trim() || "Atendente"} · Nexora` : tela.empresa}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1">
+                    <p className="truncate text-sm font-bold text-[#E9EDEF]">
+                      {modoChat === "ensinar" ? `${nome.trim() || "Atendente"} · Nexora` : tela.empresa}
+                    </p>
+                    <svg className="h-3.5 w-3.5 shrink-0 text-[#25D366]" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                    </svg>
+                  </div>
+                  <p className="text-[11px] text-[#00A884]">
+                    {digitando
+                      ? "digitando…"
+                      : modoChat === "ensinar"
+                        ? "online · clique para ver dados ›"
+                        : teste
+                          ? "online agora"
+                          : "exemplo"}
                   </p>
-                  <svg className="h-3.5 w-3.5 shrink-0 text-[#25D366]" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-                  </svg>
                 </div>
-                <p className="text-[11px] text-[#8696A0]">
-                  {digitando
-                    ? "digitando…"
-                    : modo === "ensinar"
-                      ? "online agora · modo ensino"
-                      : teste
-                        ? "online agora"
-                        : "exemplo"}
-                </p>
-              </div>
-            </div>
+              </button>
 
-            <div className="flex items-center gap-2 text-[#A7B2B8]">
-              {(modo === "ensinar" ? mensagensEnsino.length > 1 : Boolean(teste)) && (
+              <div className="flex items-center gap-2 text-[#A7B2B8]">
+                {(modoChat === "ensinar" ? mensagensEnsino.length > 1 : Boolean(teste)) && (
+                  <button
+                    type="button"
+                    onClick={recomecar}
+                    aria-label="Recomeçar"
+                    title="Recomeçar conversa"
+                    className="rounded-full p-1.5 text-amber transition hover:bg-white/10"
+                  >
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M5.1 15a7 7 0 0012.4 2M18.9 9A7 7 0 006.5 7" />
+                    </svg>
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={recomecar}
-                  aria-label="Recomeçar"
-                  title="Recomeçar conversa"
-                  className="rounded-full p-1.5 text-amber transition hover:bg-white/10"
+                  onClick={() => setAbaAtiva("perfil")}
+                  className="rounded-full border border-[#2A3942] bg-[#182229] px-2.5 py-1 text-[11px] font-semibold text-[#E9EDEF] hover:border-amber hover:text-amber transition"
                 >
-                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M5.1 15a7 7 0 0012.4 2M18.9 9A7 7 0 006.5 7" />
-                  </svg>
+                  Perfil ›
                 </button>
-              )}
-              <span
-                className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
-                  modo === "ensinar"
-                    ? "border-amber/40 bg-amber/10 text-amber"
-                    : "border-[#2A3942] bg-[#182229] text-[#8696A0]"
-                }`}
-              >
-                {modo === "ensinar" ? "Ensinando" : "Ao vivo"}
-              </span>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center justify-between border-b border-[#2A3942]/60 bg-[#202C33] px-3 py-2.5 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setAbaAtiva("chat")}
+                className="flex items-center gap-2 text-xs font-semibold text-[#00A884] hover:text-white transition"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+                <span>Voltar para o chat</span>
+              </button>
+              <span className="text-xs font-bold text-[#E9EDEF]">Perfil Comercial</span>
+              <span className="text-[10px] text-[#25D366] font-semibold">✓ Verificado</span>
+            </div>
+          )}
 
           {/* AVISO DE SINCRONIZAÇÃO EM TEMPO REAL */}
           {notificacaoSalvo && (
             <div className="bg-emerald-600 px-3 py-1.5 text-center text-xs font-semibold text-white transition animate-in fade-in slide-in-from-top duration-300">
-              ✓ Dados salvos e sincronizados com a empresa!
+              ✓ Dados salvos com sucesso na sua empresa!
             </div>
           )}
 
-          {/* ÁREA DE CONVERSA COM FUNDO DO WHATSAPP */}
-          <div
-            ref={rolagem}
-            className="flex-1 space-y-3 overflow-y-auto overflow-x-hidden px-3.5 py-4 scroll-smooth"
-            style={{
-              backgroundImage:
-                "radial-gradient(#182229 0.75px, transparent 0.75px), radial-gradient(#182229 0.75px, #0B141A 0.75px)",
-              backgroundSize: "30px 30px",
-              backgroundPosition: "0 0, 15px 15px",
-            }}
-            aria-live="polite"
-          >
-            <div className="flex justify-center">
-              <span className="rounded-lg bg-[#182229] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#8696A0] shadow-sm">
-                HOJE
-              </span>
-            </div>
-
-            <div className="mx-auto max-w-[290px] rounded-lg bg-[#182229]/90 px-3 py-1.5 text-center text-[10px] leading-tight text-[#FFD279] shadow-sm">
-              {modo === "ensinar"
-                ? "💬 Ensine serviços, horários e regras conversando direto no chat."
-                : "🔒 As mensagens são protegidas e enviadas em tempo real como no WhatsApp oficial."}
-            </div>
-
-            {modo === "ensinar"
-              ? mensagensEnsino.map((m, i) => {
-                  const ehDono = m.de === "dono";
-                  return (
-                    <div key={i} className={`flex flex-col ${ehDono ? "items-end" : "items-start"}`}>
-                      <div
-                        className={`relative max-w-[88%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed shadow-md break-words [overflow-wrap:anywhere] ${
-                          ehDono
-                            ? "rounded-tr-xs bg-[#005C4B] text-[#E9EDEF]"
-                            : "rounded-tl-xs bg-[#202C33] text-[#E9EDEF]"
-                        }`}
-                      >
-                        <p className="whitespace-pre-line break-words [overflow-wrap:anywhere]">{m.texto}</p>
-
-                        {m.salvo && (
-                          <div className="mt-2 rounded-xl border border-emerald-500/40 bg-[#0B141A]/80 p-2 text-xs text-emerald-300">
-                            <span className="font-bold">✓ Salvo na sua empresa!</span>
-                            <p className="text-[10px] text-[#8696A0] mt-0.5">
-                              Atualizado nos cartões ao lado em tempo real.
-                            </p>
-                          </div>
-                        )}
-
-                        <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-[#8696A0]">
-                          <span>{horaStatus}</span>
-                          {ehDono && (
-                            <span className="font-bold text-[#53BDEB]" title="Lido">
-                              ✓✓
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              : (mensagensExibidas as MensagemCliente[]).map((m, i) => {
-                  const ehCliente = m.de === "cliente";
-                  return (
-                    <div key={i} className={`flex flex-col ${ehCliente ? "items-end" : "items-start"}`}>
-                      <div
-                        title={m.fonte}
-                        className={`relative max-w-[88%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed shadow-md break-words [overflow-wrap:anywhere] ${
-                          ehCliente
-                            ? "rounded-tr-xs bg-[#005C4B] text-[#E9EDEF]"
-                            : "rounded-tl-xs bg-[#202C33] text-[#E9EDEF]"
-                        }`}
-                      >
-                        <p className="whitespace-pre-line break-words [overflow-wrap:anywhere]">{m.texto}</p>
-
-                        {/* SELO DE CONFIRMAÇÃO DE AGENDAMENTO AUTOMÁTICO */}
-                        {m.agendamentoConfirmado && (
-                          <div className="mt-2.5 rounded-xl border border-[#25D366]/40 bg-[#0B141A]/70 p-2.5 text-xs text-[#E9EDEF]">
-                            <div className="flex items-center gap-1.5 font-bold text-[#25D366]">
-                              <span>✓</span> Horário reservado automaticamente
-                            </div>
-                            <p className="mt-1 text-[11px] text-[#8696A0]">
-                              Salvo na agenda da empresa! Cliente recebe confirmação e lembrete anti-falta.
-                            </p>
-                          </div>
-                        )}
-
-                        <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-[#8696A0]">
-                          <span>{horaStatus}</span>
-                          {ehCliente && (
-                            <span className="font-bold text-[#53BDEB]" title="Lido">
-                              ✓✓
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-
-            {digitando && (
-              <div className="flex items-start">
-                <div className="rounded-2xl rounded-tl-xs bg-[#202C33] px-4 py-3 shadow-md">
-                  <div className="flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-[#8696A0] animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <span className="h-2 w-2 rounded-full bg-[#8696A0] animate-bounce" style={{ animationDelay: "180ms" }} />
-                    <span className="h-2 w-2 rounded-full bg-[#8696A0] animate-bounce" style={{ animationDelay: "360ms" }} />
-                  </div>
-                </div>
+          {/* CONTEÚDO PRINCIPAL: MODO CHAT OU MODO PERFIL COMERCIAL */}
+          {abaAtiva === "chat" ? (
+            <>
+              {/* SUB-SELETOR: ENSINAR vs TESTAR COMO CLIENTE */}
+              <div className="flex border-b border-[#1E222D] bg-[#182229] px-3 py-1.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setModoChat("ensinar")}
+                  className={`flex-1 rounded-lg py-1 px-2 font-semibold transition ${
+                    modoChat === "ensinar"
+                      ? "bg-amber text-night"
+                      : "text-[#8696A0] hover:text-[#E9EDEF]"
+                  }`}
+                >
+                  🎓 Ensinar pelo chat
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModoChat("cliente")}
+                  className={`flex-1 rounded-lg py-1 px-2 font-semibold transition ${
+                    modoChat === "cliente"
+                      ? "bg-[#00A884] text-white"
+                      : "text-[#8696A0] hover:text-[#E9EDEF]"
+                  }`}
+                >
+                  💬 Testar como cliente
+                </button>
               </div>
-            )}
-          </div>
 
-          {/* SUGESTÕES RÁPIDAS DE RESPOSTA */}
-          <div className="flex flex-wrap gap-1.5 border-t border-[#1E222D]/60 bg-[#0B141A]/95 px-3 py-2">
-            {sugestoes.map((s) => (
-              <button
-                key={s}
-                type="button"
-                disabled={digitando}
-                onClick={() => {
-                  if (modo === "ensinar") {
-                    void enviarEnsino(s);
+              {/* ÁREA DE CONVERSA COM FUNDO DO WHATSAPP */}
+              <div
+                ref={rolagem}
+                className="flex-1 space-y-3 overflow-y-auto overflow-x-hidden px-3.5 py-4 scroll-smooth"
+                style={{
+                  backgroundImage:
+                    "radial-gradient(#182229 0.75px, transparent 0.75px), radial-gradient(#182229 0.75px, #0B141A 0.75px)",
+                  backgroundSize: "30px 30px",
+                  backgroundPosition: "0 0, 15px 15px",
+                }}
+                aria-live="polite"
+              >
+                <div className="flex justify-center">
+                  <span className="rounded-lg bg-[#182229] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#8696A0] shadow-sm">
+                    HOJE
+                  </span>
+                </div>
+
+                <div className="mx-auto max-w-[290px] rounded-lg bg-[#182229]/90 px-3 py-1.5 text-center text-[10px] leading-tight text-[#FFD279] shadow-sm">
+                  {modoChat === "ensinar"
+                    ? "💬 Digite preços, horários ou regras. Anotamos tudo na hora."
+                    : "🔒 Mensagens processadas em tempo real com os dados da sua empresa."}
+                </div>
+
+                {modoChat === "ensinar"
+                  ? mensagensEnsino.map((m, i) => {
+                      const ehDono = m.de === "dono";
+                      return (
+                        <div key={i} className={`flex flex-col ${ehDono ? "items-end" : "items-start"}`}>
+                          <div
+                            className={`relative max-w-[88%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed shadow-md break-words [overflow-wrap:anywhere] ${
+                              ehDono
+                                ? "rounded-tr-xs bg-[#005C4B] text-[#E9EDEF]"
+                                : "rounded-tl-xs bg-[#202C33] text-[#E9EDEF]"
+                            }`}
+                          >
+                            <p className="whitespace-pre-line break-words [overflow-wrap:anywhere]">{m.texto}</p>
+
+                            {m.salvo && (
+                              <div className="mt-2 rounded-xl border border-emerald-500/40 bg-[#0B141A]/80 p-2 text-xs text-emerald-300">
+                                <span className="font-bold">✓ Salvo na sua empresa!</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setAbaAtiva("perfil")}
+                                  className="mt-1 block text-[11px] font-semibold text-amber hover:underline"
+                                >
+                                  Ver no perfil comercial da empresa ›
+                                </button>
+                              </div>
+                            )}
+
+                            <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-[#8696A0]">
+                              <span>{horaStatus}</span>
+                              {ehDono && (
+                                <span className="font-bold text-[#53BDEB]" title="Lido">
+                                  ✓✓
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  : (mensagensExibidas as MensagemCliente[]).map((m, i) => {
+                      const ehCliente = m.de === "cliente";
+                      return (
+                        <div key={i} className={`flex flex-col ${ehCliente ? "items-end" : "items-start"}`}>
+                          <div
+                            title={m.fonte}
+                            className={`relative max-w-[88%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed shadow-md break-words [overflow-wrap:anywhere] ${
+                              ehCliente
+                                ? "rounded-tr-xs bg-[#005C4B] text-[#E9EDEF]"
+                                : "rounded-tl-xs bg-[#202C33] text-[#E9EDEF]"
+                            }`}
+                          >
+                            <p className="whitespace-pre-line break-words [overflow-wrap:anywhere]">{m.texto}</p>
+
+                            {m.agendamentoConfirmado && (
+                              <div className="mt-2.5 rounded-xl border border-[#25D366]/40 bg-[#0B141A]/70 p-2.5 text-xs text-[#E9EDEF]">
+                                <div className="flex items-center gap-1.5 font-bold text-[#25D366]">
+                                  <span>✓</span> Horário reservado automaticamente
+                                </div>
+                                <p className="mt-1 text-[11px] text-[#8696A0]">
+                                  Salvo na agenda da empresa com aviso para o cliente.
+                                </p>
+                              </div>
+                            )}
+
+                            <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-[#8696A0]">
+                              <span>{horaStatus}</span>
+                              {ehCliente && (
+                                <span className="font-bold text-[#53BDEB]" title="Lido">
+                                  ✓✓
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                {digitando && (
+                  <div className="flex items-start">
+                    <div className="rounded-2xl rounded-tl-xs bg-[#202C33] px-4 py-3 shadow-md">
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-[#8696A0] animate-bounce" style={{ animationDelay: "0ms" }} />
+                        <span className="h-2 w-2 rounded-full bg-[#8696A0] animate-bounce" style={{ animationDelay: "180ms" }} />
+                        <span className="h-2 w-2 rounded-full bg-[#8696A0] animate-bounce" style={{ animationDelay: "360ms" }} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* SUGESTÕES RÁPIDAS */}
+              <div className="flex flex-wrap gap-1.5 border-t border-[#1E222D]/60 bg-[#0B141A]/95 px-3 py-2">
+                {sugestoes.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    disabled={digitando}
+                    onClick={() => {
+                      if (modoChat === "ensinar") {
+                        void enviarEnsino(s);
+                      } else {
+                        void enviarCliente(s);
+                      }
+                    }}
+                    className={`shrink-0 rounded-full border px-3 py-1 text-[11px] font-medium shadow-sm transition disabled:opacity-40 ${
+                      modoChat === "ensinar"
+                        ? "border-amber/40 bg-[#1A1D27] text-amber hover:border-amber hover:bg-amber/20"
+                        : "border-[#00A884]/40 bg-[#111B21] text-[#E9EDEF] hover:border-[#00A884] hover:bg-[#005C4B]/40 hover:text-white"
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+
+              {/* BARRA DE DIGITAÇÃO DO WHATSAPP */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (modoChat === "ensinar") {
+                    void enviarEnsino(entrada);
                   } else {
-                    void enviarCliente(s);
+                    void enviarCliente(entrada);
                   }
                 }}
-                className={`shrink-0 rounded-full border px-3 py-1 text-[11px] font-medium shadow-sm transition disabled:opacity-40 ${
-                  modo === "ensinar"
-                    ? "border-amber/40 bg-[#1A1D27] text-amber hover:border-amber hover:bg-amber/20"
-                    : "border-[#00A884]/40 bg-[#111B21] text-[#E9EDEF] hover:border-[#00A884] hover:bg-[#005C4B]/40 hover:text-white"
-                }`}
+                className="flex items-center gap-2 border-t border-[#2A3942]/50 bg-[#202C33] px-3 py-2.5"
               >
-                {s}
-              </button>
-            ))}
-          </div>
+                <span className="text-lg text-[#8696A0] select-none" aria-hidden="true">
+                  {modoChat === "ensinar" ? "⚡" : "😀"}
+                </span>
+                <input
+                  ref={campoInput}
+                  value={entrada}
+                  onChange={(e) => setEntrada(e.target.value)}
+                  maxLength={500}
+                  placeholder={
+                    modoChat === "ensinar"
+                      ? "Ex: Faço corte por 45 e barba por 35…"
+                      : "Escreva como um cliente no WhatsApp…"
+                  }
+                  aria-label={modoChat === "ensinar" ? "Ensinar atendente" : "Mensagem de teste"}
+                  className="min-w-0 flex-1 rounded-full bg-[#2A3942] px-3.5 py-1.5 text-xs text-[#E9EDEF] placeholder:text-[#8696A0] focus:outline-none focus:ring-1 focus:ring-amber"
+                />
+                <button
+                  type="submit"
+                  disabled={digitando || !entrada.trim()}
+                  aria-label="Enviar"
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white shadow transition hover:brightness-110 disabled:opacity-40 ${
+                    modoChat === "ensinar" ? "bg-amber text-night" : "bg-[#00A884]"
+                  }`}
+                >
+                  <svg className="h-3.5 w-3.5 translate-x-0.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                  </svg>
+                </button>
+              </form>
+            </>
+          ) : (
+            /* VISUALIZAÇÃO IMERSIVA DO PERFIL COMERCIAL DENTRO DO WHATSAPP */
+            <div className="flex-1 overflow-y-auto px-3.5 py-4 space-y-4 scroll-smooth">
+              {/* CARTÃO DE IDENTIDADE DO PERFIL */}
+              <div className="rounded-2xl border border-[#2A3942] bg-[#182229] p-4 text-center shadow-md">
+                <div className="relative mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-amber to-amber-600 font-display text-2xl font-bold text-night shadow-inner">
+                  {tela.empresa.trim().charAt(0).toUpperCase() || "N"}
+                  <span className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-[#182229] bg-[#25D366] text-[10px] text-white font-bold">
+                    ✓
+                  </span>
+                </div>
 
-          {/* BARRA DE DIGITAÇÃO DO WHATSAPP */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (modo === "ensinar") {
-                void enviarEnsino(entrada);
-              } else {
-                void enviarCliente(entrada);
-              }
-            }}
-            className="flex items-center gap-2 border-t border-[#2A3942]/50 bg-[#202C33] px-3 py-2.5"
-          >
-            <span className="text-lg text-[#8696A0] select-none" aria-hidden="true">
-              {modo === "ensinar" ? "⚡" : "😀"}
-            </span>
-            <input
-              ref={campoInput}
-              value={entrada}
-              onChange={(e) => setEntrada(e.target.value)}
-              maxLength={500}
-              placeholder={
-                modo === "ensinar"
-                  ? "Ex: Faço corte por 45 e barba por 35…"
-                  : "Escreva como um cliente no WhatsApp…"
-              }
-              aria-label={modo === "ensinar" ? "Ensinar atendente" : "Mensagem de teste"}
-              className="min-w-0 flex-1 rounded-full bg-[#2A3942] px-3.5 py-1.5 text-xs text-[#E9EDEF] placeholder:text-[#8696A0] focus:outline-none focus:ring-1 focus:ring-amber"
-            />
-            <button
-              type="submit"
-              disabled={digitando || !entrada.trim()}
-              aria-label="Enviar"
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white shadow transition hover:brightness-110 disabled:opacity-40 ${
-                modo === "ensinar" ? "bg-amber text-night" : "bg-[#00A884]"
-              }`}
-            >
-              <svg className="h-3.5 w-3.5 translate-x-0.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-              </svg>
-            </button>
-          </form>
+                <div className="mt-3">
+                  {editandoNome ? (
+                    <div className="flex items-center justify-center gap-1.5">
+                      <input
+                        value={nomeTemp}
+                        onChange={(e) => setNomeTemp(e.target.value.slice(0, 30))}
+                        maxLength={30}
+                        className="rounded-lg border border-amber bg-[#0B141A] px-2 py-1 text-center text-xs font-bold text-[#E9EDEF] focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (nomeTemp.trim()) {
+                            if (aoMudarNome) aoMudarNome(nomeTemp.trim());
+                            void executarAjuste({ nome: nomeTemp.trim() });
+                          }
+                          setEditandoNome(false);
+                        }}
+                        className="rounded-lg bg-amber px-2.5 py-1 text-xs font-bold text-night"
+                      >
+                        ✓
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNomeTemp(nome || tela.empresa);
+                          setEditandoNome(false);
+                        }}
+                        className="rounded-lg border border-[#2A3942] px-2 py-1 text-xs text-[#8696A0]"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center gap-1.5">
+                      <h3 className="text-sm font-bold text-[#E9EDEF]">{nomeTemp || tela.empresa}</h3>
+                      <button
+                        type="button"
+                        onClick={() => setEditandoNome(true)}
+                        className="text-[11px] text-amber hover:underline"
+                        title="Editar nome"
+                      >
+                        ✎
+                      </button>
+                    </div>
+                  )}
+                  <p className="mt-0.5 text-[11px] text-[#8696A0]">
+                    Conta comercial oficial · Responde clientes no WhatsApp
+                  </p>
+                </div>
+              </div>
+
+              {/* STATUS DE CONEXÃO DO WHATSAPP */}
+              <div className="rounded-2xl border border-[#2A3942] bg-[#182229] p-3.5 shadow-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`h-2.5 w-2.5 rounded-full ${
+                        tela.whatsappLigado ? "bg-[#25D366] animate-pulse" : "bg-red-500"
+                      }`}
+                    />
+                    <div>
+                      <p className="text-xs font-bold text-[#E9EDEF]">
+                        {tela.whatsappLigado ? "WhatsApp Ligado" : "WhatsApp Desligado"}
+                      </p>
+                      <p className="text-[10px] text-[#8696A0]">
+                        {tela.whatsappLigado
+                          ? "Atendendo no seu número oficial"
+                          : "Conecte para responder seus clientes"}
+                      </p>
+                    </div>
+                  </div>
+                  {!tela.whatsappLigado && (
+                    <button
+                      type="button"
+                      onClick={() => setModalConectarAberto(true)}
+                      className="rounded-xl bg-[#00A884] px-3 py-1.5 text-xs font-bold text-white shadow hover:brightness-110 transition"
+                    >
+                      Ligar agora
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* MICRO-DECISÕES DO ATENDENTE */}
+              <div className="rounded-2xl border border-[#2A3942] bg-[#182229] p-3.5 space-y-3 shadow-sm">
+                <p className="text-xs font-bold text-amber">⚡ Como atender no WhatsApp</p>
+
+                {/* 1. Agendamento */}
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-semibold text-[#E9EDEF]">Quando pedirem horário:</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => void executarAjuste({ marcaDireto: false })}
+                      className={`rounded-xl border p-2 text-left text-[11px] font-semibold transition ${
+                        !tela.marcaDireto
+                          ? "border-amber bg-amber/15 text-amber ring-1 ring-amber"
+                          : "border-[#2A3942] bg-[#0B141A] text-[#8696A0] hover:text-[#E9EDEF]"
+                      }`}
+                    >
+                      Eu confirmo antes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void executarAjuste({ marcaDireto: true })}
+                      className={`rounded-xl border p-2 text-left text-[11px] font-semibold transition ${
+                        tela.marcaDireto
+                          ? "border-amber bg-amber/15 text-amber ring-1 ring-amber"
+                          : "border-[#2A3942] bg-[#0B141A] text-[#8696A0] hover:text-[#E9EDEF]"
+                      }`}
+                    >
+                      Confirma direto
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-[#8696A0] leading-tight">
+                    {!tela.marcaDireto
+                      ? "Anota o pedido e aguarda sua confirmação."
+                      : "Consulta a agenda e confirma imediatamente."}
+                  </p>
+                </div>
+
+                {/* 2. Expediente */}
+                <div className="space-y-1.5 pt-1">
+                  <p className="text-[11px] font-semibold text-[#E9EDEF]">Quando responder:</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => void executarAjuste({ expediente: true })}
+                      className={`rounded-xl border p-2 text-left text-[11px] font-semibold transition ${
+                        tela.expediente
+                          ? "border-amber bg-amber/15 text-amber ring-1 ring-amber"
+                          : "border-[#2A3942] bg-[#0B141A] text-[#8696A0] hover:text-[#E9EDEF]"
+                      }`}
+                    >
+                      24h dia e noite
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void executarAjuste({ expediente: false })}
+                      className={`rounded-xl border p-2 text-left text-[11px] font-semibold transition ${
+                        !tela.expediente
+                          ? "border-amber bg-amber/15 text-amber ring-1 ring-amber"
+                          : "border-[#2A3942] bg-[#0B141A] text-[#8696A0] hover:text-[#E9EDEF]"
+                      }`}
+                    >
+                      Só fora do expediente
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-[#8696A0] leading-tight">
+                    {tela.expediente
+                      ? "Responde seus clientes 24 horas por dia."
+                      : "Responde apenas quando a empresa fechar."}
+                  </p>
+                </div>
+              </div>
+
+              {/* O QUE O ATENDENTE SABE RESPONDER */}
+              <div className="rounded-2xl border border-[#2A3942] bg-[#182229] p-3.5 space-y-3 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold text-[#E9EDEF]">✦ O que ele sabe responder</p>
+                  <span className="text-[10px] text-[#8696A0]">Dados da empresa</span>
+                </div>
+
+                {/* Linha Horário */}
+                <div className="flex items-center justify-between gap-2 border-b border-[#2A3942]/60 pb-2.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-[#E9EDEF]">🕒 Horários</p>
+                    <p className="truncate text-[11px] text-[#8696A0]">
+                      {tela.sabe.horario || "seg a dom fechado"}
+                    </p>
+                  </div>
+                  <a
+                    href="/painel/configuracoes"
+                    className="shrink-0 text-xs font-bold text-amber hover:underline"
+                  >
+                    Mudar
+                  </a>
+                </div>
+
+                {/* Linha Serviços */}
+                <div className="flex items-center justify-between gap-2 border-b border-[#2A3942]/60 pb-2.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-[#E9EDEF]">💼 Serviços e preços</p>
+                    <p className="truncate text-[11px] text-[#8696A0]">
+                      {totalServicos === 0
+                        ? "Nenhum serviço"
+                        : `${totalServicos} serviços${semPreco ? ` · ${semPreco} sem preço` : ""}`}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setModalServicosAberto(true)}
+                    className="shrink-0 text-xs font-bold text-amber hover:underline"
+                  >
+                    Mudar
+                  </button>
+                </div>
+
+                {/* Linha Endereço */}
+                <div className="border-b border-[#2A3942]/60 pb-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold text-[#E9EDEF]">📍 Endereço</p>
+                    <button
+                      type="button"
+                      onClick={() => setEditandoEndereco(!editandoEndereco)}
+                      className="text-xs font-bold text-amber hover:underline"
+                    >
+                      {editandoEndereco ? "Cancelar" : tela.sabe.endereco ? "Mudar" : "Adicionar"}
+                    </button>
+                  </div>
+                  {editandoEndereco ? (
+                    <div className="mt-1.5 flex gap-1.5">
+                      <input
+                        value={enderecoTemp}
+                        onChange={(e) => setEnderecoTemp(e.target.value)}
+                        placeholder="Rua, número e bairro"
+                        className="min-w-0 flex-1 rounded-lg border border-amber bg-[#0B141A] px-2.5 py-1 text-xs text-[#E9EDEF] focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void executarAjuste({ endereco: enderecoTemp.trim() });
+                          setEditandoEndereco(false);
+                        }}
+                        className="rounded-lg bg-amber px-2.5 py-1 text-xs font-bold text-night"
+                      >
+                        Salvar
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="mt-0.5 break-words text-[11px] text-[#8696A0]">
+                      {tela.sabe.endereco || "Não cadastrado"}
+                    </p>
+                  )}
+                </div>
+
+                {/* Linha Pagamento */}
+                <div className="border-b border-[#2A3942]/60 pb-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold text-[#E9EDEF]">💳 Formas de pagamento</p>
+                    <button
+                      type="button"
+                      onClick={() => setEditandoPagamento(!editandoPagamento)}
+                      className="text-xs font-bold text-amber hover:underline"
+                    >
+                      {editandoPagamento ? "Cancelar" : tela.sabe.pagamento ? "Mudar" : "Adicionar"}
+                    </button>
+                  </div>
+                  {editandoPagamento ? (
+                    <div className="mt-1.5 flex gap-1.5">
+                      <input
+                        value={pagamentoTemp}
+                        onChange={(e) => setPagamentoTemp(e.target.value)}
+                        placeholder="Pix, cartão e dinheiro"
+                        className="min-w-0 flex-1 rounded-lg border border-amber bg-[#0B141A] px-2.5 py-1 text-xs text-[#E9EDEF] focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void executarAjuste({ pagamento: pagamentoTemp.trim() });
+                          setEditandoPagamento(false);
+                        }}
+                        className="rounded-lg bg-amber px-2.5 py-1 text-xs font-bold text-night"
+                      >
+                        Salvar
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="mt-0.5 break-words text-[11px] text-[#8696A0]">
+                      {tela.sabe.pagamento || "Não cadastrado"}
+                    </p>
+                  )}
+                </div>
+
+                {/* Regras e diferenciais da empresa */}
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-[#E9EDEF]">
+                      ✦ Regras ({regrasAtuais.length})
+                    </p>
+                    <span className="text-[10px] text-[#8696A0]">Tolerância, vagas, etc.</span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1">
+                    {TEMAS_RAPIDOS.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => {
+                          setTemaRegraAtivo(t.id);
+                          setNovaRegraInput(t.exemplo);
+                        }}
+                        className="rounded-full border border-[#2A3942] bg-[#0B141A] px-2.5 py-0.5 text-[10px] font-medium text-[#E9EDEF] hover:border-amber transition"
+                      >
+                        + {t.rotulo}
+                      </button>
+                    ))}
+                  </div>
+
+                  {temaRegraAtivo && (
+                    <div className="rounded-xl border border-amber/40 bg-[#0B141A] p-2.5 space-y-1.5">
+                      <input
+                        value={novaRegraInput}
+                        onChange={(e) => setNovaRegraInput(e.target.value.slice(0, 150))}
+                        maxLength={150}
+                        placeholder="Digite a regra ou detalhe..."
+                        className="w-full rounded-lg border border-[#2A3942] bg-[#182229] px-2.5 py-1 text-xs text-[#E9EDEF] focus:border-amber focus:outline-none"
+                      />
+                      <div className="flex justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setTemaRegraAtivo(null)}
+                          className="rounded-lg px-2 py-1 text-[11px] text-[#8696A0]"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!novaRegraInput.trim()}
+                          onClick={() => adicionarRegra(novaRegraInput)}
+                          className="rounded-lg bg-amber px-2.5 py-1 text-[11px] font-bold text-night disabled:opacity-40"
+                        >
+                          Salvar regra
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {regrasAtuais.length > 0 && (
+                    <div className="space-y-1 pt-1">
+                      {regrasAtuais.map((regra, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between gap-2 rounded-lg bg-[#0B141A] p-2 text-[11px] text-[#E9EDEF]"
+                        >
+                          <span className="truncate flex-1">{regra}</span>
+                          <button
+                            type="button"
+                            onClick={() => removerRegra(idx)}
+                            className="text-red-400 hover:text-red-300 text-[10px] font-bold px-1"
+                            title="Remover regra"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* BOTÃO PARA VOLTAR AO CHAT E TESTAR IMEDIATAMENTE */}
+              <div className="pt-1 pb-2">
+                <button
+                  type="button"
+                  onClick={() => setAbaAtiva("chat")}
+                  className="w-full rounded-xl bg-[#00A884] py-3 text-center text-xs font-bold text-white shadow hover:brightness-110 transition"
+                >
+                  💬 Testar no WhatsApp Agora
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
       {erro && (
         <p role="alert" className="mt-2 text-center text-xs text-red-600">
           {erro}
         </p>
       )}
+
+      {/* MODAL DE SERVIÇOS & PREÇOS */}
+      {modalServicosAberto && (
+        <ModalServicos
+          aoFechar={() => setModalServicosAberto(false)}
+          aoAtualizar={() => {
+            aoAtualizarTela?.();
+            aoTestar();
+          }}
+        />
+      )}
+
+      {/* MODAL DE CONEXÃO DO WHATSAPP (QR CODE / PAIRING) */}
+      <ModalConectarWhatsApp
+        aberto={modalConectarAberto}
+        aoFechar={() => setModalConectarAberto(false)}
+        aoConectar={() => {
+          setModalConectarAberto(false);
+          aoAtualizarTela?.();
+        }}
+        telefonePadrao={tela.empresaTelefone}
+      />
     </div>
   );
 }
