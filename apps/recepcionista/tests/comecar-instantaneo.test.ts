@@ -138,8 +138,17 @@ describe("Salvar Conta (/api/auth/salvar-conta) — Tornar a conta definitiva", 
     vi.clearAllMocks();
     (getSessionCompanyId as Fn).mockResolvedValue("comp_convidado_123");
     (rateLimit as Fn).mockReturnValue(true);
-    db.company.findUnique.mockResolvedValue(null);
-    db.company.update.mockResolvedValue({ id: "comp_convidado_123" });
+    db.company.findUnique.mockImplementation(async (args: any) => {
+      if (args?.where?.id) {
+        return {
+          id: args.where.id,
+          email: "convidado_123@temporario.meunexora.com.br",
+          sessaoEpoca: 0,
+        };
+      }
+      return null;
+    });
+    db.company.update.mockResolvedValue({ id: "comp_convidado_123", sessaoEpoca: 1 });
   });
 
   it("exige sessão autenticada para salvar conta", async () => {
@@ -155,8 +164,41 @@ describe("Salvar Conta (/api/auth/salvar-conta) — Tornar a conta definitiva", 
     expect(db.company.update).not.toHaveBeenCalled();
   });
 
+  it("rejeita salvar conta se a conta já for permanente", async () => {
+    db.company.findUnique.mockImplementation(async (args: any) => {
+      if (args?.where?.id) {
+        return {
+          id: args.where.id,
+          email: "dono@empresa-permanente.com",
+          sessaoEpoca: 0,
+        };
+      }
+      return null;
+    });
+
+    const req = new Request("https://www.meunexora.com.br/api/auth/salvar-conta", {
+      method: "POST",
+      body: JSON.stringify({ email: "dona@clinica.com", password: "senha-segura-123" }),
+    });
+    const res = await salvarContaPOST(req);
+    expect(res.status).toBe(403);
+    expect(db.company.update).not.toHaveBeenCalled();
+  });
+
   it("rejeita e-mail já em uso por outro usuário", async () => {
-    db.company.findUnique.mockResolvedValue({ id: "outra_empresa_456" });
+    db.company.findUnique.mockImplementation(async (args: any) => {
+      if (args?.where?.id) {
+        return {
+          id: args.where.id,
+          email: "convidado_123@temporario.meunexora.com.br",
+          sessaoEpoca: 0,
+        };
+      }
+      if (args?.where?.email === "existente@clinica.com") {
+        return { id: "outra_empresa_456" };
+      }
+      return null;
+    });
 
     const req = new Request("https://www.meunexora.com.br/api/auth/salvar-conta", {
       method: "POST",
@@ -204,8 +246,11 @@ describe("Salvar Conta (/api/auth/salvar-conta) — Tornar a conta definitiva", 
       data: {
         email: "dona@clinica.com",
         passwordHash: "hash_senha-segura-123",
+        emailVerificadoEm: null,
+        sessaoEpoca: { increment: 1 },
         name: "Clínica Harmonização Prime",
       },
+      select: { id: true, sessaoEpoca: true },
     });
   });
 });

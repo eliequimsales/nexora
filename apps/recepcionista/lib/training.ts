@@ -370,18 +370,6 @@ export async function reviewKnowledgeItem(
   let finalQuestion = edits?.question?.trim() || item.question;
   let finalAnswer = edits?.answer?.trim() || item.answer;
 
-  // Se o usuário aprovou diretamente com "Usar sempre" sem edição manual,
-  // estrutura a resposta para transformar linguagem coloquial em regra clara
-  if (!edits?.answer?.trim()) {
-    try {
-      const structured = await structureTrainedAnswer(finalQuestion, finalAnswer);
-      finalQuestion = structured.question.slice(0, MAX_QUESTION_LENGTH);
-      finalAnswer = structured.answer.slice(0, MAX_ANSWER_LENGTH);
-    } catch {
-      // Fallback gracioso caso a IA esteja offline ou sem chave
-    }
-  }
-
   await prisma.knowledgeItem.update({
     where: { id: item.id },
     data: {

@@ -95,12 +95,22 @@ export async function GET(request: Request) {
         },
       });
     } else if (decisao.acao === "VINCULAR") {
-      // Conta que vincula com o Google ganha o vínculo e tem o e-mail validado
+      // Conta que vincula com o Google ganha o vínculo e tem o e-mail validado.
+      // Se a conta foi pré-criada com senha e o e-mail nunca foi verificado por ela,
+      // neutralizamos a senha pré-cadastrada para impedir que o criador inicial mantenha acesso.
+      // Sempre incrementamos sessaoEpoca para revogar qualquer sessão antiga pré-existente.
+      const precisaResetarSenha = !existente?.emailVerificadoEm;
+      const novoHash = precisaResetarSenha
+        ? await hashPassword(randomBytes(24).toString("hex"))
+        : undefined;
+
       company = await prisma.company.update({
         where: { id: decisao.companyId },
         data: {
           googleSub: user.sub,
           emailVerificadoEm: new Date(),
+          sessaoEpoca: { increment: 1 },
+          ...(novoHash ? { passwordHash: novoHash } : {}),
         },
         select: { id: true, sessaoEpoca: true },
       });

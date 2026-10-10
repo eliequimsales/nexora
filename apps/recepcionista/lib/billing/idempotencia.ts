@@ -45,12 +45,26 @@ export async function reivindicar(
 
     const linha = await prisma.stripeEvent.findUnique({
       where: { id: eventId },
-      select: { processedAt: true },
+      select: { processedAt: true, erro: true, receivedAt: true },
     });
 
     if (linha?.processedAt) return { ganhou: false, motivo: "ja-processado" };
 
-    // Alguém está processando agora (ou morreu no meio). Contamos a tentativa
+    // Se o evento falhou em tentativa anterior (erro registrado) ou a tentativa anterior
+    // expirou (lease > 30s sem conclusão), permite que a reentrega da Stripe tente novamente.
+    const tempoDecorridoMs = linha?.receivedAt ? Date.now() - new Date(linha.receivedAt).getTime() : 0;
+    const falhouAnteriormente = Boolean(linha?.erro);
+    const leaseExpirado = tempoDecorridoMs > 30_000;
+
+    if (falhouAnteriormente || leaseExpirado) {
+      await prisma.stripeEvent.update({
+        where: { id: eventId },
+        data: { attempts: { increment: 1 }, erro: null },
+      });
+      return { ganhou: true };
+    }
+
+    // Alguém está processando agora no primeiro fôlego (< 30s). Contamos a tentativa
     // e devolvemos "em-voo" — quem chamou responde 500 para a Stripe reentregar.
     await prisma.stripeEvent.update({
       where: { id: eventId },

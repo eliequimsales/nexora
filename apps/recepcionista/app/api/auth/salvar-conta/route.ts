@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { getSessionCompanyId, hashPassword } from "@/lib/auth";
+import { createSessionToken, getSessionCompanyId, hashPassword, setSessionCookie } from "@/lib/auth";
 import { logError } from "@/lib/errors";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { respostaDeLimite, type Politica } from "@/lib/limites";
@@ -40,6 +40,23 @@ export async function POST(request: Request) {
 
     const { email, password, name } = parsed.data;
 
+    // Garante no servidor que apenas contas temporárias (guest) podem usar esta rota
+    const atual = await prisma.company.findUnique({
+      where: { id: companyId },
+      select: { email: true, sessaoEpoca: true },
+    });
+    if (!atual) {
+      return NextResponse.json({ error: "Conta não encontrada" }, { status: 404 });
+    }
+
+    const ehContaConvidado = Boolean(atual.email && atual.email.includes("@temporario.meunexora.com.br"));
+    if (!ehContaConvidado) {
+      return NextResponse.json(
+        { error: "Esta conta já é permanente. Para alterar a senha, utilize as configurações de segurança ou recuperação de senha." },
+        { status: 403 },
+      );
+    }
+
     // Confere se outra conta já usa este e-mail
     const existente = await prisma.company.findUnique({
       where: { email },
@@ -54,14 +71,22 @@ export async function POST(request: Request) {
 
     const passwordHash = await hashPassword(password);
 
-    await prisma.company.update({
+    // Converte a conta de temporária para permanente, incrementa época de sessão
+    // e marca emailVerificadoEm como nulo até a confirmação
+    const atualizada = await prisma.company.update({
       where: { id: companyId },
       data: {
         email,
         passwordHash,
+        emailVerificadoEm: null,
+        sessaoEpoca: { increment: 1 },
         ...(name ? { name } : {}),
       },
+      select: { id: true, sessaoEpoca: true },
     });
+
+    // Emite nova sessão com a nova época
+    setSessionCookie(await createSessionToken(atualizada.id, atualizada.sessaoEpoca));
 
     // Envia verificação de e-mail de forma resiliente
     try {

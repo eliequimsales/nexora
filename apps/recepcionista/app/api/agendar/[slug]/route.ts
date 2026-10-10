@@ -48,14 +48,6 @@ const agendarSchema = z.object({
 });
 
 async function carregarNegocio(slug: string) {
-  // Limpeza preventiva: desativa qualquer resquício de "lavagem de cabelo"
-  await prisma.service
-    .updateMany({
-      where: { name: { contains: "lavagem de cabelo", mode: "insensitive" } },
-      data: { active: false },
-    })
-    .catch(() => {});
-
   return prisma.company.findFirst({
     where: {
       OR: [

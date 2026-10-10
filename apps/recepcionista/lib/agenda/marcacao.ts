@@ -97,8 +97,17 @@ export async function marcarNaAgenda(p: PedidoDeMarcacao): Promise<ResultadoDaMa
         antecedenciaMinutos: ANTECEDENCIA_MINUTOS,
       }).includes(hora);
 
-    if (p.profissional) return livreCom(p.profissional) ? p.profissional : null;
     const equipe = await listarProfissionais(p.companyId);
+    if (p.profissional) {
+      if (equipe.length > 0) {
+        const membro = equipe.find(
+          (e) => e.nome.trim().toLowerCase() === p.profissional!.trim().toLowerCase(),
+        );
+        if (!membro) return null;
+        return livreCom(membro.nome) ? membro.nome : null;
+      }
+      return livreCom(p.profissional) ? p.profissional : null;
+    }
     if (equipe.length > 0) return equipe.find((e) => livreCom(e.nome))?.nome ?? null;
     return livreCom(null) ? "Atendimento Geral" : null;
   }

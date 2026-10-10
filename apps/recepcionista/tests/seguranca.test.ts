@@ -263,3 +263,30 @@ describe("dupla marcação na agenda pública", () => {
     expect(rota).toMatch(/if \(!marcacao\.ok\)[\s\S]{0,200}status: 409/);
   });
 });
+
+describe("auditoria de segurança — isolamento de tenant e integridade de agendamento", () => {
+  it("carregarNegocio na rota pública de agendar não faz updateMany em serviços", () => {
+    const rota = readFileSync(
+      join(__dirname, "..", "app/api/agendar/[slug]/route.ts"),
+      "utf8",
+    );
+    expect(rota).not.toContain("updateMany");
+  });
+
+  it("marcacao valida se profissional solicitado pertence à equipe da empresa", () => {
+    const marcacao = readFileSync(join(__dirname, "..", "lib/agenda/marcacao.ts"), "utf8");
+    expect(marcacao).toContain("equipe.find(");
+    expect(marcacao).toContain("p.profissional!.trim().toLowerCase()");
+  });
+
+  it("training.ts não sobrescreve resposta aprovada pelo dono com reescrita da IA", () => {
+    const training = readFileSync(join(__dirname, "..", "lib/training.ts"), "utf8");
+    expect(training).not.toContain("structureTrainedAnswer(finalQuestion, finalAnswer)");
+  });
+
+  it("idempotência da Stripe permite recuperação quando a tentativa anterior falhou ou expirou lease", () => {
+    const fonte = readFileSync(join(__dirname, "..", "lib/billing/idempotencia.ts"), "utf8");
+    expect(fonte).toContain("falhouAnteriormente || leaseExpirado");
+    expect(fonte).toContain("data: { attempts: { increment: 1 }, erro: null }");
+  });
+});

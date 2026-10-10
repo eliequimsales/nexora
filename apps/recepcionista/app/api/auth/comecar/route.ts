@@ -30,51 +30,10 @@ export async function GET(request: Request) {
   const telefoneParam = searchParams.get("telefone")?.trim();
   const ramoParam = searchParams.get("ramo")?.trim();
 
-  // 1. Se já tem sessão válida ativa:
+  // 1. Se já tem sessão válida ativa, redireciona sem alterar dados por GET:
   try {
     const existingCompanyId = await getSessionCompanyId();
     if (existingCompanyId) {
-      if (ramoParam) {
-        const countServices = await prisma.service.count({ where: { companyId: existingCompanyId } });
-        if (countServices === 0) {
-          const preset = obterPresetDoRamo(ramoParam);
-          await prisma.company.update({
-            where: { id: existingCompanyId },
-            data: {
-              ...(empresaParam ? { name: empresaParam } : { name: preset.nomeEmpresa }),
-              profile: {
-                update: {
-                  atendenteNome: preset.atendenteNome,
-                  description: preset.description,
-                  address: preset.endereco,
-                  paymentMethods: preset.pagamento,
-                  serviceRules: preset.serviceRules,
-                },
-              },
-            },
-          });
-          await prisma.service.createMany({
-            data: preset.servicos.map((s, idx) => ({
-              companyId: existingCompanyId,
-              name: s.name,
-              durationMin: s.durationMin,
-              priceCents: s.priceCents,
-              order: idx,
-              active: true,
-            })),
-          });
-          await prisma.knowledgeItem.createMany({
-            data: preset.duvidas.map((d) => ({
-              companyId: existingCompanyId,
-              question: d.question,
-              answer: d.answer,
-              source: "TRAINING",
-              status: "APPROVED",
-              approvedAt: new Date(),
-            })),
-          });
-        }
-      }
       return NextResponse.redirect(appRedirect("/painel/atendente", request.url));
     }
   } catch {
