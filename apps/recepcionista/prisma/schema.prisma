@@ -41,11 +41,14 @@ model Company {
   // acrescentaria um join em toda checagem de acesso.
   stripeCustomerId     String?   @unique
   stripeSubscriptionId String?   @unique
-  asaasCustomerId      String?   @unique
-  asaasSubscriptionId  String?   @unique
+  asaasCustomerId      String?
+  asaasSubscriptionId  String?
   // trialing | active | past_due | paused | canceled | incomplete
   subscriptionStatus   String?
   currentPeriodEnd     DateTime?
+
+  @@index([asaasCustomerId])
+  @@index([asaasSubscriptionId])
   cancelAtPeriodEnd    Boolean   @default(false)
   trialEndsAt          DateTime?
   // Fim do último passe avulso (30 dias no Pix ou anual). Sem cobrança
@@ -163,7 +166,7 @@ model PassePago {
 
   stripeSessionId       String  @unique
   stripePaymentIntentId String?
-  asaasPaymentId        String? @unique
+  asaasPaymentId        String?
   // pix_30_dias | anual (lib/billing/planos.ts)
   plano      String
   dias       Int
@@ -181,6 +184,7 @@ model PassePago {
   criadoEm DateTime @default(now())
 
   @@index([companyId])
+  @@index([asaasPaymentId])
 }
 
 // GARANTIA DINHEIRO RECUPERADO — uma por negócio (lib/billing/garantia.ts).
