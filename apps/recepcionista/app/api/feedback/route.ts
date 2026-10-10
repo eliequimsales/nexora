@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { enviarFeedback } from "@/lib/feedback/servico";
 import type { CategoriaFeedback } from "@/lib/feedback/tipos";
 import { clientIp, rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
+import { validarOrigemECsrfe } from "@/lib/seguranca/origem";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,9 @@ const CATEGORIAS_VALIDAS: CategoriaFeedback[] = [
 ];
 
 export async function POST(req: Request) {
+  const erroOrigem = validarOrigemECsrfe(req, { exigirJson: true });
+  if (erroOrigem) return erroOrigem;
+
   try {
     const ip = clientIp(req);
     const permitido = rateLimit(`feedback:${ip}`, { limit: 10, windowMs: 60_000 });

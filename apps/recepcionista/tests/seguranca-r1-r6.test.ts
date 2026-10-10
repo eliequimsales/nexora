@@ -224,3 +224,136 @@ describe("Segurança R3 — Vínculo Google e Distinção de Token Invalidado vs
     expect(comprovacaoReal?.emailConfirmado).toBe("dono@exemplo.com");
   });
 });
+
+describe("Segurança R1 & R6 — Provas Permanentes dos Achados 01, 02 e 03", () => {
+  it("feedback route bloqueia subdomínio atacante e text/plain com cookie de sessão", async () => {
+    const { POST: feedbackPOST } = await import("@/app/api/feedback/route");
+    const { middleware } = await import("@/middleware");
+    const { NextRequest } = await import("next/server");
+
+    // Prova do Middleware: /api/feedback NÃO é isenta e bloqueia atacante
+    const reqMidd = new NextRequest("https://www.meunexora.com.br/api/feedback", {
+      method: "POST",
+      headers: {
+        host: "www.meunexora.com.br",
+        origin: "https://attacker.meunexora.com.br",
+        "sec-fetch-site": "same-site",
+        "content-type": "text/plain",
+        cookie: "rd_session=mock",
+      },
+      body: JSON.stringify({ mensagem: "Ataque via feedback" }),
+    });
+
+    const resMidd = await middleware(reqMidd);
+    expect(resMidd.status).toBe(403);
+
+    // Prova do Handler: validarOrigemECsrfe bloqueia origem indevida com 403
+    const reqHandler = new Request("https://www.meunexora.com.br/api/feedback", {
+      method: "POST",
+      headers: {
+        host: "www.meunexora.com.br",
+        origin: "https://attacker.meunexora.com.br",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ mensagem: "Ataque via feedback" }),
+    });
+
+    const resHandler = await feedbackPOST(reqHandler);
+    expect(resHandler.status).toBe(403);
+
+    // Prova do Handler: Content-Type não JSON é rejeitado com 415
+    const reqForm = new Request("https://www.meunexora.com.br/api/feedback", {
+      method: "POST",
+      headers: {
+        host: "www.meunexora.com.br",
+        origin: "https://www.meunexora.com.br",
+        "content-type": "text/plain",
+      },
+      body: "texto simples",
+    });
+
+    const resForm = await feedbackPOST(reqForm);
+    expect(resForm.status).toBe(415);
+  });
+
+  it("origem em produção rejeita HTTP e portas não padrão (8443)", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      const reqHttp = new Request("https://www.meunexora.com.br/api/billing/garantia", {
+        headers: {
+          host: "www.meunexora.com.br",
+          origin: "http://www.meunexora.com.br",
+        },
+      });
+      expect(verificarOrigemPermitida(reqHttp)).toBe(false);
+
+      const reqPorta = new Request("https://www.meunexora.com.br/api/billing/garantia", {
+        headers: {
+          host: "www.meunexora.com.br",
+          origin: "https://www.meunexora.com.br:8443",
+        },
+      });
+      expect(verificarOrigemPermitida(reqPorta)).toBe(false);
+
+      const reqSemOrigemComCookie = new Request("https://www.meunexora.com.br/api/billing/garantia", {
+        headers: {
+          host: "www.meunexora.com.br",
+          cookie: "rd_session=mock",
+        },
+      });
+      expect(verificarOrigemPermitida(reqSemOrigemComCookie)).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("reserva de confirmação de e-mail não é revertida se o e-mail foi enviado com sucesso", async () => {
+    const { aplicarAssinatura } = await import("@/lib/billing/converger");
+    const { prisma } = await import("@/lib/db");
+
+    let emails = 0;
+    const company = {
+      id: "cmp_1",
+      name: "Empresa",
+      email: "owner@example.invalid",
+      canceladoEm: null,
+      confirmacaoEnviadaEm: null as Date | null,
+    };
+
+    vi.spyOn(prisma.company, "findUnique").mockImplementation(async () => ({ ...company }) as any);
+    vi.spyOn(prisma.company, "update").mockImplementation(async (args: any) => {
+      Object.assign(company, args.data);
+      return { ...company } as any;
+    });
+    vi.spyOn(prisma.company, "updateMany").mockImplementation(async (args: any) => {
+      if (args?.where?.confirmacaoEnviadaEm === null) {
+        if (company.confirmacaoEnviadaEm !== null) return { count: 0 } as any;
+        company.confirmacaoEnviadaEm = args.data.confirmacaoEnviadaEm;
+        return { count: 1 } as any;
+      }
+      return { count: 1 } as any;
+    });
+
+    const emailModule = await import("@/lib/reengajamento/email");
+    vi.spyOn(emailModule, "enviarEmail").mockImplementation(async () => {
+      emails++;
+      return { enviado: true };
+    });
+
+    const sub = {
+      id: "sub_1",
+      customer: "cus_1",
+      status: "active",
+      metadata: { companyId: "cmp_1" },
+      cancel_at_period_end: false,
+    } as any;
+
+    await aplicarAssinatura(sub);
+    expect(emails).toBe(1);
+    expect(company.confirmacaoEnviadaEm).not.toBeNull();
+
+    // Segunda execução subsequente não duplica e-mail
+    await aplicarAssinatura(sub);
+    expect(emails).toBe(1);
+  });
+});

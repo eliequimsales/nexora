@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
  * os dados do banco. Toda recusa sai com o motivo e o caminho.
  */
 export async function POST(request: Request) {
-  const erroOrigem = validarOrigemECsrfe(request);
+  const erroOrigem = validarOrigemECsrfe(request, { exigirJson: true });
   if (erroOrigem) return erroOrigem;
 
   const companyId = await getSessionCompanyId();

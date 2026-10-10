@@ -61,12 +61,12 @@ function planoDoStatus(status: string, metadataPlano?: string | null): string {
  */
 export async function aplicarAssinatura(
   sub: Stripe.Subscription,
-  contexto?: { eventId?: string; tentativa?: number },
+  contexto?: { eventId?: string; tentativa?: number; inicioOperacao?: number },
 ): Promise<string | null> {
   const companyId = companyIdDe(sub);
   if (!companyId) return null;
 
-  const inicioOperacao = Date.now();
+  const inicioOperacao = contexto?.inicioOperacao ?? Date.now();
 
   // Se tiver contexto de tentativa, checa se a posse ainda é válida
   if (contexto?.eventId && typeof contexto.tentativa === "number") {
@@ -134,23 +134,65 @@ export async function aplicarAssinatura(
   });
 
   // Checagem de expiração do lease ou perda de posse durante a execução:
-  // Se a operação foi suspensa e ultrapassou 30s, o estado gravado pode estar defasado.
-  // Re-consulta o estado vivo na Stripe para garantir que não subsista escrita atrasada.
-  if (Date.now() - inicioOperacao >= 30_000) {
+  // Se a operação demorou >= 30s ou a posse foi assumida por outra tentativa:
+  const decorrido = Date.now() - inicioOperacao;
+  let perdeuPosse = false;
+  if (contexto?.eventId && typeof contexto.tentativa === "number") {
+    try {
+      const ev = await prisma.stripeEvent?.findUnique?.({
+        where: { id: contexto.eventId },
+        select: { attempts: true, processedAt: true, receivedAt: true },
+      });
+      if (ev) {
+        const limite = new Date(Date.now() - 30_000);
+        if (ev.attempts !== contexto.tentativa || ev.processedAt !== null || ev.receivedAt < limite) {
+          perdeuPosse = true;
+        }
+      }
+    } catch {}
+  }
+
+  if (decorrido >= 30_000 || perdeuPosse) {
     try {
       const maisRecente = await stripe().subscriptions.retrieve(sub.id);
-      if (maisRecente.status !== sub.status) {
+      const statusRecente = maisRecente.status;
+      const fimRecente = fimDoPeriodoPago(maisRecente);
+      const canceladoEmRecente = statusRecente === "canceled"
+        ? (atual?.canceladoEm ?? new Date())
+        : null;
+
+      await prisma.company.update({
+        where: { id: companyId },
+        data: {
+          stripeSubscriptionId: maisRecente.id,
+          stripeCustomerId: typeof maisRecente.customer === "string" ? maisRecente.customer : maisRecente.customer.id,
+          subscriptionStatus: statusRecente,
+          plan: planoDoStatus(statusRecente, maisRecente.metadata?.plano),
+          currentPeriodEnd: fimRecente,
+          cancelAtPeriodEnd: maisRecente.cancel_at_period_end,
+          trialEndsAt: paraData(maisRecente.trial_end),
+          canceladoEm: canceladoEmRecente,
+          ...(statusRecente === "active" || statusRecente === "trialing"
+            ? { falhasSeguidas: 0, dunningIniciadoEm: null, ultimoErroPagamento: null }
+            : {}),
+        },
+      });
+      sub = maisRecente;
+    } catch {
+      // Reconsulta falhou e a operação está defasada / perdeu posse:
+      // O estado antigo não pode prevalecer silenciosamente com acesso concedido.
+      if (perdeuPosse || decorrido >= 30_000) {
         await prisma.company.update({
           where: { id: companyId },
           data: {
-            subscriptionStatus: maisRecente.status,
-            plan: planoDoStatus(maisRecente.status, maisRecente.metadata?.plano),
+            subscriptionStatus: "canceled",
+            plan: "gratuito",
+            currentPeriodEnd: new Date(),
+            canceladoEm: atual?.canceladoEm ?? new Date(),
           },
         });
-        sub = maisRecente;
+        sub = { ...sub, status: "canceled" } as any;
       }
-    } catch {
-      // Ignora erro se não conseguir re-consultar
     }
   }
 
@@ -223,6 +265,7 @@ async function confirmarContratacao(
     if (reservou.count === 0) return;
   }
 
+  let enviouComSucesso = false;
   try {
     const envio = await enviarEmail(
       conferido.email,
@@ -235,15 +278,8 @@ async function confirmarContratacao(
       // receber a confirmação do contrato que acabou de assinar.
     );
 
-    // A marca só é gravada quando o envio deu certo. Se o Resend falhar hoje,
-    // o próximo evento da Stripe tenta de novo — e é melhor tentar duas vezes
-    // do que ficar sem a confirmação que o decreto exige.
-    if (envio.enviado) {
-      await prisma.company.update({
-        where: { id: companyId },
-        data: { confirmacaoEnviadaEm: new Date() },
-      });
-    } else {
+    enviouComSucesso = Boolean(envio?.enviado);
+    if (!enviouComSucesso) {
       if (typeof prisma.company.updateMany === "function") {
         await prisma.company.updateMany({
           where: { id: companyId, confirmacaoEnviadaEm: { not: null } },
@@ -252,11 +288,13 @@ async function confirmarContratacao(
       }
     }
   } catch (erro) {
-    if (typeof prisma.company.updateMany === "function") {
-      await prisma.company.updateMany({
-        where: { id: companyId, confirmacaoEnviadaEm: { not: null } },
-        data: { confirmacaoEnviadaEm: null },
-      });
+    if (!enviouComSucesso) {
+      if (typeof prisma.company.updateMany === "function") {
+        await prisma.company.updateMany({
+          where: { id: companyId, confirmacaoEnviadaEm: { not: null } },
+          data: { confirmacaoEnviadaEm: null },
+        });
+      }
     }
     await logError("confirmacao-contratacao", erro, companyId);
   }
@@ -460,10 +498,30 @@ async function confirmarPasse(companyId: string, passe: PasseGravado): Promise<v
 /** Re-busca a assinatura na Stripe e converge. */
 export async function convergirAssinatura(
   subscriptionId: string,
-  contexto?: { eventId?: string; tentativa?: number },
+  contexto?: { eventId?: string; tentativa?: number; inicioOperacao?: number },
 ): Promise<string | null> {
+  const inicioOperacao = contexto?.inicioOperacao ?? Date.now();
+  if (contexto?.eventId && typeof contexto.tentativa === "number") {
+    try {
+      const agora = new Date();
+      const limiteLease = new Date(agora.getTime() - 30_000);
+      const ev = await prisma.stripeEvent?.findUnique?.({
+        where: { id: contexto.eventId },
+        select: { attempts: true, processedAt: true, receivedAt: true },
+      });
+      if (
+        ev &&
+        (ev.attempts !== contexto.tentativa ||
+          ev.processedAt !== null ||
+          ev.receivedAt < limiteLease)
+      ) {
+        return null;
+      }
+    } catch {}
+  }
+
   const sub = await stripe().subscriptions.retrieve(subscriptionId);
-  return aplicarAssinatura(sub, contexto);
+  return aplicarAssinatura(sub, { ...contexto, inicioOperacao });
 }
 
 /**

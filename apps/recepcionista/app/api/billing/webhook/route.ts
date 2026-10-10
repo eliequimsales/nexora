@@ -140,7 +140,7 @@ async function processar(
         // Sem tenant no metadata da fatura, tenta pela assinatura.
         const subId = assinaturaDaFatura(inv);
         if (!subId) return null;
-        const doSub = await convergirAssinatura(subId);
+        const doSub = await convergirAssinatura(subId, contexto);
         if (doSub) {
           await registrarFalhaPagamento(doSub, "Pagamento não aprovado", tentativaFatura);
         }

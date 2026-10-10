@@ -15,7 +15,6 @@ const ROTAS_ISENTAS_CSRF = [
   "/api/agendar/",
   "/api/demo/chat",
   "/api/descadastro",
-  "/api/feedback",
 ];
 
 export async function middleware(request: NextRequest) {
