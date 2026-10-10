@@ -1,12 +1,45 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { jwtVerify } from "jose";
+import { validarOrigemECsrfe } from "@/lib/seguranca/origem";
 
 const SESSION_COOKIE = "rd_session";
 
+// Rotas públicas ou webhooks que possuem autenticação própria por assinatura/token
+// e não utilizam sessão por cookies.
+const ROTAS_ISENTAS_CSRF = [
+  "/api/billing/webhook",
+  "/api/billing/asaas-webhook",
+  "/api/webhook/whatsapp",
+  "/api/cron/reengajamento",
+  "/api/auth/google/callback",
+  "/api/agendar/",
+  "/api/demo/chat",
+  "/api/descadastro",
+  "/api/feedback",
+];
+
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // 1. Defesa de Origem / CSRF para mutações em rotas de API
+  if (pathname.startsWith("/api/")) {
+    const metodo = request.method.toUpperCase();
+    if (["POST", "PUT", "DELETE", "PATCH"].includes(metodo)) {
+      const ehIsenta = ROTAS_ISENTAS_CSRF.some((rota) => pathname.startsWith(rota));
+      if (!ehIsenta) {
+        const erroOrigem = validarOrigemECsrfe(request);
+        if (erroOrigem) {
+          return erroOrigem;
+        }
+      }
+    }
+    return NextResponse.next();
+  }
+
+  // 2. Proteção de páginas do painel (/painel/:path*)
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   const loginUrl = new URL("/login", request.url);
-  loginUrl.searchParams.set("next", request.nextUrl.pathname);
+  loginUrl.searchParams.set("next", pathname);
 
   if (!token) return NextResponse.redirect(loginUrl);
 
@@ -36,5 +69,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/painel/:path*"],
+  matcher: ["/painel/:path*", "/api/:path*"],
 };

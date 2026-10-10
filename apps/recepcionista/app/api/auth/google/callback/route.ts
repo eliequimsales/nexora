@@ -46,11 +46,11 @@ export async function GET(request: Request) {
     const existente =
       (await prisma.company.findUnique({
         where: { googleSub: user.sub },
-        select: { id: true, googleSub: true, emailVerificadoEm: true },
+        select: { id: true, googleSub: true, emailVerificadoEm: true, email: true },
       })) ??
       (await prisma.company.findUnique({
         where: { email: user.email },
-        select: { id: true, googleSub: true, emailVerificadoEm: true },
+        select: { id: true, googleSub: true, emailVerificadoEm: true, email: true },
       }));
 
     const decisao = decidirVinculoGoogle(existente, user.sub);
@@ -97,11 +97,22 @@ export async function GET(request: Request) {
     } else if (decisao.acao === "VINCULAR") {
       // Conta que vincula com o Google ganha o vínculo e tem o e-mail validado.
       // Confere se o e-mail foi comprovado por envio e clique real de token de verificação,
-      // e não apenas por liberação de contorno excepcional (ex: verificar/sem-email).
+      // explicitamente vinculado ao endereço confirmado atual, e NÃO por mera invalidação
+      // de reemissão nem por liberação de contorno excepcional (ex: verificar/sem-email).
       const comprovacaoReal = await prisma.verificacaoEmail.findFirst({
-        where: { companyId: decisao.companyId, usadoEm: { not: null } },
+        where: {
+          companyId: decisao.companyId,
+          usadoEm: { not: null },
+          invalidadoEm: null,
+          emailConfirmado: { equals: existente?.email, mode: "insensitive" },
+        },
       });
-      const emailRealmenteComprovado = Boolean(existente?.emailVerificadoEm && comprovacaoReal);
+      const emailRealmenteComprovado = Boolean(
+        existente?.emailVerificadoEm &&
+        existente?.email &&
+        existente.email.trim().toLowerCase() === user.email.trim().toLowerCase() &&
+        comprovacaoReal
+      );
 
       // Se a conta foi pré-criada com senha e o endereço não foi provado por recebimento real,
       // neutralizamos a senha pré-cadastrada com hash criptográfico aleatório.

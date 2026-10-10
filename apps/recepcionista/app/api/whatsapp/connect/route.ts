@@ -3,12 +3,16 @@ import { getSessionCompanyId } from "@/lib/auth";
 import { exigirAcesso } from "@/lib/billing/guarda";
 import { rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 import { connectWhatsApp } from "@/lib/whatsapp/instance";
+import { validarOrigemECsrfe } from "@/lib/seguranca/origem";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /** Cria a instância da empresa na Evolution, configura o webhook e gera o QR ou Código de Pareamento. */
 export async function POST(request: Request) {
+  const erroOrigem = validarOrigemECsrfe(request);
+  if (erroOrigem) return erroOrigem;
+
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 

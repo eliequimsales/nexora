@@ -776,6 +776,8 @@ model VerificacaoEmail {
   tokenHash String    @unique
   expiraEm  DateTime
   usadoEm   DateTime?
+  invalidadoEm DateTime?
+  emailConfirmado String?
 
   criadoEm DateTime @default(now())
 

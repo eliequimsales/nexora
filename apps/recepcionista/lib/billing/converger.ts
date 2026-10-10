@@ -59,9 +59,37 @@ function planoDoStatus(status: string, metadataPlano?: string | null): string {
  * Grava o estado da assinatura no Company. Devolve o companyId, ou null quando
  * a assinatura pertence a outro produto da mesma conta Stripe.
  */
-export async function aplicarAssinatura(sub: Stripe.Subscription): Promise<string | null> {
+export async function aplicarAssinatura(
+  sub: Stripe.Subscription,
+  contexto?: { eventId?: string; tentativa?: number },
+): Promise<string | null> {
   const companyId = companyIdDe(sub);
   if (!companyId) return null;
+
+  const inicioOperacao = Date.now();
+
+  // Se tiver contexto de tentativa, checa se a posse ainda é válida
+  if (contexto?.eventId && typeof contexto.tentativa === "number") {
+    try {
+      const agora = new Date();
+      const limiteLease = new Date(agora.getTime() - 30_000);
+      const ev = await prisma.stripeEvent?.findUnique?.({
+        where: { id: contexto.eventId },
+        select: { attempts: true, processedAt: true, receivedAt: true },
+      });
+      if (
+        ev &&
+        (ev.attempts !== contexto.tentativa ||
+          ev.processedAt !== null ||
+          ev.receivedAt < limiteLease)
+      ) {
+        // Posse perdida ou expirada para outra tentativa
+        return companyId;
+      }
+    } catch {
+      // Ignora erro se stripeEvent não estiver disponível
+    }
+  }
 
   // Precisamos do valor atual porque `canceladoEm` é a data do PRIMEIRO
   // cancelamento, não da última vez que um evento passou por aqui.
@@ -104,6 +132,27 @@ export async function aplicarAssinatura(sub: Stripe.Subscription): Promise<strin
         : {}),
     },
   });
+
+  // Checagem de expiração do lease ou perda de posse durante a execução:
+  // Se a operação foi suspensa e ultrapassou 30s, o estado gravado pode estar defasado.
+  // Re-consulta o estado vivo na Stripe para garantir que não subsista escrita atrasada.
+  if (Date.now() - inicioOperacao >= 30_000) {
+    try {
+      const maisRecente = await stripe().subscriptions.retrieve(sub.id);
+      if (maisRecente.status !== sub.status) {
+        await prisma.company.update({
+          where: { id: companyId },
+          data: {
+            subscriptionStatus: maisRecente.status,
+            plan: planoDoStatus(maisRecente.status, maisRecente.metadata?.plano),
+          },
+        });
+        sub = maisRecente;
+      }
+    } catch {
+      // Ignora erro se não conseguir re-consultar
+    }
+  }
 
   await registrarGarantiaDaAssinatura(companyId, sub);
   await confirmarContratacao(companyId, sub, atual);
@@ -155,13 +204,30 @@ async function confirmarContratacao(
   atual: { confirmacaoEnviadaEm: Date | null; name: string; email: string } | null,
 ): Promise<void> {
   if (!atual) return;
-  if (!deveConfirmar(sub.status, atual.confirmacaoEnviadaEm)) return;
+
+  // Re-lê o estado mais recente no banco antes de qualquer envio.
+  // Impede envio duplicado se outra execução já confirmou enquanto esta esteve suspensa.
+  const conferido = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: { confirmacaoEnviadaEm: true, name: true, email: true },
+  });
+  if (!conferido) return;
+  if (!deveConfirmar(sub.status, conferido.confirmacaoEnviadaEm)) return;
+
+  // Aquisição atômica: reserva o envio no banco antes de mandar o e-mail
+  if (typeof prisma.company.updateMany === "function") {
+    const reservou = await prisma.company.updateMany({
+      where: { id: companyId, confirmacaoEnviadaEm: null },
+      data: { confirmacaoEnviadaEm: new Date() },
+    });
+    if (reservou.count === 0) return;
+  }
 
   try {
     const envio = await enviarEmail(
-      atual.email,
+      conferido.email,
       montarConfirmacao({
-        nome: atual.name,
+        nome: conferido.name,
         emTeste: sub.status === "trialing",
         proximaCobranca: periodoFimDe(sub),
       }),
@@ -177,8 +243,21 @@ async function confirmarContratacao(
         where: { id: companyId },
         data: { confirmacaoEnviadaEm: new Date() },
       });
+    } else {
+      if (typeof prisma.company.updateMany === "function") {
+        await prisma.company.updateMany({
+          where: { id: companyId, confirmacaoEnviadaEm: { not: null } },
+          data: { confirmacaoEnviadaEm: null },
+        });
+      }
     }
   } catch (erro) {
+    if (typeof prisma.company.updateMany === "function") {
+      await prisma.company.updateMany({
+        where: { id: companyId, confirmacaoEnviadaEm: { not: null } },
+        data: { confirmacaoEnviadaEm: null },
+      });
+    }
     await logError("confirmacao-contratacao", erro, companyId);
   }
 }
@@ -379,9 +458,12 @@ async function confirmarPasse(companyId: string, passe: PasseGravado): Promise<v
 }
 
 /** Re-busca a assinatura na Stripe e converge. */
-export async function convergirAssinatura(subscriptionId: string): Promise<string | null> {
+export async function convergirAssinatura(
+  subscriptionId: string,
+  contexto?: { eventId?: string; tentativa?: number },
+): Promise<string | null> {
   const sub = await stripe().subscriptions.retrieve(subscriptionId);
-  return aplicarAssinatura(sub);
+  return aplicarAssinatura(sub, contexto);
 }
 
 /**
@@ -392,7 +474,10 @@ export async function convergirAssinatura(subscriptionId: string): Promise<strin
  * dono de pagar, cair no painel e ler "período de teste" porque o webhook ainda
  * não chegou — tela que informa o errado e não resolve.
  */
-export async function convergirDoCheckout(sessionId: string): Promise<string | null> {
+export async function convergirDoCheckout(
+  sessionId: string,
+  contexto?: { eventId?: string; tentativa?: number },
+): Promise<string | null> {
   const sessao = await stripe().checkout.sessions.retrieve(sessionId, {
     expand: ["subscription"],
   });
@@ -406,7 +491,7 @@ export async function convergirDoCheckout(sessionId: string): Promise<string | n
   // `checkout.session.async_payment_succeeded` e esta função roda de novo.
   if (!deveProvisionar(sessao)) return companyId;
 
-  const resultado = await aplicarCompra(companyId, sessao);
+  const resultado = await aplicarCompra(companyId, sessao, contexto);
   // A implantação é lida depois do acesso gravado: um problema com ela nunca
   // atrasa o que o dono pagou.
   await registrarImplantacao(companyId, sessao);
@@ -417,15 +502,16 @@ export async function convergirDoCheckout(sessionId: string): Promise<string | n
 async function aplicarCompra(
   companyId: string,
   sessao: Stripe.Checkout.Session,
+  contexto?: { eventId?: string; tentativa?: number },
 ): Promise<string | null> {
   // Pagamento avulso não tem assinatura: é o passe de 30 dias ou o anual.
   if (sessao.mode === "payment") return aplicarPasse(companyId, sessao);
 
   const sub = sessao.subscription;
   if (!sub || typeof sub === "string") {
-    return sub ? convergirAssinatura(sub) : companyId;
+    return sub ? convergirAssinatura(sub, contexto) : companyId;
   }
-  return aplicarAssinatura(sub);
+  return aplicarAssinatura(sub, contexto);
 }
 
 /**
@@ -441,24 +527,67 @@ export async function registrarFalhaPagamento(
   motivo: string,
   tentativaFatura?: number,
 ): Promise<void> {
-  const atual = await prisma.company.findUnique({
-    where: { id: companyId },
-    select: { dunningIniciadoEm: true, falhasSeguidas: true },
-  });
+  const agora = new Date();
+  const motivoTruncado = motivo.slice(0, 300);
 
-  const novasFalhas =
-    typeof tentativaFatura === "number"
-      ? Math.max(atual?.falhasSeguidas ?? 0, tentativaFatura)
-      : (atual?.falhasSeguidas ?? 0) + 1;
-
-  await prisma.company.update({
-    where: { id: companyId },
-    data: {
-      falhasSeguidas: novasFalhas,
-      // O relógio da tolerância começa na PRIMEIRA falha e não é reiniciado
-      // pelas seguintes — senão a tolerância nunca vence.
-      dunningIniciadoEm: atual?.dunningIniciadoEm ?? new Date(),
-      ultimoErroPagamento: motivo.slice(0, 300),
-    },
-  });
+  if (typeof tentativaFatura === "number") {
+    if (typeof prisma.company.updateMany === "function") {
+      await prisma.company.updateMany({
+        where: {
+          id: companyId,
+          falhasSeguidas: { lt: tentativaFatura },
+        },
+        data: {
+          falhasSeguidas: tentativaFatura,
+          ultimoErroPagamento: motivoTruncado,
+        },
+      });
+      await prisma.company.updateMany({
+        where: { id: companyId, dunningIniciadoEm: null },
+        data: { dunningIniciadoEm: agora },
+      });
+    } else {
+      const atual = await prisma.company.findUnique({
+        where: { id: companyId },
+        select: { falhasSeguidas: true, dunningIniciadoEm: true },
+      });
+      if (!atual || atual.falhasSeguidas < tentativaFatura) {
+        await prisma.company.update({
+          where: { id: companyId },
+          data: {
+            falhasSeguidas: tentativaFatura,
+            dunningIniciadoEm: atual?.dunningIniciadoEm ?? agora,
+            ultimoErroPagamento: motivoTruncado,
+          },
+        });
+      }
+    }
+  } else {
+    if (typeof prisma.company.updateMany === "function") {
+      await prisma.company.update({
+        where: { id: companyId },
+        data: {
+          falhasSeguidas: { increment: 1 },
+          ultimoErroPagamento: motivoTruncado,
+        },
+      });
+      await prisma.company.updateMany({
+        where: { id: companyId, dunningIniciadoEm: null },
+        data: { dunningIniciadoEm: agora },
+      });
+    } else {
+      const atual = await prisma.company.findUnique({
+        where: { id: companyId },
+        select: { falhasSeguidas: true, dunningIniciadoEm: true },
+      });
+      await prisma.company.update({
+        where: { id: companyId },
+        data: {
+          falhasSeguidas: (atual?.falhasSeguidas ?? 0) + 1,
+          dunningIniciadoEm: atual?.dunningIniciadoEm ?? agora,
+          ultimoErroPagamento: motivoTruncado,
+        },
+      });
+    }
+  }
 }

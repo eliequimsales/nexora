@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { clearSessionCookie, getSessionCompanyId, revogarSessoes } from "@/lib/auth";
+import { validarOrigemECsrfe } from "@/lib/seguranca/origem";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,10 @@ export const dynamic = "force-dynamic";
  * Sair de um dispositivo derruba os outros: é mais agressivo do que o normal, e
  * é a escolha certa para quem clica em sair porque desconfia de alguma coisa.
  */
-export async function POST() {
+export async function POST(request: Request) {
+  const erroOrigem = validarOrigemECsrfe(request);
+  if (erroOrigem) return erroOrigem;
+
   const companyId = await getSessionCompanyId();
   if (companyId) await revogarSessoes(companyId);
   clearSessionCookie();

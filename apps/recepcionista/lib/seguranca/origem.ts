@@ -1,9 +1,14 @@
 /**
  * DEFESA DE ORIGEM E PROTEÇÃO ANTI-CSRF / CROSS-SITE.
  *
- * Valida cabeçalhos de origem (Origin, Referer, Sec-Fetch-Site) e tipo de conteúdo (Content-Type)
- * para mutações sensíveis no servidor, impedindo que scripts ou formulários em sites
+ * Valida cabeçalhos de origem (Origin, Referer, Sec-Fetch-Site, Sec-Fetch-Mode) e tipo de conteúdo
+ * (Content-Type) para mutações sensíveis no servidor, impedindo que scripts ou formulários em sites
  * terceiros façam submissões contra a sessão do usuário ou logins falsos.
+ *
+ * Em conformidade com OWASP Cross-Site Request Forgery Prevention Cheat Sheet:
+ * - Validação estrita de Origin e Referer contra domínios exatos autorizados.
+ * - Verificação de Fetch Metadata (Sec-Fetch-Site, Sec-Fetch-Mode).
+ * - Validação estrita do MIME type (Content-Type exato application/json, sem submissões de formulário cego).
  */
 
 import { NextResponse } from "next/server";
@@ -13,31 +18,62 @@ const DOMINIOS_PERMITIDOS = new Set([
   "www.meunexora.com.br",
 ]);
 
-function extrairHost(urlStr: string | null): string | null {
+function extrairOrigem(urlStr: string | null): { protocol: string; host: string; hostname: string; port: string } | null {
   if (!urlStr) return null;
   try {
     const parsed = new URL(urlStr);
-    return parsed.host.toLowerCase();
+    return {
+      protocol: parsed.protocol.toLowerCase(),
+      host: parsed.host.toLowerCase(),
+      hostname: parsed.hostname.toLowerCase(),
+      port: parsed.port,
+    };
   } catch {
     return null;
   }
 }
 
-function hostPermitido(hostAlvo: string, hostRequisicao: string | null): boolean {
-  const alvoLimpo = hostAlvo.split(":")[0];
-  const reqLimpo = hostRequisicao ? hostRequisicao.split(":")[0].toLowerCase() : null;
+function origemPermitida(
+  origem: { protocol: string; host: string; hostname: string; port: string },
+  hostRequisicao: string | null,
+): boolean {
+  const reqLimpo = hostRequisicao ? hostRequisicao.toLowerCase() : null;
+  const reqHostname = reqLimpo ? reqLimpo.split(":")[0] : null;
 
-  // Mesma origem da requisição atual
-  if (reqLimpo && alvoLimpo === reqLimpo) return true;
+  // 1. Mesma origem da requisição atual (host e porta correspondentes)
+  if (reqLimpo && origem.host === reqLimpo) {
+    return true;
+  }
 
-  // Domínios oficiais de produção
-  if (DOMINIOS_PERMITIDOS.has(alvoLimpo)) return true;
+  // 2. Desenvolvimento local (localhost / 127.0.0.1)
+  if (origem.hostname === "localhost" || origem.hostname === "127.0.0.1") {
+    // Permite local se o host da requisição também for local
+    if (!reqHostname || reqHostname === "localhost" || reqHostname === "127.0.0.1") {
+      return true;
+    }
+  }
 
-  // Desenvolvimento local
-  if (alvoLimpo === "localhost" || alvoLimpo === "127.0.0.1") return true;
+  // 3. Em produção ou chamadas externas, o protocolo DEVE ser https
+  if (process.env.NODE_ENV === "production" && origem.protocol !== "https:") {
+    return false;
+  }
 
-  // Ambientes de preview/staging na Railway
-  if (alvoLimpo.endsWith(".railway.app")) return true;
+  // 4. Domínios oficiais de produção exatos (sem subdomínios arbitrários como attacker.meunexora.com.br)
+  if (DOMINIOS_PERMITIDOS.has(origem.hostname)) {
+    return true;
+  }
+
+  // 5. Se houver APP_URL configurado no ambiente, confere com a origem exata dele
+  if (process.env.APP_URL) {
+    try {
+      const appUrlParsed = new URL(process.env.APP_URL);
+      if (origem.host === appUrlParsed.host.toLowerCase()) {
+        return true;
+      }
+    } catch {
+      // url inválida
+    }
+  }
 
   return false;
 }
@@ -52,39 +88,52 @@ export function verificarOrigemPermitida(request: Request): boolean {
     return false;
   }
 
+  // Se o navegador reporta modo de navegação em uma requisição de API, rejeita
+  const secFetchMode = request.headers.get("sec-fetch-mode")?.toLowerCase();
+  if (secFetchMode === "navigate") {
+    return false;
+  }
+
   const hostReq = request.headers.get("x-forwarded-host") || request.headers.get("host");
 
-  const origin = request.headers.get("origin");
-  if (origin) {
-    const hostOrigin = extrairHost(origin);
-    if (!hostOrigin || !hostPermitido(hostOrigin, hostReq)) {
+  const originHeader = request.headers.get("origin");
+  if (originHeader) {
+    const parsedOrigin = extrairOrigem(originHeader);
+    if (!parsedOrigin || !origemPermitida(parsedOrigin, hostReq)) {
       return false;
     }
     return true;
   }
 
-  const referer = request.headers.get("referer");
-  if (referer) {
-    const hostReferer = extrairHost(referer);
-    if (!hostReferer || !hostPermitido(hostReferer, hostReq)) {
+  const refererHeader = request.headers.get("referer");
+  if (refererHeader) {
+    const parsedReferer = extrairOrigem(refererHeader);
+    if (!parsedReferer || !origemPermitida(parsedReferer, hostReq)) {
       return false;
     }
     return true;
   }
 
-  // Requisições sem Origin e sem Referer (ex: chamadas diretas por curl ou testes programáticos)
+  // Se não tem nem Origin nem Referer:
+  // Se houver sinal Sec-Fetch-Site diferente de "same-origin", rejeita
+  if (secFetchSite && secFetchSite !== "same-origin") {
+    return false;
+  }
+
   return true;
 }
 
 /**
  * Valida se o Content-Type é application/json para endpoints que esperam JSON.
+ * A essência do tipo MIME deve ser estritamente "application/json".
  * Impede que formulários HTML de navegadores (form-urlencoded, multipart, text/plain)
  * façam submissões sem preflight.
  */
 export function exigeJson(request: Request): boolean {
-  const contentType = request.headers.get("content-type")?.toLowerCase();
-  if (!contentType) return true;
-  return contentType.includes("application/json");
+  const rawContentType = request.headers.get("content-type");
+  if (!rawContentType) return false;
+  const mime = rawContentType.split(";")[0].trim().toLowerCase();
+  return mime === "application/json";
 }
 
 /**
@@ -95,17 +144,17 @@ export function validarOrigemECsrfe(
   request: Request,
   opcoes?: { exigirJson?: boolean },
 ): Response | null {
-  if (!verificarOrigemPermitida(request)) {
-    return NextResponse.json(
-      { error: "Requisição rejeitada por segurança: origem cruzada não permitida." },
-      { status: 403 },
-    );
-  }
-
   if (opcoes?.exigirJson && !exigeJson(request)) {
     return NextResponse.json(
       { error: "Content-Type inválido: esperado application/json." },
       { status: 415 },
+    );
+  }
+
+  if (!verificarOrigemPermitida(request)) {
+    return NextResponse.json(
+      { error: "Requisição rejeitada por segurança: origem cruzada não permitida." },
+      { status: 403 },
     );
   }
 

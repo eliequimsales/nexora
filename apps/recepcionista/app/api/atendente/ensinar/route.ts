@@ -5,10 +5,14 @@ import { logError } from "@/lib/errors";
 import { LIMITES, limitar } from "@/lib/limites";
 import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 import { telaDoAtendente } from "@/lib/atendente/tela";
+import { validarOrigemECsrfe } from "@/lib/seguranca/origem";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  const erroOrigem = validarOrigemECsrfe(request, { exigirJson: true });
+  if (erroOrigem) return erroOrigem;
+
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 

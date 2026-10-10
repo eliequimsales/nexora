@@ -86,10 +86,12 @@ function hashDoToken(token: string): string {
 export async function abrirVerificacao(companyId: string): Promise<string> {
   const token = randomBytes(32).toString("base64url");
 
+  // Invalida os pedidos pendentes anteriores marcando invalidadoEm, SEM marcar usadoEm.
+  // Somente o consumo legítimo por clique real marca usadoEm e emailConfirmado.
   await prisma.$transaction([
     prisma.verificacaoEmail.updateMany({
-      where: { companyId, usadoEm: null },
-      data: { usadoEm: new Date() },
+      where: { companyId, usadoEm: null, invalidadoEm: null },
+      data: { invalidadoEm: new Date() },
     }),
     prisma.verificacaoEmail.create({
       data: {
@@ -117,26 +119,35 @@ export async function concluirVerificacao(token: string): Promise<ResultadoVerif
 
   const pedido = await prisma.verificacaoEmail.findUnique({
     where: { tokenHash: hashDoToken(token) },
-    select: { id: true, companyId: true, expiraEm: true, usadoEm: true },
+    select: { id: true, companyId: true, expiraEm: true, usadoEm: true, invalidadoEm: true },
   });
 
-  if (!pedido || pedido.usadoEm || pedido.expiraEm <= new Date()) {
+  if (!pedido || pedido.usadoEm || pedido.invalidadoEm || pedido.expiraEm <= new Date()) {
     return { ok: false, motivo: INVALIDO };
   }
 
+  const agora = new Date();
   try {
     await prisma.$transaction(async (tx) => {
-      // `usadoEm: null` no where é a trava contra uso duplo: se outra
-      // requisição chegou primeiro, esta atualiza zero linhas e desiste.
+      const empresa = await tx.company.findUnique({
+        where: { id: pedido.companyId },
+        select: { email: true },
+      });
+
+      // `usadoEm: null, invalidadoEm: null` no where é a trava contra uso duplo ou cancelado:
+      // se outra requisição chegou primeiro, esta atualiza zero linhas e desiste.
       const queimado = await tx.verificacaoEmail.updateMany({
-        where: { id: pedido.id, usadoEm: null },
-        data: { usadoEm: new Date() },
+        where: { id: pedido.id, usadoEm: null, invalidadoEm: null },
+        data: {
+          usadoEm: agora,
+          emailConfirmado: empresa?.email ?? null,
+        },
       });
       if (queimado.count === 0) throw new Error("token-ja-consumido");
 
       await tx.company.update({
         where: { id: pedido.companyId },
-        data: { emailVerificadoEm: new Date() },
+        data: { emailVerificadoEm: agora },
       });
     });
   } catch {

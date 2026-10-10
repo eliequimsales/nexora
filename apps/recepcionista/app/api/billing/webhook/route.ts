@@ -74,7 +74,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const companyId = await processar(evento);
+    const contexto = { eventId: evento.id, tentativa: claim.tentativa };
+    const companyId = await processar(evento, contexto);
 
     if (companyId === null) {
       // Evento de outro produto na mesma conta Stripe (o apps/api marca com
@@ -94,7 +95,10 @@ export async function POST(request: Request) {
   }
 }
 
-async function processar(evento: Stripe.Event): Promise<string | null> {
+async function processar(
+  evento: Stripe.Event,
+  contexto?: { eventId: string; tentativa: number },
+): Promise<string | null> {
   switch (evento.type) {
     case "checkout.session.completed":
     // O Pix termina a sessão com o QR na tela e paga depois: este evento chega
@@ -102,7 +106,7 @@ async function processar(evento: Stripe.Event): Promise<string | null> {
     // deveProvisionar só libera com o pagamento confirmado.
     case "checkout.session.async_payment_succeeded": {
       const sessao = evento.data.object as Stripe.Checkout.Session;
-      return convergirDoCheckout(sessao.id);
+      return convergirDoCheckout(sessao.id, contexto);
     }
 
     // QR vencido ou pagamento recusado: nada é liberado. Devolver o tenant marca
@@ -119,13 +123,13 @@ async function processar(evento: Stripe.Event): Promise<string | null> {
     case "customer.subscription.resumed":
     case "customer.subscription.trial_will_end": {
       const sub = evento.data.object as Stripe.Subscription;
-      return convergirAssinatura(sub.id);
+      return convergirAssinatura(sub.id, contexto);
     }
 
     case "invoice.paid": {
       const inv = evento.data.object as Stripe.Invoice;
       const subId = assinaturaDaFatura(inv);
-      return subId ? convergirAssinatura(subId) : companyIdDe(inv);
+      return subId ? convergirAssinatura(subId, contexto) : companyIdDe(inv);
     }
 
     case "invoice.payment_failed": {

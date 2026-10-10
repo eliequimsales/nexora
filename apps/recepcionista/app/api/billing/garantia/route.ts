@@ -5,6 +5,7 @@ import { stripeConfigurado } from "@/lib/billing/stripe";
 import { logError } from "@/lib/errors";
 import { LIMITES, limitar } from "@/lib/limites";
 import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
+import { validarOrigemECsrfe } from "@/lib/seguranca/origem";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,7 +17,10 @@ export const dynamic = "force-dynamic";
  * mesma regra que desenha a tela (lib/billing/garantia.ts), aqui no servidor, com
  * os dados do banco. Toda recusa sai com o motivo e o caminho.
  */
-export async function POST() {
+export async function POST(request: Request) {
+  const erroOrigem = validarOrigemECsrfe(request);
+  if (erroOrigem) return erroOrigem;
+
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 

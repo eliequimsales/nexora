@@ -5,11 +5,15 @@ import { teachAnswer } from "@/lib/training";
 import { teachSchema } from "@/lib/validation";
 import { LIMITES, limitar } from "@/lib/limites";
 import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
+import { validarOrigemECsrfe } from "@/lib/seguranca/origem";
 
 export const dynamic = "force-dynamic";
 
 /** Empresa respondeu uma dúvida → item fica AGUARDANDO APROVAÇÃO (nunca direto em uso). */
 export async function POST(request: Request) {
+  const erroOrigem = validarOrigemECsrfe(request, { exigirJson: true });
+  if (erroOrigem) return erroOrigem;
+
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 

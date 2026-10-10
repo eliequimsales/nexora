@@ -85,6 +85,17 @@ export async function reivindicar(
   }
 }
 
+export async function posseAtiva(eventId: string, tentativa: number): Promise<boolean> {
+  const agora = new Date();
+  const limiteLease = new Date(agora.getTime() - 30_000);
+  const row = await prisma.stripeEvent.findUnique({
+    where: { id: eventId },
+    select: { attempts: true, processedAt: true, receivedAt: true },
+  });
+  if (!row) return false;
+  return row.attempts === tentativa && row.processedAt === null && row.receivedAt >= limiteLease;
+}
+
 export async function marcarProcessado(
   eventId: string,
   companyId: string | null,
