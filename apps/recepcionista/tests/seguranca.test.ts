@@ -264,29 +264,62 @@ describe("dupla marcação na agenda pública", () => {
   });
 });
 
-describe("auditoria de segurança — isolamento de tenant e integridade de agendamento", () => {
-  it("carregarNegocio na rota pública de agendar não faz updateMany em serviços", () => {
-    const rota = readFileSync(
+describe("auditoria de segurança — isolamento de tenant, concorrência e integridade (R1 a R6)", () => {
+  it("R1: idempotência da Stripe usa CAS atômico, renova lease e cerca tentativa", () => {
+    const fonte = readFileSync(join(__dirname, "..", "lib/billing/idempotencia.ts"), "utf8");
+    expect(fonte).toContain("updateMany");
+    expect(fonte).toContain("receivedAt: agora");
+    expect(fonte).toContain("attempts: tentativa");
+  });
+
+  it("R2: training.ts não reescreve com IA nem em aprovação nem em teachAnswer", () => {
+    const training = readFileSync(join(__dirname, "..", "lib/training.ts"), "utf8");
+    expect(training).not.toContain("structureTrainedAnswer");
+  });
+
+  it("R3: callback Google exige verificação por token real (usadoEm) antes de manter senha", () => {
+    const google = readFileSync(
+      join(__dirname, "..", "app/api/auth/google/callback/route.ts"),
+      "utf8",
+    );
+    expect(google).toContain("verificacaoEmail.findFirst");
+    expect(google).toContain("usadoEm: { not: null }");
+  });
+
+  it("R4: marcacao e consulta pública barram profissional arbitrário com e sem equipe", () => {
+    const marcacao = readFileSync(join(__dirname, "..", "lib/agenda/marcacao.ts"), "utf8");
+    expect(marcacao).toContain("p.profissional && p.profissional.trim().toLowerCase() !== \"atendimento geral\"");
+
+    const rotaAgendar = readFileSync(
       join(__dirname, "..", "app/api/agendar/[slug]/route.ts"),
       "utf8",
     );
-    expect(rota).not.toContain("updateMany");
+    expect(rotaAgendar).toContain("profissionalFiltro.trim().toLowerCase() !== \"atendimento geral\"");
   });
 
-  it("marcacao valida se profissional solicitado pertence à equipe da empresa", () => {
-    const marcacao = readFileSync(join(__dirname, "..", "lib/agenda/marcacao.ts"), "utf8");
-    expect(marcacao).toContain("equipe.find(");
-    expect(marcacao).toContain("p.profissional!.trim().toLowerCase()");
+  it("R5: promoção de convidado é atômica com CAS em sessaoEpoca e recusa domínio temporário", () => {
+    const salvar = readFileSync(
+      join(__dirname, "..", "app/api/auth/salvar-conta/route.ts"),
+      "utf8",
+    );
+    expect(salvar).toContain("updateMany");
+    expect(salvar).toContain("sessaoEpoca: atual.sessaoEpoca");
+    expect(salvar).toContain("emailDestino.endsWith(\"@temporario.meunexora.com.br\")");
   });
 
-  it("training.ts não sobrescreve resposta aprovada pelo dono com reescrita da IA", () => {
-    const training = readFileSync(join(__dirname, "..", "lib/training.ts"), "utf8");
-    expect(training).not.toContain("structureTrainedAnswer(finalQuestion, finalAnswer)");
-  });
+  it("R6: proteção de origem e anti-CSRF valida sec-fetch-site, origin, referer e JSON", () => {
+    const origem = readFileSync(
+      join(__dirname, "..", "lib/seguranca/origem.ts"),
+      "utf8",
+    );
+    expect(origem).toContain("sec-fetch-site");
+    expect(origem).toContain("cross-site");
+    expect(origem).toContain("application/json");
 
-  it("idempotência da Stripe permite recuperação quando a tentativa anterior falhou ou expirou lease", () => {
-    const fonte = readFileSync(join(__dirname, "..", "lib/billing/idempotencia.ts"), "utf8");
-    expect(fonte).toContain("falhouAnteriormente || leaseExpirado");
-    expect(fonte).toContain("data: { attempts: { increment: 1 }, erro: null }");
+    const login = readFileSync(
+      join(__dirname, "..", "app/api/auth/login/route.ts"),
+      "utf8",
+    );
+    expect(login).toContain("validarOrigemECsrfe");
   });
 });

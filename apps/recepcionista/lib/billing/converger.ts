@@ -439,16 +439,22 @@ async function aplicarCompra(
 export async function registrarFalhaPagamento(
   companyId: string,
   motivo: string,
+  tentativaFatura?: number,
 ): Promise<void> {
   const atual = await prisma.company.findUnique({
     where: { id: companyId },
-    select: { dunningIniciadoEm: true },
+    select: { dunningIniciadoEm: true, falhasSeguidas: true },
   });
+
+  const novasFalhas =
+    typeof tentativaFatura === "number"
+      ? Math.max(atual?.falhasSeguidas ?? 0, tentativaFatura)
+      : (atual?.falhasSeguidas ?? 0) + 1;
 
   await prisma.company.update({
     where: { id: companyId },
     data: {
-      falhasSeguidas: { increment: 1 },
+      falhasSeguidas: novasFalhas,
       // O relógio da tolerância começa na PRIMEIRA falha e não é reiniciado
       // pelas seguintes — senão a tolerância nunca vence.
       dunningIniciadoEm: atual?.dunningIniciadoEm ?? new Date(),

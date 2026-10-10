@@ -1,7 +1,6 @@
 import type { CompanyProfile, KnowledgeItem } from "@nexora/recepcionista-prisma";
 import { prisma } from "./db";
 import { logError } from "./errors";
-import { structureTrainedAnswer } from "./ai/provider";
 import { getTemplatesForSegments, type SegmentTopic } from "./segments";
 
 /** Lê o Json de áreas de atuação com segurança. */
@@ -319,16 +318,8 @@ export async function teachAnswer(
     if (!gap) throw new Error("Dúvida não encontrada");
   }
 
-  let question = input.question.trim().slice(0, MAX_QUESTION_LENGTH);
-  let answer = input.answer.trim().slice(0, MAX_ANSWER_LENGTH);
-
-  try {
-    const structured = await structureTrainedAnswer(question, answer);
-    question = structured.question.slice(0, MAX_QUESTION_LENGTH);
-    answer = structured.answer.slice(0, MAX_ANSWER_LENGTH);
-  } catch (error) {
-    await logError("training-structure", error, companyId);
-  }
+  const question = input.question.trim().slice(0, MAX_QUESTION_LENGTH);
+  const answer = input.answer.trim().slice(0, MAX_ANSWER_LENGTH);
 
   const item = await prisma.knowledgeItem.create({
     data: {

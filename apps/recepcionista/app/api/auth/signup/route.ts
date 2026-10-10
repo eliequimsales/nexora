@@ -11,9 +11,13 @@ import { respostaDeLimite, type Politica } from "@/lib/limites";
 const IP: Politica = { limit: 5, windowMs: 15 * 60_000 };
 import { abrirVerificacao, VALIDADE_HORAS } from "@/lib/auth/verificacao";
 import { enviarEmail } from "@/lib/reengajamento/email";
+import { validarOrigemECsrfe } from "@/lib/seguranca/origem";
 
 export async function POST(request: Request) {
   try {
+    const erroOrigem = validarOrigemECsrfe(request, { exigirJson: true });
+    if (erroOrigem) return erroOrigem;
+
     if (!rateLimit(`signup:${clientIp(request)}`, IP)) return respostaDeLimite(IP);
 
     const body = await request.json().catch(() => null);

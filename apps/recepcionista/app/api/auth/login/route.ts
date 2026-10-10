@@ -5,6 +5,7 @@ import { logError } from "@/lib/errors";
 import { loginSchema } from "@/lib/validation";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { respostaDeLimite, type Politica } from "@/lib/limites";
+import { validarOrigemECsrfe } from "@/lib/seguranca/origem";
 
 /** Uma máquina insistindo. */
 const IP: Politica = { limit: 10, windowMs: 5 * 60_000 };
@@ -22,6 +23,9 @@ const INVALID_CREDENTIALS = "E-mail ou senha incorretos";
 
 export async function POST(request: Request) {
   try {
+    const erroOrigem = validarOrigemECsrfe(request, { exigirJson: true });
+    if (erroOrigem) return erroOrigem;
+
     if (!rateLimit(`login:${clientIp(request)}`, IP)) return respostaDeLimite(IP);
 
     const body = await request.json().catch(() => null);

@@ -146,61 +146,78 @@ export async function GET(
       .map((dia) => {
         let horas: string[] = [];
 
-        if (profissionalFiltro && profissionalFiltro !== "Primeiro disponível") {
-          // Filtro por profissional específico: apenas agendamentos deste profissional ocupam o horário
-          const ocupadosProf = todosAgendamentos
-            .filter((a) => extrairProfissional(a.notes).toLowerCase() === profissionalFiltro.toLowerCase())
-            .map((a) => ({ startsAt: a.startsAt, endsAt: a.endsAt }));
+        if (profissionais.length > 0) {
+          if (profissionalFiltro && profissionalFiltro !== "Primeiro disponível") {
+            const membro = profissionais.find(
+              (p) => p.nome.trim().toLowerCase() === profissionalFiltro.trim().toLowerCase(),
+            );
+            if (!membro) {
+              // Profissional requisitado não pertence à equipe: nenhum slot disponível
+              horas = [];
+            } else {
+              const ocupadosProf = todosAgendamentos
+                .filter((a) => extrairProfissional(a.notes).toLowerCase() === membro.nome.toLowerCase())
+                .map((a) => ({ startsAt: a.startsAt, endsAt: a.endsAt }));
 
-          horas = calcularSlots({
-            dia,
-            horarios,
-            duracaoMin: servico.durationMin,
-            ocupados: ocupadosProf,
-            agora,
-            antecedenciaMinutos: ANTECEDENCIA_MIN,
-          });
-        } else if (profissionais.length > 0) {
-          // "Primeiro disponível" com múltiplos profissionais:
-          // Um horário está livre se pelo menos UM profissional estiver livre.
-          // Só fica indisponível se TODOS os profissionais estiverem ocupados.
-          const slotsDisponiveis = new Set<string>();
+              horas = calcularSlots({
+                dia,
+                horarios,
+                duracaoMin: servico.durationMin,
+                ocupados: ocupadosProf,
+                agora,
+                antecedenciaMinutos: ANTECEDENCIA_MIN,
+              });
+            }
+          } else {
+            // "Primeiro disponível" com múltiplos profissionais:
+            // Um horário está livre se pelo menos UM profissional estiver livre.
+            // Só fica indisponível se TODOS os profissionais estiverem ocupados.
+            const slotsDisponiveis = new Set<string>();
 
-          for (const p of profissionais) {
-            const ocupadosP = todosAgendamentos
-              .filter((a) => extrairProfissional(a.notes).toLowerCase() === p.nome.toLowerCase())
-              .map((a) => ({ startsAt: a.startsAt, endsAt: a.endsAt }));
+            for (const p of profissionais) {
+              const ocupadosP = todosAgendamentos
+                .filter((a) => extrairProfissional(a.notes).toLowerCase() === p.nome.toLowerCase())
+                .map((a) => ({ startsAt: a.startsAt, endsAt: a.endsAt }));
 
-            const slotsP = calcularSlots({
+              const slotsP = calcularSlots({
+                dia,
+                horarios,
+                duracaoMin: servico.durationMin,
+                ocupados: ocupadosP,
+                agora,
+                antecedenciaMinutos: ANTECEDENCIA_MIN,
+              });
+
+              for (const s of slotsP) {
+                slotsDisponiveis.add(s);
+              }
+            }
+
+            horas = Array.from(slotsDisponiveis).sort();
+          }
+        } else {
+          // Sem profissionais cadastrados (atendimento geral / 1 vaga por horário)
+          if (
+            profissionalFiltro &&
+            profissionalFiltro !== "Primeiro disponível" &&
+            profissionalFiltro.trim().toLowerCase() !== "atendimento geral"
+          ) {
+            horas = [];
+          } else {
+            const ocupadosGeral = todosAgendamentos.map((a) => ({
+              startsAt: a.startsAt,
+              endsAt: a.endsAt,
+            }));
+
+            horas = calcularSlots({
               dia,
               horarios,
               duracaoMin: servico.durationMin,
-              ocupados: ocupadosP,
+              ocupados: ocupadosGeral,
               agora,
               antecedenciaMinutos: ANTECEDENCIA_MIN,
             });
-
-            for (const s of slotsP) {
-              slotsDisponiveis.add(s);
-            }
           }
-
-          horas = Array.from(slotsDisponiveis).sort();
-        } else {
-          // Sem profissionais cadastrados (atendimento geral / 1 vaga por horário)
-          const ocupadosGeral = todosAgendamentos.map((a) => ({
-            startsAt: a.startsAt,
-            endsAt: a.endsAt,
-          }));
-
-          horas = calcularSlots({
-            dia,
-            horarios,
-            duracaoMin: servico.durationMin,
-            ocupados: ocupadosGeral,
-            agora,
-            antecedenciaMinutos: ANTECEDENCIA_MIN,
-          });
         }
 
         return {

@@ -98,17 +98,22 @@ export async function marcarNaAgenda(p: PedidoDeMarcacao): Promise<ResultadoDaMa
       }).includes(hora);
 
     const equipe = await listarProfissionais(p.companyId);
-    if (p.profissional) {
-      if (equipe.length > 0) {
+    if (equipe.length > 0) {
+      if (p.profissional) {
         const membro = equipe.find(
           (e) => e.nome.trim().toLowerCase() === p.profissional!.trim().toLowerCase(),
         );
         if (!membro) return null;
         return livreCom(membro.nome) ? membro.nome : null;
       }
-      return livreCom(p.profissional) ? p.profissional : null;
+      return equipe.find((e) => livreCom(e.nome))?.nome ?? null;
     }
-    if (equipe.length > 0) return equipe.find((e) => livreCom(e.nome))?.nome ?? null;
+
+    // Sem equipe cadastrada: a capacidade é única ("Atendimento Geral").
+    // Qualquer profissional arbitrário que não seja nulo ou "Atendimento Geral" é rejeitado.
+    if (p.profissional && p.profissional.trim().toLowerCase() !== "atendimento geral") {
+      return null;
+    }
     return livreCom(null) ? "Atendimento Geral" : null;
   }
 

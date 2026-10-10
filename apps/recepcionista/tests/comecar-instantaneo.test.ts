@@ -13,7 +13,9 @@ vi.mock("@/lib/db", () => {
     company: {
       create: vi.fn(),
       findUnique: vi.fn(),
+      findUniqueOrThrow: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
     },
   };
   return { prisma: db };
@@ -148,20 +150,34 @@ describe("Salvar Conta (/api/auth/salvar-conta) — Tornar a conta definitiva", 
       }
       return null;
     });
-    db.company.update.mockResolvedValue({ id: "comp_convidado_123", sessaoEpoca: 1 });
+    db.company.updateMany.mockResolvedValue({ count: 1 });
+    db.company.findUniqueOrThrow.mockResolvedValue({ id: "comp_convidado_123", sessaoEpoca: 1 });
   });
+
+  function reqSalvar(body: any, headers?: Record<string, string>) {
+    return new Request("https://www.meunexora.com.br/api/auth/salvar-conta", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...headers },
+      body: JSON.stringify(body),
+    });
+  }
 
   it("exige sessão autenticada para salvar conta", async () => {
     (getSessionCompanyId as Fn).mockResolvedValue(null);
 
-    const req = new Request("https://www.meunexora.com.br/api/auth/salvar-conta", {
-      method: "POST",
-      body: JSON.stringify({ email: "dona@clinica.com", password: "senha-segura-123" }),
-    });
+    const req = reqSalvar({ email: "dona@clinica.com", password: "senha-segura-123" });
     const res = await salvarContaPOST(req);
-
     expect(res.status).toBe(401);
-    expect(db.company.update).not.toHaveBeenCalled();
+    expect(db.company.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("rejeita requisição com form-urlencoded por proteção CSRF", async () => {
+    const req = reqSalvar(
+      { email: "dona@clinica.com", password: "senha-segura-123" },
+      { "Content-Type": "application/x-www-form-urlencoded" },
+    );
+    const res = await salvarContaPOST(req);
+    expect(res.status).toBe(415);
   });
 
   it("rejeita salvar conta se a conta já for permanente", async () => {
@@ -176,13 +192,25 @@ describe("Salvar Conta (/api/auth/salvar-conta) — Tornar a conta definitiva", 
       return null;
     });
 
-    const req = new Request("https://www.meunexora.com.br/api/auth/salvar-conta", {
-      method: "POST",
-      body: JSON.stringify({ email: "dona@clinica.com", password: "senha-segura-123" }),
-    });
+    const req = reqSalvar({ email: "dona@clinica.com", password: "senha-segura-123" });
     const res = await salvarContaPOST(req);
     expect(res.status).toBe(403);
-    expect(db.company.update).not.toHaveBeenCalled();
+    expect(db.company.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("rejeita e-mail de destino que seja temporário", async () => {
+    const req = reqSalvar({ email: "outro@temporario.meunexora.com.br", password: "senha-segura-123" });
+    const res = await salvarContaPOST(req);
+    expect(res.status).toBe(400);
+    expect(db.company.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("recusa promoção concorrente quando outra requisição já alterou época ou e-mail", async () => {
+    db.company.updateMany.mockResolvedValue({ count: 0 });
+
+    const req = reqSalvar({ email: "dona@clinica.com", password: "senha-segura-123" });
+    const res = await salvarContaPOST(req);
+    expect(res.status).toBe(409);
   });
 
   it("rejeita e-mail já em uso por outro usuário", async () => {
@@ -200,39 +228,30 @@ describe("Salvar Conta (/api/auth/salvar-conta) — Tornar a conta definitiva", 
       return null;
     });
 
-    const req = new Request("https://www.meunexora.com.br/api/auth/salvar-conta", {
-      method: "POST",
-      body: JSON.stringify({ email: "existente@clinica.com", password: "senha-segura-123" }),
-    });
+    const req = reqSalvar({ email: "existente@clinica.com", password: "senha-segura-123" });
     const res = await salvarContaPOST(req);
     const json = await res.json();
 
     expect(res.status).toBe(409);
     expect(json.error).toContain("Já existe uma conta");
-    expect(db.company.update).not.toHaveBeenCalled();
+    expect(db.company.updateMany).not.toHaveBeenCalled();
   });
 
   it("rejeita senhas com menos de 8 caracteres", async () => {
-    const req = new Request("https://www.meunexora.com.br/api/auth/salvar-conta", {
-      method: "POST",
-      body: JSON.stringify({ email: "dona@clinica.com", password: "123" }),
-    });
+    const req = reqSalvar({ email: "dona@clinica.com", password: "123" });
     const res = await salvarContaPOST(req);
     const json = await res.json();
 
     expect(res.status).toBe(400);
     expect(json.error).toContain("8 caracteres");
-    expect(db.company.update).not.toHaveBeenCalled();
+    expect(db.company.updateMany).not.toHaveBeenCalled();
   });
 
   it("atualiza dados da conta no banco com hash seguro e preserva o tenant", async () => {
-    const req = new Request("https://www.meunexora.com.br/api/auth/salvar-conta", {
-      method: "POST",
-      body: JSON.stringify({
-        email: "dona@clinica.com",
-        password: "senha-segura-123",
-        name: "Clínica Harmonização Prime",
-      }),
+    const req = reqSalvar({
+      email: "dona@clinica.com",
+      password: "senha-segura-123",
+      name: "Clínica Harmonização Prime",
     });
     const res = await salvarContaPOST(req);
     const json = await res.json();
@@ -241,8 +260,12 @@ describe("Salvar Conta (/api/auth/salvar-conta) — Tornar a conta definitiva", 
     expect(json.ok).toBe(true);
     expect(json.email).toBe("dona@clinica.com");
 
-    expect(db.company.update).toHaveBeenCalledWith({
-      where: { id: "comp_convidado_123" },
+    expect(db.company.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: "comp_convidado_123",
+        sessaoEpoca: 0,
+        email: "convidado_123@temporario.meunexora.com.br",
+      },
       data: {
         email: "dona@clinica.com",
         passwordHash: "hash_senha-segura-123",
@@ -250,7 +273,6 @@ describe("Salvar Conta (/api/auth/salvar-conta) — Tornar a conta definitiva", 
         sessaoEpoca: { increment: 1 },
         name: "Clínica Harmonização Prime",
       },
-      select: { id: true, sessaoEpoca: true },
     });
   });
 });

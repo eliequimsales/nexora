@@ -22,7 +22,7 @@
 import { prisma } from "@/lib/db";
 
 export type Reivindicacao =
-  | { ganhou: true }
+  | { ganhou: true; tentativa: number }
   | { ganhou: false; motivo: "ja-processado" | "em-voo" };
 
 function ehColisaoDeChave(erro: unknown): boolean {
@@ -39,37 +39,48 @@ export async function reivindicar(
 ): Promise<Reivindicacao> {
   try {
     await prisma.stripeEvent.create({ data: { id: eventId, type: tipo } });
-    return { ganhou: true };
+    return { ganhou: true, tentativa: 1 };
   } catch (erro) {
     if (!ehColisaoDeChave(erro)) throw erro;
 
+    const agora = new Date();
+    const limiteLease = new Date(agora.getTime() - 30_000);
+
+    // Aquisição atômica por Compare-And-Swap (CAS):
+    // Só atualiza se o evento NÃO foi processado E (estava com erro OU o lease expirou).
+    // Atualiza atomicamente attempts, renova receivedAt para agora (novo lease) e limpa o erro.
+    const atualizado = await prisma.stripeEvent.updateMany({
+      where: {
+        id: eventId,
+        processedAt: null,
+        OR: [
+          { erro: { not: null } },
+          { receivedAt: { lt: limiteLease } },
+        ],
+      },
+      data: {
+        attempts: { increment: 1 },
+        receivedAt: agora,
+        erro: null,
+      },
+    });
+
+    if (atualizado.count === 1) {
+      const linha = await prisma.stripeEvent.findUnique({
+        where: { id: eventId },
+        select: { attempts: true },
+      });
+      return { ganhou: true, tentativa: linha?.attempts ?? 2 };
+    }
+
+    // Se count === 0, não houve aquisição: ou já foi processado ou está em voo com lease ativo (< 30s)
     const linha = await prisma.stripeEvent.findUnique({
       where: { id: eventId },
-      select: { processedAt: true, erro: true, receivedAt: true },
+      select: { processedAt: true },
     });
 
     if (linha?.processedAt) return { ganhou: false, motivo: "ja-processado" };
 
-    // Se o evento falhou em tentativa anterior (erro registrado) ou a tentativa anterior
-    // expirou (lease > 30s sem conclusão), permite que a reentrega da Stripe tente novamente.
-    const tempoDecorridoMs = linha?.receivedAt ? Date.now() - new Date(linha.receivedAt).getTime() : 0;
-    const falhouAnteriormente = Boolean(linha?.erro);
-    const leaseExpirado = tempoDecorridoMs > 30_000;
-
-    if (falhouAnteriormente || leaseExpirado) {
-      await prisma.stripeEvent.update({
-        where: { id: eventId },
-        data: { attempts: { increment: 1 }, erro: null },
-      });
-      return { ganhou: true };
-    }
-
-    // Alguém está processando agora no primeiro fôlego (< 30s). Contamos a tentativa
-    // e devolvemos "em-voo" — quem chamou responde 500 para a Stripe reentregar.
-    await prisma.stripeEvent.update({
-      where: { id: eventId },
-      data: { attempts: { increment: 1 } },
-    });
     return { ganhou: false, motivo: "em-voo" };
   }
 }
@@ -77,20 +88,39 @@ export async function reivindicar(
 export async function marcarProcessado(
   eventId: string,
   companyId: string | null,
+  tentativa?: number,
 ): Promise<void> {
-  await prisma.stripeEvent.update({
-    where: { id: eventId },
-    data: { processedAt: new Date(), companyId },
-  });
+  if (tentativa !== undefined) {
+    await prisma.stripeEvent.updateMany({
+      where: { id: eventId, attempts: tentativa, processedAt: null },
+      data: { processedAt: new Date(), companyId },
+    });
+  } else {
+    await prisma.stripeEvent.update({
+      where: { id: eventId },
+      data: { processedAt: new Date(), companyId },
+    });
+  }
 }
 
 /**
  * Registra a falha SEM marcar como processado, para que a reentrega da Stripe
  * possa tentar de novo. O erro fica gravado para diagnóstico.
  */
-export async function marcarFalha(eventId: string, erro: unknown): Promise<void> {
-  await prisma.stripeEvent.update({
-    where: { id: eventId },
-    data: { erro: String(erro).slice(0, 500) },
-  });
+export async function marcarFalha(
+  eventId: string,
+  erro: unknown,
+  tentativa?: number,
+): Promise<void> {
+  if (tentativa !== undefined) {
+    await prisma.stripeEvent.updateMany({
+      where: { id: eventId, attempts: tentativa, processedAt: null },
+      data: { erro: String(erro).slice(0, 500) },
+    });
+  } else {
+    await prisma.stripeEvent.update({
+      where: { id: eventId },
+      data: { erro: String(erro).slice(0, 500) },
+    });
+  }
 }

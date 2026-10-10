@@ -80,15 +80,15 @@ export async function POST(request: Request) {
       // Evento de outro produto na mesma conta Stripe (o apps/api marca com
       // `orgId`). 200: não é erro nosso, e 500 poria a Stripe em retry de 3
       // dias inundando o ErrorLog.
-      await marcarProcessado(evento.id, null);
+      await marcarProcessado(evento.id, null, claim.tentativa);
       return NextResponse.json({ received: true, deOutroProduto: true });
     }
 
-    await marcarProcessado(evento.id, companyId);
+    await marcarProcessado(evento.id, companyId, claim.tentativa);
     return NextResponse.json({ received: true });
   } catch (erro) {
     // NÃO marca processado: a reentrega da Stripe precisa poder tentar de novo.
-    await marcarFalha(evento.id, erro);
+    await marcarFalha(evento.id, erro, claim.tentativa);
     await logError(`stripe-webhook:${evento.type}`, erro);
     return NextResponse.json({ error: "Falha ao processar" }, { status: 500 });
   }
@@ -130,6 +130,7 @@ async function processar(evento: Stripe.Event): Promise<string | null> {
 
     case "invoice.payment_failed": {
       const inv = evento.data.object as Stripe.Invoice;
+      const tentativaFatura = typeof inv.attempt_count === "number" ? inv.attempt_count : undefined;
       const companyId = companyIdDe(inv);
       if (!companyId) {
         // Sem tenant no metadata da fatura, tenta pela assinatura.
@@ -137,11 +138,11 @@ async function processar(evento: Stripe.Event): Promise<string | null> {
         if (!subId) return null;
         const doSub = await convergirAssinatura(subId);
         if (doSub) {
-          await registrarFalhaPagamento(doSub, "Pagamento não aprovado");
+          await registrarFalhaPagamento(doSub, "Pagamento não aprovado", tentativaFatura);
         }
         return doSub;
       }
-      await registrarFalhaPagamento(companyId, "Pagamento não aprovado");
+      await registrarFalhaPagamento(companyId, "Pagamento não aprovado", tentativaFatura);
       return companyId;
     }
 
