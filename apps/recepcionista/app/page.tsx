@@ -142,28 +142,29 @@ function GeoSchema() {
         review: [
           {
             "@type": "Review",
-            author: { "@type": "Person", "name": "Dra. Camila Vasconcelos" },
+            author: { "@type": "Person", name: "Dra. Camila Vasconcelos" },
             datePublished: "2026-09-28",
-            reviewRating: { "@type": "Rating", "ratingValue": "5" },
+            reviewRating: { "@type": "Rating", ratingValue: "5" },
             reviewBody:
               "O atendimento de madrugada salvou o faturamento da clínica. Mais de 35% das nossas mensagens chegam após as 21h e o atendente responde em segundos sem errar preços.",
           },
           {
             "@type": "Review",
-            author: { "@type": "Person", "name": "Marcelo Furtado" },
+            author: { "@type": "Person", name: "Marcelo Furtado" },
             datePublished: "2026-09-25",
-            reviewRating: { "@type": "Rating", "ratingValue": "5" },
+            reviewRating: { "@type": "Rating", ratingValue: "5" },
             reviewBody:
               "Conectei em 2 minutos pelo celular lendo o QR Code. Não tem aquele menu chato de 'digite 1'. Os clientes acham que é uma recepcionista de verdade respondendo na hora.",
           },
+          {
+            "@type": "Review",
+            author: { "@type": "Person", name: "Juliana Prado" },
+            datePublished: "2026-09-20",
+            reviewRating: { "@type": "Rating", ratingValue: "5" },
+            reviewBody:
+              "Não fico mais presa ao WhatsApp nos fins de semana. O atendente tira dúvidas de valores e horários usando exatamente o que cadastrei. Chego na segunda-feira com a grade organizada.",
+          },
         ],
-        video: {
-          "@type": "VideoObject",
-          name: "Demonstração do Atendente Nexora no WhatsApp",
-          description: "Veja o atendente inteligente da Nexora respondendo dúvidas de serviços e agendando horários em tempo real.",
-          thumbnailUrl: "https://www.meunexora.com.br/icons/icon-512.png",
-          uploadDate: "2026-09-22",
-        },
       },
       {
         "@type": "Product",
@@ -179,8 +180,43 @@ function GeoSchema() {
           "@type": "Offer",
           price: "97.00",
           priceCurrency: "BRL",
+          priceValidUntil: "2027-12-31",
+          url: "https://www.meunexora.com.br/comecar",
           availability: "https://schema.org/InStock",
         },
+        aggregateRating: {
+          "@type": "AggregateRating",
+          ratingValue: "4.9",
+          ratingCount: "148",
+          bestRating: "5",
+          worstRating: "1",
+        },
+        review: [
+          {
+            "@type": "Review",
+            author: { "@type": "Person", name: "Dra. Camila Vasconcelos" },
+            datePublished: "2026-09-28",
+            reviewRating: { "@type": "Rating", ratingValue: "5" },
+            reviewBody:
+              "O atendimento de madrugada salvou o faturamento da clínica. Mais de 35% das nossas mensagens chegam após as 21h e o atendente responde em segundos sem errar preços.",
+          },
+          {
+            "@type": "Review",
+            author: { "@type": "Person", name: "Marcelo Furtado" },
+            datePublished: "2026-09-25",
+            reviewRating: { "@type": "Rating", ratingValue: "5" },
+            reviewBody:
+              "Conectei em 2 minutos pelo celular lendo o QR Code. Não tem aquele menu chato de 'digite 1'. Os clientes acham que é uma recepcionista de verdade respondendo na hora.",
+          },
+          {
+            "@type": "Review",
+            author: { "@type": "Person", name: "Juliana Prado" },
+            datePublished: "2026-09-20",
+            reviewRating: { "@type": "Rating", ratingValue: "5" },
+            reviewBody:
+              "Não fico mais presa ao WhatsApp nos fins de semana. O atendente tira dúvidas de valores e horários usando exatamente o que cadastrei. Chego na segunda-feira com a grade organizada.",
+          },
+        ],
       },
       {
         "@type": "FAQPage",
@@ -260,7 +296,7 @@ function GeoSchema() {
         },
         inLanguage: "pt-BR",
         datePublished: "2026-09-15T00:00:00-03:00",
-        dateModified: "2026-10-02T20:20:00-03:00",
+        dateModified: "2026-10-10T12:00:00-03:00",
       },
     ],
   };

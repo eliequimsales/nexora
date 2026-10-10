@@ -154,3 +154,23 @@ describe("nenhuma promessa que o produto não cumpre", () => {
     });
   }
 });
+
+describe("dados estruturados GeoSchema (Schema.org / Google Search Console)", () => {
+  const home = leia("app/page.tsx");
+
+  it("Product possui aggregateRating e reviews válidos para Snippets de Produto", () => {
+    expect(home).toContain('"@type": "Product"');
+    // Verifica que Product tem aggregateRating e review
+    const productIdx = home.indexOf('"@type": "Product"');
+    const productChunk = home.slice(productIdx, productIdx + 2500);
+    expect(productChunk).toContain('"@type": "AggregateRating"');
+    expect(productChunk).toContain('"@type": "Review"');
+    expect(productChunk).toContain('ratingValue: "4.9"');
+    expect(productChunk).toContain('priceValidUntil: "2027-12-31"');
+  });
+
+  it("não declara VideoObject incompleto enquanto a demonstração for o simulador web", () => {
+    expect(home).not.toContain('"@type": "VideoObject"');
+  });
+});
+
