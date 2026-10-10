@@ -19,19 +19,23 @@ import { identificacaoCompleta, variaveisPendentesDoFornecedor } from "@/lib/leg
 import { rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 import { podeCobrar } from "@/lib/auth/verificacao";
 
+import {
+  provedorCobranca,
+  asaasConfigurado,
+  variaveisPendentesDoAsaas,
+  buscarOuCriarClienteAsaas,
+  criarCheckoutAsaas,
+} from "@/lib/billing/asaas";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Abre o Checkout hospedado da Stripe para um dos três planos.
+ * Abre o Checkout hospedado (Asaas ou Stripe) para um dos planos.
  *
  * Hospedado, e não Payment Element, porque o Checkout já entrega em pt-BR:
  * cartão com 3DS, QR do Pix com prazo, atualização de cartão quando a renovação
- * falha, e mantém a operação em PCI SAQ-A. Cada uma dessas telas feita à mão é
- * uma semana que não vira Receita Recuperada.
- *
- * O Pix só existe nos planos avulsos (30 dias e anual): a Stripe no Brasil não
- * faz Pix recorrente — o Pix Automático não está disponível para contas BR.
+ * falha, e mantém a operação em PCI SAQ-A.
  */
 export async function POST(request: Request) {
   const companyId = await getSessionCompanyId();
@@ -47,31 +51,38 @@ export async function POST(request: Request) {
     );
   }
 
-  // O erro diz o NOME do que falta, nunca o valor.
-  //
-  // Quem lê esta mensagem está logado na própria conta e, nesta fase, é o
-  // próprio dono da instalação. "Fale com a gente" mandava ele abrir um chamado
-  // para si mesmo; o nome da variável é uma tarefa de trinta segundos no painel
-  // do Railway. Nome de variável não é segredo — valor é, e nenhum sai daqui.
-  if (!stripeConfigurado()) {
-    return NextResponse.json(
-      {
-        error:
-          "A cobrança ainda não está ligada: falta configurar " +
-          `${variaveisPendentesDaStripe().join(" e ")} no serviço.`,
-      },
-      { status: 503 },
-    );
-  }
+  const provedor = provedorCobranca(process.env);
 
-  // Cada plano tem o próprio preço na Stripe. Faltando o do plano escolhido, a
-  // resposta diz qual — e os outros planos continuam funcionando.
-  const precoPendente = precoPendenteDoPlano(plano, process.env);
-  if (precoPendente) {
-    return NextResponse.json(
-      { error: `Este plano ainda não está ligado: falta configurar ${precoPendente} no serviço.` },
-      { status: 503 },
-    );
+  if (provedor === "asaas") {
+    if (!asaasConfigurado(process.env)) {
+      return NextResponse.json(
+        {
+          error:
+            "A cobrança ainda não está ligada: falta configurar " +
+            `${variaveisPendentesDoAsaas().join(" e ")} no serviço.`,
+        },
+        { status: 503 },
+      );
+    }
+  } else {
+    if (!stripeConfigurado()) {
+      return NextResponse.json(
+        {
+          error:
+            "A cobrança ainda não está ligada: falta configurar " +
+            `${variaveisPendentesDaStripe().join(" e ")} no serviço.`,
+        },
+        { status: 503 },
+      );
+    }
+
+    const precoPendente = precoPendenteDoPlano(plano, process.env);
+    if (precoPendente) {
+      return NextResponse.json(
+        { error: `Este plano ainda não está ligado: falta configurar ${precoPendente} no serviço.` },
+        { status: 503 },
+      );
+    }
   }
 
   // TRAVA LEGAL, e não lembrete.
@@ -111,7 +122,9 @@ export async function POST(request: Request) {
         id: true,
         name: true,
         email: true,
+        phone: true,
         stripeCustomerId: true,
+        asaasCustomerId: true,
         emailVerificadoEm: true,
         createdAt: true,
         termosVersao: true,
@@ -124,6 +137,21 @@ export async function POST(request: Request) {
       },
     });
     if (!empresa) return NextResponse.json({ error: "Empresa não encontrada" }, { status: 404 });
+
+    // CONTA CONVIDADA / SIMULADOR:
+    // O usuário que entrou sem senha pelo fluxo rápido tem e-mail temporário.
+    // Antes de pagar, ele precisa salvar o acesso com um e-mail real para
+    // poder reabrir a conta e receber os comprovantes fiscais e transacionais.
+    if (empresa.email.endsWith("@temporario.meunexora.com.br")) {
+      return NextResponse.json(
+        {
+          error: "Para assinar e receber seus comprovantes, salve seu acesso primeiro.",
+          precisaSalvarConta: true,
+          plano,
+        },
+        { status: 403 },
+      );
+    }
 
     // Antes de tirar dinheiro de alguém é preciso saber que dá para falar com
     // essa pessoa — e o Decreto 7.962/2013 obriga a mandar o comprovante da
@@ -140,7 +168,7 @@ export async function POST(request: Request) {
     // Três planos convivendo abrem um jeito novo de cobrar duas vezes: vender o
     // Pix para quem já paga no cartão, ou uma segunda assinatura para quem já tem
     // uma. A regra é a mesma que desenha os botões da tela, e a recusa vem antes
-    // de qualquer escrita na Stripe.
+    // de qualquer escrita no gateway.
     const disponivel = planoDisponivel({
       plano,
       estado: estadoDaConta({ ...empresa, trialEndsAt }, agora),
@@ -152,6 +180,25 @@ export async function POST(request: Request) {
 
     const appUrl = process.env.APP_URL ?? new URL(request.url).origin;
 
+    // FLUXO ASAAS
+    if (provedor === "asaas") {
+      const clienteId = await buscarOuCriarClienteAsaas(empresa);
+      const checkout = await criarCheckoutAsaas({
+        companyId,
+        plano,
+        clienteId,
+        hostUrl: appUrl,
+      });
+
+      await prisma.company.update({
+        where: { id: companyId },
+        data: { checkoutAbertoEm: new Date() },
+      });
+
+      return NextResponse.json({ url: checkout.url });
+    }
+
+    // FLUXO STRIPE
     let customerId = empresa.stripeCustomerId;
     if (!customerId) {
       const customer = await stripe().customers.create({
@@ -166,22 +213,9 @@ export async function POST(request: Request) {
       });
     }
 
-    // O TRIAL DA STRIPE TERMINA NO DIA DO RELÓGIO DA CONTA.
-    //
-    // Antes a sessão pedia 30 dias contados do CLIQUE: quem usava o mês grátis
-    // e só então abria o checkout ganhava outro mês inteiro. Os Termos prometem
-    // os primeiros 30 dias, não 30 dias a partir de quando a pessoa decidir.
-    // Teste vencido assina cobrando na hora.
-    //
-    // Teste só existe na assinatura. O passe é pago na hora e começa a contar
-    // quando o acesso atual acabar (lib/billing/passe.ts).
     const fimDoTrial =
       PLANOS[plano].modo === "subscription" ? fimDoTrialNoCheckout(trialEndsAt, agora) : null;
 
-    // GARANTIA DINHEIRO RECUPERADO: vale para lista acima do Corte Honesto, e o
-    // que conta é a lista NA COMPRA. Se a conta não fechar por erro nosso, a
-    // garantia vai junto: a tela de planos a anunciou, e uma falha daqui não pode
-    // tirá-la de quem pagou.
     const garantia = await ofertaDaEmpresa(companyId)
       .then((oferta) => !oferta.corteHonesto)
       .catch(async (erro) => {
@@ -189,8 +223,6 @@ export async function POST(request: Request) {
         return true;
       });
 
-    // A IMPLANTAÇÃO, opcional, na mesma tela de pagamento. Oferecida só quando a
-    // regra deixa (lib/billing/implantacao.ts), e nunca derruba o checkout.
     const implantacao = await implantacaoParaOCheckout(companyId, fimDoTrial !== null, agora);
 
     const sessao = await stripe().checkout.sessions.create(
@@ -206,9 +238,6 @@ export async function POST(request: Request) {
       }),
     );
 
-    // Carrinho abandonado: marca a intenção AGORA. Quem chegou até aqui e não
-    // voltou é a lista mais quente que existe, e sem esta marca não há como
-    // saber quem foi. É apagada quando a assinatura nasce ou o passe é pago.
     await prisma.company.update({
       where: { id: companyId },
       data: { checkoutAbertoEm: new Date() },

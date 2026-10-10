@@ -109,12 +109,12 @@ export function lerFornecedor(env: Record<string, string | undefined>): Forneced
 export const FORNECEDOR: Fornecedor = lerFornecedor(process.env);
 
 /** Nenhum campo pode ficar como marcador quando o produto começar a cobrar. */
-export function identificacaoCompleta(f: Fornecedor = FORNECEDOR): boolean {
+export function identificacaoCompleta(f: Fornecedor = lerFornecedor(process.env)): boolean {
   return Object.values(f).every((v) => v !== PENDENTE && v.trim().length > 0);
 }
 
 /** Campos que ainda faltam — para a tela poder dizer exatamente o quê. */
-export function camposPendentes(f: Fornecedor = FORNECEDOR): string[] {
+export function camposPendentes(f: Fornecedor = lerFornecedor(process.env)): string[] {
   return Object.entries(f)
     .filter(([, v]) => v === PENDENTE || !v.trim())
     .map(([k]) => k);
@@ -128,7 +128,7 @@ export function camposPendentes(f: Fornecedor = FORNECEDOR): string[] {
  * FORNECEDOR_ENCARREGADO seria mandá-lo resolver algo que já está resolvido — a
  * lista precisa ser exatamente o trabalho que resta.
  */
-export function variaveisPendentesDoFornecedor(f: Fornecedor = FORNECEDOR): string[] {
+export function variaveisPendentesDoFornecedor(f: Fornecedor = lerFornecedor(process.env)): string[] {
   return camposPendentes(f)
     .filter((campo) => campo !== "encarregado")
     .map((campo) => VARIAVEIS_DO_FORNECEDOR[campo as keyof typeof VARIAVEIS_DO_FORNECEDOR]);

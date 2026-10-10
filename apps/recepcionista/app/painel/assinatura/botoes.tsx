@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { PlanoId } from "@/lib/billing/planos";
 import { trackInitiateCheckout, trackPurchase } from "@/lib/analytics/pixel";
+import { ModalSalvarConta } from "@/components/painel/modal-salvar-conta";
 
 /**
  * As ações da tela de conta. Regra Zero: sempre existe uma, e ela EXECUTA —
@@ -22,39 +23,44 @@ export type OpcaoDePlano = {
   acao: string;
 };
 
+export type CompraConfirmada = {
+  id: string;
+  valor: number;
+  plano: string;
+};
+
 export function BotoesAssinatura({
   opcoes,
   portal,
+  compraConfirmada,
   comprouComSucesso,
 }: {
   opcoes: OpcaoDePlano[];
   /** Texto do botão do portal da Stripe; null quando não há assinatura no cartão para gerenciar. */
   portal: string | null;
+  compraConfirmada?: CompraConfirmada | null;
   comprouComSucesso?: boolean;
 }) {
   const [abrindo, setAbrindo] = useState<PlanoId | "portal" | null>(null);
   const [erro, setErro] = useState("");
+  const [modalSalvarAberto, setModalSalvarAberto] = useState(false);
+  const [planoPendente, setPlanoPendente] = useState<PlanoId | null>(null);
 
   useEffect(() => {
-    if (!comprouComSucesso) return;
+    // SÓ dispara evento Purchase se a compra foi REALMENTE verificada no banco pelo servidor.
+    // Nunca dispara apenas por ?ok=1 na URL.
+    if (!compraConfirmada) return;
+
     try {
-      const sessionId =
-        typeof window !== "undefined"
-          ? new URLSearchParams(window.location.search).get("session_id") || "ok"
-          : "ok";
-      const chave = `nx_purchased_${sessionId}`;
+      const chave = `nx_purchased_${compraConfirmada.id}`;
       if (!sessionStorage.getItem(chave)) {
         sessionStorage.setItem(chave, "1");
-        const eCompleto = opcoes.some((o) => o.plano.startsWith("completo"));
-        const eAnual = opcoes.some((o) => o.plano.includes("anual"));
-        const valor = eCompleto && eAnual ? 1970.0 : eCompleto ? 197.0 : eAnual ? 970.0 : 97.0;
-        const plano = eCompleto ? "completo_cartao" : "mensal_cartao";
-        trackPurchase(valor, plano);
+        trackPurchase(compraConfirmada.valor, compraConfirmada.plano, compraConfirmada.id);
       }
     } catch {
-      trackPurchase(97.0, "assinatura_stripe");
+      // Ignora erro de storage
     }
-  }, [comprouComSucesso, opcoes]);
+  }, [compraConfirmada]);
 
   const abrir = async (destino: PlanoId | "portal") => {
     setAbrindo(destino);
@@ -73,11 +79,23 @@ export function BotoesAssinatura({
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ plano: destino }),
             });
-      const json = await res.json();
-      if (!res.ok || !json.url) {
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        if (json?.precisaSalvarConta) {
+          setPlanoPendente(destino !== "portal" ? destino : null);
+          setModalSalvarAberto(true);
+          return;
+        }
         setErro(json.error ?? "Não consegui abrir agora. Tenta de novo?");
         return;
       }
+
+      if (!json?.url) {
+        setErro(json.error ?? "Não consegui abrir agora. Tenta de novo?");
+        return;
+      }
+
       window.location.href = json.url;
     } catch {
       setErro("Falha de conexão. Tenta de novo?");
@@ -144,6 +162,17 @@ export function BotoesAssinatura({
           {erro}
         </p>
       )}
+
+      <ModalSalvarConta
+        aberto={modalSalvarAberto}
+        aoFechar={() => setModalSalvarAberto(false)}
+        aoSalvarSucesso={async () => {
+          setModalSalvarAberto(false);
+          if (planoPendente) {
+            await abrir(planoPendente);
+          }
+        }}
+      />
     </div>
   );
 }

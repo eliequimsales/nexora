@@ -41,6 +41,7 @@ export function InstallPrompt() {
   const [isIos, setIsIos] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
+  const [isInAppBrowser, setIsInAppBrowser] = useState(false);
   const [modalAberto, setModalAberto] = useState(false);
   const [copiado, setCopiado] = useState(false);
 
@@ -69,12 +70,15 @@ export function InstallPrompt() {
 
     checkStandalone();
 
-    // 3. Detecta dispositivos móveis e iOS
+    // 3. Detecta dispositivos móveis, iOS e navegadores internos (Instagram / Facebook)
     const userAgent = window.navigator.userAgent.toLowerCase();
     const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
     const isMobileDevice = /android|iphone|ipad|ipod|mobile/.test(userAgent);
+    const inApp = /instagram|fbav|fban/.test(userAgent);
+
     setIsIos(isIosDevice);
     setIsMobile(isMobileDevice);
+    setIsInAppBrowser(inApp);
 
     // 4. Captura o evento de instalação nativo (Chrome / Android / Edge Desktop)
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -201,8 +205,19 @@ export function InstallPrompt() {
                 /* VISÃO NO IPHONE (IOS / SAFARI)                                            */
                 /* ========================================================================= */
                 <div className="space-y-3">
+                  {isInAppBrowser && (
+                    <div className="rounded-xl border border-amber/40 bg-amber/10 p-3 text-left text-xs text-panel-ink space-y-1">
+                      <p className="font-bold text-amber">
+                        ⚠️ Você está no navegador interno do Instagram/Facebook
+                      </p>
+                      <p className="text-panel-sub text-[11px]">
+                        Para instalar na tela inicial, toque nos três pontinhos (⋯ ou ⋮) e escolha <strong>&quot;Abrir no Safari&quot;</strong>.
+                      </p>
+                    </div>
+                  )}
+
                   <p className="text-xs text-panel-sub">
-                    No iPhone, você instala o aplicativo em 3 toques rápidos pelo Safari:
+                    No iPhone, você adiciona à Tela de Início pelo Safari seguindo estes passos:
                   </p>
 
                   <div className="space-y-2 text-xs text-panel-sub">
@@ -234,17 +249,28 @@ export function InstallPrompt() {
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-center text-xs text-emerald-300">
-                    ✓ O ícone da Nexora vai direto para a tela inicial do seu iPhone!
-                  </div>
+                  <p className="text-[11px] text-panel-sub text-center">
+                    Aplicativo web leve que atualiza automaticamente e roda em tela cheia.
+                  </p>
                 </div>
               ) : (
                 /* ========================================================================= */
                 /* VISÃO NO ANDROID / CHROME                                                 */
                 /* ========================================================================= */
                 <div className="space-y-3 text-center">
+                  {isInAppBrowser && (
+                    <div className="rounded-xl border border-amber/40 bg-amber/10 p-3 text-left text-xs text-panel-ink space-y-1">
+                      <p className="font-bold text-amber">
+                        ⚠️ Você está no navegador interno do Instagram/Facebook
+                      </p>
+                      <p className="text-panel-sub text-[11px]">
+                        Para instalar na tela inicial, toque nos três pontinhos (⋮) e escolha <strong>&quot;Abrir no Chrome&quot;</strong>.
+                      </p>
+                    </div>
+                  )}
+
                   <p className="text-xs text-panel-sub">
-                    Instale a Nexora para acessar a agenda e recuperar clientes com 1 toque no celular, em tela cheia:
+                    Instale a Nexora para acessar o painel do seu atendente na tela inicial do celular:
                   </p>
 
                   {deferredPrompt ? (
@@ -277,7 +303,7 @@ export function InstallPrompt() {
                   )}
 
                   <p className="text-[11px] text-panel-sub">
-                    Não ocupa espaço no celular e atualiza automaticamente.
+                    Aplicativo web leve que atualiza automaticamente e roda em tela cheia.
                   </p>
                 </div>
               )}

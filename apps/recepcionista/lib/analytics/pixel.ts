@@ -121,12 +121,17 @@ export function trackInitiateCheckout(plano: string, preco?: string): void {
   });
 }
 
-export function trackPurchase(valorReais: number = 97.0, plano: string = "pro_mensal"): void {
+export function trackPurchase(
+  valorReais: number = 97.0,
+  plano: string = "pro_mensal",
+  transactionId?: string,
+): void {
   track("Purchase", {
     value: valorReais,
     currency: "BRL",
     content_name: plano,
     content_type: "product",
+    ...(transactionId ? { order_id: transactionId, transaction_id: transactionId } : {}),
   });
 }
 

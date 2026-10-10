@@ -36,11 +36,13 @@ model Company {
   // Identificador público da página de agendamento: nexora.app/agendar/{slug}
   slug String? @unique
 
-  // ——— Cobrança (Stripe) ———
+  // ——— Cobrança (Stripe & Asaas) ———
   // A assinatura é 1:1 com Company, que já é o tenant. Model separado só
   // acrescentaria um join em toda checagem de acesso.
   stripeCustomerId     String?   @unique
   stripeSubscriptionId String?   @unique
+  asaasCustomerId      String?   @unique
+  asaasSubscriptionId  String?   @unique
   // trialing | active | past_due | paused | canceled | incomplete
   subscriptionStatus   String?
   currentPeriodEnd     DateTime?
@@ -161,6 +163,7 @@ model PassePago {
 
   stripeSessionId       String  @unique
   stripePaymentIntentId String?
+  asaasPaymentId        String? @unique
   // pix_30_dias | anual (lib/billing/planos.ts)
   plano      String
   dias       Int
@@ -264,6 +267,20 @@ model StripeEvent {
   erro        String?
 
   @@index([processedAt])
+}
+
+model AsaasEvent {
+  id          String    @id
+  event       String
+  paymentId   String?
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime?
+  attempts    Int       @default(1)
+  companyId   String?
+  erro        String?
+
+  @@index([processedAt])
+  @@index([paymentId])
 }
 
 // Base de conhecimento da IA — tudo que a recepcionista sabe vem daqui.

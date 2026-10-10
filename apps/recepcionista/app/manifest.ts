@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Nexora — Gestão e Recuperação",
+    name: "Nexora — Atendente Inteligente no WhatsApp",
     short_name: "Nexora",
-    description: "Agenda inteligente e recuperação de clientes para o seu negócio.",
+    description: "Atendente virtual inteligente para o seu WhatsApp",
     start_url: "/painel",
     scope: "/",
     display: "standalone",

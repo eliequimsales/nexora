@@ -17,10 +17,21 @@ import {
   MINUTOS_DA_CHAMADA,
   PRAZO_DA_IMPLANTACAO_DIAS,
 } from "@/lib/billing/implantacao";
-import { acoesDaConta, PLANOS, precoPendenteDoPlano, type PlanoId } from "@/lib/billing/planos";
+import {
+  acoesDaConta,
+  PLANOS,
+  precoPendenteDoPlano,
+  ehPlanoCompleto,
+  type PlanoId,
+} from "@/lib/billing/planos";
 import { emReais, PRECO_MENSAL_CENTS } from "@/lib/billing/preco";
 import { garantirRelogio } from "@/lib/billing/relogio-da-conta";
 import { variaveisPendentesDaStripe } from "@/lib/billing/stripe";
+import {
+  provedorCobranca,
+  convergirDoAsaas,
+  variaveisPendentesDoAsaas,
+} from "@/lib/billing/asaas";
 import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
 import { linkDeSuporte } from "@/lib/institucional";
@@ -66,7 +77,12 @@ const MOSTRA_PROGRESSO: SituacaoDaGarantia[] = [
 export default async function PaginaAssinatura({
   searchParams,
 }: {
-  searchParams: { session_id?: string; ok?: string; cancelado?: string };
+  searchParams: {
+    session_id?: string;
+    asaas_payment_id?: string;
+    ok?: string;
+    cancelado?: string;
+  };
 }) {
   const companyId = await getSessionCompanyId();
   if (!companyId) redirect("/login");
@@ -79,6 +95,14 @@ export default async function PaginaAssinatura({
       await convergirDoCheckout(searchParams.session_id);
     } catch (erro) {
       await logError("assinatura-convergir", erro, companyId);
+    }
+  }
+
+  if (searchParams.asaas_payment_id) {
+    try {
+      await convergirDoAsaas(searchParams.asaas_payment_id);
+    } catch (erro) {
+      await logError("assinatura-convergir-asaas", erro, companyId);
     }
   }
 
@@ -145,15 +169,70 @@ export default async function PaginaAssinatura({
 
   const semGarantiaAinda = garantia.decisao.situacao === "SEM_GARANTIA";
 
+  // Identifica se houve compra confirmada no banco para disparo único do Meta Pixel Purchase
+  let compraConfirmada: { id: string; valor: number; plano: string } | null = null;
+
+  if (searchParams.session_id) {
+    const passeStripe = await prisma.passePago.findUnique({
+      where: { stripeSessionId: searchParams.session_id },
+      select: { valorCents: true, plano: true },
+    });
+    if (passeStripe) {
+      compraConfirmada = {
+        id: searchParams.session_id,
+        valor: passeStripe.valorCents / 100,
+        plano: passeStripe.plano,
+      };
+    } else if (lida.subscriptionStatus === "active") {
+      compraConfirmada = {
+        id: searchParams.session_id,
+        valor: ehPlanoCompleto(lida.plan) ? 197 : 97,
+        plano: lida.plan === "completo" ? "completo_cartao" : "mensal_cartao",
+      };
+    }
+  } else if (searchParams.asaas_payment_id) {
+    const passeAsaas = await prisma.passePago.findFirst({
+      where: {
+        OR: [
+          { stripeSessionId: `asaas:${searchParams.asaas_payment_id}` },
+          { asaasPaymentId: searchParams.asaas_payment_id },
+        ],
+      },
+      select: { valorCents: true, plano: true },
+    });
+    if (passeAsaas) {
+      compraConfirmada = {
+        id: searchParams.asaas_payment_id,
+        valor: passeAsaas.valorCents / 100,
+        plano: passeAsaas.plano,
+      };
+    } else if (lida.subscriptionStatus === "active") {
+      compraConfirmada = {
+        id: searchParams.asaas_payment_id,
+        valor: ehPlanoCompleto(lida.plan) ? 197 : 97,
+        plano: lida.plan === "completo" ? "completo_cartao" : "mensal_cartao",
+      };
+    }
+  }
+
   // Tudo que impede a cobrança de abrir, na ordem em que o dono resolve:
-  // primeiro a Stripe e os preços de cada plano, depois a identificação exigida
+  // gateway ativo e preços de cada plano, depois a identificação exigida
   // pelo Decreto 7.962/2013. Nomes de variável, nunca valores.
-  const precosPendentes = (Object.keys(PLANOS) as PlanoId[])
-    .map((p) => precoPendenteDoPlano(p, process.env))
-    .filter((nome): nome is string => nome !== null);
+  const provedor = provedorCobranca();
+  const precosPendentes =
+    provedor === "stripe"
+      ? (Object.keys(PLANOS) as PlanoId[])
+          .map((p) => precoPendenteDoPlano(p, process.env))
+          .filter((nome): nome is string => nome !== null)
+      : [];
+  const variaveisGateway =
+    provedor === "asaas"
+      ? variaveisPendentesDoAsaas()
+      : variaveisPendentesDaStripe();
+
   const pendentes = Array.from(
     new Set([
-      ...variaveisPendentesDaStripe(),
+      ...variaveisGateway,
       ...precosPendentes,
       ...variaveisPendentesDoFornecedor(),
     ]),
@@ -165,6 +244,8 @@ export default async function PaginaAssinatura({
   const aguardandoPagamento = Boolean(searchParams.ok) && !podeExecutar(estado, "GERAR_ONDA").pode;
   const conferirDeNovo = searchParams.session_id
     ? `/painel/assinatura?ok=1&session_id=${encodeURIComponent(searchParams.session_id)}`
+    : searchParams.asaas_payment_id
+    ? `/painel/assinatura?ok=1&asaas_payment_id=${encodeURIComponent(searchParams.asaas_payment_id)}`
     : "/painel/assinatura?ok=1";
 
   return (
@@ -261,6 +342,11 @@ export default async function PaginaAssinatura({
                 <BotoesAssinatura
                   opcoes={opcoesEntrada}
                   portal={acoes.portal}
+                  compraConfirmada={
+                    compraConfirmada && !ehPlanoCompleto(compraConfirmada.plano)
+                      ? compraConfirmada
+                      : null
+                  }
                   comprouComSucesso={Boolean(searchParams.ok) && lida.plan !== "completo"}
                 />
               </div>
@@ -320,6 +406,11 @@ export default async function PaginaAssinatura({
                 <BotoesAssinatura
                   opcoes={opcoesCompleto}
                   portal={acoes.portal}
+                  compraConfirmada={
+                    compraConfirmada && ehPlanoCompleto(compraConfirmada.plano)
+                      ? compraConfirmada
+                      : null
+                  }
                   comprouComSucesso={Boolean(searchParams.ok) && lida.plan === "completo"}
                 />
               </div>
