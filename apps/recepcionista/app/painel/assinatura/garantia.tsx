@@ -22,7 +22,11 @@ export function BotaoDaGarantia() {
     setEnviando(true);
     setErro("");
     try {
-      const res = await fetch("/api/billing/garantia", { method: "POST" });
+      const res = await fetch("/api/billing/garantia", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
       const json = await res.json();
       if (!res.ok || !json.devolvido) {
         setErro(json.error ?? "Não consegui concluir agora. Tenta de novo?");

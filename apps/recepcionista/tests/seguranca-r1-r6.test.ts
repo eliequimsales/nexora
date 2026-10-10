@@ -46,6 +46,36 @@ describe("Segurança R6 — Proteção de Origem e Anti-CSRF em Mutações", () 
     expect(res.status).toBe(403);
   });
 
+  it("botão da garantia envia application/json com corpo e processa devolução com 200", async () => {
+    const auth = await import("@/lib/auth");
+    vi.spyOn(auth, "getSessionCompanyId").mockResolvedValue("cmp_test_123");
+    const stripeModule = await import("@/lib/billing/stripe");
+    vi.spyOn(stripeModule, "stripeConfigurado").mockReturnValue(true);
+    const devolucao = await import("@/lib/billing/devolucao");
+    vi.spyOn(devolucao, "devolverPelaGarantia").mockResolvedValue({
+      devolvido: true,
+      valorCents: 9700,
+      prazoTerminaEm: new Date(),
+    } as any);
+
+    const req = new Request("https://www.meunexora.com.br/api/billing/garantia", {
+      method: "POST",
+      headers: {
+        host: "www.meunexora.com.br",
+        origin: "https://www.meunexora.com.br",
+        "content-type": "application/json",
+      },
+      body: "{}",
+    });
+    const erro = validarOrigemECsrfe(req, { exigirJson: true });
+    expect(erro).toBeNull();
+    const res = await garantiaPOST(req);
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.devolvido).toBe(true);
+    expect(json.valorCents).toBe(9700);
+  });
+
   it("logout.POST bloqueia requisição cross-origin com 403", async () => {
     const req = new Request("https://www.meunexora.com.br/api/auth/logout", {
       method: "POST",
@@ -355,5 +385,154 @@ describe("Segurança R1 & R6 — Provas Permanentes dos Achados 01, 02 e 03", ()
     // Segunda execução subsequente não duplica e-mail
     await aplicarAssinatura(sub);
     expect(emails).toBe(1);
+  });
+
+  it("indisponibilidade da Stripe na reconsulta de execução antiga não revoga assinatura ativa", async () => {
+    const { aplicarAssinatura } = await import("@/lib/billing/converger");
+    const { prisma } = await import("@/lib/db");
+    const stripeModule = await import("@/lib/billing/stripe");
+
+    const agora = new Date();
+    const futuro = new Date(agora.getTime() + 30 * 86400000);
+    const company = {
+      id: "cmp_probe_1",
+      name: "Empresa Ativa",
+      email: "probe@example.invalid",
+      subscriptionStatus: "active",
+      plan: "pro",
+      currentPeriodEnd: futuro,
+      canceladoEm: null,
+      confirmacaoEnviadaEm: agora,
+      falhasSeguidas: 0,
+      dunningIniciadoEm: null,
+    };
+
+    let eventRow = {
+      id: "evt_fallback_1",
+      attempts: 2,
+      processedAt: agora,
+      receivedAt: agora,
+      erro: JSON.stringify({
+        status: "active",
+        plan: "pro",
+        currentPeriodEnd: futuro.toISOString(),
+        canceladoEm: null,
+      }),
+    };
+
+    vi.spyOn(prisma.stripeEvent, "findUnique").mockImplementation(async () => ({ ...eventRow }) as any);
+    vi.spyOn(prisma.company, "findUnique").mockImplementation(async () => ({ ...company }) as any);
+    vi.spyOn(prisma.company, "update").mockImplementation(async (args: any) => {
+      Object.assign(company, args.data);
+      return { ...company } as any;
+    });
+
+    vi.spyOn(stripeModule, "stripe").mockReturnValue({
+      subscriptions: {
+        retrieve: vi.fn().mockRejectedValue(new Error("Stripe unavailable")),
+      },
+    } as any);
+
+    const sub = {
+      id: "sub_1",
+      customer: "cus_1",
+      status: "active",
+      metadata: { companyId: "cmp_probe_1" },
+      cancel_at_period_end: false,
+      trial_end: null,
+    } as any;
+
+    await aplicarAssinatura(sub, {
+      eventId: "evt_fallback_1",
+      tentativa: 1,
+      inicioOperacao: Date.now() - 35000,
+    });
+
+    expect(company.subscriptionStatus).toBe("active");
+    expect(company.canceladoEm).toBeNull();
+  });
+
+  it("reconsulta defasada com snapshot canceled não sobrescreve reativação legítima", async () => {
+    const { aplicarAssinatura } = await import("@/lib/billing/converger");
+    const { prisma } = await import("@/lib/db");
+    const stripeModule = await import("@/lib/billing/stripe");
+
+    const agora = new Date();
+    const futuro = new Date(agora.getTime() + 30 * 86400000);
+    const company = {
+      id: "cmp_race_1",
+      name: "Empresa",
+      email: "race@example.invalid",
+      subscriptionStatus: "active",
+      plan: "pro",
+      currentPeriodEnd: futuro,
+      canceladoEm: null,
+      confirmacaoEnviadaEm: agora,
+      falhasSeguidas: 0,
+      dunningIniciadoEm: null,
+    };
+
+    const eventRow = {
+      id: "evt_race_1",
+      attempts: 2,
+      processedAt: agora,
+      receivedAt: agora,
+      erro: JSON.stringify({
+        status: "active",
+        plan: "pro",
+        currentPeriodEnd: futuro.toISOString(),
+        canceladoEm: null,
+      }),
+    };
+
+    vi.spyOn(prisma.stripeEvent, "findUnique").mockImplementation(async () => ({ ...eventRow }) as any);
+    let leitura = 0;
+    vi.spyOn(prisma.company, "findUnique").mockImplementation(async () => {
+      leitura++;
+      if (leitura > 1) {
+        return {
+          ...company,
+          subscriptionStatus: "active",
+          currentPeriodEnd: futuro,
+          confirmacaoEnviadaEm: agora,
+        } as any;
+      }
+      return { ...company, confirmacaoEnviadaEm: null } as any;
+    });
+
+    vi.spyOn(prisma.company, "update").mockImplementation(async (args: any) => {
+      Object.assign(company, args.data);
+      return { ...company } as any;
+    });
+
+    vi.spyOn(stripeModule, "stripe").mockReturnValue({
+      subscriptions: {
+        retrieve: vi.fn().mockResolvedValue({
+          id: "sub_1",
+          customer: "cus_1",
+          status: "canceled",
+          metadata: { companyId: "cmp_race_1" },
+          cancel_at_period_end: false,
+          ended_at: Math.floor(agora.getTime() / 1000),
+          items: { data: [{ current_period_end: Math.floor(agora.getTime() / 1000) }] },
+        }),
+      },
+    } as any);
+
+    const sub = {
+      id: "sub_1",
+      customer: "cus_1",
+      status: "canceled",
+      metadata: { companyId: "cmp_race_1" },
+      cancel_at_period_end: false,
+    } as any;
+
+    await aplicarAssinatura(sub, {
+      eventId: "evt_race_1",
+      tentativa: 1,
+      inicioOperacao: Date.now() - 35000,
+    });
+
+    expect(company.subscriptionStatus).toBe("active");
   });
 });

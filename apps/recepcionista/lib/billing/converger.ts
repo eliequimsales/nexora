@@ -133,6 +133,23 @@ export async function aplicarAssinatura(
     },
   });
 
+  // Registra snapshot confirmado no stripeEvent para recuperação em caso de indisponibilidade
+  if (contexto?.eventId && typeof contexto.tentativa === "number") {
+    try {
+      await prisma.stripeEvent?.updateMany?.({
+        where: { id: contexto.eventId, attempts: contexto.tentativa },
+        data: {
+          erro: JSON.stringify({
+            status: sub.status,
+            plan: planoDoStatus(sub.status, sub.metadata?.plano),
+            currentPeriodEnd: fimDoPeriodoPago(sub)?.toISOString(),
+            canceladoEm: sub.status === "canceled" ? (atual?.canceladoEm ?? new Date()).toISOString() : null,
+          }),
+        },
+      });
+    } catch {}
+  }
+
   // Checagem de expiração do lease ou perda de posse durante a execução:
   // Se a operação demorou >= 30s ou a posse foi assumida por outra tentativa:
   const decorrido = Date.now() - inicioOperacao;
@@ -153,6 +170,11 @@ export async function aplicarAssinatura(
   }
 
   if (decorrido >= 30_000 || perdeuPosse) {
+    const estadoAntes = await prisma.company.findUnique({
+      where: { id: companyId },
+      select: { subscriptionStatus: true, currentPeriodEnd: true, canceladoEm: true, confirmacaoEnviadaEm: true },
+    });
+
     try {
       const maisRecente = await stripe().subscriptions.retrieve(sub.id);
       const statusRecente = maisRecente.status;
@@ -160,6 +182,28 @@ export async function aplicarAssinatura(
       const canceladoEmRecente = statusRecente === "canceled"
         ? (atual?.canceladoEm ?? new Date())
         : null;
+
+      const estadoDepois = await prisma.company.findUnique({
+        where: { id: companyId },
+        select: { subscriptionStatus: true, currentPeriodEnd: true, canceladoEm: true, confirmacaoEnviadaEm: true },
+      });
+
+      // Se a empresa foi atualizada por outra convergência legítima enquanto a reconsulta ocorria:
+      const mudouDuranteConsulta =
+        Boolean(estadoAntes && estadoDepois) &&
+        (estadoAntes?.confirmacaoEnviadaEm?.getTime() !== estadoDepois?.confirmacaoEnviadaEm?.getTime() ||
+          estadoAntes?.subscriptionStatus !== estadoDepois?.subscriptionStatus ||
+          estadoAntes?.currentPeriodEnd?.getTime() !== estadoDepois?.currentPeriodEnd?.getTime() ||
+          estadoAntes?.canceladoEm?.getTime() !== estadoDepois?.canceladoEm?.getTime());
+
+      const reativadaDuranteConsulta =
+        statusRecente === "canceled" &&
+        (estadoDepois?.subscriptionStatus === "active" || estadoDepois?.subscriptionStatus === "trialing") &&
+        mudouDuranteConsulta;
+
+      if (reativadaDuranteConsulta) {
+        return companyId;
+      }
 
       await prisma.company.update({
         where: { id: companyId },
@@ -178,20 +222,34 @@ export async function aplicarAssinatura(
         },
       });
       sub = maisRecente;
-    } catch {
-      // Reconsulta falhou e a operação está defasada / perdeu posse:
-      // O estado antigo não pode prevalecer silenciosamente com acesso concedido.
-      if (perdeuPosse || decorrido >= 30_000) {
-        await prisma.company.update({
-          where: { id: companyId },
-          data: {
-            subscriptionStatus: "canceled",
-            plan: "gratuito",
-            currentPeriodEnd: new Date(),
-            canceladoEm: atual?.canceladoEm ?? new Date(),
-          },
-        });
-        sub = { ...sub, status: "canceled" } as any;
+    } catch (erro) {
+      // Reconsulta falhou (indisponibilidade da Stripe):
+      // Preserva o último estado confirmado — NUNCA inventa cancelamento se o estado era ativo.
+      await logError("reconciliacao-stripe-indisponivel", erro, companyId);
+
+      // Se perdeu a posse, restaura o estado confirmado pela tentativa legítima que possui/possuiu o evento
+      if (contexto?.eventId) {
+        try {
+          const ev = await prisma.stripeEvent?.findUnique?.({
+            where: { id: contexto.eventId },
+            select: { erro: true },
+          });
+          if (ev?.erro) {
+            const confirmado = JSON.parse(ev.erro);
+            if (confirmado?.status) {
+              await prisma.company.update({
+                where: { id: companyId },
+                data: {
+                  subscriptionStatus: confirmado.status,
+                  plan: confirmado.plan ?? planoDoStatus(confirmado.status),
+                  currentPeriodEnd: confirmado.currentPeriodEnd ? new Date(confirmado.currentPeriodEnd) : fimDoPeriodoPago(sub),
+                  canceladoEm: confirmado.canceladoEm ? new Date(confirmado.canceladoEm) : null,
+                },
+              });
+              sub = { ...sub, status: confirmado.status } as any;
+            }
+          }
+        } catch {}
       }
     }
   }
