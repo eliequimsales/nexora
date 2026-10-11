@@ -719,12 +719,12 @@ export async function responderComercial(e: EntradaDoMotor, deps?: DependenciasD
     );
 
   if (querAtivarFunil) {
-    if (ramoAtual) {
+    if (ramoHistorico) {
       return {
         mensagens: [
-          `${ramoAtual.dor}\n\n` +
+          `${ramoHistorico.dor}\n\n` +
             "Já deixei tudo pronto para você ver funcionando no seu WhatsApp:\n" +
-            `👉 ${ramoAtual.link}`,
+            `👉 ${ramoHistorico.link}`,
         ],
         estado: null,
         fontes: ["Ativação do funil com ramo identificado"],

@@ -1,33 +1,70 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import PaginaObrigado, { metadata, viewport } from "@/app/obrigado/page";
 
-const RAIZ = join(__dirname, "..");
-const leia = (rel: string) => readFileSync(join(RAIZ, rel), "utf8");
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
-describe("Página de Obrigado — A Onda Sem Fricção", () => {
-  const obrigado = leia("app/obrigado/page.tsx");
-
-  it("contém a mensagem de sucesso e confirmação imediata", () => {
-    expect(obrigado).toContain("Compra Aprovada com Sucesso!");
-    expect(obrigado).toContain("Seu Atendente Oficial já está pronto e te esperando no WhatsApp.");
+describe("continuação pública com a Sofia", () => {
+  it("não confirma compra nem libera acesso em uma visita direta", () => {
+    const html = renderToStaticMarkup(createElement(PaginaObrigado));
+    expect(html).toContain("Vamos continuar com a Sofia.");
+    expect(html).toContain(
+      "Se você já comprou, tenha a confirmação da compra em mãos.",
+    );
+    expect(html).not.toMatch(
+      /pagamento confirmado|compra aprovada|acesso liberado|já está pronto/i,
+    );
   });
 
-  it("possui contagem regressiva visual de 5 segundos", () => {
-    expect(obrigado).toContain("Redirecionando você direto para a conversa em");
-    expect(obrigado).toContain("setSegundos");
+  it("parâmetros de retorno forjados não viram confirmação de pagamento", () => {
+    const props = {
+      searchParams: { ok: "1", pago: "true", session_id: "cs_inventada" },
+    };
+    const html = renderToStaticMarkup(createElement(PaginaObrigado, props));
+    expect(html).toBe(renderToStaticMarkup(createElement(PaginaObrigado)));
   });
 
-  it("possui o botão magnético direcionando para a Sofia no WhatsApp", () => {
-    expect(obrigado).toContain("Continuar no WhatsApp com a Sofia");
-    expect(obrigado).toContain("(Resposta em 3 segundos para você ver funcionando ao vivo)");
+  it("abre uma única conversa pelo número configurado, sem alegar compra na mensagem", () => {
+    vi.stubEnv("NEXT_PUBLIC_WHATSAPP_DEMO", "5511999999999");
+    const html = renderToStaticMarkup(createElement(PaginaObrigado));
+    const hrefs = [...html.matchAll(/<a\b[^>]*href="([^"]+)"/g)].map(
+      (match) => match[1],
+    );
+    expect(hrefs).toHaveLength(1);
+    const url = new URL(hrefs[0]);
+    expect(url.origin).toBe("https://wa.me");
+    expect(url.pathname).toBe("/5511999999999");
+    expect(url.searchParams.get("text")).toBe(
+      "Oi Sofia, quero ajuda com meu acesso ao guia Anti-Vácuo.",
+    );
+    expect(html).toContain("Conversar com a Sofia no WhatsApp");
   });
 
-  it("utiliza a mensagem pré-pronta exata aprovada", () => {
-    expect(obrigado).toContain("Oi Sofia, quero ativar meu Atendente Nexora!");
+  it("começa em três segundos, com pausa acessível e opção de abrir manualmente", () => {
+    const html = renderToStaticMarkup(createElement(PaginaObrigado));
+    expect(html).toContain("Tentaremos abrir o WhatsApp em 3 segundos.");
+    expect(html).toContain("Pausar abertura automática");
+    expect(html).toContain('role="status"');
+    const cliente = readFileSync(
+      join(__dirname, "../app/obrigado/continuar-com-sofia.tsx"),
+      "utf8",
+    );
+    expect(cliente).toContain("if (pausado || tentouAbrir) return;");
+    expect(cliente).toContain("window.clearTimeout(timer)");
   });
 
-  it("não possui termos técnicos alienantes como LLM, prompt, chatbot ou setup", () => {
-    expect(obrigado).not.toMatch(/\b(llm|prompt|chatbot|setup)\b/i);
+  it("não promete tempo de resposta e permite zoom sem indexar a página de retorno", () => {
+    const html = renderToStaticMarkup(createElement(PaginaObrigado));
+    expect(html).not.toMatch(
+      /responde na hora|resposta em 3 segundos|criptografado de ponta a ponta/i,
+    );
+    expect(metadata.robots).toMatchObject({ index: false, follow: false });
+    expect(viewport.userScalable).toBe(true);
+    expect(viewport.maximumScale).toBeGreaterThan(1);
   });
 });
