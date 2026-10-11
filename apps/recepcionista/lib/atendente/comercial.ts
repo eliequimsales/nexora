@@ -457,8 +457,8 @@ export async function responderComercial(e: EntradaDoMotor): Promise<SaidaDoMoto
   if (ehSaudacao || e.primeiraDoDia) {
     return {
       mensagens: [
-        "Olá! Tudo bem? 👋 Viu a velocidade dessa resposta? Se fossem 23h ou um domingo, seu cliente receberia essa mesma atenção na sua empresa.\n\n" +
-          "Me conta: qual é o ramo do seu negócio (ex: clínica, estética, barbearia, consultório, serviços)?",
+        "Viu a velocidade dessa resposta? Se fossem 23h ou um domingo, seu cliente receberia essa mesma atenção na sua empresa.\n\n" +
+          "Qual o ramo do seu negócio?",
       ],
       estado: null,
       fontes: ["Prova imediata de velocidade + Gancho das 23h"],

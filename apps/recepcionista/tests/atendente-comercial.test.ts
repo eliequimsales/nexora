@@ -54,7 +54,8 @@ describe("Atendente Comercial da Nexora — Cobertura Total de Ramos e Nichos", 
     const msg = res.mensagens[0];
     expect(msg).toContain("Viu a velocidade dessa resposta?");
     expect(msg).toContain("23h");
-    expect(msg).toContain("qual é o ramo do seu negócio");
+    expect(msg).toContain("Qual o ramo do seu negócio?");
+    expect(msg).not.toContain("Olá! Tudo bem?");
     expect(res.usouIa).toBe(false);
   });
 

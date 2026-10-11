@@ -31,7 +31,7 @@ export function obterPresetDoRamo(ramoOuTexto?: string | null): PresetNicho {
       nomeEmpresa: "Nexora",
       atendenteNome: "Sofia da Nexora",
       description:
-        "Atendente Inteligente 24h no WhatsApp para pequenas empresas, clínicas e prestadores de serviços. Conduz o lead para testar gratuitamente por 7 dias em https://www.meunexora.com.br/ativar sem pedir cartão de crédito.",
+        "Atendente Inteligente 24h no WhatsApp para pequenas empresas, clínicas e prestadores de serviços. Conduz o lead para testar gratuitamente por 7 dias em meunexora.com.br/ativar sem pedir cartão de crédito.",
       endereco: "Atendimento 100% online em todo o Brasil — www.meunexora.com.br",
       pagamento: "Pix e Cartão de Crédito",
       serviceRules: "⚡ Resposta imediata 24 horas por dia. 7 dias de teste grátis sem cartão.",
@@ -44,52 +44,52 @@ export function obterPresetDoRamo(ramoOuTexto?: string | null): PresetNicho {
         {
           question: "Oi! Vi o anúncio da Nexora e quero ver como ela atenderia na minha empresa.",
           answer:
-            "Olá! 👋 Viu a velocidade dessa resposta? Se fossem 23h ou um domingo, seu cliente receberia essa mesma atenção na sua empresa. Qual é o ramo do seu negócio (ex: clínica, estética, barbearia, consultório, serviços)?",
+            "Viu a velocidade dessa resposta? Se fossem 23h ou um domingo, seu cliente receberia essa mesma atenção na sua empresa.\n\nQual o ramo do seu negócio?",
         },
         {
           question: "Clínica",
           answer:
-            "Clínicas e consultórios perdem até 40% das consultas fora do horário. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis, sem pedir cartão: 👉 https://www.meunexora.com.br/ativar?ramo=clinica",
+            "Clínicas e consultórios perdem até 40% das consultas fora do horário. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis, sem pedir cartão: 👉 meunexora.com.br/ativar/clinica",
         },
         {
           question: "Barbearia",
           answer:
-            "Salões e barbearias perdem muitos clientes que tentam agendar à noite. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis, sem pedir cartão: 👉 https://www.meunexora.com.br/ativar?ramo=barbearia",
+            "Salões e barbearias perdem muitos clientes que tentam agendar à noite. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis, sem pedir cartão: 👉 meunexora.com.br/ativar/barbearia",
         },
         {
           question: "Estética",
           answer:
-            "Espaços de estética perdem clientes toda semana que tentam agendar fora do expediente. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis: 👉 https://www.meunexora.com.br/ativar?ramo=estetica",
+            "Espaços de estética perdem clientes toda semana que tentam agendar fora do expediente. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis: 👉 meunexora.com.br/ativar/estetica",
         },
         {
           question: "Odontologia",
           answer:
-            "Consultórios odontológicos perdem pacientes de alto valor fora do horário comercial. Já deixei seu Atendente pré-configurado com 7 dias grátis sem cartão: 👉 https://www.meunexora.com.br/ativar?ramo=odonto",
+            "Consultórios odontológicos perdem pacientes de alto valor fora do horário comercial. Já deixei seu Atendente pré-configurado com 7 dias grátis sem cartão: 👉 meunexora.com.br/ativar/odonto",
         },
         {
           question: "Consultório",
           answer:
-            "Consultórios perdem muitos agendamentos fora do horário de atendimento. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis, sem pedir cartão: 👉 https://www.meunexora.com.br/ativar?ramo=clinica",
+            "Consultórios perdem muitos agendamentos fora do horário de atendimento. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis, sem pedir cartão: 👉 meunexora.com.br/ativar/clinica",
         },
         {
           question: "Dentista",
           answer:
-            "Consultórios odontológicos perdem pacientes de alto valor fora do expediente. Já deixei seu Atendente pré-configurado com 7 dias grátis sem cartão: 👉 https://www.meunexora.com.br/ativar?ramo=odonto",
+            "Consultórios odontológicos perdem pacientes de alto valor fora do expediente. Já deixei seu Atendente pré-configurado com 7 dias grátis sem cartão: 👉 meunexora.com.br/ativar/odonto",
         },
         {
           question: "Salão",
           answer:
-            "Salões de beleza perdem agendamentos todos os dias fora do expediente. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis, sem pedir cartão: 👉 https://www.meunexora.com.br/ativar?ramo=barbearia",
+            "Salões de beleza perdem agendamentos todos os dias fora do expediente. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis, sem pedir cartão: 👉 meunexora.com.br/ativar/salao",
         },
         {
           question: "Pet shop",
           answer:
-            "Pet shops e veterinárias perdem muitos clientes fora do horário. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis, sem pedir cartão: 👉 https://www.meunexora.com.br/ativar?ramo=clinica",
+            "Pet shops e veterinárias perdem muitos clientes fora do horário. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis, sem pedir cartão: 👉 meunexora.com.br/ativar/pet",
         },
         {
           question: "Serviços",
           answer:
-            "Empresas de serviços perdem orçamentos valiosos toda noite e fim de semana. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis, sem pedir cartão: 👉 https://www.meunexora.com.br/ativar?ramo=servicos",
+            "Empresas de serviços perdem orçamentos valiosos toda noite e fim de semana. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis, sem pedir cartão: 👉 meunexora.com.br/ativar/servicos",
         },
         {
           question: "Quanto custa o plano?",
