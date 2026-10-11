@@ -19,6 +19,7 @@ import { apresentacao, cumprimento, nomeProprio, textosDoJeito, URGENCIA, URGENC
 import { escolherTres, formatarOpcao, opcoesParaEscolha, type EstadoDaConversa } from "./oferta";
 import { montarPrompt } from "./prompt";
 import { numerosSemFonte } from "./verificador";
+import { responderComercial } from "./comercial";
 
 /**
  * O MOTOR DO ATENDENTE VIRTUAL.
@@ -206,6 +207,10 @@ function encontrarFaqDireta(
 }
 
 export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): Promise<SaidaDoMotor> {
+  if (e.fatos.comercial) {
+    return responderComercial(e);
+  }
+
   const { fatos, agora } = e;
   const t = textosDoJeito(fatos.jeito);
   const agoraIso = agora.toISOString();

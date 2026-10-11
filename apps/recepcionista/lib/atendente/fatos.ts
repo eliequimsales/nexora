@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { getApprovedKnowledge } from "@/lib/training";
 import type { BusinessHour, Faq } from "@/lib/validation";
 import { lerJeito, type Jeito } from "./jeitos";
+import { ehContaComercialNexora } from "./comercial-config";
 
 /**
  * OS FATOS DA EMPRESA — A ÚNICA FONTE DO ATENDENTE VIRTUAL.
@@ -43,6 +44,7 @@ export type Fatos = {
   productsServices?: string;
   perguntas: Faq[];
   linkAgenda: string | null;
+  comercial?: boolean;
 };
 
 /** O que o simulador testa antes de o dono salvar. */
@@ -108,6 +110,7 @@ export async function fatosDaEmpresa(companyId: string, sobrescrever: Sobrescrit
     productsServices: (perfil?.productsServices ?? "").trim(),
     perguntas: [...lerPerguntas(perfil?.faqs), ...treinamento],
     linkAgenda: appUrl && (empresa?.slug || companyId) ? `${appUrl}/agendar/${empresa?.slug || companyId}` : null,
+    comercial: ehContaComercialNexora(companyId),
   };
 }
 
