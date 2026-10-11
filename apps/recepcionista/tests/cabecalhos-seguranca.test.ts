@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import nextConfig from "../next.config.mjs";
 
 /**
@@ -31,6 +31,19 @@ describe("cabeçalhos de resposta de segurança (next.config.mjs)", () => {
     }
     return mapa;
   }
+
+  it.each(["production", "test", "development"])(
+    "permite o recarregamento local sem liberar eval fora do desenvolvimento (%s)",
+    async (ambiente) => {
+      vi.stubEnv("NODE_ENV", ambiente);
+      try {
+        const csp = (await obterCabecalhos())["Content-Security-Policy"];
+        expect(csp.includes("'unsafe-eval'")).toBe(ambiente === "development");
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    },
+  );
 
   it("HSTS (Strict-Transport-Security) está ativo e com validade mínima de 1 ano", async () => {
     const headers = await obterCabecalhos();
