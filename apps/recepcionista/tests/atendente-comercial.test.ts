@@ -324,12 +324,13 @@ describe("Atendente Comercial da Nexora — Cobertura Total de Ramos e Nichos", 
 
   // --- NOVOS TESTES DE SITUAÇÕES REAIS DO DIA A DIA ---
 
-  it("inclui a dica de celular com código de 8 dígitos nos links de ativação", async () => {
+  it("entrega o link de ativação limpo e direto sem fricção prematura de conexão", async () => {
     const res = await responder(criarEntrada("Clínica de estética"), deps);
     const msg = res.mensagens[0];
     expect(msg).toContain("meunexora.com.br/ativar/estetica");
-    expect(msg).toContain("💡 Se estiver no próprio celular, não precisa de câmera nem de QR Code");
-    expect(msg).toContain("código de 8 dígitos em 30 segundos");
+    expect(msg).not.toContain("câmera");
+    expect(msg).not.toContain("QR Code");
+    expect(msg).not.toContain("8 dígitos");
   });
 
   it("responde sobre compreensão e áudio de clientes", async () => {

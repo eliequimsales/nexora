@@ -8,9 +8,6 @@ export type InformacaoDeRamo = {
   link: string;
 };
 
-export const DICA_CELULAR =
-  "\n\n💡 Se estiver no próprio celular, não precisa de câmera nem de QR Code: você conecta direto com um código de 8 dígitos em 30 segundos.";
-
 function normalizarTexto(txt: string): string {
   return (txt || "")
     .toLowerCase()
@@ -342,7 +339,6 @@ Seu objetivo é encantar o lead, responder com segurança, autoridade e simpatia
 # Sobre a Nexora
 - Plataforma de IA para atendimento e agendamento automático 24/7 no WhatsApp de empresas e profissionais autônomos.
 - Responde em segundos, com regras próprias, preços e horários da empresa cadastrada, sem inventar nada.
-- Conexão instantânea: pelo QR Code ou com código de pareamento de 8 dígitos direto no celular em 30 segundos. Não precisa de câmera nem de segundo aparelho se estiver no próprio celular.
 - Não precisa de chip novo, funciona com o WhatsApp atual da empresa sem perder histórico.
 - Roda 100% em nuvem 24h: não precisa de computador ligado nem celular conectado.
 - Seguro, isolado e em total conformidade com a LGPD.
@@ -352,10 +348,6 @@ Seu objetivo é encantar o lead, responder com segurança, autoridade e simpatia
 
 # Contexto do Lead
 ${ramoContexto}
-
-# Dica de Ativação Mobile
-Sempre que você enviar ou sugerir o link de ativação, inclua:
-"💡 Se estiver no próprio celular, não precisa de câmera nem de QR Code: você conecta direto com um código de 8 dígitos em 30 segundos."
 
 # Regras de Resposta
 - Responda em português do Brasil, tom consultivo, ágil, educado e focado em conversão.
@@ -387,7 +379,7 @@ export async function responderComercial(e: EntradaDoMotor, deps?: DependenciasD
       mensagens: [
         "Com certeza! Já notifiquei nossa equipe e um especialista vai te atender por aqui em instantes.\n\n" +
           "Enquanto isso, se quiser adiantar e ver seu atendente funcionando na prática agora mesmo, você já pode acessar:\n" +
-          `👉 ${URL_ATIVACAO}${DICA_CELULAR}`,
+          `👉 ${URL_ATIVACAO}`,
       ],
       estado: null,
       equipe: true,
@@ -426,7 +418,7 @@ export async function responderComercial(e: EntradaDoMotor, deps?: DependenciasD
       mensagens: [
         "Sim! O Nexora ouve e compreende áudios perfeitamente, respondendo em texto instantaneamente com as regras do seu negócio. Ele não se perde nem com áudios longos de clientes.\n\n" +
           (ramoHistorico
-            ? `${ramoHistorico.dor}\n\nVocê já pode ativar e testar agora mesmo:\n👉 ${link}${DICA_CELULAR}`
+            ? `${ramoHistorico.dor}\n\nVocê já pode ativar e testar agora mesmo:\n👉 ${link}`
             : "Qual é o ramo da sua empresa? Já deixo configurado para você testar na prática!"),
       ],
       estado: null,
@@ -446,7 +438,7 @@ export async function responderComercial(e: EntradaDoMotor, deps?: DependenciasD
       mensagens: [
         "Sim! Emitimos nota fiscal automaticamente para todas as assinaturas, tanto para CNPJ quanto para CPF. A nota é gerada e enviada para o seu e-mail a cada mensalidade.\n\n" +
           (ramoHistorico
-            ? `Você já pode ativar seu atendente agora:\n👉 ${link}${DICA_CELULAR}`
+            ? `Você já pode ativar seu atendente agora:\n👉 ${link}`
             : "Qual é o ramo da sua empresa para eu já liberar seu modelo pré-configurado?"),
       ],
       estado: null,
@@ -466,7 +458,7 @@ export async function responderComercial(e: EntradaDoMotor, deps?: DependenciasD
       mensagens: [
         "Sim! O Nexora tem integração nativa com o Google Agenda e sistemas externos via Webhook/API. Quando um cliente agenda pelo WhatsApp, o horário é sincronizado na hora e bloqueado na sua agenda para evitar choque de horários.\n\n" +
           (ramoHistorico
-            ? `${ramoHistorico.dor}\n\nJá deixei seu Atendente 100% pré-configurado para você ativar agora:\n👉 ${link}${DICA_CELULAR}`
+            ? `${ramoHistorico.dor}\n\nJá deixei seu Atendente 100% pré-configurado para você ativar agora:\n👉 ${link}`
             : "Qual é o ramo da sua empresa para eu já liberar seu modelo pré-configurado?"),
       ],
       estado: null,
@@ -486,7 +478,7 @@ export async function responderComercial(e: EntradaDoMotor, deps?: DependenciasD
       mensagens: [
         "É 100% seguro! Trabalhamos em total conformidade com a LGPD e criptografia de ponta a ponta. Seus dados e os dados dos seus clientes ficam isolados no seu ambiente seguro e nunca são compartilhados nem usados para treinar modelos públicos.\n\n" +
           (ramoHistorico
-            ? `${ramoHistorico.dor}\n\nVocê já pode ativar seu modelo com total segurança:\n👉 ${link}${DICA_CELULAR}`
+            ? `${ramoHistorico.dor}\n\nVocê já pode ativar seu modelo com total segurança:\n👉 ${link}`
             : "Qual é o ramo da sua empresa para eu já liberar seu modelo pré-configurado?"),
       ],
       estado: null,
@@ -506,7 +498,7 @@ export async function responderComercial(e: EntradaDoMotor, deps?: DependenciasD
       mensagens: [
         "Zero fidelidade e zero burocracia. Você pode cancelar quando quiser com 1 clique direto no seu painel, sem multa, sem contrato e sem pegadinhas. Você só continua se o Nexora realmente estiver gerando lucro e poupando seu tempo.\n\n" +
           (ramoHistorico
-            ? `${ramoHistorico.dor}\n\nJá deixei seu Atendente 100% pré-configurado para você testar agora:\n👉 ${link}${DICA_CELULAR}`
+            ? `${ramoHistorico.dor}\n\nJá deixei seu Atendente 100% pré-configurado para você testar agora:\n👉 ${link}`
             : "Qual é o ramo do seu negócio para eu já liberar seu modelo pré-configurado?"),
       ],
       estado: null,
@@ -526,7 +518,7 @@ export async function responderComercial(e: EntradaDoMotor, deps?: DependenciasD
       mensagens: [
         "Sou 100% inteligência artificial da Nexora rodando ao vivo! Exatamente igual ao que podemos colocar atendendo seus clientes na sua empresa 24h por dia, sem você precisar ficar preso ao celular.\n\n" +
           (ramoHistorico
-            ? `${ramoHistorico.dor}\n\nVocê pode testar e ver seu modelo funcionando agora:\n👉 ${link}${DICA_CELULAR}`
+            ? `${ramoHistorico.dor}\n\nVocê pode testar e ver seu modelo funcionando agora:\n👉 ${link}`
             : "Qual é o ramo da sua empresa? Te mostro como fica configurado para o seu negócio!"),
       ],
       estado: null,
@@ -580,7 +572,7 @@ export async function responderComercial(e: EntradaDoMotor, deps?: DependenciasD
       mensagens: [
         "Não precisa deixar o computador ligado nem o celular conectado! O Nexora roda 100% em nuvem 24 horas por dia. Você pode desligar tudo que ele continua atendendo e agendando normalmente.\n\n" +
           "Quer ver funcionando no seu ramo? É só me falar qual é o seu tipo de negócio ou ativar seu modelo aqui:\n" +
-          `👉 ${link}${DICA_CELULAR}`,
+          `👉 ${link}`,
       ],
       estado: null,
       fontes: ["Esclarecimento de infraestrutura em nuvem"],
@@ -599,7 +591,7 @@ export async function responderComercial(e: EntradaDoMotor, deps?: DependenciasD
       mensagens: [
         "São 7 dias completos com todas as funções liberadas, 100% grátis e sem pedir cartão de crédito. Você conecta e seu atendente já começa a rodar hoje mesmo.\n\n" +
           "Me diz qual é o ramo do seu negócio ou acesse direto para ver pronto:\n" +
-          `👉 ${link}${DICA_CELULAR}`,
+          `👉 ${link}`,
       ],
       estado: null,
       fontes: ["Condições transparentes do teste de 7 dias"],
@@ -618,7 +610,7 @@ export async function responderComercial(e: EntradaDoMotor, deps?: DependenciasD
       mensagens: [
         "É super simples e leva menos de 1 minuto: você entra no link, a tela já abre pré-configurada pro seu ramo, você testa uma mensagem no simulador e conecta seu WhatsApp escaneando o QR Code (ou com código de 8 dígitos).\n\n" +
           "Você já pode ativar agora mesmo:\n" +
-          `👉 ${link}${DICA_CELULAR}`,
+          `👉 ${link}`,
       ],
       estado: null,
       fontes: ["Fluxo de pareamento sem atrito"],
@@ -639,7 +631,7 @@ export async function responderComercial(e: EntradaDoMotor, deps?: DependenciasD
         `${ramoAtual.dor}\n\n` +
           "A primeira semana é 100% por nossa conta — grátis e sem pedir cartão de crédito. Você testa com seus clientes na prática e só decide se quer continuar depois de ver o resultado.\n\n" +
           "Depois, o plano é super acessível, apenas R$ 97/mês (no Pix ou Cartão), sem contrato e sem fidelidade.\n\n" +
-          `Já deixei seu modelo pré-configurado para você ativar agora:\n👉 ${ramoAtual.link}${DICA_CELULAR}`,
+          `Já deixei seu modelo pré-configurado para você ativar agora:\n👉 ${ramoAtual.link}`,
       ],
       estado: null,
       fontes: ["Oferta comercial personalizada com inversão de risco"],
@@ -654,7 +646,7 @@ export async function responderComercial(e: EntradaDoMotor, deps?: DependenciasD
         mensagens: [
           "A primeira semana é 100% por nossa conta — grátis e sem pedir cartão de crédito. Você testa com seus clientes na prática e só decide se quer continuar depois de ver o resultado.\n\n" +
             "Depois, o plano é super acessível, apenas R$ 97/mês (no Pix ou Cartão), sem contrato e sem fidelidade.\n\n" +
-            `Já deixei seu modelo pré-configurado para você ativar agora:\n👉 ${ramoHistorico.link}${DICA_CELULAR}`,
+            `Já deixei seu modelo pré-configurado para você ativar agora:\n👉 ${ramoHistorico.link}`,
         ],
         estado: null,
         fontes: ["Oferta comercial transparente com inversão de risco"],
@@ -687,7 +679,7 @@ export async function responderComercial(e: EntradaDoMotor, deps?: DependenciasD
           "O Nexora é o seu atendente inteligente de WhatsApp que nunca dorme. Ele responde seus clientes em segundos, tira dúvidas com as suas regras e agenda horários sozinho 24h por dia — para você nunca mais perder uma venda fora do expediente.\n\n" +
             `${ramoAtual.dor}\n\n` +
             "Já deixei seu Atendente 100% pré-configurado para você ativar agora:\n" +
-            `👉 ${ramoAtual.link}${DICA_CELULAR}`,
+            `👉 ${ramoAtual.link}`,
         ],
         estado: null,
         fontes: ["Apresentação de valor + Gancho de conversão do nicho"],
@@ -699,7 +691,7 @@ export async function responderComercial(e: EntradaDoMotor, deps?: DependenciasD
       mensagens: [
         `${ramoAtual.dor}\n\n` +
           "Já deixei seu Atendente 100% pré-configurado para você ativar agora:\n" +
-          `👉 ${ramoAtual.link}${DICA_CELULAR}`,
+          `👉 ${ramoAtual.link}`,
       ],
       estado: null,
       fontes: ["Gancho de conversão específico por nicho"],
