@@ -251,16 +251,179 @@ export function obterPresetDoRamo(ramoOuTexto?: string | null): PresetNicho {
     };
   }
 
-  // 7. Padrão Universal Acolhedor
+  // 7. Pet Shop e Clínicas Veterinárias
+  if (/pet|veterin|banho|tosa|hotel\s*pet|creche\s*pet/i.test(limpo)) {
+    return {
+      nomeEmpresa: "Pet Shop e Veterinária",
+      atendenteNome: "Pet Shop",
+      description: "Cuidados, banho, tosa e atendimento veterinário",
+      endereco: "Atendimento presencial e com hora marcada",
+      pagamento: "Pix, Cartão de Crédito e Débito",
+      serviceRules: "⏱️ Tolerância de atraso: 15 minutos",
+      servicos: [
+        { name: "Banho e Tosa", durationMin: 60, priceCents: 0 },
+        { name: "Consulta Veterinária", durationMin: 30, priceCents: 0 },
+      ],
+      duvidas: [
+        {
+          question: "Como funciona o agendamento de banho e tosa?",
+          answer: "Agendamos o melhor horário para trazer seu pet com total conforto e pontualidade!",
+        },
+      ],
+    };
+  }
+
+  // 8. Oficinas e Centros Automotivos
+  if (/mecanic|oficin|auto\s*center|centro\s*automotivo|funilar|lava\s*jato|lava\s*rapido|pneu|borrachari/i.test(limpo)) {
+    return {
+      nomeEmpresa: "Centro Automotivo",
+      atendenteNome: "Centro Automotivo",
+      description: "Manutenção mecânica, revisão e cuidados automotivos",
+      endereco: "Atendimento presencial com agendamento",
+      pagamento: "Pix e Cartão de Crédito",
+      serviceRules: "Orçamentos e diagnósticos com hora marcada",
+      servicos: [
+        { name: "Revisão Geral e Diagnóstico", durationMin: 60, priceCents: 0 },
+        { name: "Troca de Óleo e Filtros", durationMin: 30, priceCents: 0 },
+      ],
+      duvidas: [
+        {
+          question: "Como funciona o orçamento?",
+          answer: "Avaliamos seu veículo na data marcada e passamos o orçamento transparente antes de qualquer serviço.",
+        },
+      ],
+    };
+  }
+
+  // 9. Fitness, Academias e Personal Trainer
+  if (/academia|personal|crossfit|pilates|funcional|treino|natacao|luta/i.test(limpo)) {
+    return {
+      nomeEmpresa: "Studio Fitness",
+      atendenteNome: "Studio Fitness",
+      description: "Treinos, acompanhamento físico e saúde",
+      endereco: "Atendimento presencial com hora marcada",
+      pagamento: "Pix e Cartão de Crédito",
+      serviceRules: "Agendamento de aulas e avaliações",
+      servicos: [
+        { name: "Aula Experimental Gratuita", durationMin: 50, priceCents: 0 },
+        { name: "Avaliação Física Inicial", durationMin: 40, priceCents: 0 },
+      ],
+      duvidas: [
+        {
+          question: "Como funciona a aula experimental?",
+          answer: "Você pode agendar um horário para conhecer o espaço e fazer um treino sem compromisso!",
+        },
+      ],
+    };
+  }
+
+  // 10. Imobiliárias e Corretores de Imóveis
+  if (/imobiliari|corretor|imovel|imoveis/i.test(limpo)) {
+    return {
+      nomeEmpresa: "Imobiliária",
+      atendenteNome: "Imobiliária",
+      description: "Intermediação imobiliária, locação e vendas",
+      endereco: "Atendimento presencial e visitas agendadas",
+      pagamento: "Pix, Boleto e Transferência",
+      serviceRules: "Visitas acompanhadas com agendamento prévio",
+      servicos: [
+        { name: "Agendamento de Visita ao Imóvel", durationMin: 45, priceCents: 0 },
+        { name: "Atendimento com Corretor", durationMin: 30, priceCents: 0 },
+      ],
+      duvidas: [
+        {
+          question: "Como agendar uma visita?",
+          answer: "Basta me informar o imóvel de interesse e seu horário disponível para agendarmos com o corretor!",
+        },
+      ],
+    };
+  }
+
+  // 11. Estúdios de Tatuagem e Piercing
+  if (/tatuag|tattoo|piercing/i.test(limpo)) {
+    return {
+      nomeEmpresa: "Studio de Tattoo",
+      atendenteNome: "Studio de Tattoo",
+      description: "Tatuagens autorais, coberturas e body piercing",
+      endereco: "Atendimento exclusivo com hora marcada",
+      pagamento: "Pix e Cartão de Crédito",
+      serviceRules: "Materiais 100% descartáveis e esterilizados",
+      servicos: [
+        { name: "Orçamento e Criação de Arte", durationMin: 30, priceCents: 0 },
+        { name: "Aplicação de Piercing", durationMin: 30, priceCents: 0 },
+      ],
+      duvidas: [
+        {
+          question: "Como faço para orçar uma tatuagem?",
+          answer: "Você pode me enviar a ideia, o tamanho aproximado em centímetros e o local do corpo para calcularmos o valor!",
+        },
+      ],
+    };
+  }
+
+  // 12. Fotografia, Filmagem e Eventos
+  if (/fotograf|filmagem|evento|buffet|cerimonial/i.test(limpo)) {
+    return {
+      nomeEmpresa: "Estúdio de Fotografia e Eventos",
+      atendenteNome: "Estúdio de Fotografia",
+      description: "Ensaios fotográficos, coberturas de eventos e produções",
+      endereco: "Atendimento em estúdio ou externa com hora marcada",
+      pagamento: "Pix e Cartão de Crédito",
+      serviceRules: "Agendamento prévio com confirmação",
+      servicos: [
+        { name: "Ensaio Fotográfico", durationMin: 60, priceCents: 0 },
+        { name: "Reunião de Orçamento para Evento", durationMin: 40, priceCents: 0 },
+      ],
+      duvidas: [
+        {
+          question: "Como funciona o agendamento de ensaios?",
+          answer: "Reservamos a data exclusiva para o seu ensaio. Me diga qual estilo de foto você busca!",
+        },
+      ],
+    };
+  }
+
+  // 13. Manutenção, Ar Condicionado, Vidraçaria, Marcenaria e Reformas
+  if (/ar\s*condicionado|refrigerac|climatizac|eletricist|encanador|vidracar|marcenar|serralher|pintor|reforma|energia\s*solar|manutencao/i.test(limpo)) {
+    return {
+      nomeEmpresa: "Serviços e Manutenção",
+      atendenteNome: "Serviços e Manutenção",
+      description: "Instalação, reparos especializados e orçamentos",
+      endereco: "Atendimento no local com visita agendada",
+      pagamento: "Pix, Cartão e Boleto",
+      serviceRules: "Visitas técnicas pontuais com garantia de serviço",
+      servicos: [
+        { name: "Visita Técnica e Orçamento", durationMin: 45, priceCents: 0 },
+        { name: "Manutenção Preventiva", durationMin: 60, priceCents: 0 },
+      ],
+      duvidas: [
+        {
+          question: "Como funciona a visita técnica?",
+          answer: "Agendamos o melhor dia e horário para um profissional ir até o seu local fazer o diagnóstico e orçamento.",
+        },
+      ],
+    };
+  }
+
+  // 14. Padrão Universal Inteligente
+  const nomeCustom = ramoOuTexto
+    ? ramoOuTexto
+        .trim()
+        .split(/[\s_-]+/)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(" ")
+    : "Minha Empresa";
+
   return {
-    nomeEmpresa: "Minha Empresa",
+    nomeEmpresa: nomeCustom.length <= 40 ? nomeCustom : "Minha Empresa",
     atendenteNome: "Atendente Virtual",
-    description: "Atendimento rápido e agendamentos",
+    description: `Atendimento rápido e agendamentos para ${ramoOuTexto ? ramoOuTexto.trim() : "clientes"}`,
     endereco: "Atendimento com hora marcada",
     pagamento: "Pix, Cartão de Crédito e Débito",
     serviceRules: "⏱️ Tolerância de atraso: 15 minutos",
     servicos: [
       { name: "Atendimento e Agendamento", durationMin: 30, priceCents: 0 },
+      { name: "Orçamento Personalizado", durationMin: 30, priceCents: 0 },
     ],
     duvidas: [
       {
