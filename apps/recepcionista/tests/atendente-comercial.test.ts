@@ -64,119 +64,119 @@ describe("Atendente Comercial da Nexora — Cobertura Total de Ramos e Nichos", 
     const res = await responder(criarEntrada("Clínica médica"), deps);
     const msg = res.mensagens[0];
     expect(msg).toContain("40% das consultas fora do horário");
-    expect(msg).toContain("meunexora.com.br/ativar?ramo=clinica");
+    expect(msg).toContain("meunexora.com.br/ativar/clinica");
   });
 
   it("responde a Odontologia / Dentista", async () => {
     const res = await responder(criarEntrada("Consultório odontológico"), deps);
     const msg = res.mensagens[0];
     expect(msg).toContain("pacientes de alto valor fora do horário comercial");
-    expect(msg).toContain("meunexora.com.br/ativar?ramo=odonto");
+    expect(msg).toContain("meunexora.com.br/ativar/odonto");
   });
 
   it("responde a Barbearia", async () => {
     const res = await responder(criarEntrada("Barbearia"), deps);
     const msg = res.mensagens[0];
     expect(msg).toContain("tentam agendar à noite e no fim de semana");
-    expect(msg).toContain("meunexora.com.br/ativar?ramo=barbearia");
+    expect(msg).toContain("meunexora.com.br/ativar/barbearia");
   });
 
   it("responde a Salão de Beleza / Cabeleireiro / Manicure / Lash", async () => {
     const res = await responder(criarEntrada("Salão de beleza e manicure"), deps);
     const msg = res.mensagens[0];
     expect(msg).toContain("Salões de beleza e profissionais de estética perdem dezenas de agendamentos");
-    expect(msg).toContain("meunexora.com.br/ativar?ramo=salao");
+    expect(msg).toContain("meunexora.com.br/ativar/salao");
   });
 
   it("responde a Estética / Spa", async () => {
     const res = await responder(criarEntrada("Clínica de estética"), deps);
     const msg = res.mensagens[0];
     expect(msg).toContain("Espaços de estética e beleza perdem agendamentos");
-    expect(msg).toContain("meunexora.com.br/ativar?ramo=estetica");
+    expect(msg).toContain("meunexora.com.br/ativar/estetica");
   });
 
   it("responde a Pet Shop e Veterinária", async () => {
     const res = await responder(criarEntrada("Pet shop e banho e tosa"), deps);
     const msg = res.mensagens[0];
     expect(msg).toContain("Pet shops e clínicas veterinárias perdem agendamentos");
-    expect(msg).toContain("meunexora.com.br/ativar?ramo=pet");
+    expect(msg).toContain("meunexora.com.br/ativar/pet");
   });
 
   it("responde a Oficina Mecânica / Centro Automotivo", async () => {
     const res = await responder(criarEntrada("Oficina mecânica"), deps);
     const msg = res.mensagens[0];
     expect(msg).toContain("Oficinas e centros automotivos perdem orçamentos");
-    expect(msg).toContain("meunexora.com.br/ativar?ramo=automotivo");
+    expect(msg).toContain("meunexora.com.br/ativar/automotivo");
   });
 
   it("responde a Fitness / Academia / Personal Trainer", async () => {
     const res = await responder(criarEntrada("Sou personal trainer"), deps);
     const msg = res.mensagens[0];
     expect(msg).toContain("Academias, estúdios e personais perdem alunos novos");
-    expect(msg).toContain("meunexora.com.br/ativar?ramo=fitness");
+    expect(msg).toContain("meunexora.com.br/ativar/fitness");
   });
 
   it("responde a Advocacia", async () => {
     const res = await responder(criarEntrada("Escritório de advocacia"), deps);
     const msg = res.mensagens[0];
     expect(msg).toContain("Escritórios de advocacia perdem clientes");
-    expect(msg).toContain("meunexora.com.br/ativar?ramo=advocacia");
+    expect(msg).toContain("meunexora.com.br/ativar/advocacia");
   });
 
   it("responde a Imobiliária e Corretores", async () => {
     const res = await responder(criarEntrada("Imobiliária"), deps);
     const msg = res.mensagens[0];
     expect(msg).toContain("Imobiliárias e corretores perdem leads quentes");
-    expect(msg).toContain("meunexora.com.br/ativar?ramo=imobiliaria");
+    expect(msg).toContain("meunexora.com.br/ativar/imobiliaria");
   });
 
   it("responde a Contabilidade", async () => {
     const res = await responder(criarEntrada("Escritório de contabilidade"), deps);
     const msg = res.mensagens[0];
     expect(msg).toContain("Escritórios de contabilidade perdem clientes empresariais");
-    expect(msg).toContain("meunexora.com.br/ativar?ramo=contabilidade");
+    expect(msg).toContain("meunexora.com.br/ativar/contabilidade");
   });
 
   it("responde a Estúdio de Tatuagem / Piercing", async () => {
     const res = await responder(criarEntrada("Estúdio de tattoo e piercing"), deps);
     const msg = res.mensagens[0];
     expect(msg).toContain("Estúdios de tatuagem e piercing perdem clientes");
-    expect(msg).toContain("meunexora.com.br/ativar?ramo=tattoo");
+    expect(msg).toContain("meunexora.com.br/ativar/tattoo");
   });
 
   it("responde a Fotografia / Eventos", async () => {
     const res = await responder(criarEntrada("Estúdio de fotografia"), deps);
     const msg = res.mensagens[0];
     expect(msg).toContain("Profissionais de eventos e fotografia perdem contratos");
-    expect(msg).toContain("meunexora.com.br/ativar?ramo=eventos");
+    expect(msg).toContain("meunexora.com.br/ativar/eventos");
   });
 
   it("responde a Manutenção / Marcenaria / Vidraçaria / Ar Condicionado", async () => {
     const res = await responder(criarEntrada("Trabalho com ar condicionado e refrigeração"), deps);
     const msg = res.mensagens[0];
     expect(msg).toContain("Profissionais de manutenção e reformas perdem chamados");
-    expect(msg).toContain("meunexora.com.br/ativar?ramo=manutencao");
+    expect(msg).toContain("meunexora.com.br/ativar/manutencao");
   });
 
   it("responde a Educação / Cursos", async () => {
     const res = await responder(criarEntrada("Escola de cursos e idiomas"), deps);
     const msg = res.mensagens[0];
     expect(msg).toContain("Escolas e cursos perdem matrículas valiosas");
-    expect(msg).toContain("meunexora.com.br/ativar?ramo=educacao");
+    expect(msg).toContain("meunexora.com.br/ativar/educacao");
   });
 
   it("responde a Gastronomia / Restaurante / Confeitaria", async () => {
     const res = await responder(criarEntrada("Restaurante e pizzaria"), deps);
     const msg = res.mensagens[0];
     expect(msg).toContain("Restaurantes e confeitarias perdem reservas");
-    expect(msg).toContain("meunexora.com.br/ativar?ramo=gastronomia");
+    expect(msg).toContain("meunexora.com.br/ativar/gastronomia");
   });
 
   it("responde a Consultoria / Agência", async () => {
     const res = await responder(criarEntrada("Agência de consultoria e marketing"), deps);
     const msg = res.mensagens[0];
     expect(msg).toContain("Empresas e consultorias perdem oportunidades");
-    expect(msg).toContain("meunexora.com.br/ativar?ramo=consultoria");
+    expect(msg).toContain("meunexora.com.br/ativar/consultoria");
   });
 
   // --- EXTRAÇÃO UNIVERSAL DINÂMICA PARA QUALQUER RAMO NÃO CATALOGADO ---
@@ -186,7 +186,7 @@ describe("Atendente Comercial da Nexora — Cobertura Total de Ramos e Nichos", 
     const msg = res.mensagens[0];
     expect(msg).toContain("floricultura");
     expect(msg).toContain("perdem orçamentos e clientes valiosos toda noite e fim de semana");
-    expect(msg).toContain("meunexora.com.br/ativar?ramo=floricultura");
+    expect(msg).toContain("meunexora.com.br/ativar/floricultura");
   });
 
   it("reconhece dinamicamente ramo informado com 'trabalho com energia solar'", async () => {
@@ -199,7 +199,7 @@ describe("Atendente Comercial da Nexora — Cobertura Total de Ramos e Nichos", 
     const res = await responder(criarEntrada("Sou relojoeiro"), deps);
     const msg = res.mensagens[0];
     expect(msg).toContain("relojoeiro");
-    expect(msg).toContain("meunexora.com.br/ativar?ramo=relojoeiro");
+    expect(msg).toContain("meunexora.com.br/ativar/relojoeiro");
   });
 
   it("reconhece resposta direta à pergunta do atendente (ex: 'Ótica')", async () => {
@@ -216,7 +216,7 @@ describe("Atendente Comercial da Nexora — Cobertura Total de Ramos e Nichos", 
     const res = await responder(entrada, deps);
     const msg = res.mensagens[0];
     expect(msg).toContain("otica");
-    expect(msg).toContain("meunexora.com.br/ativar?ramo=otica");
+    expect(msg).toContain("meunexora.com.br/ativar/otica");
   });
 
   it("reconhece resposta direta à pergunta do atendente (ex: 'Bicicletaria')", async () => {
@@ -233,7 +233,7 @@ describe("Atendente Comercial da Nexora — Cobertura Total de Ramos e Nichos", 
     const res = await responder(entrada, deps);
     const msg = res.mensagens[0];
     expect(msg).toContain("bicicletaria");
-    expect(msg).toContain("meunexora.com.br/ativar?ramo=bicicletaria");
+    expect(msg).toContain("meunexora.com.br/ativar/bicicletaria");
   });
 
   // --- PERGUNTAS DE PREÇO E DÚVIDAS OPERACIONAIS ---
@@ -261,7 +261,7 @@ describe("Atendente Comercial da Nexora — Cobertura Total de Ramos e Nichos", 
     const msg = res.mensagens[0];
     expect(msg).toContain("R$ 97/mês");
     expect(msg).toContain("sem pedir cartão");
-    expect(msg).toContain("meunexora.com.br/ativar?ramo=pet");
+    expect(msg).toContain("meunexora.com.br/ativar/pet");
   });
 
   it("esclarece dúvida de computador ligado / nuvem sem atrito", async () => {

@@ -178,7 +178,7 @@ export function identificarRamo(texto: string, historico: { content: string }[] 
         slug: item.slug,
         nome: item.nome,
         dor: item.dor,
-        link: `${URL_ATIVACAO}?ramo=${item.slug}`,
+        link: `${URL_ATIVACAO}/${item.slug}`,
       };
     }
   }
@@ -201,7 +201,7 @@ export function identificarRamo(texto: string, historico: { content: string }[] 
           slug: item.slug,
           nome: item.nome,
           dor: item.dor,
-          link: `${URL_ATIVACAO}?ramo=${item.slug}`,
+          link: `${URL_ATIVACAO}/${item.slug}`,
         };
       }
     }
@@ -211,7 +211,7 @@ export function identificarRamo(texto: string, historico: { content: string }[] 
       slug,
       nome: ramoExtraido,
       dor: `Empresas de ${ramoExtraido} perdem orçamentos e clientes valiosos toda noite e fim de semana. Quem responde primeiro fecha a venda.`,
-      link: `${URL_ATIVACAO}?ramo=${slug}`,
+      link: `${URL_ATIVACAO}/${slug}`,
     };
   }
 
@@ -230,7 +230,7 @@ export function identificarRamo(texto: string, historico: { content: string }[] 
       slug,
       nome: t,
       dor: `Empresas de ${t} perdem orçamentos e clientes valiosos toda noite e fim de semana. Quem responde primeiro fecha a venda.`,
-      link: `${URL_ATIVACAO}?ramo=${slug}`,
+      link: `${URL_ATIVACAO}/${slug}`,
     };
   }
 
@@ -240,7 +240,7 @@ export function identificarRamo(texto: string, historico: { content: string }[] 
       slug: "servicos",
       nome: "Serviços em Geral",
       dor: "Empresas de serviços perdem orçamentos valiosos toda noite e fim de semana. Quem responde primeiro fecha a venda.",
-      link: `${URL_ATIVACAO}?ramo=servicos`,
+      link: `${URL_ATIVACAO}/servicos`,
     };
   }
 

@@ -5,4 +5,4 @@ export function ehContaComercialNexora(companyId: string): boolean {
   return companyId === oficial;
 }
 
-export const URL_ATIVACAO = "https://www.meunexora.com.br/ativar";
+export const URL_ATIVACAO = "meunexora.com.br/ativar";
