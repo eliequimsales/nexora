@@ -321,4 +321,80 @@ describe("Atendente Comercial da Nexora — Cobertura Total de Ramos e Nichos", 
     expect(msg).toContain("especialista vai te atender por aqui em instantes");
     expect(msg).toContain("meunexora.com.br/ativar");
   });
+
+  // --- NOVOS TESTES DE SITUAÇÕES REAIS DO DIA A DIA ---
+
+  it("inclui a dica de celular com código de 8 dígitos nos links de ativação", async () => {
+    const res = await responder(criarEntrada("Clínica de estética"), deps);
+    const msg = res.mensagens[0];
+    expect(msg).toContain("meunexora.com.br/ativar/estetica");
+    expect(msg).toContain("💡 Se estiver no próprio celular, não precisa de câmera nem de QR Code");
+    expect(msg).toContain("código de 8 dígitos em 30 segundos");
+  });
+
+  it("responde sobre compreensão e áudio de clientes", async () => {
+    const res = await responder(criarEntrada("Ele entende áudio que os clientes mandam?"), deps);
+    const msg = res.mensagens[0];
+    expect(msg).toContain("Sim! O Nexora ouve e compreende áudios perfeitamente");
+    expect(msg).toContain("respondendo em texto instantaneamente");
+    expect(msg).not.toContain("Empresas de entende");
+  });
+
+  it("atende cliente já existente e direciona para suporte sem tratar como lead", async () => {
+    const res = await responder(criarEntrada("Já sou cliente e preciso de suporte com meu painel"), deps);
+    expect(res.equipe).toBe(true);
+    const msg = res.mensagens[0];
+    expect(msg).toContain("Como você já é nosso cliente");
+    expect(msg).toContain("meunexora.com.br/painel");
+    expect(msg).toContain("suporte para te ajudar por aqui");
+    expect(msg).not.toContain("Empresas de cliente");
+  });
+
+  it("esclarece emissão de nota fiscal para CNPJ sem confundir com contabilidade", async () => {
+    const res = await responder(criarEntrada("Vocês emitem nota fiscal para CNPJ?"), deps);
+    const msg = res.mensagens[0];
+    expect(msg).toContain("Emitimos nota fiscal automaticamente");
+    expect(msg).toContain("tanto para CNPJ quanto para CPF");
+    expect(msg).not.toContain("Escritórios de contabilidade perdem");
+  });
+
+  it("esclarece integração com Google Agenda e Webhooks", async () => {
+    const res = await responder(criarEntrada("Tem integração com a Agenda do Google?"), deps);
+    const msg = res.mensagens[0];
+    expect(msg).toContain("integração nativa com o Google Agenda");
+    expect(msg).toContain("bloqueado na sua agenda para evitar choque");
+  });
+
+  it("esclarece segurança e LGPD sem confundir com seguro empresarial", async () => {
+    const res = await responder(criarEntrada("É seguro colocar os dados dos meus clientes?"), deps);
+    const msg = res.mensagens[0];
+    expect(msg).toContain("É 100% seguro");
+    expect(msg).toContain("LGPD");
+    expect(msg).toContain("criptografia de ponta a ponta");
+    expect(msg).not.toContain("Empresas de seguro");
+  });
+
+  it("esclarece cancelamento sem fidelidade e com 1 clique", async () => {
+    const res = await responder(criarEntrada("Como funciona para cancelar se eu não gostar?"), deps);
+    const msg = res.mensagens[0];
+    expect(msg).toContain("Zero fidelidade e zero burocracia");
+    expect(msg).toContain("cancelar quando quiser com 1 clique");
+  });
+
+  it("responde com naturalidade a elogios ou desconfiança ('kkkk isso é de verdade?')", async () => {
+    const res = await responder(criarEntrada("Kkkk que massa, isso é de verdade?"), deps);
+    const msg = res.mensagens[0];
+    expect(msg).toContain("Sou 100% inteligência artificial da Nexora rodando ao vivo");
+    expect(msg).not.toContain("Empresas de massa");
+  });
+
+  it("quando o usuário diz o ramo E pergunta como funciona, une a explicação de valor com o gancho do ramo", async () => {
+    const res = await responder(criarEntrada("Boa tarde, sou veterinária e quero saber como funciona"), deps);
+    const msg = res.mensagens[0];
+    expect(msg).toContain("O Nexora é o seu atendente inteligente de WhatsApp");
+    expect(msg).toContain("Pet shops e clínicas veterinárias perdem agendamentos");
+    expect(msg).toContain("meunexora.com.br/ativar/pet");
+    expect(msg).not.toContain("Qual é o ramo do seu negócio para eu te mostrar");
+  });
 });
+

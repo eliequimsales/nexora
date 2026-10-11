@@ -208,7 +208,7 @@ function encontrarFaqDireta(
 
 export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): Promise<SaidaDoMotor> {
   if (e.fatos.comercial) {
-    return responderComercial(e);
+    return responderComercial(e, deps);
   }
 
   const { fatos, agora } = e;
