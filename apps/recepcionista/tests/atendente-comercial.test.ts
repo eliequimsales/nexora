@@ -392,10 +392,40 @@ describe("Atendente Comercial da Nexora — Cobertura Total de Ramos e Nichos", 
   it("quando o usuário diz o ramo E pergunta como funciona, une a explicação de valor com o gancho do ramo", async () => {
     const res = await responder(criarEntrada("Boa tarde, sou veterinária e quero saber como funciona"), deps);
     const msg = res.mensagens[0];
-    expect(msg).toContain("O Nexora é o seu atendente inteligente de WhatsApp");
+    expect(msg).toContain("O Nexora é o seu atendente");
     expect(msg).toContain("Pet shops e clínicas veterinárias perdem agendamentos");
     expect(msg).toContain("meunexora.com.br/ativar/pet");
     expect(msg).not.toContain("Qual é o ramo do seu negócio para eu te mostrar");
+  });
+
+  // --- GATILHOS EXATOS DO FUNIL E BOTÃO DE OBRIGADO ---
+
+  it("responde ao clique do botão da página de obrigado com o choque de velocidade e gancho do concorrente", async () => {
+    const res = await responder(criarEntrada("Oi Sofia, quero ativar meu Atendente Nexora!"), deps);
+    const msg = res.mensagens[0];
+    expect(msg).toContain("Viu a velocidade dessa resposta? ⚡");
+    expect(msg).toContain("Se fossem 23h ou um domingo");
+    expect(msg).toContain("em vez de fechar com o concorrente");
+    expect(msg).toContain("Qual o ramo do seu negócio?");
+    expect(res.usouIa).toBe(false);
+  });
+
+  it("reconhece quando o lead digita apenas 'quero ativar meu atendente' mesmo sem saudação", async () => {
+    const res = await responder(criarEntrada("quero ativar meu atendente"), deps);
+    const msg = res.mensagens[0];
+    expect(msg).toContain("Viu a velocidade dessa resposta? ⚡");
+    expect(msg).toContain("em vez de fechar com o concorrente");
+    expect(msg).toContain("Qual o ramo do seu negócio?");
+  });
+
+  it("responde ao gatilho de ativação do funil já com o link pronto quando o ramo vem na mesma mensagem", async () => {
+    const res = await responder(
+      criarEntrada("Oi Sofia, acabei de comprar e quero ativar meu atendente para minha barbearia"),
+      deps,
+    );
+    const msg = res.mensagens[0];
+    expect(msg).toContain("tentam agendar à noite e no fim de semana");
+    expect(msg).toContain("meunexora.com.br/ativar/barbearia");
   });
 });
 

@@ -703,11 +703,42 @@ export async function responderComercial(e: EntradaDoMotor, deps?: DependenciasD
   if (perguntouComoFunciona) {
     return {
       mensagens: [
-        "O Nexora é o seu atendente inteligente de WhatsApp que nunca dorme. Ele responde seus clientes em segundos, tira dúvidas com as suas regras e agenda horários sozinho 24h por dia — para você nunca mais perder uma venda fora do expediente.\n\n" +
-          "Qual é o ramo do seu negócio para eu te mostrar como ele fica pré-configurado?",
+        "O Nexora é o seu atendente que nunca dorme. Ele responde seus clientes em segundos, tira dúvidas com as suas regras e agenda horários sozinho 24h por dia — para você nunca mais perder uma venda fora do expediente ou para o concorrente.\n\n" +
+          "Qual é o ramo do seu negócio para eu deixar tudo pronto para a sua empresa?",
       ],
       estado: null,
       fontes: ["Apresentação de valor da Nexora"],
+      usouIa: false,
+    };
+  }
+
+  // 16.5. Gatilho prioritário do funil pós-checkout / intenção explícita de ativação
+  const querAtivarFunil =
+    /\b(ativar meu atendente|quero ativar|acabei de comprar|acabei de garantir|ativar o nexora|ativar nexora|ativar meu nexora|ativar agora|como ativo|ativar o atendente|ativar meu bot|ativar recepcao)\b/i.test(
+      t,
+    );
+
+  if (querAtivarFunil) {
+    if (ramoAtual) {
+      return {
+        mensagens: [
+          `${ramoAtual.dor}\n\n` +
+            "Já deixei tudo pronto para você ver funcionando no seu WhatsApp:\n" +
+            `👉 ${ramoAtual.link}`,
+        ],
+        estado: null,
+        fontes: ["Ativação do funil com ramo identificado"],
+        usouIa: false,
+      };
+    }
+
+    return {
+      mensagens: [
+        "Viu a velocidade dessa resposta? ⚡ Se fossem 23h ou um domingo, seu cliente receberia essa mesma atenção na sua empresa em vez de fechar com o concorrente.\n\n" +
+          "Qual o ramo do seu negócio?",
+      ],
+      estado: null,
+      fontes: ["Ativação do funil + Choque de velocidade em 3s"],
       usouIa: false,
     };
   }
@@ -721,11 +752,11 @@ export async function responderComercial(e: EntradaDoMotor, deps?: DependenciasD
   if (ehSaudacao || e.primeiraDoDia) {
     return {
       mensagens: [
-        "Viu a velocidade dessa resposta? Se fossem 23h ou um domingo, seu cliente receberia essa mesma atenção na sua empresa.\n\n" +
+        "Viu a velocidade dessa resposta? ⚡ Se fossem 23h ou um domingo, seu cliente receberia essa mesma atenção na sua empresa em vez de fechar com o concorrente.\n\n" +
           "Qual o ramo do seu negócio?",
       ],
       estado: null,
-      fontes: ["Prova imediata de velocidade + Gancho das 23h"],
+      fontes: ["Prova imediata de velocidade + Gancho das 23h e concorrente"],
       usouIa: false,
     };
   }
