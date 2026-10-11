@@ -269,7 +269,7 @@ export async function responderComercial(e: EntradaDoMotor): Promise<SaidaDoMoto
     return {
       mensagens: [
         "Com certeza! Já notifiquei nossa equipe e um especialista vai te atender por aqui em instantes.\n\n" +
-          "Enquanto isso, se quiser adiantar e ver seu atendente funcionando na prática com 7 dias grátis por nossa conta, você já pode acessar:\n" +
+          "Enquanto isso, se quiser adiantar e ver seu atendente funcionando na prática agora mesmo, você já pode acessar:\n" +
           `👉 ${URL_ATIVACAO}`,
       ],
       estado: null,
@@ -323,7 +323,7 @@ export async function responderComercial(e: EntradaDoMotor): Promise<SaidaDoMoto
     return {
       mensagens: [
         "Não precisa deixar o computador ligado nem o celular conectado! O Nexora roda 100% em nuvem 24 horas por dia. Você pode desligar tudo que ele continua atendendo e agendando normalmente.\n\n" +
-          "Quer ver funcionando no seu ramo? É só me falar qual é o seu tipo de negócio ou ativar seu teste grátis aqui:\n" +
+          "Quer ver funcionando no seu ramo? É só me falar qual é o seu tipo de negócio ou ativar seu modelo aqui:\n" +
           `👉 ${link}`,
       ],
       estado: null,
@@ -361,7 +361,7 @@ export async function responderComercial(e: EntradaDoMotor): Promise<SaidaDoMoto
     return {
       mensagens: [
         "É super simples e leva menos de 1 minuto: você entra no link, a tela já abre pré-configurada pro seu ramo, você testa uma mensagem no simulador e conecta seu WhatsApp escaneando o QR Code (ou com código de 8 dígitos).\n\n" +
-          "Você pode testar agora mesmo com 7 dias grátis por nossa conta:\n" +
+          "Você já pode ativar agora mesmo:\n" +
           `👉 ${link}`,
       ],
       estado: null,
@@ -398,8 +398,9 @@ export async function responderComercial(e: EntradaDoMotor): Promise<SaidaDoMoto
     return {
       mensagens: [
         `${ramoAtual.dor}\n\n` +
-          "A primeira semana é 100% por nossa conta — grátis e sem pedir cartão de crédito para você ver o resultado na prática com seus clientes. Depois fica apenas R$ 97/mês (no Pix ou Cartão), sem contrato e sem fidelidade.\n\n" +
-          `Já deixei seu modelo 100% pré-configurado para ativar agora:\n👉 ${ramoAtual.link}`,
+          "A primeira semana é 100% por nossa conta — grátis e sem pedir cartão de crédito. Você testa com seus clientes na prática e só decide se quer continuar depois de ver o resultado.\n\n" +
+          "Depois, o plano é super acessível, apenas R$ 97/mês (no Pix ou Cartão), sem contrato e sem fidelidade.\n\n" +
+          `Já deixei seu modelo pré-configurado para você ativar agora:\n👉 ${ramoAtual.link}`,
       ],
       estado: null,
       fontes: ["Oferta comercial personalizada com inversão de risco"],
@@ -426,7 +427,7 @@ export async function responderComercial(e: EntradaDoMotor): Promise<SaidaDoMoto
       mensagens: [
         "A primeira semana é 100% por nossa conta — grátis e sem pedir cartão de crédito. Você testa com seus clientes na prática e só decide se quer continuar depois de ver o resultado.\n\n" +
           "Depois, o plano é super acessível, apenas R$ 97/mês (no Pix ou Cartão), sem contrato e sem fidelidade.\n\n" +
-          "Me conta: qual é o ramo da sua empresa para eu já liberar seu modelo pronto?",
+          "Me conta: qual é o ramo da sua empresa para eu já liberar seu modelo pré-configurado?",
       ],
       estado: null,
       fontes: ["Oferta comercial com convite ao nicho"],
@@ -439,7 +440,7 @@ export async function responderComercial(e: EntradaDoMotor): Promise<SaidaDoMoto
     return {
       mensagens: [
         `${ramoAtual.dor}\n\n` +
-          "Já deixei seu Atendente 100% pré-configurado com 7 dias grátis por nossa conta, sem pedir cartão:\n" +
+          "Já deixei seu Atendente 100% pré-configurado para você ativar agora:\n" +
           `👉 ${ramoAtual.link}`,
       ],
       estado: null,
@@ -470,7 +471,7 @@ export async function responderComercial(e: EntradaDoMotor): Promise<SaidaDoMoto
   return {
     mensagens: [
       "Entendi perfeitamente! O Nexora foi desenvolvido exatamente para dar essa agilidade e tranquilidade para o seu negócio, atendendo no mesmo segundo e sem deixar nenhum cliente sem resposta.\n\n" +
-        "A primeira semana é 100% grátis e sem pedir cartão de crédito. Qual é o ramo da sua empresa para eu liberar seu atendente pré-configurado?",
+        "Qual é o ramo da sua empresa para eu liberar seu atendente pré-configurado?",
     ],
     estado: null,
     fontes: ["Acolhimento comercial + Condução suave para o nicho"],

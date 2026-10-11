@@ -49,47 +49,47 @@ export function obterPresetDoRamo(ramoOuTexto?: string | null): PresetNicho {
         {
           question: "Clínica",
           answer:
-            "Clínicas e consultórios perdem até 40% das consultas fora do horário. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis, sem pedir cartão: 👉 meunexora.com.br/ativar/clinica",
+            "Clínicas e consultórios perdem até 40% das consultas fora do horário. Já deixei seu Atendente 100% pré-configurado para você ativar agora: 👉 meunexora.com.br/ativar/clinica",
         },
         {
           question: "Barbearia",
           answer:
-            "Salões e barbearias perdem muitos clientes que tentam agendar à noite. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis, sem pedir cartão: 👉 meunexora.com.br/ativar/barbearia",
+            "Salões e barbearias perdem muitos clientes que tentam agendar à noite. Já deixei seu Atendente 100% pré-configurado para você ativar agora: 👉 meunexora.com.br/ativar/barbearia",
         },
         {
           question: "Estética",
           answer:
-            "Espaços de estética perdem clientes toda semana que tentam agendar fora do expediente. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis: 👉 meunexora.com.br/ativar/estetica",
+            "Espaços de estética perdem clientes toda semana que tentam agendar fora do expediente. Já deixei seu Atendente 100% pré-configurado para você ativar agora: 👉 meunexora.com.br/ativar/estetica",
         },
         {
           question: "Odontologia",
           answer:
-            "Consultórios odontológicos perdem pacientes de alto valor fora do horário comercial. Já deixei seu Atendente pré-configurado com 7 dias grátis sem cartão: 👉 meunexora.com.br/ativar/odonto",
+            "Consultórios odontológicos perdem pacientes de alto valor fora do horário comercial. Já deixei seu Atendente 100% pré-configurado para você ativar agora: 👉 meunexora.com.br/ativar/odonto",
         },
         {
           question: "Consultório",
           answer:
-            "Consultórios perdem muitos agendamentos fora do horário de atendimento. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis, sem pedir cartão: 👉 meunexora.com.br/ativar/clinica",
+            "Consultórios perdem muitos agendamentos fora do horário de atendimento. Já deixei seu Atendente 100% pré-configurado para você ativar agora: 👉 meunexora.com.br/ativar/clinica",
         },
         {
           question: "Dentista",
           answer:
-            "Consultórios odontológicos perdem pacientes de alto valor fora do expediente. Já deixei seu Atendente pré-configurado com 7 dias grátis sem cartão: 👉 meunexora.com.br/ativar/odonto",
+            "Consultórios odontológicos perdem pacientes de alto valor fora do expediente. Já deixei seu Atendente 100% pré-configurado para você ativar agora: 👉 meunexora.com.br/ativar/odonto",
         },
         {
           question: "Salão",
           answer:
-            "Salões de beleza perdem agendamentos todos os dias fora do expediente. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis, sem pedir cartão: 👉 meunexora.com.br/ativar/salao",
+            "Salões de beleza perdem agendamentos todos os dias fora do expediente. Já deixei seu Atendente 100% pré-configurado para você ativar agora: 👉 meunexora.com.br/ativar/salao",
         },
         {
           question: "Pet shop",
           answer:
-            "Pet shops e veterinárias perdem muitos clientes fora do horário. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis, sem pedir cartão: 👉 meunexora.com.br/ativar/pet",
+            "Pet shops e veterinárias perdem muitos clientes fora do horário. Já deixei seu Atendente 100% pré-configurado para você ativar agora: 👉 meunexora.com.br/ativar/pet",
         },
         {
           question: "Serviços",
           answer:
-            "Empresas de serviços perdem orçamentos valiosos toda noite e fim de semana. Já deixei seu Atendente 100% pré-configurado com 7 dias grátis, sem pedir cartão: 👉 meunexora.com.br/ativar/servicos",
+            "Empresas de serviços perdem orçamentos valiosos toda noite e fim de semana. Já deixei seu Atendente 100% pré-configurado para você ativar agora: 👉 meunexora.com.br/ativar/servicos",
         },
         {
           question: "Quanto custa o plano?",

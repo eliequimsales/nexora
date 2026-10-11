@@ -61,11 +61,14 @@ describe("Atendente Comercial da Nexora — Cobertura Total de Ramos e Nichos", 
 
   // --- SETORES MAPEADOS DO CATÁLOGO ---
 
-  it("responde a Clínica Médica / Consultório", async () => {
+  it("responde a Clínica Médica / Consultório sem menção a 7 dias grátis ou cartão", async () => {
     const res = await responder(criarEntrada("Clínica médica"), deps);
     const msg = res.mensagens[0];
     expect(msg).toContain("40% das consultas fora do horário");
     expect(msg).toContain("meunexora.com.br/ativar/clinica");
+    expect(msg).toContain("Já deixei seu Atendente 100% pré-configurado para você ativar agora:");
+    expect(msg).not.toContain("7 dias grátis");
+    expect(msg).not.toContain("cartão");
   });
 
   it("responde a Odontologia / Dentista", async () => {
@@ -248,20 +251,29 @@ describe("Atendente Comercial da Nexora — Cobertura Total de Ramos e Nichos", 
     expect(msg).toContain("qual é o ramo da sua empresa");
   });
 
-  it("quando o lead pergunta preço tendo nicho anterior no histórico, preserva o nicho no link", async () => {
-    const entrada = criarEntrada("Quanto custa?", {
+  it("quando o lead pergunta 'Mas quanto custa isso depois?', responde com a cópia exata de preço e inversão de risco", async () => {
+    const entrada = criarEntrada("Mas quanto custa isso depois?", {
       historico: [
         { role: "CUSTOMER", content: "Olá" },
         { role: "AI", content: "Qual o seu ramo?" },
         { role: "CUSTOMER", content: "Pet shop" },
-        { role: "AI", content: "Pet shops perdem..." },
-        { role: "CUSTOMER", content: "Quanto custa o plano?" },
+        {
+          role: "AI",
+          content:
+            "Pet shops e clínicas veterinárias perdem agendamentos.\n\nJá deixei seu Atendente 100% pré-configurado para você ativar agora:\n👉 meunexora.com.br/ativar/pet",
+        },
+        { role: "CUSTOMER", content: "Mas quanto custa isso depois?" },
       ],
     });
     const res = await responder(entrada, deps);
     const msg = res.mensagens[0];
-    expect(msg).toContain("R$ 97/mês");
-    expect(msg).toContain("sem pedir cartão");
+    expect(msg).toContain(
+      "A primeira semana é 100% por nossa conta — grátis e sem pedir cartão de crédito. Você testa com seus clientes na prática e só decide se quer continuar depois de ver o resultado.",
+    );
+    expect(msg).toContain(
+      "Depois, o plano é super acessível, apenas R$ 97/mês (no Pix ou Cartão), sem contrato e sem fidelidade.",
+    );
+    expect(msg).toContain("Já deixei seu modelo pré-configurado para você ativar agora:");
     expect(msg).toContain("meunexora.com.br/ativar/pet");
   });
 
