@@ -4,6 +4,10 @@ const nextConfig = {
   experimental: {
     // Necessário no Next 14 para o instrumentation.ts (worker de follow-up)
     instrumentationHook: true,
+    serverComponentsExternalPackages: ["@nexora/recepcionista-prisma", "@prisma/client"],
+    outputFileTracingIncludes: {
+      "/**": ["./node_modules/@nexora/recepcionista-prisma/**/*"],
+    },
   },
   async redirects() {
     return [
