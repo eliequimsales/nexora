@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/db";
-import { createSessionToken, hashPassword, setSessionCookie } from "@/lib/auth";
+import { createSessionToken, hashPassword, setSessionCookie, SESSION_COOKIE } from "@/lib/auth";
 import { logError } from "@/lib/errors";
 import { VERSAO_DOCUMENTOS } from "@/lib/legal/identidade";
 import { relogioDoCadastro } from "@/lib/billing/relogio";
@@ -18,7 +18,17 @@ export async function GET(request: Request) {
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
   // Redirects SEMPRE via APP_URL — request.url é localhost:8080 atrás do proxy
-  const fail = () => NextResponse.redirect(appRedirect("/login?erro=google", request.url));
+  const fail = (erro = "google") => {
+    const res = NextResponse.redirect(appRedirect(`/login?erro=${erro}`, request.url));
+    res.cookies.set(OAUTH_STATE_COOKIE, "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 0,
+    });
+    return res;
+  };
 
   // Rate limit: sem ele o mesmo link de callback podia ser disparado contra
   // muitas vítimas de uma vez. /api/auth/google já tinha; aqui faltava.
@@ -57,7 +67,7 @@ export async function GET(request: Request) {
 
     if (decisao.acao === "RECUSAR") {
       await logError("auth-google-callback", new Error(`Vínculo recusado: ${decisao.motivo}`));
-      return NextResponse.redirect(appRedirect("/login?erro=google-vinculo", request.url));
+      return fail("google-vinculo");
     }
 
     let company: { id: string; sessaoEpoca: number };
@@ -140,10 +150,34 @@ export async function GET(request: Request) {
       company = conta;
     }
 
-    setSessionCookie(await createSessionToken(company.id, company.sessaoEpoca));
-    return NextResponse.redirect(
-      appRedirect(isNew ? "/painel/atendente?novo=1" : "/painel/atendente", request.url),
+    const token = await createSessionToken(company.id, company.sessaoEpoca);
+    setSessionCookie(token);
+
+    const redirectUrl = appRedirect(
+      isNew ? "/painel/atendente?novo=1" : "/painel/atendente",
+      request.url,
     );
+    const response = NextResponse.redirect(redirectUrl);
+
+    // Garante cabeçalho Set-Cookie na resposta HTTP enviada ao navegador
+    response.cookies.set(SESSION_COOKIE, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 7 * 24 * 60 * 60,
+    });
+
+    // Remove o cookie do OAuth state
+    response.cookies.set(OAUTH_STATE_COOKIE, "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 0,
+    });
+
+    return response;
   } catch (error) {
     await logError("auth-google-callback", error);
     return fail();
