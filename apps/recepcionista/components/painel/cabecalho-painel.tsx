@@ -35,9 +35,9 @@ export function CabecalhoPainel({
         <div className="flex items-center gap-2">
           <Link href="/painel/atendente" className="flex items-baseline gap-2">
             <span className="text-xl font-bold tracking-tight text-white font-sans">
-              WhatsApp
+              Nexora
             </span>
-            <span className="text-[11px] text-white/80 font-normal truncate max-w-[120px]">
+            <span className="text-[11px] text-white/80 font-normal truncate max-w-[140px]">
               · {empresaNome}
             </span>
           </Link>
@@ -128,10 +128,10 @@ export function CabecalhoPainel({
               </span>
               <div className="flex flex-col">
                 <span className="font-sans font-bold text-base text-[#111B21] leading-tight">
-                  WhatsApp Web
+                  Nexora
                 </span>
-                <span className="text-[11px] text-[#667781] leading-tight font-medium">
-                  Nexora Atendente Inteligente
+                <span className="text-[11px] text-[#008069] leading-tight font-medium">
+                  Atendente Inteligente para WhatsApp
                 </span>
               </div>
             </Link>

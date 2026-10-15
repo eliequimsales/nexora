@@ -44,15 +44,19 @@ function useTreinamentoBadge(initialBadge?: number) {
 }
 
 function iconeParaRota(href: string) {
-  // Ensinar / Atualizações (Ícone Status/Updates do WhatsApp com anéis segmentados)
+  // Ensinar Atendente (Ícone Livro / Conhecimento)
   if (href.includes("treinamento")) {
     return (
-      <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden="true">
-        <path strokeLinecap="round" d="M12 3a9 9 0 0 1 8.66 6.5M21 12a9 9 0 0 1-6.5 8.66M12 21a9 9 0 0 1-8.66-6.5M3 12a9 9 0 0 1 6.5-8.66" />
+      <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+        />
       </svg>
     );
   }
-  // Clientes / Comunidades (Ícone Comunidades do WhatsApp)
+  // Meus Clientes (Ícone Contatos / Clientes)
   if (href.includes("clientes")) {
     return (
       <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -72,15 +76,19 @@ function iconeParaRota(href: string) {
       </svg>
     );
   }
-  // Agenda / Ligações (Ícone Chamadas/Ligações do WhatsApp)
+  // Agenda (Ícone Calendário de Marcações)
   if (href.includes("agenda")) {
     return (
-      <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-1.57 1.97c-2.83-1.44-5.15-3.75-6.59-6.59l1.97-1.57c.29-.28.37-.69.25-1.02A11.36 11.36 0 019 4.31c0-.55-.45-1-1-1H4.5c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1z" />
+      <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+        />
       </svg>
     );
   }
-  // Planos / Configurações (Ícone Engrenagem de Configurações do WhatsApp)
+  // Planos / Ajustes (Ícone Engrenagem de Configurações)
   return (
     <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
       <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -102,7 +110,7 @@ export function PainelNavDesktop({ items }: { items: NavItem[] }) {
   const liveBadge = useTreinamentoBadge(initialTreinamento);
 
   return (
-    <nav aria-label="Menu principal WhatsApp Web" className="hidden items-center sm:flex">
+    <nav aria-label="Menu principal" className="hidden items-center sm:flex">
       <div className="flex items-center gap-1.5 rounded-xl border border-panel-line/80 bg-white p-1 shadow-2xs">
         {items.map((item) => {
           const ativo = estaAtivo(item.href, pathname);
@@ -147,9 +155,9 @@ export function PainelNavMobile({ items }: { items: NavItem[] }) {
 
   const rotuloCurto = (href: string, label: string) => {
     if (href.includes("atendente")) return "Conversas";
-    if (href.includes("treinamento")) return "Atualizações";
+    if (href.includes("treinamento")) return "Ensinar Atendente";
     if (href.includes("clientes")) return "Comunidades";
-    if (href.includes("agenda")) return "Ligações";
+    if (href.includes("agenda")) return "Agenda";
     if (href.includes("assinatura")) return "Ajustes";
     return label;
   };
@@ -189,7 +197,7 @@ export function PainelNavMobile({ items }: { items: NavItem[] }) {
                 )}
               </div>
               <span
-                className={`text-[11px] tracking-tight mt-0.5 truncate ${
+                className={`text-[10px] tracking-tight mt-0.5 text-center leading-tight line-clamp-2 max-w-full px-0.5 ${
                   ativo ? "font-bold text-[#008069]" : "font-medium text-[#54656f]"
                 }`}
               >
