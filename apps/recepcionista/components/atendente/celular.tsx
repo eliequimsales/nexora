@@ -483,13 +483,13 @@ export function Celular({
               >
                 <div className="relative shrink-0">
                   <div
-                    className={`flex h-10 w-10 items-center justify-center rounded-full font-sans text-base font-bold text-white shadow-inner ${
+                    className={`flex h-10 w-10 items-center justify-center rounded-full font-sans text-base font-bold shadow-inner ${
                       modoChat === "ensinar"
-                        ? "bg-[#00A884] ring-2 ring-white/40"
-                        : "bg-[#075E54]"
+                        ? "bg-amber text-night font-black ring-2 ring-white/40"
+                        : "bg-[#075E54] text-white"
                     }`}
                   >
-                    {modoChat === "ensinar" ? "⚡" : tela.empresa.trim().charAt(0).toUpperCase() || "N"}
+                    {modoChat === "ensinar" ? "N" : tela.empresa.trim().charAt(0).toUpperCase() || "N"}
                   </div>
                   <span
                     className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#008069] ${
@@ -499,7 +499,7 @@ export function Celular({
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold text-white">
-                    {modoChat === "ensinar" ? `${nome.trim() || "Atendente"} · Nexora` : tela.empresa}
+                    {modoChat === "ensinar" ? `${nome.trim() || "Atendente"} · Nexora IA` : tela.empresa}
                   </p>
                   <p className="text-[11px] text-[#D9FDD3]">
                     {digitando
@@ -608,10 +608,10 @@ export function Celular({
                   </span>
                 </div>
 
-                <div className="mx-auto max-w-[340px] rounded-lg bg-[#FFEECD] px-3 py-1.5 text-center text-[10.5px] leading-tight text-[#54656F] shadow-2xs font-medium">
+                <div className="mx-auto max-w-[340px] rounded-lg bg-[#FFEECD] border border-[#F5C358]/40 px-3 py-1.5 text-center text-[10.5px] leading-tight text-[#54656F] shadow-2xs font-medium">
                   {modoChat === "ensinar"
-                    ? "💬 Digite preços, horários ou regras. O atendente anota tudo na hora."
-                    : "🔒 Teste como um cliente. Você pode ajustar qualquer resposta na hora."}
+                    ? "✨ Nexora IA: digite preços, horários ou regras. O atendente aprende tudo na hora."
+                    : "🔒 Teste como um cliente. A inteligência da Nexora responde com base nas suas regras."}
                 </div>
 
                 {modoChat === "ensinar"

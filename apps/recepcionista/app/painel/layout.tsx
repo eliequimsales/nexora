@@ -59,16 +59,24 @@ export default async function PainelLayout({ children }: { children: React.React
     <div className="min-h-screen bg-[#F0F2F5] text-panel-ink">
       <RastreadorCadastroNovo />
 
-      {/* Banner de Teste Grátis Estilo WhatsApp */}
+      {/* Banner de Teste Grátis com Identidade Visual Nexora */}
       {estado === "TRIAL" && (
-        <div className="border-b border-[#00A884]/20 bg-[#D9FDD3] px-4 py-2 text-center text-xs font-medium text-[#075E54] sm:text-sm">
-          <span>
-            ⚡ <strong>Período de teste:</strong> você tem{" "}
-            <strong className="text-[#008069]">{diasRestantes} {diasRestantes === 1 ? "dia restante" : "dias restantes"}</strong> com envio de mensagens liberado.
+        <div className="border-b border-amber/30 bg-amber/15 px-4 py-2 text-center text-xs font-medium text-night sm:text-sm">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-amber text-[10px] font-black text-night shadow-2xs">
+              ✦
+            </span>
+            <span>
+              <strong>Período de teste Nexora:</strong> você tem{" "}
+              <strong className="text-amber-deep font-bold">
+                {diasRestantes} {diasRestantes === 1 ? "dia restante" : "dias restantes"}
+              </strong>{" "}
+              com atendimento inteligente liberado no WhatsApp.
+            </span>
           </span>{" "}
           <Link
             href="/painel/assinatura"
-            className="ml-2 inline-flex items-center font-bold text-[#008069] hover:underline"
+            className="ml-2 inline-flex items-center font-bold text-amber-deep underline hover:text-night"
           >
             Ver planos →
           </Link>

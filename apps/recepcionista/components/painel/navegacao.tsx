@@ -189,7 +189,7 @@ export function PainelNavMobile({ items }: { items: NavItem[] }) {
                 </div>
                 {Boolean(badge > 0) && (
                   <span
-                    className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#25D366] text-white px-1 text-[10px] font-black shadow-xs animate-pulse"
+                    className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber text-night px-1 text-[10px] font-black shadow-xs animate-pulse ring-1 ring-night/10"
                     aria-label={`${badge} notificações`}
                   >
                     {badge}

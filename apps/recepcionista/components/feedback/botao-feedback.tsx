@@ -18,7 +18,7 @@ export function BotaoFeedback({
 
   return (
     <>
-      <div className="fixed bottom-5 right-5 z-40">
+      <div className="fixed bottom-20 right-4 sm:bottom-5 sm:right-5 z-40">
         <button
           type="button"
           onClick={() => setAberto(true)}

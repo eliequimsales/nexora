@@ -32,14 +32,24 @@ export function CabecalhoPainel({
     <>
       {/* CABEÇALHO MOBILE ESTILO WHATSAPP NATIVO (Verde #008069) */}
       <header className="sticky top-0 z-40 flex items-center justify-between bg-[#008069] px-4 py-3 text-white shadow-md sm:hidden">
-        <div className="flex items-center gap-2">
-          <Link href="/painel/atendente" className="flex items-baseline gap-2">
-            <span className="text-xl font-bold tracking-tight text-white font-sans">
-              Nexora
+        <div className="flex items-center gap-2.5">
+          <Link href="/painel/atendente" className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber text-night font-black text-sm shadow-sm ring-1 ring-white/25">
+              N
             </span>
-            <span className="text-[11px] text-white/80 font-normal truncate max-w-[140px]">
-              · {empresaNome}
-            </span>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5 leading-none">
+                <span className="text-lg font-bold tracking-tight text-white font-sans">
+                  Nexora
+                </span>
+                <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-amber-300 uppercase">
+                  IA
+                </span>
+              </div>
+              <span className="text-[10.5px] text-white/80 font-normal truncate max-w-[150px] leading-tight mt-0.5">
+                {empresaNome}
+              </span>
+            </div>
           </Link>
         </div>
 
@@ -116,22 +126,21 @@ export function CabecalhoPainel({
       <header className="hidden border-b border-[#E9EDEF] bg-[#F0F2F5] sm:block">
         <div className="mx-auto flex max-w-page items-center justify-between px-6 py-3">
           <div className="flex items-center gap-8">
-            <Link href="/painel/atendente" className="flex items-center gap-2.5">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#00A884] text-white shadow-xs">
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                  />
-                </svg>
+            <Link href="/painel/atendente" className="flex items-center gap-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-night text-amber font-black text-lg shadow-sm border border-amber/30 ring-2 ring-amber/10">
+                N
               </span>
               <div className="flex flex-col">
-                <span className="font-sans font-bold text-base text-[#111B21] leading-tight">
-                  Nexora
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-sans font-bold text-base text-[#111B21] leading-tight">
+                    Nexora
+                  </span>
+                  <span className="rounded bg-amber/20 px-1.5 py-0.5 text-[9px] font-bold text-amber-deep tracking-wider uppercase">
+                    Atendente
+                  </span>
+                </div>
                 <span className="text-[11px] text-[#008069] leading-tight font-medium">
-                  Atendente Inteligente para WhatsApp
+                  Inteligência no WhatsApp
                 </span>
               </div>
             </Link>
