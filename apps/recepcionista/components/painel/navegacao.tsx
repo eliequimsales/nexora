@@ -122,18 +122,18 @@ export function PainelNavDesktop({ items }: { items: NavItem[] }) {
               aria-current={ativo ? "page" : undefined}
               className={`group flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-all duration-150 active:scale-[0.98] ${
                 ativo
-                  ? "bg-[#00A884] text-white shadow-xs"
+                  ? "bg-night text-amber shadow-xs border border-amber/30"
                   : "text-panel-sub hover:bg-[#F0F2F5] hover:text-panel-ink"
               }`}
             >
-              <span className={ativo ? "text-white" : "text-[#54656f] group-hover:text-panel-ink"}>
+              <span className={ativo ? "text-amber" : "text-[#54656f] group-hover:text-panel-ink"}>
                 {iconeParaRota(item.href)}
               </span>
               <span>{item.label}</span>
               {Boolean(badge > 0) && (
                 <span
                   className={`ml-1 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-black ${
-                    ativo ? "bg-white text-[#00A884]" : "bg-[#25D366] text-white animate-pulse"
+                    ativo ? "bg-amber text-night" : "bg-amber text-night animate-pulse ring-1 ring-night/10"
                   }`}
                   aria-label={`${badge} para ensinar`}
                 >
@@ -182,7 +182,7 @@ export function PainelNavMobile({ items }: { items: NavItem[] }) {
               <div className="relative flex items-center justify-center">
                 <div
                   className={`flex items-center justify-center px-4 py-0.5 rounded-full transition-colors ${
-                    ativo ? "bg-[#d9fdd3] text-[#008069]" : "text-[#54656f]"
+                    ativo ? "bg-amber/25 text-night font-bold ring-1 ring-amber/40" : "text-[#54656f]"
                   }`}
                 >
                   {iconeParaRota(item.href)}
@@ -198,7 +198,7 @@ export function PainelNavMobile({ items }: { items: NavItem[] }) {
               </div>
               <span
                 className={`text-[10px] tracking-tight mt-0.5 text-center leading-tight line-clamp-2 max-w-full px-0.5 ${
-                  ativo ? "font-bold text-[#008069]" : "font-medium text-[#54656f]"
+                  ativo ? "font-black text-night" : "font-medium text-[#54656f]"
                 }`}
               >
                 {rotuloCurto(item.href, item.label)}

@@ -430,7 +430,7 @@ export function Celular({
           }}
           className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 px-3 text-xs font-semibold transition ${
             abaAtiva === "chat"
-              ? "bg-[#00A884] text-white shadow-xs"
+              ? "bg-night text-amber font-bold shadow-xs border border-amber/30"
               : "text-panel-sub hover:text-panel-ink hover:bg-panel-bg"
           }`}
         >
@@ -445,14 +445,14 @@ export function Celular({
           }}
           className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 px-3 text-xs font-semibold transition ${
             abaAtiva === "perfil"
-              ? "bg-amber text-night shadow-xs"
+              ? "bg-amber text-night font-bold shadow-xs"
               : "text-panel-sub hover:text-panel-ink hover:bg-panel-bg"
           }`}
         >
           <span>🏢</span>
           <span>Perfil Comercial & Dados</span>
           {semServicos && (
-            <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" title="Configure aqui" />
+            <span className="flex h-2 w-2 rounded-full bg-amber animate-pulse" title="Configure aqui" />
           )}
         </button>
       </div>
@@ -472,9 +472,9 @@ export function Celular({
             </div>
           </div>
 
-          {/* CABEÇALHO DO WHATSAPP (Verde #008069 oficial) */}
+          {/* CABEÇALHO DO CELULAR COM IDENTIDADE VISUAL NEXORA */}
           {abaAtiva === "chat" ? (
-            <div className="flex items-center justify-between border-b border-[#E9EDEF] bg-[#008069] px-3.5 py-2.5 shadow-sm text-white">
+            <div className="flex items-center justify-between border-b border-night-line bg-night px-3.5 py-2.5 shadow-sm text-white">
               <button
                 type="button"
                 onClick={() => setAbaAtiva("perfil")}
@@ -486,14 +486,14 @@ export function Celular({
                     className={`flex h-10 w-10 items-center justify-center rounded-full font-sans text-base font-bold shadow-inner ${
                       modoChat === "ensinar"
                         ? "bg-amber text-night font-black ring-2 ring-white/40"
-                        : "bg-[#075E54] text-white"
+                        : "bg-night-soft text-amber border border-amber/30"
                     }`}
                   >
                     {modoChat === "ensinar" ? "N" : tela.empresa.trim().charAt(0).toUpperCase() || "N"}
                   </div>
                   <span
-                    className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#008069] ${
-                      tela.whatsappLigado ? "bg-[#25D366]" : "bg-amber"
+                    className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-night ${
+                      tela.whatsappLigado ? "bg-amber" : "bg-amber/60"
                     }`}
                   />
                 </div>
@@ -501,7 +501,7 @@ export function Celular({
                   <p className="truncate text-sm font-bold text-white">
                     {modoChat === "ensinar" ? `${nome.trim() || "Atendente"} · Nexora IA` : tela.empresa}
                   </p>
-                  <p className="text-[11px] text-[#D9FDD3]">
+                  <p className="text-[11px] text-amber-300">
                     {digitando
                       ? "digitando…"
                       : modoChat === "ensinar"
@@ -537,7 +537,7 @@ export function Celular({
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-between border-b border-[#E9EDEF] bg-[#008069] px-3.5 py-2.5 shadow-sm text-white">
+            <div className="flex items-center justify-between border-b border-night-line bg-night px-3.5 py-2.5 shadow-sm text-white">
               <button
                 type="button"
                 onClick={() => setAbaAtiva("chat")}
@@ -549,13 +549,13 @@ export function Celular({
                 <span>Voltar ao chat</span>
               </button>
               <span className="text-xs font-bold text-white">Perfil Comercial</span>
-              <span className="text-[10px] text-[#D9FDD3] font-semibold">✓ Verificado</span>
+              <span className="text-[10px] text-amber-300 font-semibold">✓ Verificado</span>
             </div>
           )}
 
           {/* AVISO DE SINCRONIZAÇÃO EM TEMPO REAL */}
           {notificacaoSalvo && (
-            <div className="bg-[#00A884] px-3 py-1.5 text-center text-xs font-semibold text-white transition animate-in fade-in slide-in-from-top duration-300">
+            <div className="bg-amber px-3 py-1.5 text-center text-xs font-bold text-night transition animate-in fade-in slide-in-from-top duration-300 shadow-2xs">
               ✓ Dados salvos com sucesso na sua empresa!
             </div>
           )}
@@ -570,7 +570,7 @@ export function Celular({
                   onClick={() => setModoChat("cliente")}
                   className={`flex-1 rounded-lg py-1 px-2 font-semibold transition ${
                     modoChat === "cliente"
-                      ? "bg-[#00A884] text-white shadow-xs"
+                      ? "bg-amber text-night font-bold shadow-xs"
                       : "text-[#54656F] hover:text-[#111B21]"
                   }`}
                 >
@@ -581,7 +581,7 @@ export function Celular({
                   onClick={() => setModoChat("ensinar")}
                   className={`flex-1 rounded-lg py-1 px-2 font-semibold transition ${
                     modoChat === "ensinar"
-                      ? "bg-[#00A884] text-white shadow-xs"
+                      ? "bg-amber text-night font-bold shadow-xs"
                       : "text-[#54656F] hover:text-[#111B21]"
                   }`}
                 >
@@ -622,19 +622,19 @@ export function Celular({
                           <div
                             className={`relative max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs sm:text-[13px] leading-relaxed shadow-[0_1px_0.5px_rgba(11,20,26,.13)] break-words [overflow-wrap:anywhere] ${
                               ehDono
-                                ? "rounded-tr-xs bg-[#D9FDD3] text-[#111B21]"
+                                ? "rounded-tr-xs bg-[#FEF3C7] text-[#111B21] border border-amber/30"
                                 : "rounded-tl-xs bg-white text-[#111B21] border border-gray-100"
                             }`}
                           >
                             <p className="whitespace-pre-line break-words [overflow-wrap:anywhere]">{m.texto}</p>
 
                             {m.salvo && (
-                              <div className="mt-2 rounded-xl border border-[#00A884]/40 bg-[#D9FDD3] p-2 text-xs text-[#008069]">
-                                <span className="font-bold">✓ Salvo na sua empresa!</span>
+                              <div className="mt-2 rounded-xl border border-amber/40 bg-amber/15 p-2 text-xs text-night">
+                                <span className="font-bold text-amber-deep">✓ Salvo na sua empresa!</span>
                                 <button
                                   type="button"
                                   onClick={() => setAbaAtiva("perfil")}
-                                  className="mt-1 block text-[11px] font-semibold text-[#008069] underline"
+                                  className="mt-1 block text-[11px] font-semibold text-amber-deep underline"
                                 >
                                   Ver em informações do negócio ›
                                 </button>
@@ -661,15 +661,15 @@ export function Celular({
                             title={m.fonte}
                             className={`relative max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs sm:text-[13px] leading-relaxed shadow-[0_1px_0.5px_rgba(11,20,26,.13)] break-words [overflow-wrap:anywhere] ${
                               ehCliente
-                                ? "rounded-tr-xs bg-[#D9FDD3] text-[#111B21]"
+                                ? "rounded-tr-xs bg-[#FEF3C7] text-[#111B21] border border-amber/30"
                                 : "rounded-tl-xs bg-white text-[#111B21] border border-gray-100"
                             }`}
                           >
                             <p className="whitespace-pre-line break-words [overflow-wrap:anywhere]">{m.texto}</p>
 
                             {m.agendamentoConfirmado && (
-                              <div className="mt-2.5 rounded-xl border border-[#25D366]/40 bg-[#D9FDD3] p-2 text-xs text-[#111B21]">
-                                <div className="flex items-center gap-1.5 font-bold text-[#008069]">
+                              <div className="mt-2.5 rounded-xl border border-amber/40 bg-amber/15 p-2 text-xs text-[#111B21]">
+                                <div className="flex items-center gap-1.5 font-bold text-amber-deep">
                                   <span>✓</span> Horário reservado automaticamente
                                 </div>
                                 <p className="mt-1 text-[11px] text-[#667781]">
@@ -687,7 +687,7 @@ export function Celular({
                                     setAjustandoIdx(i);
                                     setAjusteTexto("");
                                   }}
-                                  className="text-[11px] font-semibold text-[#008069] hover:underline flex items-center gap-1"
+                                  className="text-[11px] font-semibold text-amber-deep hover:underline flex items-center gap-1"
                                 >
                                   <span>✏️</span> Ajustar esta resposta
                                 </button>
@@ -697,14 +697,14 @@ export function Celular({
 
                             {/* CAIXA DE AJUSTE INLINE DE RESPOSTA */}
                             {ajustandoIdx === i && (
-                              <div className="mt-2.5 rounded-xl border border-[#00A884]/60 bg-[#F0F2F5] p-2.5 text-xs space-y-2">
-                                <p className="font-bold text-[#008069]">Como o Atendente deve responder?</p>
+                              <div className="mt-2.5 rounded-xl border border-amber/50 bg-amber/5 p-2.5 text-xs space-y-2">
+                                <p className="font-bold text-amber-deep">Como o Atendente deve responder?</p>
                                 <input
                                   value={ajusteTexto}
                                   onChange={(e) => setAjusteTexto(e.target.value.slice(0, 150))}
                                   maxLength={150}
                                   placeholder="Ex: Custa R$ 50 / Não atendemos domingo..."
-                                  className="w-full rounded-lg border border-[#E9EDEF] bg-white px-2.5 py-1.5 text-xs text-[#111B21] focus:border-[#00A884] focus:outline-none"
+                                  className="w-full rounded-lg border border-[#E9EDEF] bg-white px-2.5 py-1.5 text-xs text-[#111B21] focus:border-amber focus:outline-none"
                                 />
                                 <div className="flex items-center justify-end gap-2">
                                   <button
@@ -718,7 +718,7 @@ export function Celular({
                                     type="button"
                                     disabled={!ajusteTexto.trim()}
                                     onClick={() => void salvarAjusteResposta(ajusteTexto)}
-                                    className="rounded-lg bg-[#00A884] px-3 py-1 text-xs font-bold text-white hover:bg-[#008069] disabled:opacity-40"
+                                    className="rounded-lg bg-amber hover:bg-amber-400 px-3 py-1 text-xs font-bold text-night disabled:opacity-40 shadow-2xs"
                                   >
                                     Salvar regra
                                   </button>
@@ -782,7 +782,7 @@ export function Celular({
                     }}
                     className={`shrink-0 rounded-full border border-[#E9EDEF] bg-white px-3.5 py-1.5 text-xs font-medium shadow-2xs transition disabled:opacity-40 hover:bg-[#E9EDEF] hover:text-[#111B21] ${
                       modoChat === "ensinar"
-                        ? "text-[#008069] border-[#00A884]/30"
+                        ? "text-amber-deep border-amber/40"
                         : "text-[#54656F]"
                     }`}
                   >
@@ -817,13 +817,13 @@ export function Celular({
                       : "Escreva como um cliente no WhatsApp…"
                   }
                   aria-label={modoChat === "ensinar" ? "Ensinar atendente" : "Mensagem de teste"}
-                  className="min-w-0 flex-1 rounded-full border border-transparent bg-white px-4 py-2 text-xs sm:text-sm text-[#111B21] placeholder:text-[#8696A0] shadow-2xs focus:outline-none focus:ring-1 focus:ring-[#00A884]"
+                  className="min-w-0 flex-1 rounded-full border border-transparent bg-white px-4 py-2 text-xs sm:text-sm text-[#111B21] placeholder:text-[#8696A0] shadow-2xs focus:outline-none focus:ring-1 focus:ring-amber"
                 />
                 <button
                   type="submit"
                   disabled={digitando || !entrada.trim()}
                   aria-label="Enviar"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#00A884] hover:bg-[#008069] text-white shadow-xs transition disabled:opacity-40"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber hover:bg-amber-400 text-night font-bold shadow-xs transition disabled:opacity-40"
                 >
                   <svg className="h-4 w-4 rotate-45 transform -translate-y-0.5 translate-x-0.5" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
@@ -899,7 +899,7 @@ export function Celular({
                     <span
                       className={`h-3 w-3 rounded-full ${
                         tela.whatsappLigado && tela.ligado
-                          ? "bg-[#25D366] animate-pulse"
+                          ? "bg-amber animate-pulse shadow-sm shadow-amber/50"
                           : "bg-red-500"
                       }`}
                     />
@@ -919,7 +919,7 @@ export function Celular({
                       <button
                         type="button"
                         onClick={() => setModalConectarAberto(true)}
-                        className="rounded-xl bg-[#00A884] px-3.5 py-2 text-xs font-bold text-white shadow hover:brightness-110 transition"
+                        className="rounded-xl bg-amber hover:bg-amber-400 px-3.5 py-2 text-xs font-bold text-night shadow transition"
                       >
                         Conectar meu WhatsApp
                       </button>
@@ -935,7 +935,7 @@ export function Celular({
                       <button
                         type="button"
                         onClick={() => void alternarLigado(true)}
-                        className="rounded-xl bg-[#00A884] px-3.5 py-1.5 text-xs font-bold text-white shadow hover:brightness-110 transition"
+                        className="rounded-xl bg-amber hover:bg-amber-400 px-3.5 py-1.5 text-xs font-bold text-night shadow transition"
                       >
                         Ligar Atendente
                       </button>
@@ -1237,7 +1237,7 @@ export function Celular({
                 <button
                   type="button"
                   onClick={() => setAbaAtiva("chat")}
-                  className="w-full rounded-xl bg-[#00A884] py-3.5 text-center text-xs sm:text-sm font-bold text-white shadow hover:brightness-110 transition"
+                  className="w-full rounded-xl bg-amber hover:bg-amber-400 py-3.5 text-center text-xs sm:text-sm font-bold text-night shadow transition"
                 >
                   💬 Voltar para a Conversa
                 </button>

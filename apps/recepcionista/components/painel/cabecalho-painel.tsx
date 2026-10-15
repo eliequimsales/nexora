@@ -30,8 +30,8 @@ export function CabecalhoPainel({
 
   return (
     <>
-      {/* CABEÇALHO MOBILE ESTILO WHATSAPP NATIVO (Verde #008069) */}
-      <header className="sticky top-0 z-40 flex items-center justify-between bg-[#008069] px-4 py-3 text-white shadow-md sm:hidden">
+      {/* CABEÇALHO MOBILE COM IDENTIDADE VISUAL NEXORA */}
+      <header className="sticky top-0 z-40 flex items-center justify-between bg-night px-4 py-3 text-white shadow-md border-b border-night-line sm:hidden">
         <div className="flex items-center gap-2.5">
           <Link href="/painel/atendente" className="flex items-center gap-2.5">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber text-night font-black text-sm shadow-sm ring-1 ring-white/25">
@@ -139,7 +139,7 @@ export function CabecalhoPainel({
                     Atendente
                   </span>
                 </div>
-                <span className="text-[11px] text-[#008069] leading-tight font-medium">
+                <span className="text-[11px] text-amber-deep leading-tight font-semibold">
                   Inteligência no WhatsApp
                 </span>
               </div>

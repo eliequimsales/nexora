@@ -154,9 +154,9 @@ export default function PaginaDoAtendente() {
       </header>
 
       {tela.isGuest && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#00A884]/30 bg-[#D9FDD3]/60 p-4 text-sm text-[#075E54]">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber/40 bg-amber/10 p-4 text-sm text-night">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#00A884] text-xs font-bold text-white" aria-hidden="true">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber text-xs font-bold text-night" aria-hidden="true">
               ⚡
             </span>
             <div>
@@ -169,7 +169,7 @@ export default function PaginaDoAtendente() {
           <button
             type="button"
             onClick={() => setSalvarAberto(true)}
-            className="rounded-lg bg-[#00A884] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#008069] shadow-xs"
+            className="rounded-lg bg-amber hover:bg-amber-400 px-3.5 py-1.5 text-xs font-bold text-night shadow-xs transition"
           >
             Salvar meu acesso
           </button>
@@ -177,13 +177,13 @@ export default function PaginaDoAtendente() {
       )}
 
       {tela.acesso === "SEMANA_ACABOU" && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#00A884]/30 bg-[#D9FDD3]/60 p-4 text-sm text-[#075E54]">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber/40 bg-amber/10 p-4 text-sm text-night">
           <p className="text-[#111B21]">
             A semana grátis acabou. Para o Atendente continuar respondendo 24 horas no WhatsApp, ative o plano Atendente.
           </p>
           <Link
             href="/painel/assinatura"
-            className="rounded-lg bg-[#00A884] px-4 py-2 text-xs font-bold text-white hover:bg-[#008069]"
+            className="rounded-lg bg-amber hover:bg-amber-400 px-4 py-2 text-xs font-bold text-night transition shadow-xs"
           >
             Ver planos
           </Link>

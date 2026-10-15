@@ -41,7 +41,7 @@ function MessageBubble({ message }: { message: MessageRow }) {
         className={`relative max-w-[85%] sm:max-w-[70%] px-3.5 py-2 text-[14.2px] leading-relaxed shadow-[0_1px_0.5px_rgba(11,20,26,.13)] ${
           fromCustomer
             ? "rounded-2xl rounded-tl-none bg-white text-[#111B21]"
-            : "rounded-2xl rounded-tr-none bg-[#D9FDD3] text-[#111B21]"
+            : "rounded-2xl rounded-tr-none bg-[#FEF3C7] text-[#111B21] border border-amber/30"
         }`}
       >
         <p className="whitespace-pre-wrap">{message.content}</p>
@@ -147,7 +147,7 @@ export default function ConversaPage() {
     return (
       <div className="p-10 text-center">
         <p className="font-medium text-[#111B21]">Conversa não encontrada.</p>
-        <Link href="/painel/conversas" className="mt-2 inline-block text-sm text-[#00A884] font-semibold underline">
+        <Link href="/painel/conversas" className="mt-2 inline-block text-sm text-amber-deep font-semibold underline">
           Voltar para as conversas
         </Link>
       </div>
@@ -165,7 +165,7 @@ export default function ConversaPage() {
 
   return (
     <div className="mx-auto max-w-4xl pb-10">
-      {/* CABEÇALHO DO CHAT IDÊNTICO AO WHATSAPP */}
+      {/* CABEÇALHO DO CHAT COM IDENTIDADE NEXORA */}
       <div className="flex flex-col overflow-hidden rounded-2xl border border-[#E9EDEF] bg-white shadow-md">
         <div className="flex items-center justify-between border-b border-[#E9EDEF] bg-[#F0F2F5] px-4 py-2.5">
           <div className="flex items-center gap-3">
@@ -180,7 +180,7 @@ export default function ConversaPage() {
             </Link>
 
             {/* Avatar circular */}
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#DFE5E7] font-bold text-[#54656F] text-sm">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-night text-amber font-bold text-sm border border-amber/30">
               {iniciais}
             </div>
 
@@ -188,7 +188,7 @@ export default function ConversaPage() {
               <h1 className="truncate text-base font-bold text-[#111B21] leading-tight">
                 {nomeCliente}
               </h1>
-              <p className="text-xs text-[#00A884] font-medium leading-tight">
+              <p className="text-xs text-amber-deep font-semibold leading-tight">
                 {isHuman ? "Atendimento com você" : "online · Atendente Virtual 24h"}
               </p>
             </div>
@@ -200,7 +200,7 @@ export default function ConversaPage() {
               <button
                 onClick={() => runAction("assumir")}
                 disabled={busy}
-                className="rounded-full bg-[#00A884] hover:bg-[#008069] px-4 py-1.5 text-xs font-bold text-white transition disabled:opacity-60 shadow-xs"
+                className="rounded-full bg-amber hover:bg-amber-400 px-4 py-1.5 text-xs font-bold text-night transition disabled:opacity-60 shadow-xs"
               >
                 Assumir conversa
               </button>
@@ -209,7 +209,7 @@ export default function ConversaPage() {
               <button
                 onClick={() => runAction("reativar_ia")}
                 disabled={busy}
-                className="rounded-full border border-[#00A884] bg-[#D9FDD3] hover:bg-[#D9FDD3]/80 px-3.5 py-1.5 text-xs font-bold text-[#008069] transition disabled:opacity-60 shadow-xs"
+                className="rounded-full border border-amber/40 bg-amber/15 hover:bg-amber/25 px-3.5 py-1.5 text-xs font-bold text-night transition disabled:opacity-60 shadow-xs"
               >
                 Devolver para IA
               </button>
@@ -228,7 +228,7 @@ export default function ConversaPage() {
 
         {/* Lead Card (se houver dados capturados) */}
         {conversation.lead && (
-          <div className="border-b border-[#C4E9BE] bg-[#D9FDD3]/50 px-4 py-2 text-xs text-[#008069] flex items-center justify-between">
+          <div className="border-b border-amber/30 bg-amber/10 px-4 py-2 text-xs text-night flex items-center justify-between">
             <span>
               <strong>Cliente identificado:</strong> {conversation.lead.name} · +{conversation.customerPhone}
               {conversation.lead.interest && ` · Interesse: ${conversation.lead.interest}`}
@@ -274,13 +274,13 @@ export default function ConversaPage() {
                 value={reply}
                 onChange={(e) => setReply(e.target.value)}
                 placeholder="Mensagem..."
-                className="flex-1 rounded-full border border-transparent bg-white px-4 py-2.5 text-sm text-[#111B21] placeholder:text-[#8696A0] outline-none shadow-2xs focus:ring-1 focus:ring-[#00A884]"
+                className="flex-1 rounded-full border border-transparent bg-white px-4 py-2.5 text-sm text-[#111B21] placeholder:text-[#8696A0] outline-none shadow-2xs focus:ring-1 focus:ring-amber"
               />
               <button
                 type="submit"
                 disabled={busy || !reply.trim()}
                 aria-label="Enviar mensagem"
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#00A884] text-white transition hover:bg-[#008069] disabled:opacity-50 shadow-xs"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber hover:bg-amber-400 text-night font-bold transition disabled:opacity-50 shadow-xs"
               >
                 <svg className="h-5 w-5 rotate-45 transform -translate-y-0.5 translate-x-0.5" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
@@ -298,7 +298,7 @@ export default function ConversaPage() {
                 <button
                   type="button"
                   onClick={() => runAction("assumir")}
-                  className="ml-3 shrink-0 rounded-lg bg-[#00A884] px-3 py-1 text-xs font-bold text-white hover:bg-[#008069]"
+                  className="ml-3 shrink-0 rounded-lg bg-amber hover:bg-amber-400 px-3 py-1 text-xs font-bold text-night"
                 >
                   Assumir
                 </button>
