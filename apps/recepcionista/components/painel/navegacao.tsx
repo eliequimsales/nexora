@@ -156,7 +156,7 @@ export function PainelNavMobile({ items }: { items: NavItem[] }) {
   const rotuloCurto = (href: string, label: string) => {
     if (href.includes("atendente")) return "Conversas";
     if (href.includes("treinamento")) return "Ensinar Atendente";
-    if (href.includes("clientes")) return "Comunidades";
+    if (href.includes("clientes")) return "Clientes";
     if (href.includes("agenda")) return "Agenda";
     if (href.includes("assinatura")) return "Ajustes";
     return label;
