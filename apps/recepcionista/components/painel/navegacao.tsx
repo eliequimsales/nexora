@@ -228,20 +228,20 @@ export function PainelNavMobile({ items }: { items: NavItem[] }) {
   const liveBadge = useTreinamentoBadge(initialTreinamento);
 
   const rotuloCurto = (href: string, label: string) => {
-    if (href.includes("atendente")) return "Atendente";
+    if (href.includes("atendente")) return "Conversas";
     if (href.includes("treinamento")) return "Ensinar";
-    if (href.includes("clientes")) return "Clientes";
     if (href.includes("agenda")) return "Agenda";
-    if (href.includes("assinatura")) return "Planos";
+    if (href.includes("clientes")) return "Clientes";
+    if (href.includes("assinatura")) return "Ajustes";
     return label;
   };
 
   return (
     <nav
-      aria-label="Menu principal para celular"
-      className="border-b border-panel-line bg-panel-card px-2 py-1.5 sm:hidden"
+      aria-label="Navegação móvel estilo WhatsApp"
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-panel-line bg-panel-card/95 backdrop-blur-md px-2 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))] sm:hidden shadow-[0_-4px_25px_rgba(0,0,0,0.08)]"
     >
-      <div className="grid grid-cols-5 gap-1 rounded-2xl border border-panel-line/80 bg-panel-bg p-1 shadow-inner">
+      <div className="grid grid-cols-5 items-center justify-around gap-1">
         {items.map((item) => {
           const ativo = estaAtivo(item.href, pathname);
           const badge = item.href === "/painel/treinamento" ? liveBadge : (item.badge ?? 0);
@@ -250,33 +250,29 @@ export function PainelNavMobile({ items }: { items: NavItem[] }) {
               key={item.href}
               href={item.href}
               aria-current={ativo ? "page" : undefined}
-              className={`relative flex flex-col items-center justify-center gap-1 rounded-xl py-2 px-0.5 text-center transition-all duration-200 active:scale-[0.93] ${
-                ativo
-                  ? "bg-amber text-night font-bold shadow-sm ring-1 ring-amber/50"
-                  : "bg-panel-card/70 text-panel-sub border border-panel-line/40 hover:bg-panel-card hover:text-panel-ink"
+              className={`relative flex flex-col items-center justify-center py-1 transition-all duration-150 active:scale-95 ${
+                ativo ? "text-[#00A884]" : "text-panel-sub hover:text-panel-ink"
               }`}
             >
-              {Boolean(badge > 0) && (
-                <span
-                  className="absolute -top-1 -right-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber px-1 text-[10px] font-black text-night shadow-xs animate-pulse"
-                  aria-label={`${badge} para ensinar`}
-                >
-                  {badge}
+              <div className="relative flex items-center justify-center">
+                <span className={`transition-transform duration-200 ${ativo ? "scale-115 text-[#00A884]" : ""}`}>
+                  {iconeParaRota(item.href)}
                 </span>
-              )}
-              <span
-                className={`transition-transform duration-200 ${
-                  ativo ? "scale-110 text-night" : "text-panel-sub"
-                }`}
-              >
-                {iconeParaRota(item.href)}
-              </span>
-              <span className="text-[10px] font-semibold leading-tight tracking-tight truncate max-w-full">
+                {Boolean(badge > 0) && (
+                  <span
+                    className="absolute -top-1.5 -right-3 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#25D366] text-white px-1 text-[10px] font-black shadow-sm animate-pulse"
+                    aria-label={`${badge} notificações`}
+                  >
+                    {badge}
+                  </span>
+                )}
+              </div>
+              <span className={`text-[10px] tracking-tight mt-1 truncate ${ativo ? "font-bold text-[#00A884]" : "font-medium"}`}>
                 {rotuloCurto(item.href, item.label)}
               </span>
               {ativo && (
                 <span
-                  className="h-1 w-3 rounded-full bg-night/70 animate-pulse"
+                  className="mt-0.5 h-1 w-4 rounded-full bg-[#00A884]"
                   aria-hidden="true"
                 />
               )}

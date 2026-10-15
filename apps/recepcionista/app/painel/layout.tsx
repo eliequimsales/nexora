@@ -112,7 +112,7 @@ export default async function PainelLayout({ children }: { children: React.React
         </div>
       </header>
       <PainelNavMobile items={navItems} />
-      <main className="mx-auto max-w-page px-6 py-8">{children}</main>
+      <main className="mx-auto max-w-page px-4 sm:px-6 py-6 pb-28 sm:pb-8">{children}</main>
       <BotaoFeedback
         emailPadrao={company.email}
         telefonePadrao={company.phone}

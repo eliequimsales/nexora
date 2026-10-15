@@ -21,13 +21,13 @@ interface ConversationDetail {
   lead: { name: string; interest: string | null } | null;
 }
 
-const ROLE_LABEL: Record<string, string> = { AI: "Atendente", HUMAN: "Equipe", CUSTOMER: "Cliente" };
+const ROLE_LABEL: Record<string, string> = { AI: "Atendente", HUMAN: "Você (Equipe)", CUSTOMER: "Cliente" };
 
 function MessageBubble({ message }: { message: MessageRow }) {
   if (message.role === "SYSTEM") {
     return (
       <div className="my-2 text-center">
-        <span className="rounded-full bg-panel-bg px-3 py-1 font-mono text-[11px] text-panel-sub">
+        <span className="rounded-full bg-panel-bg/90 border border-panel-line px-3 py-1 font-mono text-[11px] text-panel-sub">
           {message.content}
         </span>
       </div>
@@ -38,19 +38,25 @@ function MessageBubble({ message }: { message: MessageRow }) {
   return (
     <div className={`flex ${fromCustomer ? "justify-start" : "justify-end"}`}>
       <div
-        className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+        className={`relative max-w-[85%] sm:max-w-[72%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed shadow-xs ${
           fromCustomer
-            ? "rounded-bl-md bg-panel-bg text-panel-ink"
-            : message.role === "AI"
-              ? "rounded-br-md bg-amber text-night"
-              : "rounded-br-md bg-panel-ink text-white"
+            ? "rounded-tl-xs bg-white text-[#111b21] border border-gray-100"
+            : "rounded-tr-xs bg-[#d9fdd3] text-[#111b21] border border-[#c4e9be]/60"
         }`}
       >
         <p className="whitespace-pre-wrap">{message.content}</p>
-        <p className={`mt-1 text-right font-mono text-[10px] ${fromCustomer ? "text-panel-sub" : "text-white/60"}`}>
-          {ROLE_LABEL[message.role]} ·{" "}
-          {new Date(message.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-        </p>
+        <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-gray-500">
+          <span>{ROLE_LABEL[message.role]}</span>
+          <span>·</span>
+          <span>
+            {new Date(message.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+          </span>
+          {!fromCustomer && (
+            <span className="text-[#53bdeb] font-bold text-[11px] tracking-tighter" title="Entregue">
+              ✓✓
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -205,8 +211,8 @@ export default function ConversaPage() {
         </div>
       )}
 
-      <div className="rounded-2xl border border-panel-line bg-panel-card">
-        <div className="flex max-h-[60vh] min-h-[320px] flex-col gap-3 overflow-y-auto p-5">
+      <div className="rounded-2xl border border-panel-line bg-panel-card shadow-xs overflow-hidden">
+        <div className="flex max-h-[60vh] min-h-[360px] flex-col gap-3 overflow-y-auto p-5 bg-[#EFEAE2]/35">
           {conversation.messages.length === 0 ? (
             <p className="m-auto text-sm text-panel-sub">Sem mensagens nesta conversa.</p>
           ) : (
@@ -217,19 +223,19 @@ export default function ConversaPage() {
           <div ref={bottomRef} />
         </div>
 
-        <div className="border-t border-panel-line p-4">
+        <div className="border-t border-panel-line bg-panel-card p-3 sm:p-4">
           {isHuman ? (
-            <form onSubmit={sendReply} className="flex gap-2">
+            <form onSubmit={sendReply} className="flex items-center gap-2">
               <input
                 value={reply}
                 onChange={(e) => setReply(e.target.value)}
-                placeholder="Responder como equipe..."
-                className="flex-1 rounded-lg border border-panel-line px-3 py-2.5 text-sm outline-none focus:border-amber"
+                placeholder="Mensagem..."
+                className="flex-1 rounded-full border border-panel-line bg-panel-bg/60 px-4 py-2.5 text-sm outline-none focus:border-[#00A884] focus:ring-1 focus:ring-[#00A884]/30"
               />
               <button
                 type="submit"
                 disabled={busy || !reply.trim()}
-                className="rounded-lg bg-amber px-5 py-2.5 text-sm font-semibold text-night transition hover:brightness-110 disabled:opacity-60"
+                className="rounded-full bg-[#00A884] hover:bg-[#00A884]/90 px-5 py-2.5 text-sm font-bold text-white transition disabled:opacity-60 shadow-xs"
               >
                 Enviar
               </button>

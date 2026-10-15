@@ -17,7 +17,6 @@ export default function CadastroPage() {
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [aceite, setAceite] = useState(true);
   const jaIniciou = useRef(false);
 
   useEffect(() => {
@@ -34,10 +33,6 @@ export default function CadastroPage() {
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError("");
-    if (!aceite) {
-      setError("Por favor, marque a caixa confirmando o aceite dos Termos de Uso para criar sua conta.");
-      return;
-    }
     setLoading(true);
     try {
       const emailPrefix = form.email.split("@")[0] || "Minha Empresa";
@@ -45,7 +40,7 @@ export default function CadastroPage() {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, name, aceite }),
+        body: JSON.stringify({ ...form, name, aceite: true }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -154,34 +149,23 @@ export default function CadastroPage() {
               />
             </div>
 
-            {/* TERMOS DE USO */}
-            <label className={`flex items-start gap-2.5 rounded-lg border p-2.5 text-xs leading-relaxed transition-colors cursor-pointer ${
-              !aceite && error ? "border-nx-gold/60 bg-nx-gold/5 text-nx-primary" : "border-transparent text-nx-secondary"
-            }`}>
-              <input
-                type="checkbox"
-                checked={aceite}
-                onChange={(e) => setAceite(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-nx-border bg-nx-surface-2 accent-nx-gold shrink-0"
-              />
-              <span>
-                Li e aceito os{" "}
-                <Link href="/termos" target="_blank" className="font-semibold text-nx-gold hover:underline">
-                  Termos de Uso
-                </Link>
-                , a{" "}
-                <Link href="/privacidade" target="_blank" className="font-semibold text-nx-gold hover:underline">
-                  Política de Privacidade
-                </Link>{" "}
-                e o{" "}
-                <Link href="/operador" target="_blank" className="font-semibold text-nx-gold hover:underline">
-                  Contrato de Operador
-                </Link>
-                .
-              </span>
-            </label>
-
             {error && <p className="text-xs font-semibold text-nx-error">{error}</p>}
+
+            <p className="text-[11px] leading-relaxed text-center text-nx-secondary">
+              Ao clicar em &quot;Criar minha conta&quot;, você concorda com os{" "}
+              <Link href="/termos" target="_blank" className="font-semibold text-nx-gold hover:underline">
+                Termos de Uso
+              </Link>
+              , a{" "}
+              <Link href="/privacidade" target="_blank" className="font-semibold text-nx-gold hover:underline">
+                Política de Privacidade
+              </Link>{" "}
+              e o{" "}
+              <Link href="/operador" target="_blank" className="font-semibold text-nx-gold hover:underline">
+                Contrato de Operador
+              </Link>
+              .
+            </p>
 
             <button
               type="submit"
