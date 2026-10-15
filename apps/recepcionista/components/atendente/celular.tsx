@@ -457,73 +457,70 @@ export function Celular({
         </button>
       </div>
 
-      {/* DISPOSITIVO SMARTPHONE ULTRA-REALISTA */}
-      <div className="rounded-[3rem] border border-[#2A2E3D] bg-gradient-to-b from-[#2A2E3D] via-[#1A1D27] to-[#0E1017] p-3 shadow-2xl ring-1 ring-white/10">
-        <div className="relative flex h-[620px] sm:h-[640px] flex-col overflow-hidden rounded-[2.35rem] bg-[#0B141A] border border-[#1E222D]">
-          {/* BARRA DE STATUS DO DISPOSITIVO */}
-          <div className="flex h-7 select-none items-center justify-between bg-[#202C33] px-6 pt-1 text-[11px] font-semibold text-white/80">
+      {/* DISPOSITIVO ESTILO WHATSAPP NATIVO */}
+      <div className="rounded-2xl sm:rounded-[2.5rem] border border-[#E9EDEF] bg-white sm:p-2 sm:shadow-2xl overflow-hidden shadow-sm">
+        <div className="relative flex h-[620px] sm:h-[650px] flex-col overflow-hidden rounded-xl sm:rounded-[2rem] bg-white border border-[#E9EDEF]">
+          {/* BARRA DE STATUS DO DISPOSITIVO (Desktop) */}
+          <div className="hidden sm:flex h-7 select-none items-center justify-between bg-[#F0F2F5] border-b border-[#E9EDEF] px-6 pt-1 text-[11px] font-semibold text-[#54656F]">
             <span>{horaStatus}</span>
-            <div className="flex h-4 w-20 items-center justify-center rounded-full bg-black/90">
-              <span className="h-2 w-2 rounded-full bg-black ring-1 ring-white/10" />
+            <div className="flex h-3.5 w-16 items-center justify-center rounded-full bg-[#E9EDEF]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#54656F]" />
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-white/90">
+            <div className="flex items-center gap-1.5 text-xs text-[#54656F]">
               <span className="text-[10px] font-bold">5G</span>
-              <svg className="h-3 w-3 fill-current" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 21l3.39-.62C9.27 20.74 10.6 21 12 21c4.97 0 9-4.03 9-9s-4.03-9-9-9z" />
-              </svg>
               <span className="text-[10px]">98%</span>
             </div>
           </div>
 
-          {/* CABEÇALHO DO WHATSAPP */}
+          {/* CABEÇALHO DO WHATSAPP (Verde #008069 oficial) */}
           {abaAtiva === "chat" ? (
-            <div className="flex items-center justify-between border-b border-[#2A3942]/60 bg-[#202C33] px-3 py-2.5 shadow-sm">
+            <div className="flex items-center justify-between border-b border-[#E9EDEF] bg-[#008069] px-3.5 py-2.5 shadow-sm text-white">
               <button
                 type="button"
                 onClick={() => setAbaAtiva("perfil")}
                 title="Clique para consultar informações do negócio"
-                className="flex min-w-0 flex-1 items-center gap-2.5 text-left transition hover:opacity-85"
+                className="flex min-w-0 flex-1 items-center gap-2.5 text-left transition hover:opacity-90"
               >
                 <div className="relative shrink-0">
                   <div
-                    className={`flex h-10 w-10 items-center justify-center rounded-full font-display text-base font-bold text-night shadow-inner ${
+                    className={`flex h-10 w-10 items-center justify-center rounded-full font-sans text-base font-bold text-white shadow-inner ${
                       modoChat === "ensinar"
-                        ? "bg-gradient-to-br from-amber to-amber-500 ring-2 ring-amber/40"
-                        : "bg-gradient-to-br from-amber to-amber-600"
+                        ? "bg-[#00A884] ring-2 ring-white/40"
+                        : "bg-[#075E54]"
                     }`}
                   >
                     {modoChat === "ensinar" ? "⚡" : tela.empresa.trim().charAt(0).toUpperCase() || "N"}
                   </div>
                   <span
-                    className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#202C33] ${
-                      tela.whatsappLigado ? "bg-[#25D366]" : "bg-amber-400"
+                    className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#008069] ${
+                      tela.whatsappLigado ? "bg-[#25D366]" : "bg-amber"
                     }`}
                   />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold text-[#E9EDEF]">
+                  <p className="truncate text-sm font-bold text-white">
                     {modoChat === "ensinar" ? `${nome.trim() || "Atendente"} · Nexora` : tela.empresa}
                   </p>
-                  <p className="text-[11px] text-[#00A884]">
+                  <p className="text-[11px] text-[#D9FDD3]">
                     {digitando
                       ? "digitando…"
                       : modoChat === "ensinar"
-                        ? "online · clique para ver dados ›"
+                        ? "online · ver dados do negócio ›"
                         : teste
                           ? "online agora"
-                          : "exemplo"}
+                          : "exemplo ao vivo"}
                   </p>
                 </div>
               </button>
 
-              <div className="flex items-center gap-2 text-[#A7B2B8]">
+              <div className="flex items-center gap-2 text-white">
                 {(modoChat === "ensinar" ? mensagensEnsino.length > 1 : Boolean(teste)) && (
                   <button
                     type="button"
                     onClick={recomecar}
                     aria-label="Recomeçar"
                     title="Recomeçar conversa"
-                    className="rounded-full p-1.5 text-amber transition hover:bg-white/10"
+                    className="rounded-full p-1.5 text-white/80 transition hover:bg-white/15"
                   >
                     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M5.1 15a7 7 0 0012.4 2M18.9 9A7 7 0 006.5 7" />
@@ -533,32 +530,32 @@ export function Celular({
                 <button
                   type="button"
                   onClick={() => setAbaAtiva("perfil")}
-                  className="rounded-full border border-[#2A3942] bg-[#182229] px-2.5 py-1 text-xs font-semibold text-[#E9EDEF] hover:border-amber hover:text-amber transition"
+                  className="rounded-full border border-white/30 bg-white/10 px-2.5 py-1 text-xs font-semibold text-white hover:bg-white/20 transition"
                 >
                   Perfil ›
                 </button>
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-between border-b border-[#2A3942]/60 bg-[#202C33] px-3 py-2.5 shadow-sm">
+            <div className="flex items-center justify-between border-b border-[#E9EDEF] bg-[#008069] px-3.5 py-2.5 shadow-sm text-white">
               <button
                 type="button"
                 onClick={() => setAbaAtiva("chat")}
-                className="flex items-center gap-2 text-xs font-semibold text-[#00A884] hover:text-white transition"
+                className="flex items-center gap-2 text-xs font-semibold text-white hover:text-white/80 transition"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
-                <span>Voltar para o chat</span>
+                <span>Voltar ao chat</span>
               </button>
-              <span className="text-xs font-bold text-[#E9EDEF]">Perfil Comercial</span>
-              <span className="text-[10px] text-[#25D366] font-semibold">✓ Verificado</span>
+              <span className="text-xs font-bold text-white">Perfil Comercial</span>
+              <span className="text-[10px] text-[#D9FDD3] font-semibold">✓ Verificado</span>
             </div>
           )}
 
           {/* AVISO DE SINCRONIZAÇÃO EM TEMPO REAL */}
           {notificacaoSalvo && (
-            <div className="bg-emerald-600 px-3 py-1.5 text-center text-xs font-semibold text-white transition animate-in fade-in slide-in-from-top duration-300">
+            <div className="bg-[#00A884] px-3 py-1.5 text-center text-xs font-semibold text-white transition animate-in fade-in slide-in-from-top duration-300">
               ✓ Dados salvos com sucesso na sua empresa!
             </div>
           )}
@@ -567,14 +564,14 @@ export function Celular({
           {abaAtiva === "chat" ? (
             <>
               {/* SUB-SELETOR: ENSINAR vs TESTAR COMO CLIENTE */}
-              <div className="flex border-b border-[#1E222D] bg-[#111B21] px-3 py-1.5 text-xs">
+              <div className="flex border-b border-[#E9EDEF] bg-[#F0F2F5] px-3 py-1.5 text-xs">
                 <button
                   type="button"
                   onClick={() => setModoChat("cliente")}
                   className={`flex-1 rounded-lg py-1 px-2 font-semibold transition ${
                     modoChat === "cliente"
                       ? "bg-[#00A884] text-white shadow-xs"
-                      : "text-[#8696A0] hover:text-[#E9EDEF]"
+                      : "text-[#54656F] hover:text-[#111B21]"
                   }`}
                 >
                   💬 Testar como cliente
@@ -584,8 +581,8 @@ export function Celular({
                   onClick={() => setModoChat("ensinar")}
                   className={`flex-1 rounded-lg py-1 px-2 font-semibold transition ${
                     modoChat === "ensinar"
-                      ? "bg-amber text-night shadow-xs"
-                      : "text-[#8696A0] hover:text-[#E9EDEF]"
+                      ? "bg-[#00A884] text-white shadow-xs"
+                      : "text-[#54656F] hover:text-[#111B21]"
                   }`}
                 >
                   🎓 Ensinar conversando
@@ -595,22 +592,23 @@ export function Celular({
               {/* ÁREA DE CONVERSA COM FUNDO DO WHATSAPP */}
               <div
                 ref={rolagem}
-                className="flex-1 space-y-3 overflow-y-auto overflow-x-hidden px-4 py-4 scroll-smooth"
+                className="flex-1 space-y-3 overflow-y-auto overflow-x-hidden px-4 py-4 scroll-smooth bg-[#EFEAE2]"
                 style={{
+                  backgroundColor: "#EFEAE2",
                   backgroundImage:
-                    "radial-gradient(#182229 0.75px, transparent 0.75px), radial-gradient(#182229 0.75px, #0B141A 0.75px)",
+                    "radial-gradient(#D4CDC3 0.75px, transparent 0.75px), radial-gradient(#D4CDC3 0.75px, #EFEAE2 0.75px)",
                   backgroundSize: "30px 30px",
                   backgroundPosition: "0 0, 15px 15px",
                 }}
                 aria-live="polite"
               >
                 <div className="flex justify-center">
-                  <span className="rounded-lg bg-[#182229] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#8696A0] shadow-sm">
+                  <span className="rounded-md bg-white/90 px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#54656F] shadow-2xs">
                     HOJE
                   </span>
                 </div>
 
-                <div className="mx-auto max-w-[340px] rounded-lg bg-[#182229]/90 px-3 py-1.5 text-center text-[10px] leading-tight text-[#FFD279] shadow-sm">
+                <div className="mx-auto max-w-[340px] rounded-lg bg-[#FFEECD] px-3 py-1.5 text-center text-[10.5px] leading-tight text-[#54656F] shadow-2xs font-medium">
                   {modoChat === "ensinar"
                     ? "💬 Digite preços, horários ou regras. O atendente anota tudo na hora."
                     : "🔒 Teste como um cliente. Você pode ajustar qualquer resposta na hora."}
@@ -622,28 +620,28 @@ export function Celular({
                       return (
                         <div key={i} className={`flex flex-col ${ehDono ? "items-end" : "items-start"}`}>
                           <div
-                            className={`relative max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs sm:text-[13px] leading-relaxed shadow-md break-words [overflow-wrap:anywhere] ${
+                            className={`relative max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs sm:text-[13px] leading-relaxed shadow-[0_1px_0.5px_rgba(11,20,26,.13)] break-words [overflow-wrap:anywhere] ${
                               ehDono
-                                ? "rounded-tr-xs bg-[#005C4B] text-[#E9EDEF]"
-                                : "rounded-tl-xs bg-[#202C33] text-[#E9EDEF]"
+                                ? "rounded-tr-xs bg-[#D9FDD3] text-[#111B21]"
+                                : "rounded-tl-xs bg-white text-[#111B21] border border-gray-100"
                             }`}
                           >
                             <p className="whitespace-pre-line break-words [overflow-wrap:anywhere]">{m.texto}</p>
 
                             {m.salvo && (
-                              <div className="mt-2 rounded-xl border border-emerald-500/40 bg-[#0B141A]/80 p-2 text-xs text-emerald-300">
+                              <div className="mt-2 rounded-xl border border-[#00A884]/40 bg-[#D9FDD3] p-2 text-xs text-[#008069]">
                                 <span className="font-bold">✓ Salvo na sua empresa!</span>
                                 <button
                                   type="button"
                                   onClick={() => setAbaAtiva("perfil")}
-                                  className="mt-1 block text-[11px] font-semibold text-amber hover:underline"
+                                  className="mt-1 block text-[11px] font-semibold text-[#008069] underline"
                                 >
                                   Ver em informações do negócio ›
                                 </button>
                               </div>
                             )}
 
-                            <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-[#8696A0]">
+                            <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-[#667781]">
                               <span>{horaStatus}</span>
                               {ehDono && (
                                 <span className="font-bold text-[#53BDEB]" title="Lido">
@@ -661,20 +659,20 @@ export function Celular({
                         <div key={i} className={`flex flex-col ${ehCliente ? "items-end" : "items-start"}`}>
                           <div
                             title={m.fonte}
-                            className={`relative max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs sm:text-[13px] leading-relaxed shadow-md break-words [overflow-wrap:anywhere] ${
+                            className={`relative max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs sm:text-[13px] leading-relaxed shadow-[0_1px_0.5px_rgba(11,20,26,.13)] break-words [overflow-wrap:anywhere] ${
                               ehCliente
-                                ? "rounded-tr-xs bg-[#005C4B] text-[#E9EDEF]"
-                                : "rounded-tl-xs bg-[#202C33] text-[#E9EDEF]"
+                                ? "rounded-tr-xs bg-[#D9FDD3] text-[#111B21]"
+                                : "rounded-tl-xs bg-white text-[#111B21] border border-gray-100"
                             }`}
                           >
                             <p className="whitespace-pre-line break-words [overflow-wrap:anywhere]">{m.texto}</p>
 
                             {m.agendamentoConfirmado && (
-                              <div className="mt-2.5 rounded-xl border border-[#25D366]/40 bg-[#0B141A]/70 p-2 text-xs text-[#E9EDEF]">
-                                <div className="flex items-center gap-1.5 font-bold text-[#25D366]">
+                              <div className="mt-2.5 rounded-xl border border-[#25D366]/40 bg-[#D9FDD3] p-2 text-xs text-[#111B21]">
+                                <div className="flex items-center gap-1.5 font-bold text-[#008069]">
                                   <span>✓</span> Horário reservado automaticamente
                                 </div>
-                                <p className="mt-1 text-[11px] text-[#8696A0]">
+                                <p className="mt-1 text-[11px] text-[#667781]">
                                   Salvo na agenda da empresa com aviso para o cliente.
                                 </p>
                               </div>
@@ -682,37 +680,37 @@ export function Celular({
 
                             {/* BOTÃO PARA AJUSTAR ESTA RESPOSTA DIRETAMENTE */}
                             {!ehCliente && (
-                              <div className="mt-2 pt-1 border-t border-[#2A3942]/50 flex items-center justify-between">
+                              <div className="mt-2 pt-1 border-t border-[#E9EDEF] flex items-center justify-between">
                                 <button
                                   type="button"
                                   onClick={() => {
                                     setAjustandoIdx(i);
                                     setAjusteTexto("");
                                   }}
-                                  className="text-[11px] font-semibold text-amber hover:underline flex items-center gap-1"
+                                  className="text-[11px] font-semibold text-[#008069] hover:underline flex items-center gap-1"
                                 >
                                   <span>✏️</span> Ajustar esta resposta
                                 </button>
-                                <span className="text-[10px] text-[#8696A0]">{horaStatus}</span>
+                                <span className="text-[10px] text-[#667781]">{horaStatus}</span>
                               </div>
                             )}
 
                             {/* CAIXA DE AJUSTE INLINE DE RESPOSTA */}
                             {ajustandoIdx === i && (
-                              <div className="mt-2.5 rounded-xl border border-amber/60 bg-[#0B141A] p-2.5 text-xs space-y-2">
-                                <p className="font-bold text-amber">Como a Sofia deve responder?</p>
+                              <div className="mt-2.5 rounded-xl border border-[#00A884]/60 bg-[#F0F2F5] p-2.5 text-xs space-y-2">
+                                <p className="font-bold text-[#008069]">Como o Atendente deve responder?</p>
                                 <input
                                   value={ajusteTexto}
                                   onChange={(e) => setAjusteTexto(e.target.value.slice(0, 150))}
                                   maxLength={150}
                                   placeholder="Ex: Custa R$ 50 / Não atendemos domingo..."
-                                  className="w-full rounded-lg border border-[#2A3942] bg-[#182229] px-2.5 py-1.5 text-xs text-[#E9EDEF] focus:border-amber focus:outline-none"
+                                  className="w-full rounded-lg border border-[#E9EDEF] bg-white px-2.5 py-1.5 text-xs text-[#111B21] focus:border-[#00A884] focus:outline-none"
                                 />
                                 <div className="flex items-center justify-end gap-2">
                                   <button
                                     type="button"
                                     onClick={() => setAjustandoIdx(null)}
-                                    className="px-2 py-1 text-xs text-[#8696A0] hover:text-white"
+                                    className="px-2 py-1 text-xs text-[#667781] hover:text-[#111B21]"
                                   >
                                     Cancelar
                                   </button>
@@ -720,7 +718,7 @@ export function Celular({
                                     type="button"
                                     disabled={!ajusteTexto.trim()}
                                     onClick={() => void salvarAjusteResposta(ajusteTexto)}
-                                    className="rounded-lg bg-amber px-3 py-1 text-xs font-bold text-night disabled:opacity-40"
+                                    className="rounded-lg bg-[#00A884] px-3 py-1 text-xs font-bold text-white hover:bg-[#008069] disabled:opacity-40"
                                   >
                                     Salvar regra
                                   </button>
@@ -729,7 +727,7 @@ export function Celular({
                             )}
 
                             {ehCliente && (
-                              <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-[#8696A0]">
+                              <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-[#667781]">
                                 <span>{horaStatus}</span>
                                 <span className="font-bold text-[#53BDEB]" title="Lido">
                                   ✓✓
@@ -769,7 +767,7 @@ export function Celular({
               </div>
 
               {/* SUGESTÕES RÁPIDAS DE TESTE */}
-              <div className="flex flex-wrap gap-2 border-t border-[#1E222D]/60 bg-[#0B141A]/95 px-3.5 py-2">
+              <div className="flex flex-wrap gap-2 border-t border-[#E9EDEF] bg-[#F0F2F5] px-3.5 py-2">
                 {sugestoes.map((s) => (
                   <button
                     key={s}
@@ -782,10 +780,10 @@ export function Celular({
                         void enviarCliente(s);
                       }
                     }}
-                    className={`shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-medium shadow-sm transition disabled:opacity-40 ${
+                    className={`shrink-0 rounded-full border border-[#E9EDEF] bg-white px-3.5 py-1.5 text-xs font-medium shadow-2xs transition disabled:opacity-40 hover:bg-[#E9EDEF] hover:text-[#111B21] ${
                       modoChat === "ensinar"
-                        ? "border-amber/40 bg-[#1A1D27] text-amber hover:border-amber hover:bg-amber/20"
-                        : "border-[#00A884]/40 bg-[#111B21] text-[#E9EDEF] hover:border-[#00A884] hover:bg-[#005C4B]/40 hover:text-white"
+                        ? "text-[#008069] border-[#00A884]/30"
+                        : "text-[#54656F]"
                     }`}
                   >
                     {s}
@@ -803,9 +801,9 @@ export function Celular({
                     void enviarCliente(entrada);
                   }
                 }}
-                className="flex items-center gap-2 border-t border-[#2A3942]/50 bg-[#202C33] px-3.5 py-2.5"
+                className="flex items-center gap-2 border-t border-[#E9EDEF] bg-[#F0F2F5] px-3.5 py-2.5"
               >
-                <span className="text-lg text-[#8696A0] select-none" aria-hidden="true">
+                <span className="text-lg text-[#54656F] select-none cursor-pointer" aria-hidden="true">
                   {modoChat === "ensinar" ? "⚡" : "😀"}
                 </span>
                 <input
@@ -819,17 +817,15 @@ export function Celular({
                       : "Escreva como um cliente no WhatsApp…"
                   }
                   aria-label={modoChat === "ensinar" ? "Ensinar atendente" : "Mensagem de teste"}
-                  className="min-w-0 flex-1 rounded-full bg-[#2A3942] px-4 py-2 text-xs sm:text-sm text-[#E9EDEF] placeholder:text-[#8696A0] focus:outline-none focus:ring-1 focus:ring-amber"
+                  className="min-w-0 flex-1 rounded-full border border-transparent bg-white px-4 py-2 text-xs sm:text-sm text-[#111B21] placeholder:text-[#8696A0] shadow-2xs focus:outline-none focus:ring-1 focus:ring-[#00A884]"
                 />
                 <button
                   type="submit"
                   disabled={digitando || !entrada.trim()}
                   aria-label="Enviar"
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white shadow transition hover:brightness-110 disabled:opacity-40 ${
-                    modoChat === "ensinar" ? "bg-amber text-night" : "bg-[#00A884]"
-                  }`}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#00A884] hover:bg-[#008069] text-white shadow-xs transition disabled:opacity-40"
                 >
-                  <svg className="h-4 w-4 translate-x-0.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <svg className="h-4 w-4 rotate-45 transform -translate-y-0.5 translate-x-0.5" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
                   </svg>
                 </button>

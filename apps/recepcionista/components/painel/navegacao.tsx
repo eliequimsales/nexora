@@ -44,129 +44,47 @@ function useTreinamentoBadge(initialBadge?: number) {
 }
 
 function iconeParaRota(href: string) {
+  // Ensinar / Atualizações (Ícone Status/Updates do WhatsApp com anéis segmentados)
   if (href.includes("treinamento")) {
     return (
-      <svg
-        className="h-4 w-4 shrink-0"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-        />
+      <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden="true">
+        <path strokeLinecap="round" d="M12 3a9 9 0 0 1 8.66 6.5M21 12a9 9 0 0 1-6.5 8.66M12 21a9 9 0 0 1-8.66-6.5M3 12a9 9 0 0 1 6.5-8.66" />
       </svg>
     );
   }
+  // Clientes / Comunidades (Ícone Comunidades do WhatsApp)
   if (href.includes("clientes")) {
     return (
-      <svg
-        className="h-4 w-4 shrink-0"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
-        />
+      <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
       </svg>
     );
   }
-  if (href.includes("onda")) {
+  // Atendente / Conversas (Ícone Balão de Conversa oficial do WhatsApp com linhas de texto)
+  if (href.includes("atendente") || href.includes("conversas")) {
     return (
-      <svg
-        className="h-4 w-4 shrink-0"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-        aria-hidden="true"
-      >
+      <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
-          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+          d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
         />
       </svg>
     );
   }
-  if (href.includes("atendente")) {
-    return (
-      <svg
-        className="h-4 w-4 shrink-0"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-        />
-      </svg>
-    );
-  }
-  if (href.includes("livro-caixa")) {
-    return (
-      <svg
-        className="h-4 w-4 shrink-0"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-        />
-      </svg>
-    );
-  }
+  // Agenda / Ligações (Ícone Chamadas/Ligações do WhatsApp)
   if (href.includes("agenda")) {
     return (
-      <svg
-        className="h-4 w-4 shrink-0"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-        />
+      <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-1.57 1.97c-2.83-1.44-5.15-3.75-6.59-6.59l1.97-1.57c.29-.28.37-.69.25-1.02A11.36 11.36 0 019 4.31c0-.55-.45-1-1-1H4.5c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1z" />
       </svg>
     );
   }
-  // Planos / Assinatura
+  // Planos / Configurações (Ícone Engrenagem de Configurações do WhatsApp)
   return (
-    <svg
-      className="h-4 w-4 shrink-0"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={2}
-      aria-hidden="true"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3z"
-      />
+    <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+      <circle cx="12" cy="12" r="3" />
     </svg>
   );
 }
@@ -184,8 +102,8 @@ export function PainelNavDesktop({ items }: { items: NavItem[] }) {
   const liveBadge = useTreinamentoBadge(initialTreinamento);
 
   return (
-    <nav aria-label="Menu principal" className="hidden items-center sm:flex">
-      <div className="flex items-center gap-1 rounded-xl border border-panel-line/70 bg-panel-bg/80 p-1">
+    <nav aria-label="Menu principal WhatsApp Web" className="hidden items-center sm:flex">
+      <div className="flex items-center gap-1.5 rounded-xl border border-panel-line/80 bg-white p-1 shadow-2xs">
         {items.map((item) => {
           const ativo = estaAtivo(item.href, pathname);
           const badge = item.href === "/painel/treinamento" ? liveBadge : (item.badge ?? 0);
@@ -194,20 +112,20 @@ export function PainelNavDesktop({ items }: { items: NavItem[] }) {
               key={item.href}
               href={item.href}
               aria-current={ativo ? "page" : undefined}
-              className={`group flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-sm font-medium transition-all duration-200 active:scale-[0.97] ${
+              className={`group flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-all duration-150 active:scale-[0.98] ${
                 ativo
-                  ? "bg-amber text-night font-bold shadow-sm"
-                  : "text-panel-sub hover:bg-white hover:text-panel-ink"
+                  ? "bg-[#00A884] text-white shadow-xs"
+                  : "text-panel-sub hover:bg-[#F0F2F5] hover:text-panel-ink"
               }`}
             >
-              <span className={ativo ? "text-night" : "text-panel-sub group-hover:text-panel-ink"}>
+              <span className={ativo ? "text-white" : "text-[#54656f] group-hover:text-panel-ink"}>
                 {iconeParaRota(item.href)}
               </span>
               <span>{item.label}</span>
               {Boolean(badge > 0) && (
                 <span
-                  className={`ml-1 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-black shadow-xs ${
-                    ativo ? "bg-night text-amber" : "bg-amber text-night animate-pulse"
+                  className={`ml-1 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-black ${
+                    ativo ? "bg-white text-[#00A884]" : "bg-[#25D366] text-white animate-pulse"
                   }`}
                   aria-label={`${badge} para ensinar`}
                 >
@@ -229,19 +147,19 @@ export function PainelNavMobile({ items }: { items: NavItem[] }) {
 
   const rotuloCurto = (href: string, label: string) => {
     if (href.includes("atendente")) return "Conversas";
-    if (href.includes("treinamento")) return "Ensinar";
-    if (href.includes("agenda")) return "Agenda";
-    if (href.includes("clientes")) return "Clientes";
+    if (href.includes("treinamento")) return "Atualizações";
+    if (href.includes("clientes")) return "Comunidades";
+    if (href.includes("agenda")) return "Ligações";
     if (href.includes("assinatura")) return "Ajustes";
     return label;
   };
 
   return (
     <nav
-      aria-label="Navegação móvel estilo WhatsApp"
-      className="fixed bottom-0 left-0 right-0 z-50 border-t border-panel-line bg-panel-card/95 backdrop-blur-md px-2 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))] sm:hidden shadow-[0_-4px_25px_rgba(0,0,0,0.08)]"
+      aria-label="Navegação móvel oficial estilo WhatsApp"
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#E9EDEF] bg-white/98 backdrop-blur-lg px-1 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:hidden shadow-[0_-2px_15px_rgba(0,0,0,0.05)]"
     >
-      <div className="grid grid-cols-5 items-center justify-around gap-1">
+      <div className="grid grid-cols-5 items-center justify-around">
         {items.map((item) => {
           const ativo = estaAtivo(item.href, pathname);
           const badge = item.href === "/painel/treinamento" ? liveBadge : (item.badge ?? 0);
@@ -250,32 +168,33 @@ export function PainelNavMobile({ items }: { items: NavItem[] }) {
               key={item.href}
               href={item.href}
               aria-current={ativo ? "page" : undefined}
-              className={`relative flex flex-col items-center justify-center py-1 transition-all duration-150 active:scale-95 ${
-                ativo ? "text-[#00A884]" : "text-panel-sub hover:text-panel-ink"
-              }`}
+              className="relative flex flex-col items-center justify-center py-1 transition-all duration-150 active:scale-95"
             >
+              {/* Pílula ativa característica do WhatsApp (Material You / WhatsApp Mobile) */}
               <div className="relative flex items-center justify-center">
-                <span className={`transition-transform duration-200 ${ativo ? "scale-115 text-[#00A884]" : ""}`}>
+                <div
+                  className={`flex items-center justify-center px-4 py-0.5 rounded-full transition-colors ${
+                    ativo ? "bg-[#d9fdd3] text-[#008069]" : "text-[#54656f]"
+                  }`}
+                >
                   {iconeParaRota(item.href)}
-                </span>
+                </div>
                 {Boolean(badge > 0) && (
                   <span
-                    className="absolute -top-1.5 -right-3 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#25D366] text-white px-1 text-[10px] font-black shadow-sm animate-pulse"
+                    className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#25D366] text-white px-1 text-[10px] font-black shadow-xs animate-pulse"
                     aria-label={`${badge} notificações`}
                   >
                     {badge}
                   </span>
                 )}
               </div>
-              <span className={`text-[10px] tracking-tight mt-1 truncate ${ativo ? "font-bold text-[#00A884]" : "font-medium"}`}>
+              <span
+                className={`text-[11px] tracking-tight mt-0.5 truncate ${
+                  ativo ? "font-bold text-[#008069]" : "font-medium text-[#54656f]"
+                }`}
+              >
                 {rotuloCurto(item.href, item.label)}
               </span>
-              {ativo && (
-                <span
-                  className="mt-0.5 h-1 w-4 rounded-full bg-[#00A884]"
-                  aria-hidden="true"
-                />
-              )}
             </Link>
           );
         })}

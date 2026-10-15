@@ -3,9 +3,8 @@ import { redirect } from "next/navigation";
 import { getSessionCompanyId } from "@/lib/auth";
 import { estadoDaConta } from "@/lib/billing/acesso";
 import { prisma } from "@/lib/db";
-import { LogoutButton } from "@/components/logout-button";
-import { BotaoBaixarApp } from "@/components/install-prompt";
-import { PainelNavDesktop, PainelNavMobile } from "@/components/painel/navegacao";
+import { CabecalhoPainel } from "@/components/painel/cabecalho-painel";
+import { PainelNavMobile } from "@/components/painel/navegacao";
 import { BotaoFeedback } from "@/components/feedback/botao-feedback";
 import { RastreadorCadastroNovo } from "@/components/painel/rastreador-cadastro-novo";
 
@@ -57,62 +56,43 @@ export default async function PainelLayout({ children }: { children: React.React
   }));
 
   return (
-    <div className="min-h-screen bg-panel-bg text-panel-ink">
+    <div className="min-h-screen bg-[#F0F2F5] text-panel-ink">
       <RastreadorCadastroNovo />
 
-      {/* Banner de Teste Grátis */}
+      {/* Banner de Teste Grátis Estilo WhatsApp */}
       {estado === "TRIAL" && (
-        <div className="border-b border-amber/30 bg-amber/10 px-4 py-2 text-center text-xs font-medium text-panel-ink sm:text-sm">
+        <div className="border-b border-[#00A884]/20 bg-[#D9FDD3] px-4 py-2 text-center text-xs font-medium text-[#075E54] sm:text-sm">
           <span>
-            ⚡ <strong>Período de teste gratuito:</strong> você tem{" "}
-            <strong className="text-amber">{diasRestantes} {diasRestantes === 1 ? "dia restante" : "dias restantes"}</strong> com envio de mensagens liberado.
+            ⚡ <strong>Período de teste:</strong> você tem{" "}
+            <strong className="text-[#008069]">{diasRestantes} {diasRestantes === 1 ? "dia restante" : "dias restantes"}</strong> com envio de mensagens liberado.
           </span>{" "}
           <Link
             href="/painel/assinatura"
-            className="ml-2 inline-flex items-center font-bold text-amber hover:underline"
+            className="ml-2 inline-flex items-center font-bold text-[#008069] hover:underline"
           >
-            Garantir plano por R$ 97/mês →
+            Ver planos →
           </Link>
         </div>
       )}
 
       {/* Banner de Teste Expirado */}
       {estado === "TRIAL_EXPIRADO" && (
-        <div className="border-b border-red-500/30 bg-red-500/10 px-4 py-2 text-center text-xs font-medium text-panel-ink sm:text-sm">
+        <div className="border-b border-red-200 bg-red-50 px-4 py-2 text-center text-xs font-medium text-red-700 sm:text-sm">
           <span>
             ⚠️ <strong>Seu período de teste terminou.</strong> Seus clientes e mensagens continuam salvos.
           </span>{" "}
           <Link
             href="/painel/assinatura"
-            className="ml-2 inline-flex items-center font-bold text-red-400 hover:underline"
+            className="ml-2 inline-flex items-center font-bold text-red-700 underline"
           >
-            Liberar envios por R$ 97/mês →
+            Liberar envios →
           </Link>
         </div>
       )}
 
-      <header className="border-b border-panel-line bg-panel-card">
-        <div className="mx-auto flex max-w-page items-center justify-between px-6 py-3">
-          <div className="flex items-center gap-8">
-            <Link href="/painel/atendente" className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber font-display text-sm font-bold text-night">
-                N
-              </span>
-              <span className="font-display font-semibold">
-                Nexora
-              </span>
-            </Link>
-            <PainelNavDesktop items={navItems} />
-          </div>
-          <div className="flex items-center gap-3">
-            <BotaoBaixarApp />
-            <span className="hidden text-sm text-panel-sub md:inline">{company.name}</span>
-            <LogoutButton />
-          </div>
-        </div>
-      </header>
+      <CabecalhoPainel empresaNome={company.name} navItems={navItems} />
       <PainelNavMobile items={navItems} />
-      <main className="mx-auto max-w-page px-4 sm:px-6 py-6 pb-28 sm:pb-8">{children}</main>
+      <main className="mx-auto max-w-page px-2 sm:px-6 py-4 sm:py-6 pb-28 sm:pb-8">{children}</main>
       <BotaoFeedback
         emailPadrao={company.email}
         telefonePadrao={company.phone}

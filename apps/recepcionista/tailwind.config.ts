@@ -44,16 +44,22 @@ const config: Config = {
           deep: "#A37D06",
         },
         "amber-deep": "#A37D06", // âmbar legível sobre papel claro
-        // Painel — claro e limpo (a landing mantém o tema noturno)
+        // Painel — Estilo WhatsApp Web e Mobile (autêntico)
         panel: {
-          bg: "#F4F6F4",
+          bg: "#F0F2F5", // fundo WhatsApp Web
           card: "#FFFFFF",
-          ink: "#14231D",
-          line: "#E3E8E4",
-          sub: "#5A6B62",
+          ink: "#111B21", // texto primário do WhatsApp
+          line: "#E9EDEF", // linha divisória sutil do WhatsApp
+          sub: "#667781", // texto secundário e timestamps do WhatsApp
         },
-        // Bolhas autênticas do WhatsApp (modo escuro) para o demo do telefone
+        // Cores autênticas do WhatsApp
         wa: {
+          green: "#00A884", // verde primário do WhatsApp Web
+          dark: "#008069", // verde escuro clássico do cabeçalho Android
+          teal: "#075E54", // verde clássico
+          light: "#25D366", // verde vibrante de badges e ícones
+          chat: "#EFEAE2", // fundo do papel de parede de conversas
+          check: "#53BDEB", // azul do tique duplo (lido)
           frame: "#0B141A",
           in: "#202C33",
           out: "#005C4B",

@@ -154,14 +154,14 @@ export default function PaginaDoAtendente() {
       </header>
 
       {tela.isGuest && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber/40 bg-amber/10 p-4 text-sm text-panel-ink">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#00A884]/30 bg-[#D9FDD3]/60 p-4 text-sm text-[#075E54]">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber text-xs font-bold text-night" aria-hidden="true">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#00A884] text-xs font-bold text-white" aria-hidden="true">
               ⚡
             </span>
             <div>
-              <p className="font-semibold text-panel-ink">Modo teste sem cadastro</p>
-              <p className="text-xs text-panel-sub">
+              <p className="font-bold text-[#111B21]">Modo teste sem cadastro</p>
+              <p className="text-xs text-[#54656F]">
                 Seu atendente já está funcionando. Salve seu acesso para não perder seus dados.
               </p>
             </div>
@@ -169,7 +169,7 @@ export default function PaginaDoAtendente() {
           <button
             type="button"
             onClick={() => setSalvarAberto(true)}
-            className="rounded-lg bg-amber px-3.5 py-1.5 text-xs font-bold text-night hover:brightness-110 shadow-sm"
+            className="rounded-lg bg-[#00A884] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#008069] shadow-xs"
           >
             Salvar meu acesso
           </button>
@@ -177,13 +177,13 @@ export default function PaginaDoAtendente() {
       )}
 
       {tela.acesso === "SEMANA_ACABOU" && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber/30 bg-amber/5 p-4 text-sm">
-          <p className="text-panel-ink">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#00A884]/30 bg-[#D9FDD3]/60 p-4 text-sm text-[#075E54]">
+          <p className="text-[#111B21]">
             A semana grátis acabou. Para o Atendente continuar respondendo 24 horas no WhatsApp, ative o plano Atendente.
           </p>
           <Link
             href="/painel/assinatura"
-            className="rounded-lg bg-amber px-4 py-2 text-xs font-bold text-night hover:brightness-110"
+            className="rounded-lg bg-[#00A884] px-4 py-2 text-xs font-bold text-white hover:bg-[#008069]"
           >
             Ver planos
           </Link>
