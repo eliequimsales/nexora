@@ -430,7 +430,7 @@ export function Celular({
           }}
           className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 px-3 text-xs font-semibold transition ${
             abaAtiva === "chat"
-              ? "bg-night text-amber font-bold shadow-xs border border-amber/30"
+              ? "bg-[#182229] text-amber font-bold shadow-xs border border-amber/30"
               : "text-panel-sub hover:text-panel-ink hover:bg-panel-bg"
           }`}
         >
@@ -474,7 +474,7 @@ export function Celular({
 
           {/* CABEÇALHO DO CELULAR COM IDENTIDADE VISUAL NEXORA */}
           {abaAtiva === "chat" ? (
-            <div className="flex items-center justify-between border-b border-night-line bg-night px-3.5 py-2.5 shadow-sm text-white">
+            <div className="flex items-center justify-between border-b border-[#2A3942] bg-[#182229] px-3.5 py-2.5 shadow-sm text-white">
               <button
                 type="button"
                 onClick={() => setAbaAtiva("perfil")}
@@ -486,13 +486,13 @@ export function Celular({
                     className={`flex h-10 w-10 items-center justify-center rounded-full font-sans text-base font-bold shadow-inner ${
                       modoChat === "ensinar"
                         ? "bg-amber text-night font-black ring-2 ring-white/40"
-                        : "bg-night-soft text-amber border border-amber/30"
+                        : "bg-[#0B141A] text-amber border border-amber/30"
                     }`}
                   >
                     {modoChat === "ensinar" ? "N" : tela.empresa.trim().charAt(0).toUpperCase() || "N"}
                   </div>
                   <span
-                    className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-night ${
+                    className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#182229] ${
                       tela.whatsappLigado ? "bg-amber" : "bg-amber/60"
                     }`}
                   />
@@ -537,7 +537,7 @@ export function Celular({
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-between border-b border-night-line bg-night px-3.5 py-2.5 shadow-sm text-white">
+            <div className="flex items-center justify-between border-b border-[#2A3942] bg-[#182229] px-3.5 py-2.5 shadow-sm text-white">
               <button
                 type="button"
                 onClick={() => setAbaAtiva("chat")}

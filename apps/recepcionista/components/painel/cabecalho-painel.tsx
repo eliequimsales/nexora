@@ -31,7 +31,7 @@ export function CabecalhoPainel({
   return (
     <>
       {/* CABEÇALHO MOBILE COM IDENTIDADE VISUAL NEXORA */}
-      <header className="sticky top-0 z-40 flex items-center justify-between bg-night px-4 py-3 text-white shadow-md border-b border-night-line sm:hidden">
+      <header className="sticky top-0 z-40 flex items-center justify-between bg-[#182229] px-4 py-3 text-white shadow-md border-b border-[#2A3942] sm:hidden">
         <div className="flex items-center gap-2.5">
           <Link href="/painel/atendente" className="flex items-center gap-2.5">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber text-night font-black text-sm shadow-sm ring-1 ring-white/25">
@@ -127,7 +127,7 @@ export function CabecalhoPainel({
         <div className="mx-auto flex max-w-page items-center justify-between px-6 py-3">
           <div className="flex items-center gap-8">
             <Link href="/painel/atendente" className="flex items-center gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-night text-amber font-black text-lg shadow-sm border border-amber/30 ring-2 ring-amber/10">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#182229] text-amber font-black text-lg shadow-sm border border-amber/30 ring-2 ring-amber/10">
                 N
               </span>
               <div className="flex flex-col">

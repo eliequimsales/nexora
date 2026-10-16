@@ -122,7 +122,7 @@ export function PainelNavDesktop({ items }: { items: NavItem[] }) {
               aria-current={ativo ? "page" : undefined}
               className={`group flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-all duration-150 active:scale-[0.98] ${
                 ativo
-                  ? "bg-night text-amber shadow-xs border border-amber/30"
+                  ? "bg-[#182229] text-amber shadow-xs border border-amber/30"
                   : "text-panel-sub hover:bg-[#F0F2F5] hover:text-panel-ink"
               }`}
             >

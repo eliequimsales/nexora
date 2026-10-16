@@ -180,7 +180,7 @@ export default function ConversaPage() {
             </Link>
 
             {/* Avatar circular */}
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-night text-amber font-bold text-sm border border-amber/30">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#182229] text-amber font-bold text-sm border border-amber/30">
               {iniciais}
             </div>
 
