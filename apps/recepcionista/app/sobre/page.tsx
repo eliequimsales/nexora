@@ -64,8 +64,7 @@ export default function PaginaSobre() {
       <main className="mx-auto max-w-3xl px-6 py-16">
         <h1 className="font-display text-4xl font-bold tracking-[-0.03em]">Sobre a Nexora</h1>
         <p className="mt-4 text-lg leading-relaxed text-paper-sub">
-          A Nexora existe para um problema que não aparece na agenda: o cliente que para de
-          voltar sem avisar.
+          A Nexora existe para automatizar o atendimento de pequenas empresas no WhatsApp 24 horas por dia e recuperar clientes que pararam de agendar.
         </p>
 
         <div className="mt-14 grid gap-12 leading-[1.75] text-paper-ink/85">
@@ -74,16 +73,10 @@ export default function PaginaSobre() {
               Por que ela existe
             </h2>
             <p className="mt-4">
-              Barbearia, salão, clínica e pet shop vivem de cliente que volta. Quando um cliente
-              para de voltar, ele não avisa: some da agenda, e a agenda de hoje continua cheia o
-              bastante para ninguém perceber. A Nexora olha a lista de clientes que o negócio já
-              tem, descobre o ritmo de cada um e aponta quem quebrou esse ritmo, com a mensagem
-              pronta para chamar de volta.
+              Barbearia, salão, clínica e negócios locais perdem vendas todos os dias por dois motivos silenciosos: mensagens que chegam fora do expediente e ficam sem resposta, e clientes que deixam de voltar sem avisar.
             </p>
             <p className="mt-4">
-              A primeira versão da Nexora, em 2026, era um atendente automático de WhatsApp. Hoje o
-              foco é outro: o cliente que já veio e parou de voltar, que é dinheiro que o negócio já
-              conquistou uma vez.
+              A Nexora une essas duas frentes de receita: o <strong>Atendente Virtual com IA 24h</strong>, que esclarece preços, tira dúvidas e fecha agendamentos dia e noite no seu WhatsApp, e o <strong>Recuperador Inteligente</strong>, que analisa o ritmo de retorno dos clientes e prepara mensagens personalizadas para reativar quem sumiu da agenda, sem práticas invasivas de disparo em massa.
             </p>
           </section>
 

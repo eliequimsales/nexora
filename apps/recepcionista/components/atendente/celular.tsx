@@ -611,7 +611,7 @@ export function Celular({
                 <div className="mx-auto max-w-[340px] rounded-lg bg-[#FFEECD] border border-[#F5C358]/40 px-3 py-1.5 text-center text-[10.5px] leading-tight text-[#54656F] shadow-2xs font-medium">
                   {modoChat === "ensinar"
                     ? "✨ Nexora IA: digite preços, horários ou regras. O atendente aprende tudo na hora."
-                    : "🔒 Teste como um cliente. A inteligência da Nexora responde com base nas suas regras."}
+                    : "🔒 Teste como um cliente. A inteligência da Nexora responde seguindo as suas regras."}
                 </div>
 
                 {modoChat === "ensinar"

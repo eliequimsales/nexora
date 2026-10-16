@@ -119,9 +119,7 @@ export default async function PaginaDeStatus() {
 
         {temOpcional && (
           <p className="mt-6 text-sm leading-relaxed text-paper-sub">
-            O atendente de WhatsApp é um módulo opcional, ainda em testes e fora dos planos. O
-            estado dele aparece acima como está, mas não entra no resumo do topo, que fala do
-            serviço que a Nexora vende: a recuperação de clientes.
+            Módulo opcional de conexão: o estado da infraestrutura de WhatsApp aparece acima conforme verificado em tempo real, mas não entra no resumo do topo, que reflete a disponibilidade do painel e banco de dados central.
           </p>
         )}
 
