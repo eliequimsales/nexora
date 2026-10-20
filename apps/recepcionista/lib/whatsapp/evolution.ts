@@ -169,9 +169,23 @@ export function parseMensagemDoDono(payload: unknown): MensagemDoDono | null {
 
 // ——— Cliente REST da Evolution API (v2) ———
 
+const DEFAULT_EVOLUTION_URL = "https://evolution-api-latest-1-mqkm.onrender.com";
+const DEFAULT_EVOLUTION_KEY = "nexora-secret-key-2026";
+
 function evolutionConfig(): { baseUrl: string; apiKey: string } {
-  const baseUrl = process.env.EVOLUTION_API_URL;
-  const apiKey = process.env.EVOLUTION_API_KEY;
+  let baseUrl = process.env.EVOLUTION_API_URL?.trim();
+  let apiKey = process.env.EVOLUTION_API_KEY?.trim();
+
+  // Em produção, se a variável na Vercel ainda apontar para a Railway desativada (que responde 404),
+  // ou se não foi definida no ambiente da Vercel, redireciona de forma resiliente para a Evolution no Render.
+  if (baseUrl && baseUrl.includes("railway.app")) {
+    baseUrl = DEFAULT_EVOLUTION_URL;
+    apiKey = DEFAULT_EVOLUTION_KEY;
+  } else if (!baseUrl && process.env.NODE_ENV === "production" && (process.env.VERCEL || process.env.VERCEL_ENV)) {
+    baseUrl = DEFAULT_EVOLUTION_URL;
+    apiKey = apiKey || DEFAULT_EVOLUTION_KEY;
+  }
+
   if (!baseUrl || !apiKey) {
     throw new Error("EVOLUTION_API_URL / EVOLUTION_API_KEY não configurados");
   }

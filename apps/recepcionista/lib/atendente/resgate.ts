@@ -331,7 +331,7 @@ async function rodar(agora: Date, estado: EstadoDoResgate): Promise<{ respondida
  * Outro ambiente do Railway (staging, PR) tem outro nome e fica desligado.
  */
 export function servidorOficial(env: Record<string, string | undefined>): boolean {
-  return env.RAILWAY_ENVIRONMENT_NAME === "production";
+  return env.RAILWAY_ENVIRONMENT_NAME === "production" || env.VERCEL_ENV === "production";
 }
 
 /** Liga o resgate no boot do servidor (instrumentation.ts), só no servidor oficial. */

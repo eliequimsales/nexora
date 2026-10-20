@@ -23,7 +23,11 @@ export function instanceNameFor(companyId: string): string {
 }
 
 function webhookUrl(): string {
-  const appUrl = process.env.APP_URL;
+  const appUrl =
+    process.env.APP_URL ||
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "") ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "") ||
+    "https://www.meunexora.com.br";
   if (!appUrl) throw new Error("APP_URL não configurada (necessária para o webhook do WhatsApp)");
   const token = process.env.WEBHOOK_TOKEN;
   const base = `${appUrl.replace(/\/+$/, "")}/api/webhook/whatsapp`;
