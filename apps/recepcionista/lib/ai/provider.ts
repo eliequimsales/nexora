@@ -45,6 +45,10 @@ export const receptionistReplySchema = z.object({
   motivo_transferencia: z.string().trim().default(""),
   nome_cliente: z.string().trim().default(""),
   interesse: z.string().trim().default(""),
+  // O motor de atendimento só publica conteúdo das fontes selecionadas.
+  // Opcionais para preservar os consumidores comerciais e o contrato legado.
+  fontes_ids: z.array(z.string().trim().min(1).max(200)).max(12).optional(),
+  duvida_pendente: boolish.optional(),
 });
 
 export type ReceptionistReply = z.infer<typeof receptionistReplySchema>;
@@ -113,7 +117,8 @@ Responda SOMENTE com um objeto JSON válido, sem nenhum texto fora dele, neste f
 - "transferir_humano": true apenas se a conversa deve ir para a equipe da empresa
 - "motivo_transferencia": motivo curto da transferência ("" quando transferir_humano for false)
 - "nome_cliente": nome do cliente, apenas se ele informou nesta conversa ("" caso contrário)
-- "interesse": resumo curto (até 10 palavras) do que o cliente procura ("" se ainda não identificado)`;
+- "interesse": resumo curto (até 10 palavras) do que o cliente procura ("" se ainda não identificado)
+- Quando o system prompt fornecer um catálogo de fontes, inclua também "fontes_ids": ["id da fonte"] e "duvida_pendente": true ou false. Selecione apenas fontes pertinentes que existam no catálogo; marque a pendência quando qualquer parte da pergunta não tiver resposta nele. O texto de "resposta" não substitui esses campos.`;
 
 /** Extrai e valida o JSON estruturado retornado por qualquer provedor. */
 export function parseReceptionistReply(raw: string): ReceptionistReply {
@@ -236,6 +241,15 @@ const anthropicTool: Anthropic.Tool = {
       interesse: {
         type: "string",
         description: "Resumo curto (até 10 palavras) do que o cliente procura. String vazia se ainda não identificado.",
+      },
+      fontes_ids: {
+        type: "array",
+        items: { type: "string" },
+        description: "IDs das fontes autorizadas que respondem à pergunta, quando houver catálogo no system prompt.",
+      },
+      duvida_pendente: {
+        type: "boolean",
+        description: "Se houver catálogo, true quando alguma parte da pergunta não tiver resposta nas fontes autorizadas.",
       },
     },
     required: ["resposta", "transferir_humano"],

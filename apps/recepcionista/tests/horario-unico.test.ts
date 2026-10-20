@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { HORARIO_PADRAO, horarioDaEmpresa, semanaCompleta } from "@/lib/agenda/horario";
+import { HORARIO_PADRAO, horarioCadastrado, horarioDaEmpresa, semanaCompleta } from "@/lib/agenda/horario";
 import { calcularSlots } from "@/lib/agenda/disponibilidade";
 import { isOpenNow } from "@/lib/ai/prompt";
 
@@ -38,6 +38,13 @@ describe("o horário da empresa", () => {
   it("com horário cadastrado, vale o cadastrado", () => {
     const meu = [{ day: 2, open: "09:00", close: "19:00", closed: false }];
     expect(horarioDaEmpresa(meu)).toEqual(meu);
+    expect(horarioCadastrado(meu)).toEqual(meu);
+  });
+
+  it("respostas ao cliente não transformam horário ausente em expediente padrão", () => {
+    expect(horarioCadastrado([])).toEqual([]);
+    expect(horarioCadastrado(null)).toEqual([]);
+    expect(horarioCadastrado([{ day: 9, open: "25:00", close: "x" }])).toEqual([]);
   });
 
   it("closed ausente é dia aberto, como a agenda sempre leu", () => {
@@ -94,10 +101,13 @@ describe("ninguém inventa o próprio padrão", () => {
     expect(rota).not.toContain("HORARIOS_PADRAO");
   });
 
-  it("o Atendente lê o horário daqui", () => {
-    for (const arquivo of ["lib/atendente/executar.ts", "lib/atendente/fatos.ts"]) {
+  it("o Atendente usa o leitor comum, sem apresentar o padrão como informação cadastrada", () => {
+    for (const [arquivo, leitor] of [
+      ["lib/atendente/executar.ts", "horarioDaEmpresa("],
+      ["lib/atendente/fatos.ts", "horarioCadastrado("],
+    ]) {
       const fonte = leia(arquivo);
-      expect(fonte, arquivo).toContain("horarioDaEmpresa(");
+      expect(fonte, arquivo).toContain(leitor);
       expect(fonte, arquivo).not.toMatch(/function asBusinessHours/);
     }
   });

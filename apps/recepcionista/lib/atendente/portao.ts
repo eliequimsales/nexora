@@ -2,7 +2,6 @@ import { isOpenNow } from "@/lib/ai/prompt";
 import type { EstadoConta } from "@/lib/billing/acesso";
 import type { BusinessHour } from "@/lib/validation";
 import {
-  JANELA_DO_DONO_MS,
   MINUTOS_SEM_RESPOSTA,
   SEMANA_GRATIS_CONVERSAS,
   SEMANA_GRATIS_DIAS,
@@ -22,7 +21,7 @@ import { localDe } from "./datas";
  * 2. Esta mensagem pode ter resposta agora? Nada responde sem o dono ligar; com
  *    a loja fechada, responde na hora; com a loja aberta, a mensagem é do dono,
  *    e o Atendente só entra depois de 5 minutos sem resposta — se o dono deixou.
- *    Resposta do dono pelo celular cala o Atendente na conversa por 12 horas.
+ *    Resposta do dono pelo celular pausa o Atendente até a devolução explícita.
  *
  * `horarios` vem sempre de `horarioDaEmpresa`, que nunca devolve lista vazia:
  * com lista vazia, `isOpenNow` diria "aberto" e o Atendente nunca atenderia.
@@ -91,7 +90,7 @@ export function decidirQuando(p: {
   origem: "WEBHOOK" | "RESGATE";
 }): Quando {
   if (!p.ligado) return silencio("DESLIGADO");
-  if (p.donoAssumiuEm && p.agora.getTime() - p.donoAssumiuEm.getTime() < JANELA_DO_DONO_MS) {
+  if (p.donoAssumiuEm) {
     return silencio("DONO_ASSUMIU");
   }
   if (p.acesso === "SEMANA_ACABOU") return silencio("SEM_PLANO");

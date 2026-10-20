@@ -13,13 +13,14 @@ import {
   textoDaVolta,
   type PedidoDeDia,
 } from "./datas";
-import { duracaoFalada, precoFalado, textoDosFatos, type Fatos, type ServicoDoAtendente } from "./fatos";
-import { detectarIntencao } from "./intencao";
+import { duracaoFalada, precoFalado, type Fatos, type ServicoDoAtendente } from "./fatos";
+import { detectarIntencao, detectarIntencoes, type Intencao } from "./intencao";
 import { apresentacao, cumprimento, nomeProprio, textosDoJeito, URGENCIA, URGENCIA_CVV } from "./jeitos";
 import { escolherTres, formatarOpcao, opcoesParaEscolha, type EstadoDaConversa } from "./oferta";
 import { montarPrompt } from "./prompt";
-import { numerosSemFonte } from "./verificador";
+import { catalogoDeRespostas, validarSelecaoDeFontes } from "./conhecimento";
 import { responderComercial } from "./comercial";
+import { midiasNaoInterpretadas, textoSemMarcadoresDeMidia } from "@/lib/whatsapp/midia";
 
 /**
  * O MOTOR DO ATENDENTE VIRTUAL.
@@ -31,8 +32,8 @@ import { responderComercial } from "./comercial";
  *
  * A ordem é a do desenho aprovado: o que tem resposta certa sai por código
  * (urgência, pessoa, reclamação, escolha de opção, horário, preço, endereço,
- * pagamento); só o que sobra vai para a IA, com os fatos do banco, e passa pelo
- * verificador antes de sair. Número sem fonte derruba a resposta.
+ * pagamento); só o que sobra vai para a IA, que seleciona IDs do catálogo.
+ * A resposta usa os fatos desses IDs, nunca o texto livre produzido pelo modelo.
  *
  * O motor não envia nem salva nada: devolve as mensagens, o novo estado da
  * conversa e o que anotar. Quem executa é lib/atendente/executar.ts (WhatsApp)
@@ -79,6 +80,7 @@ export type Marcacao = {
   valorCents: number;
   appointmentId: string | null;
   clienteId: string | null;
+  reutilizada?: boolean;
 };
 
 export type SaidaDoMotor = {
@@ -94,9 +96,6 @@ export type SaidaDoMotor = {
   usouIa: boolean;
 };
 
-/** Sem serviço cadastrado, a agenda pública oferece o atendimento de 30 minutos. */
-const ATENDIMENTO: ServicoDoAtendente = { id: "", nome: "Atendimento", precoCents: 0, duracaoMin: 30 };
-
 const MAX_SERVICOS_NA_LISTA = 9;
 
 const trecho = (texto: string) => texto.trim().replace(/\s+/g, " ").slice(0, 120);
@@ -105,108 +104,40 @@ function saida(s: Partial<SaidaDoMotor> & { mensagens: string[] }): SaidaDoMotor
   return { estado: null, fontes: [], usouIa: false, ...s };
 }
 
-const SINONIMOS_PRECO = new Set([
-  "preco", "precos", "valor", "valores", "custa", "custo", "quanto", "tabela",
-  "mensalidade", "investimento", "cobranca", "cobra", "cobram", "tarifa"
-]);
-const SINONIMOS_HORARIO = new Set([
-  "horario", "horarios", "hora", "horas", "abre", "fecha", "aberto", "fechado", "funcionamento", "expediente", "atendimento"
-]);
-const SINONIMOS_ENDERECO = new Set([
-  "endereco", "localizacao", "local", "fica", "onde", "rua", "bairro", "cidade", "chegar"
-]);
-const SINONIMOS_PAGAMENTO = new Set([
-  "pagamento", "pagar", "pix", "cartao", "debito", "credito", "dinheiro", "parcela", "parcelamento"
-]);
-
-function normalizarParaBusca(txt: string): string {
-  return (txt || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+function normalizarParaBusca(texto: string): string {
+  return texto.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "")
+    .replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim()
+    .replace(/^(?:oi|ola|bom dia|boa tarde|boa noite)\s+/, "")
+    .replace(/\s+(?:por favor|pfv|obrigado|obrigada)$/, "");
 }
 
-function encontrarFaqDireta(
-  texto: string,
-  perguntas: { question: string; answer: string }[],
-): { question: string; answer: string } | null {
-  if (!perguntas || !perguntas.length) return null;
+/** Palavras genéricas compartilhadas não provam que uma FAQ responde à dúvida. */
+function encontrarFaqDireta(texto: string, perguntas: Fatos["perguntas"]): Fatos["perguntas"][number] | null {
   const limpo = normalizarParaBusca(texto);
-  if (!limpo) return null;
-  const palavrasTexto = limpo.split(/\s+/).filter((w) => w.length >= 2);
-  const setPalavrasTexto = new Set(palavrasTexto);
-
-  const temPrecoTexto = palavrasTexto.some((w) => SINONIMOS_PRECO.has(w));
-  const temHorarioTexto = palavrasTexto.some((w) => SINONIMOS_HORARIO.has(w));
-  const temEnderecoTexto = palavrasTexto.some((w) => SINONIMOS_ENDERECO.has(w));
-  const temPagamentoTexto = palavrasTexto.some((w) => SINONIMOS_PAGAMENTO.has(w));
-
-  // 1. Prioridade máxima: correspondência exata ou contenção direta da pergunta
-  for (const p of perguntas) {
-    const qLimpo = normalizarParaBusca(p.question);
-    if (!qLimpo) continue;
-    if (limpo === qLimpo || (limpo.length >= 5 && qLimpo.includes(limpo)) || (qLimpo.length >= 5 && limpo.includes(qLimpo))) {
-      return p;
-    }
+  const exata = perguntas.find((p) => normalizarParaBusca(p.question) === limpo);
+  if (exata) return exata;
+  // Mantém o preço geral ensinado, somente quando a pergunta não nomeia um serviço.
+  if (/^(?:(?:qual|quais) (?:e |sao )?(?:o |os )?)?(?:preco|precos|valor|valores|tabela(?: de precos)?|quanto custa|quanto e|quanto fica)$/.test(limpo)) {
+    const gerais = perguntas.filter((p) => /^(?:(?:qual|quais) (?:e |sao )?(?:o |os )?)?(?:preco|precos|valor|valores|tabela de precos|quanto custa)(?: do plano| cobrado)?$/.test(normalizarParaBusca(p.question)));
+    if (gerais.length === 1) return gerais[0];
   }
-
-  // 2. Sobreposição de palavras-chave da dúvida
-  let melhorCandidato: { p: { question: string; answer: string }; pontos: number } | null = null;
-  for (const p of perguntas) {
-    const qLimpo = normalizarParaBusca(p.question);
-    const palavrasQ = qLimpo.split(/\s+/).filter((w) => w.length >= 2);
-    if (!palavrasQ.length) continue;
-
-    const comuns = palavrasQ.filter((w) => setPalavrasTexto.has(w));
-    let pontos = comuns.length * 2;
-
-    const temPrecoQ = palavrasQ.some((w) => SINONIMOS_PRECO.has(w));
-    if (temPrecoTexto && temPrecoQ) pontos += 4;
-
-    const temHorarioQ = palavrasQ.some((w) => SINONIMOS_HORARIO.has(w));
-    if (temHorarioTexto && temHorarioQ) pontos += 4;
-
-    const temEnderecoQ = palavrasQ.some((w) => SINONIMOS_ENDERECO.has(w));
-    if (temEnderecoTexto && temEnderecoQ) pontos += 4;
-
-    const temPagamentoQ = palavrasQ.some((w) => SINONIMOS_PAGAMENTO.has(w));
-    if (temPagamentoTexto && temPagamentoQ) pontos += 4;
-
-    // Se o cliente perguntou preço e a resposta do item contém menção direta a valor/preço/reais
-    if (temPrecoTexto && (/r\$|\breais\b|\b\d+\b/i.test(p.answer) || temPrecoQ)) {
-      pontos += 3;
-    }
-
-    if (pontos >= 3 && (!melhorCandidato || pontos > melhorCandidato.pontos)) {
-      melhorCandidato = { p, pontos };
-    }
-  }
-
-  if (melhorCandidato) return melhorCandidato.p;
-
-  // 3. Se o cliente perguntou especificamente sobre preço ("qual o preço", "quanto custa")
-  // e temos um item de FAQ sobre preço, devolve-o diretamente
-  if (temPrecoTexto) {
-    const faqComPreco = perguntas.find((p) => {
-      const q = normalizarParaBusca(p.question);
-      const a = normalizarParaBusca(p.answer);
-      return (
-        q.split(/\s+/).some((w) => SINONIMOS_PRECO.has(w)) ||
-        a.includes("reais") ||
-        a.includes("r$") ||
-        /\d{2,}/.test(a)
-      );
-    });
-    if (faqComPreco) return faqComPreco;
-  }
-
   return null;
 }
 
 export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): Promise<SaidaDoMotor> {
+  const midias = midiasNaoInterpretadas(e.texto);
+  if (midias.length) {
+    const texto = textoSemMarcadoresDeMidia(e.texto);
+    const aviso = "Recebi sua mídia, mas não consigo interpretar o conteúdo dela por aqui. Pode escrever o que você precisa em uma mensagem?";
+    if (!texto) return saida({ mensagens: [aviso], estado: e.estado,
+      fontes: ["Mídia recebida sem interpretação"] });
+    const resposta = await responder({ ...e, texto,
+      historico: e.historico.map((m) => ({ ...m, content: textoSemMarcadoresDeMidia(m.content) }))
+        .filter((m) => m.content.trim()) }, deps);
+    if (resposta.urgente || resposta.equipe) return resposta;
+    return { ...resposta, mensagens: [[...resposta.mensagens, aviso].join("\n")],
+      fontes: [...resposta.fontes, "Mídia recebida sem interpretação"] };
+  }
   if (e.fatos.comercial) {
     return responderComercial(e, deps);
   }
@@ -219,41 +150,19 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
       ? textoDaVolta(proximaAbertura(fatos.horarios, fatos.diasFechados, agora), agora)
       : null;
 
-  const abertura = e.primeiraDoDia
-    ? `${t.saudacao({
-        cumprimento: cumprimento(agora),
-        cliente: e.clienteNome,
-        apresentacao: apresentacao({ nome: fatos.nome, empresa: fatos.empresa }),
-      })} ${e.contexto === "FECHADO" ? t.contextoFechado(volta) : t.contextoExpediente}`
-    : null;
-  const comAbertura = (texto: string) => {
-    if (!abertura) return [texto];
-    if (
-      /^(ol[aá]|oi|bom dia|boa tarde|boa noite)/i.test(texto.trim()) ||
-      texto.trim().includes("Viu a velocidade")
-    ) {
-      return [texto];
-    }
-    return [abertura, texto];
-  };
-  const formatarRespostaFaq = (resposta: string) => {
-    const r = resposta.trim();
-    if (
-      r.endsWith("?") ||
-      r.includes("http://") ||
-      r.includes("https://") ||
-      /qual\b|como\b|👉|gr[aá]tis|plano|mensal|semana|ativar|r\$/i.test(r)
-    ) {
-      return r;
-    }
-    return `${r} ${t.convite}`;
-  };
-  const convite = (): EstadoDaConversa => ({ tipo: "CONVITE", criadoEm: agoraIso });
+  const jaConversou = e.historico.some((m) => m.role === "AI" || m.role === "HUMAN");
+  const abertura = e.primeiraDoDia && !jaConversou
+    ? t.saudacao({ cumprimento: cumprimento(agora), cliente: e.clienteNome,
+        apresentacao: apresentacao({ nome: fatos.nome, empresa: fatos.empresa }) })
+    : `${cumprimento(agora)}${e.clienteNome ? `, ${e.clienteNome}` : ""}!`;
+  // Uma dúvida direta recebe a resposta primeiro, sem um segundo balão de apresentação.
+  const comAbertura = (texto: string) => [texto];
   const naoSei = (motivo: string, pergunta?: string): SaidaDoMotor =>
     saida({
-      mensagens: comAbertura(t.naoSei(volta)),
+      mensagens: [t.naoSei(volta)],
+      estado: e.estado,
       anotar: { motivo, ...(pergunta ? { pergunta } : {}) },
-      fontes: ["Anotado para você responder"],
+      fontes: ["Informação pendente de confirmação"],
     });
 
   async function oferecer(
@@ -267,9 +176,19 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
     const dias = Array.from({ length: DIAS_DE_BUSCA }, (_, i) => somarDias(primeiroDia, i));
     // O horário que acabou de ser tomado não volta na lista, mesmo que a leitura
     // da agenda ainda não tenha visto a marcação de quem chegou antes.
-    const livres = (await deps.livres({ servico, dias, profissional })).filter(
-      (l) => !ocupado || l.inicio.getTime() !== ocupado.inicio || l.profissional !== ocupado.profissional,
-    );
+    let livres: Livre[];
+    try {
+      livres = (await deps.livres({ servico, dias, profissional })).filter(
+        (l) => !ocupado || l.inicio.getTime() !== ocupado.inicio || l.profissional !== ocupado.profissional,
+      );
+    } catch {
+      return saida({
+        mensagens: ["Não consegui consultar a agenda agora. A disponibilidade ainda precisa ser confirmada pela equipe."],
+        estado: e.estado,
+        anotar: { motivo: `Falha ao consultar horários para ${servico.nome}` },
+        fontes: ["Consulta de agenda indisponível"],
+      });
+    }
     const { opcoes, noDiaPedido } = escolherTres(livres, pedido);
 
     if (opcoes.length === 0) {
@@ -328,6 +247,9 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
     pedido: PedidoDeDia,
     profissional: string | undefined,
   ): Promise<SaidaDoMotor> | SaidaDoMotor {
+    if (!fatos.horarios.length || !fatos.servicos.length) {
+      return naoSei("A agenda precisa de serviços e horários confirmados antes de oferecer uma reserva", e.texto);
+    }
     let servico = servicoId ? fatos.servicos.find((s) => s.id === servicoId) : undefined;
     if (!servico && fatos.servicos.length === 1) servico = fatos.servicos[0];
 
@@ -361,7 +283,8 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
       });
     }
 
-    return oferecer(servico ?? ATENDIMENTO, pedido, profissional ?? null, null);
+    return servico ? oferecer(servico, pedido, profissional ?? null, null)
+      : naoSei("O serviço solicitado precisa de confirmação", e.texto);
   }
 
   async function escolher(n: number): Promise<SaidaDoMotor> {
@@ -381,6 +304,12 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
 
     const opcao = estado?.tipo === "HORARIO" ? estado.opcoes.find((o) => o.n === n) : undefined;
     if (estado?.tipo === "HORARIO" && opcao) {
+      const servicoAtual = fatos.servicos.find((s) => s.id === estado.servicoId);
+      if (!fatos.horarios.length || !servicoAtual || servicoAtual.duracaoMin !== estado.duracaoMin) {
+        return saida({ mensagens: ["Os dados dessa opção precisam ser conferidos novamente antes de reservar. A equipe pode verificar o serviço e o horário para você."],
+          anotar: { motivo: "Oferta anterior incompatível com os dados atuais da agenda" },
+          fontes: ["Reserva pendente de nova verificação"] });
+      }
       const inicio = new Date(opcao.inicio);
       const quando = quandoFalado(inicio);
       const servicoFalado = estado.servicoId ? estado.servicoNome : null;
@@ -390,16 +319,29 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
         return saida({
           mensagens: comAbertura(fatos.linkAgenda ? t.linkAgenda(fatos.linkAgenda) : t.anoteiHorario({ quando, volta })),
           anotar: { motivo: `Quer marcar ${servicoFalado ?? "um horário"}: ${quando}` },
-          fontes: ["Horários livres da sua agenda", "Anotado para você confirmar"],
+          fontes: ["Horários livres da sua agenda", "Escolha pendente de confirmação"],
         });
       }
 
-      const resultado = await deps.marcar({
+      let resultado: ResultadoDaMarcacao;
+      try {
+        resultado = await deps.marcar({
         servico: { id: estado.servicoId, nome: estado.servicoNome, duracaoMin: estado.duracaoMin },
         inicio,
         profissional: opcao.profissional,
         cliente: { nome: e.clienteNome ?? "Cliente", telefone: e.telefone },
-      });
+        });
+      } catch {
+        resultado = { ok: false, motivo: "RESULTADO_DESCONHECIDO" };
+      }
+      if (!resultado.ok && resultado.motivo === "RESULTADO_DESCONHECIDO") {
+        return saida({
+          mensagens: ["Ainda não consegui confirmar o resultado dessa reserva. A equipe precisa verificar antes de uma nova tentativa."],
+          estado, equipe: true,
+          anotar: { motivo: `Verificar resultado da reserva de ${estado.servicoNome}: ${quando}` },
+          fontes: ["Resultado da reserva em verificação"],
+        });
+      }
 
       if (resultado.ok) {
         const valorCents = fatos.servicos.find((s) => s.id === estado.servicoId)?.precoCents ?? 0;
@@ -414,6 +356,7 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
             valorCents,
             appointmentId: resultado.appointmentId,
             clienteId: resultado.clienteId,
+            reutilizada: resultado.reutilizada,
           },
           fontes: ["Marcado na sua agenda, pela mesma regra do seu link"],
         });
@@ -435,232 +378,155 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
     return livre();
   }
 
-  async function livre(): Promise<SaidaDoMotor> {
-    const textoFatos = textoDosFatos(fatos);
+  async function livre(pergunta = e.texto): Promise<SaidaDoMotor> {
+    const faq = encontrarFaqDireta(pergunta, fatos.perguntas);
+    if (faq) return saida({ mensagens: [faq.answer.trim()], estado: e.estado,
+      fontes: [`Dúvida que você ensinou: "${faq.question}"`] });
+
+    const catalogo = catalogoDeRespostas(fatos);
+    if (!catalogo.length) return naoSei("Não há informação aprovada para esta pergunta", pergunta);
     const systemPrompt = montarPrompt({
-      textoDosFatos: textoFatos,
-      jeito: fatos.jeito,
-      nome: fatos.nome,
-      empresa: fatos.empresa,
-      contexto: e.contexto,
-      volta,
+      textoDosFatos: JSON.stringify(catalogo), jeito: fatos.jeito, nome: fatos.nome,
+      empresa: fatos.empresa, contexto: e.contexto, volta,
       agoraTexto: getLocalTime(agora).formatted,
     });
-
     let resposta: ReceptionistReply;
     try {
-      resposta = await deps.ia({ systemPrompt, historico: e.historico });
+      // A pergunta em análise fica por último, inclusive quando veio de uma mensagem composta.
+      const historico = e.historico.at(-1)?.content === pergunta
+        ? e.historico : [...e.historico, { role: "CUSTOMER" as const, content: pergunta }];
+      resposta = await deps.ia({ systemPrompt, historico });
     } catch {
-      return { ...naoSei("Pergunta que o atendente não soube responder", e.texto), usouIa: true };
+      return { ...naoSei("Não foi possível consultar a informação", pergunta), usouIa: true };
     }
-
-    if (!resposta || !resposta.resposta) {
-      return { ...naoSei("Pergunta que o atendente não soube responder", e.texto), usouIa: true };
+    const selecao = validarSelecaoDeFontes(resposta, catalogo);
+    if (!selecao) return { ...naoSei("A resposta não indicou fontes autorizadas", pergunta), usouIa: true };
+    const referencia = detectarIntencao(pergunta, ctx);
+    const servicosReferidos = referencia.servicoIds ?? [];
+    if (servicosReferidos.length && selecao.fontes.some((fonte) =>
+      fonte.id.startsWith("servico:") && !servicosReferidos.some((id) =>
+        fonte.id === `servico:${id}:preco` || fonte.id === `servico:${id}:duracao`))) {
+      return { ...naoSei("A fonte selecionada não corresponde ao serviço solicitado", pergunta), usouIa: true };
     }
-
-    // O verificador: todo número da resposta precisa existir nos fatos.
-    if (numerosSemFonte(resposta.resposta, textoFatos).length > 0) {
-      return { ...naoSei("A resposta tinha informação que não está no seu cadastro", e.texto), usouIa: true };
-    }
-
-    const convidou = /hor[aá]rios?/i.test(resposta.resposta) && resposta.resposta.trim().endsWith("?");
-    const expressouDuvida =
-      resposta.transferir_humano ||
-      /não (tenho|temos) (essa|esta) (informa|confirma)|não sei te informar|não consta no nosso|vou consultar a equipe|verificar com a equipe/i.test(
-        resposta.resposta,
-      );
-
+    if (resposta.transferir_humano) return saida({
+      mensagens: [t.pessoa(volta)], estado: e.estado, equipe: true, usouIa: true,
+      anotar: { motivo: "Solicitação que precisa de avaliação da equipe", pergunta },
+      fontes: ["Solicitação de avaliação humana"],
+    });
+    const mensagens = [...new Set(selecao.fontes.map((fonte) => fonte.texto))];
+    if (selecao.pendente) mensagens.push(t.naoSei(volta));
     return saida({
-      mensagens: comAbertura(resposta.resposta),
-      estado: convidou ? convite() : null,
-      ...(expressouDuvida
-        ? {
-            anotar: {
-              motivo: resposta.motivo_transferencia || "Pergunta que o atendente não soube responder",
-              pergunta: e.texto,
-            },
-          }
-        : {}),
-      fontes: ["Frase do atendente, conferida com os seus dados"],
-      usouIa: true,
+      mensagens: [mensagens.join("\n")], estado: e.estado, usouIa: true,
+      fontes: selecao.fontes.map((fonte) => fonte.assunto),
+      ...(selecao.pendente ? { anotar: { motivo: "Parte da pergunta precisa de confirmação", pergunta } } : {}),
     });
   }
 
-  const intencao = detectarIntencao(e.texto, {
+  const ctx = {
     servicos: fatos.servicos.map((s) => ({ id: s.id, nome: s.nome })),
-    profissionais: fatos.profissionais,
-    palavrasDoDono: e.palavrasDoDono,
-    estado: e.estado?.tipo ?? null,
-    opcoes: opcoesParaEscolha(e.estado),
-    agora,
+    profissionais: fatos.profissionais, palavrasDoDono: e.palavrasDoDono,
+    estado: e.estado?.tipo ?? null, opcoes: opcoesParaEscolha(e.estado), agora,
+    historico: e.historico,
+    servicoAtualId: e.estado?.tipo === "HORARIO" ? e.estado.servicoId ?? undefined : undefined,
+  };
+  const principal = detectarIntencao(e.texto, ctx);
+  const exclusivas = new Set(["URGENCIA", "DESMARCAR", "PESSOA", "RECLAMACAO", "ESCOLHA", "CONFIRMA", "NEGA"]);
+
+  async function responderIntencao(intencao: Intencao): Promise<SaidaDoMotor> {
+    const pergunta = intencao.texto ?? e.texto;
+    switch (intencao.tipo) {
+      case "URGENCIA":
+        return saida({ mensagens: [intencao.emocional ? URGENCIA_CVV(fatos.empresa) : URGENCIA(fatos.empresa)],
+          urgente: true, equipe: true, anotar: { motivo: `Urgência: ${trecho(e.texto)}` },
+          fontes: ["Orientação fixa de urgência"] });
+      case "DESMARCAR":
+        return saida({ mensagens: ["A alteração do seu agendamento precisa ser confirmada pela equipe. O pedido ainda não significa que o horário foi cancelado ou alterado."],
+          equipe: true, anotar: { motivo: "Quer desmarcar ou remarcar um horário" },
+          fontes: ["Alteração pendente de confirmação"] });
+      case "PESSOA":
+        return saida({ mensagens: [t.pessoa(volta)], equipe: true,
+          anotar: { motivo: "Pediu para falar com alguém da equipe" }, fontes: ["Pedido de atendimento humano"] });
+      case "RECLAMACAO":
+        return saida({ mensagens: [t.reclamacao(volta)], equipe: true,
+          anotar: { motivo: `Reclamação: ${trecho(e.texto)}` }, fontes: ["Pedido de atenção da equipe"] });
+      case "ESCOLHA": return escolher(intencao.escolha!);
+      case "NEGA": return saida({ mensagens: ["Tudo bem. Se precisar, estou por aqui."] });
+      case "AGRADECIMENTO": return saida({ mensagens: [t.agradecimento], estado: e.estado });
+      case "CONFIRMA":
+      case "HORARIO": return pedirHorario(intencao.servicoId, intencao.pedido, intencao.profissional);
+      case "IDENTIDADE":
+        return saida({ mensagens: [`${apresentacao({ nome: fatos.nome, empresa: fatos.empresa })}. Posso ajudar com informações do atendimento; se preferir falar com a equipe, é só pedir.`], estado: e.estado,
+          fontes: ["Identidade do atendimento virtual"] });
+      case "PRECO":
+      case "DURACAO": {
+        const ids = intencao.servicoIds?.length ? intencao.servicoIds : intencao.servicoId ? [intencao.servicoId] : [];
+        const selecionados = fatos.servicos.filter((s) => ids.includes(s.id));
+        if (selecionados.length) {
+          const textos: string[] = [];
+          const semPreco: string[] = [];
+          for (const servico of selecionados) {
+            if (intencao.tipo === "DURACAO") {
+              if (servico.duracaoMin > 0) textos.push(`${servico.nome} leva ${duracaoFalada(servico.duracaoMin)}.`);
+              else return naoSei(`Duração não confirmada: ${servico.nome}`, pergunta);
+            }
+            else if (servico.precoCents > 0) textos.push(t.preco({ servico: servico.nome,
+              preco: precoFalado(servico.precoCents), duracao: null }));
+            else { textos.push(t.semPreco(servico.nome)); semPreco.push(servico.nome); }
+          }
+          return saida({ mensagens: [textos.join("\n")], estado: e.estado,
+            fontes: selecionados.map((s) => `${intencao.tipo === "DURACAO" ? "Duração" : "Preço"} do serviço ${s.nome}`),
+            ...(semPreco.length ? { anotar: { motivo: `Preço não confirmado: ${semPreco.join(", ")}`, pergunta } } : {}) });
+        }
+        const faq = encontrarFaqDireta(pergunta, fatos.perguntas);
+        if (faq) return saida({ mensagens: [faq.answer.trim()], estado: e.estado, fontes: [`Dúvida que você ensinou: "${faq.question}"`] });
+        // Lista só quando o cliente pediu uma tabela. Um serviço desconhecido não vira outro serviço.
+        if (/\b(tabela|precos|valores|servicos)\b/.test(normalizarParaBusca(pergunta)) && intencao.tipo === "PRECO") {
+          const lista = fatos.servicos.filter((s) => s.precoCents > 0).slice(0, MAX_SERVICOS_NA_LISTA);
+          if (lista.length) return saida({ mensagens: [lista.map((s) => `${s.nome}: ${precoFalado(s.precoCents)}.`).join("\n")], estado: e.estado,
+            fontes: lista.map((s) => `Preço do serviço ${s.nome}`) });
+        }
+        const generica = /^(?:(?:qual|quais) (?:e |sao )?(?:o |os )?)?(?:preco|valor|quanto custa|quanto e|quanto fica|quanto tempo|quanto dura)$/.test(normalizarParaBusca(pergunta));
+        if (generica) return saida({ mensagens: ["De qual serviço você gostaria de saber?"], estado: e.estado });
+        return livre(pergunta);
+      }
+      case "FUNCIONAMENTO": {
+        const dia = intencao.pedido.dia;
+        if (dia && fatos.horarios.length) {
+          const semana = new Date(`${dia}T12:00:00Z`).getUTCDay();
+          const horario = fatos.horarios.find((h) => h.day === semana);
+          const fechado = fatos.diasFechados.includes(dia) || !horario || horario.closed || horario.open === horario.close;
+          return saida({ mensagens: [fechado ? `Não abrimos ${diaFalado(dia, agora)}.`
+            : `${diaFalado(dia, agora).replace(/^./, (c) => c.toUpperCase())}, funcionamos das ${horario.open} às ${horario.close}.`],
+            estado: e.estado, fontes: ["Horário e dias fechados do cadastro"] });
+        }
+        return fatos.horarios.length ? saida({ mensagens: [`Funcionamos ${horarioFalado(fatos.horarios)}.`], estado: e.estado,
+          fontes: ["Horário do cadastro"] }) : livre(pergunta);
+      }
+      case "ENDERECO": return fatos.endereco ? saida({ mensagens: [`Estamos em ${fatos.endereco}.`], estado: e.estado,
+        fontes: ["Endereço do cadastro"] }) : livre(pergunta);
+      case "PAGAMENTO": return fatos.pagamento ? saida({ mensagens: [`Formas de pagamento: ${fatos.pagamento}.`], estado: e.estado,
+        fontes: ["Formas de pagamento do cadastro"] }) : livre(pergunta);
+      case "SAUDACAO": return saida({ mensagens: [`${abertura} Como posso ajudar?`], estado: e.estado });
+      default: return livre(pergunta);
+    }
+  }
+
+  if (exclusivas.has(principal.tipo)) return responderIntencao(principal);
+  const intencoes = detectarIntencoes(e.texto, ctx);
+  const respostas: SaidaDoMotor[] = [];
+  for (const intencao of intencoes) {
+    const resposta = await responderIntencao(intencao);
+    respostas.push(resposta);
+    if (resposta.equipe) break;
+  }
+  if (respostas.length === 1) return respostas[0];
+  const anotacoes = respostas.flatMap((r) => r.anotar ? [r.anotar] : []);
+  return saida({
+    mensagens: [[...new Set(respostas.flatMap((r) => r.mensagens))].join("\n")],
+    estado: respostas.findLast((r) => r.estado && r.estado !== e.estado)?.estado ?? e.estado,
+    fontes: [...new Set(respostas.flatMap((r) => r.fontes))], usouIa: respostas.some((r) => r.usouIa),
+    ...(respostas.some((r) => r.equipe) ? { equipe: true as const } : {}),
+    ...(anotacoes.length ? { anotar: { motivo: anotacoes.map((a) => a.motivo).join("; "),
+      pergunta: anotacoes.map((a) => a.pergunta).filter(Boolean).join("; ") || undefined } } : {}),
   });
-
-  // Se o cliente fez uma pergunta direta que a empresa já ensinou no Treinamento ou FAQ,
-  // responde na hora com o conhecimento aprovado do dono, sem risco de alucinação.
-  if (
-    intencao.tipo !== "URGENCIA" &&
-    intencao.tipo !== "DESMARCAR" &&
-    intencao.tipo !== "PESSOA" &&
-    intencao.tipo !== "RECLAMACAO" &&
-    intencao.tipo !== "ESCOLHA"
-  ) {
-    const faqEncontrada = encontrarFaqDireta(e.texto, fatos.perguntas);
-    if (faqEncontrada) {
-      return saida({
-        mensagens: comAbertura(formatarRespostaFaq(faqEncontrada.answer)),
-        estado: convite(),
-        fontes: [`Dúvida que você ensinou: "${faqEncontrada.question}"`],
-      });
-    }
-  }
-
-  switch (intencao.tipo) {
-    case "URGENCIA":
-      // Antes de qualquer apresentação: quem escreve isso não quer saber quem é o atendente.
-      return saida({
-        mensagens: [intencao.emocional ? URGENCIA_CVV(fatos.empresa) : URGENCIA(fatos.empresa)],
-        urgente: true,
-        equipe: true,
-        anotar: { motivo: `Urgência: ${trecho(e.texto)}` },
-        fontes: ["Texto fixo de urgência, com aviso para você"],
-      });
-
-    case "DESMARCAR":
-      return saida({
-        mensagens: comAbertura(t.pessoa(volta)),
-        anotar: { motivo: "Quer desmarcar ou remarcar um horário" },
-        fontes: ["Anotado para você resolver"],
-      });
-
-    case "PESSOA":
-      return saida({
-        mensagens: comAbertura(t.pessoa(volta)),
-        equipe: true,
-        anotar: { motivo: "Pediu para falar com alguém da equipe" },
-        fontes: ["Anotado para você responder"],
-      });
-
-    case "RECLAMACAO":
-      return saida({
-        mensagens: comAbertura(t.reclamacao(volta)),
-        equipe: true,
-        anotar: { motivo: `Reclamação: ${trecho(e.texto)}` },
-        fontes: ["Anotado para você responder"],
-      });
-
-    case "ESCOLHA":
-      return escolher(intencao.escolha!);
-
-    case "NEGA":
-    case "AGRADECIMENTO":
-      return saida({ mensagens: comAbertura(t.agradecimento) });
-
-    case "CONFIRMA":
-    case "HORARIO":
-      return pedirHorario(intencao.servicoId, intencao.pedido, intencao.profissional);
-
-    case "PRECO": {
-      // 1. Dúvida direta ensinada pelo dono tem prioridade máxima
-      const faqPreco = encontrarFaqDireta(e.texto, fatos.perguntas);
-      if (faqPreco) {
-        return saida({
-          mensagens: comAbertura(formatarRespostaFaq(faqPreco.answer)),
-          estado: convite(),
-          fontes: [`Dúvida que você ensinou: "${faqPreco.question}"`],
-        });
-      }
-
-      // 2. Se o cliente especificou um serviço no texto (ex: "preço do corte")
-      if (intencao.servicoId) {
-        const servico = fatos.servicos.find((s) => s.id === intencao.servicoId);
-        if (servico && servico.precoCents > 0) {
-          return saida({
-            mensagens: comAbertura(
-              `${t.preco({ servico: servico.nome, preco: precoFalado(servico.precoCents), duracao: duracaoFalada(servico.duracaoMin) })} ${t.convite}`,
-            ),
-            estado: convite(),
-            fontes: [`Preço e duração do serviço ${servico.nome}`],
-          });
-        }
-        // Se o serviço citado não tem preço na agenda, procura se o dono ensinou nas perguntas
-        const faqDoServico = fatos.perguntas.find((p) =>
-          normalizarParaBusca(p.question).includes(normalizarParaBusca(servico?.nome ?? "")) ||
-          normalizarParaBusca(p.answer).includes(normalizarParaBusca(servico?.nome ?? ""))
-        );
-        if (faqDoServico) {
-          return saida({
-            mensagens: comAbertura(`${faqDoServico.answer} ${t.convite}`),
-            estado: convite(),
-            fontes: [`Dúvida que você ensinou: "${faqDoServico.question}"`],
-          });
-        }
-        if (servico) {
-          return saida({
-            mensagens: comAbertura(t.semPreco(servico.nome)),
-            anotar: { motivo: `Perguntou o valor de ${servico.nome}`, pergunta: e.texto },
-            fontes: ["Anotado para você responder"],
-          });
-        }
-      }
-
-      // 3. Pergunta geral de preço ("qual o preço", "quanto custa", "valores"):
-      const comPreco = fatos.servicos.filter((s) => s.precoCents > 0).slice(0, MAX_SERVICOS_NA_LISTA);
-      if (comPreco.length > 0) {
-        if (comPreco.length === 1) {
-          const s = comPreco[0];
-          return saida({
-            mensagens: comAbertura(
-              `${t.preco({ servico: s.nome, preco: precoFalado(s.precoCents), duracao: duracaoFalada(s.duracaoMin) })} ${t.convite}`,
-            ),
-            estado: convite(),
-            fontes: [`Preço do serviço ${s.nome}`],
-          });
-        }
-        return saida({
-          mensagens: comAbertura(
-            `Valores: ${comPreco.map((s) => `${s.nome} — ${precoFalado(s.precoCents)}`).join("; ")}. ${t.convite}`,
-          ),
-          estado: convite(),
-          fontes: ["Preços dos serviços da sua agenda"],
-        });
-      }
-
-      // 4. Se não há serviços com preço na agenda, consulta as informações da empresa ou IA livre
-      return livre();
-    }
-
-    case "FUNCIONAMENTO":
-      return fatos.horarios.length
-        ? saida({
-            mensagens: comAbertura(`Funcionamos ${horarioFalado(fatos.horarios)}. ${t.convite}`),
-            estado: convite(),
-            fontes: ["Horário do seu cadastro"],
-          })
-        : livre();
-
-    case "ENDERECO":
-      return fatos.endereco
-        ? saida({
-            mensagens: comAbertura(`Estamos em ${fatos.endereco}. ${t.convite}`),
-            estado: convite(),
-            fontes: ["Endereço do seu cadastro"],
-          })
-        : livre();
-
-    case "PAGAMENTO":
-      return fatos.pagamento
-        ? saida({
-            mensagens: comAbertura(`Formas de pagamento: ${fatos.pagamento}. ${t.convite}`),
-            estado: convite(),
-            fontes: ["Formas de pagamento do seu cadastro"],
-          })
-        : livre();
-
-    case "SAUDACAO":
-      return saida({ mensagens: [abertura ? `${abertura} ${t.convite}` : t.convite], estado: convite() });
-
-    case "LIVRE":
-    default:
-      return livre();
-  }
 }

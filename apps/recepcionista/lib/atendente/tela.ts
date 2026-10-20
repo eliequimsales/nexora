@@ -345,7 +345,7 @@ export async function telaDoAtendente(companyId: string, agora: Date = new Date(
             : `${duracaoFalada(s.duracaoMin)} · sem preço cadastrado`,
         semPreco: s.precoCents === 0,
       })),
-      horario: horarioFalado(fatos.horarios),
+      horario: fatos.horarios.length ? horarioFalado(fatos.horarios) : "Não cadastrado",
       fechadoHoje: fatos.diasFechados.includes(localDe(agora).data),
       perguntas: fatos.perguntas.map((p) => p.question).slice(0, 30),
       endereco: fatos.endereco,
@@ -353,7 +353,7 @@ export async function telaDoAtendente(companyId: string, agora: Date = new Date(
       descricao: fatos.descricao,
       linkAgenda: fatos.linkAgenda,
     },
-    foraDoHorario: quandoAtendeTexto(fatos.horarios).join(" · "),
+    foraDoHorario: fatos.horarios.length ? quandoAtendeTexto(fatos.horarios).join(" · ") : "Horário não cadastrado",
     enquantoFechado: contar(doFechamento),
     precisaDeVoce: pendentes.map((p) => ({
       id: p.id,

@@ -9,8 +9,8 @@
  *
  * Duas regras valem para todos:
  *   - Nunca finge ser gente. Ele se apresenta como atendente virtual, uma vez.
- *   - Nunca inventa número. Quando não sabe quando a equipe volta, o texto não
- *     diz hora nenhuma.
+ *   - Nunca inventa fatos nem confirma ações. Estes textos não recebem provas de
+ *     registro ou notificação; só a confirmação de reserva usa resultado da agenda.
  *
  * Puro e sem banco: roda no servidor, no navegador (passo 1 da tela) e na
  * demonstração da landing.
@@ -27,9 +27,9 @@ export const NOME_DO_JEITO: Record<Jeito, string> = {
 };
 
 export const DESCRICAO_DO_JEITO: Record<Jeito, string> = {
-  ACOLHEDOR: "Caloroso, como alguém da casa.",
+  ACOLHEDOR: "Gentil e atencioso.",
   DIRETO: "Educado e sem rodeio.",
-  DESCONTRAIDO: "Leve, do jeito de quem já é cliente.",
+  DESCONTRAIDO: "Leve e simpático, sem perder o profissionalismo.",
 };
 
 const PARTICULAS = new Set(["da", "de", "do", "das", "dos", "e"]);
@@ -97,7 +97,7 @@ export interface Textos {
   /** `servico` null: não há serviço cadastrado, e o texto fala só dos horários. */
   ofertaLead(p: { servico: string | null; detalhe: string | null; quando: string | null }): string;
   respondaComNumero: string;
-  /** "Marcar direto" desligado e sem link: a escolha vira anotação para a equipe confirmar. */
+  /** "Marcar direto" desligado e sem link: a escolha ainda precisa de confirmação. */
   respondaParaAnotar: string;
   anoteiHorario(p: { quando: string; volta: string | null }): string;
   escolherServico: string;
@@ -131,115 +131,110 @@ const ACOLHEDOR: Textos = {
   saudacao: (p) => `${p.cumprimento}${comNome(p.cliente)}! ${p.apresentacao} 💛`,
   contextoFechado: (volta) =>
     volta
-      ? `A equipe volta ${volta}, mas a agenda eu já consigo ver.`
-      : "A equipe não está agora, mas a agenda eu já consigo ver.",
-  contextoExpediente:
-    "A equipe está no atendimento agora e já te responde; enquanto isso, eu te ajudo por aqui.",
+      ? `Estamos fora do horário de atendimento. A próxima abertura é ${volta}.`
+      : "Estamos fora do horário de atendimento.",
+  contextoExpediente: "Posso te ajudar por aqui.",
   convite: "Quer que eu te mostre os horários livres?",
   ofertaLead: (p) => `Tenho estes horários${doServico("para", p.servico, p.detalhe)}${espacoAntes(p.quando)}:`,
-  respondaComNumero: "É só responder com o número que eu já deixo marcado.",
-  respondaParaAnotar: "É só responder com o número que eu deixo anotado para a equipe confirmar.",
-  anoteiHorario: (p) => `Anotei: ${p.quando}. A equipe confirma com você ${p.volta ?? "assim que puder"} 💛`,
+  respondaComNumero: "É só responder com o número do horário que você prefere.",
+  respondaParaAnotar: "Qual horário você prefere? A escolha ainda precisa de confirmação da equipe.",
+  anoteiHorario: (p) => `Você escolheu ${p.quando}. Esse horário ainda precisa de confirmação da equipe.`,
   escolherServico: "Qual desses você quer? É só responder com o número:",
   confirmacao: (p) =>
     `Prontinho! ${comMaiuscula(p.quando)}${oQueEComQuem(p, " — ")}. ` +
     "Já está na agenda. Se precisar desmarcar, é só avisar por aqui 💛",
-  ocupado: "Ih, esse horário acabou de ser ocupado. Olha os próximos:",
+  ocupado: "Esse horário não está mais disponível. Veja as próximas opções:",
   semHorario: (quando) =>
     quando ? `Para ${quando} não tenho mais horário livre. Os próximos são:` : "Os próximos horários livres são:",
-  semAgenda: "Não encontrei horário livre nos próximos dias. Deixei anotado para a equipe te chamar.",
+  semAgenda: "Não encontrei horário livre nos dias consultados. Outras possibilidades precisam ser verificadas com a equipe.",
   linkAgenda: (link) => `Para confirmar, é só escolher o seu por aqui: ${link}`,
   conviteLink: (p) =>
     `Você pode escolher o melhor horário direto por este link:\n${p.link} 💛`,
   pessoa: (volta) =>
     volta
-      ? `Claro! A equipe volta ${volta} e já deixei anotado para falarem com você.`
-      : "Claro! Já avisei a equipe, e alguém te responde por aqui assim que puder.",
-  reclamacao: (volta) =>
-    `Sinto muito por isso. Anotei tudo para a equipe, e alguém fala com você ${volta ?? "assim que puder"}.`,
-  naoSei: (volta) =>
-    `Essa eu não tenho confirmada aqui. Deixei anotado para a equipe te responder ${volta ?? "assim que puder"}. Quer que eu te mostre os horários livres?`,
+      ? `Claro. Vou pausar o atendimento virtual para você falar com a equipe. A próxima abertura é ${volta}; não tenho um prazo de resposta confirmado.`
+      : "Claro. Vou pausar o atendimento virtual para você falar com a equipe. Não tenho um prazo de resposta confirmado.",
+  reclamacao: () =>
+    "Sinto muito pelo ocorrido. Essa situação precisa da atenção da equipe; vou pausar o atendimento virtual.",
+  naoSei: () => "Não tenho essa informação confirmada. Esse detalhe precisa ser verificado com a equipe.",
   preco: (p) => `${p.servico} sai por ${p.preco}${p.duracao ? ` e leva ${p.duracao}` : ""}.`,
   semPreco: (servico) =>
-    `O valor de ${servico} eu não tenho confirmado aqui. Deixei anotado para a equipe te passar certinho. Quer que eu te mostre os horários livres?`,
+    `Não tenho o valor de ${servico} confirmado. Esse preço precisa ser verificado com a equipe.`,
   agradecimento: "Imagina! Qualquer coisa, é só chamar 💛",
   teto: (p) =>
-    `Oi! ${p.apresentacao}. Recebi sua mensagem e a equipe te responde ${p.volta ?? "assim que puder"}.`,
-  limiteDoDia: (volta) =>
-    `Deixei tudo anotado para a equipe, que te responde ${volta ?? "assim que puder"}.`,
+    `Oi! ${p.apresentacao}. Neste momento, a continuação do atendimento depende da equipe. Não tenho um prazo de resposta confirmado.`,
+  limiteDoDia: () => "A continuação desta conversa precisa da equipe. Não tenho um prazo de resposta confirmado.",
 };
 
 const DIRETO: Textos = {
   saudacao: (p) => `${p.cumprimento}${comNome(p.cliente)}. ${p.apresentacao}.`,
   contextoFechado: (volta) =>
     volta
-      ? `Estamos fechados agora e voltamos ${volta}, mas já consigo ver a agenda.`
-      : "Estamos fechados agora, mas já consigo ver a agenda.",
-  contextoExpediente: "A equipe está atendendo e já responde; enquanto isso, posso adiantar por aqui.",
+      ? `Estamos fora do horário de atendimento. Próxima abertura: ${volta}.`
+      : "Estamos fora do horário de atendimento.",
+  contextoExpediente: "Posso ajudar por aqui.",
   convite: "Quer ver os horários livres?",
   ofertaLead: (p) => `Horários${p.servico ? doServico("para", p.servico, p.detalhe) : " livres"}${espacoAntes(p.quando)}:`,
-  respondaComNumero: "Responda com o número para marcar.",
-  respondaParaAnotar: "Responda com o número para a equipe confirmar.",
-  anoteiHorario: (p) => `Anotado: ${p.quando}. A equipe confirma ${p.volta ?? "em breve"}.`,
+  respondaComNumero: "Responda com o número do horário desejado.",
+  respondaParaAnotar: "Responda com o número desejado. A escolha depende de confirmação da equipe.",
+  anoteiHorario: (p) => `Horário escolhido: ${p.quando}. Ainda não está confirmado; depende da equipe.`,
   escolherServico: "Qual serviço? Responda com o número:",
   confirmacao: (p) =>
     `Confirmado: ${p.quando}${oQueEComQuem(p, ", ")}. ` + "Está na agenda. Para desmarcar, avise por aqui.",
-  ocupado: "Esse horário acabou de ser ocupado. Próximos:",
+  ocupado: "Esse horário não está mais disponível. Próximas opções:",
   semHorario: (quando) => (quando ? `Sem horário livre para ${quando}. Próximos:` : "Próximos horários livres:"),
-  semAgenda: "Não há horário livre nos próximos dias. Anotei para a equipe entrar em contato.",
+  semAgenda: "Não encontrei horário livre nos dias consultados. Outras possibilidades dependem de consulta à equipe.",
   linkAgenda: (link) => `Para confirmar, escolha pelo link: ${link}`,
   conviteLink: (p) =>
     `Escolha seu horário direto pelo link:\n${p.link}`,
   pessoa: (volta) =>
     volta
-      ? `Certo. A equipe volta ${volta} e vai falar com você.`
-      : "Certo. Avisei a equipe, e alguém responde por aqui em breve.",
-  reclamacao: (volta) => `Lamento. Registrei para a equipe, que fala com você ${volta ?? "em breve"}.`,
-  naoSei: (volta) =>
-    `Não tenho essa informação confirmada. Anotei para a equipe responder ${volta ?? "em breve"}. Quer ver os horários livres?`,
+      ? `Vou pausar o atendimento virtual para você falar com a equipe. Próxima abertura: ${volta}. Não há prazo de resposta confirmado.`
+      : "Vou pausar o atendimento virtual para você falar com a equipe. Não há prazo de resposta confirmado.",
+  reclamacao: () => "Lamento pelo ocorrido. A equipe precisa avaliar essa situação. Vou pausar o atendimento virtual.",
+  naoSei: () => "Não tenho essa informação confirmada. É preciso verificar com a equipe.",
   preco: (p) => `${p.servico}: ${p.preco}${p.duracao ? `, ${p.duracao}` : ""}.`,
   semPreco: (servico) =>
-    `Não tenho o valor de ${servico} confirmado. Anotei para a equipe informar. Quer ver os horários livres?`,
+    `Não tenho o valor de ${servico} confirmado. É preciso consultar a equipe sobre esse preço.`,
   agradecimento: "Por nada. Qualquer coisa, estou por aqui.",
   teto: (p) =>
-    `Olá. ${p.apresentacao}. Sua mensagem foi registrada e a equipe responde ${p.volta ?? "em breve"}.`,
-  limiteDoDia: (volta) => `Registrei tudo para a equipe, que responde ${volta ?? "em breve"}.`,
+    `Olá. ${p.apresentacao}. Este atendimento precisa continuar com a equipe. Não há prazo de resposta confirmado.`,
+  limiteDoDia: () => "Esta conversa precisa continuar com a equipe. Não há prazo de resposta confirmado.",
 };
 
 const DESCONTRAIDO: Textos = {
   saudacao: (p) => `Opa, ${p.cumprimento.toLocaleLowerCase("pt-BR")}${comNome(p.cliente)}! ${p.apresentacao} 😄`,
   contextoFechado: (volta) =>
-    volta ? `O pessoal volta ${volta}, mas a agenda eu já te mostro.` : "O pessoal não está agora, mas a agenda eu já te mostro.",
-  contextoExpediente: "O pessoal está na correria aqui e já te responde; enquanto isso, deixa comigo.",
+    volta ? `Estamos fora do horário de atendimento. Abrimos ${volta}.` : "Estamos fora do horário de atendimento.",
+  contextoExpediente: "Posso te ajudar por aqui.",
   convite: "Bora ver um horário?",
   ofertaLead: (p) => `Olha o que tenho${doServico("pra", p.servico, p.detalhe)}${espacoAntes(p.quando)}:`,
-  respondaComNumero: "Manda o número que eu já marco pra você.",
-  respondaParaAnotar: "Manda o número que eu deixo anotado pro pessoal confirmar.",
-  anoteiHorario: (p) => `Anotado: ${p.quando}! O pessoal confirma com você ${p.volta ?? "assim que der"}.`,
+  respondaComNumero: "Me diga o número do horário que você prefere.",
+  respondaParaAnotar: "Me diga o número que você prefere. A escolha ainda depende de confirmação da equipe.",
+  anoteiHorario: (p) => `Sua escolha foi ${p.quando}. O horário ainda não está confirmado; precisa da confirmação da equipe.`,
   escolherServico: "Qual deles vai ser? Manda o número:",
   confirmacao: (p) =>
     `Fechado! ${comMaiuscula(p.quando)}${oQueEComQuem(p, " — ")}. ` +
     "Já tá na agenda. Se precisar desmarcar, é só avisar aqui.",
-  ocupado: "Eita, esse acabou de ser pego. Olha os próximos:",
-  semHorario: (quando) => (quando ? `Pra ${quando} lotou. Os próximos são:` : "Os próximos livres são:"),
-  semAgenda: "Nos próximos dias tá tudo cheio. Deixei anotado pro pessoal te chamar.",
+  ocupado: "Esse horário não está mais disponível. Olha as próximas opções:",
+  semHorario: (quando) => (quando ? `Não encontrei horário livre pra ${quando}. Os próximos são:` : "Os próximos livres são:"),
+  semAgenda: "Não encontrei horário livre nos dias consultados. A equipe precisa verificar outras possibilidades.",
   linkAgenda: (link) => `Pra confirmar, é só escolher o seu aqui: ${link}`,
   conviteLink: (p) =>
     `Dá uma olhada nos horários e escolhe o seu aqui:\n${p.link} 😄`,
   pessoa: (volta) =>
     volta
-      ? `Claro! O pessoal volta ${volta} e já deixei anotado pra falarem com você.`
-      : "Claro! Já chamei o pessoal, e alguém te responde aqui assim que der.",
-  reclamacao: (volta) =>
-    `Poxa, sinto muito. Anotei tudo pro pessoal, e alguém fala com você ${volta ?? "assim que der"}.`,
-  naoSei: (volta) =>
-    `Essa eu não sei te dizer com certeza. Deixei anotado pro pessoal te responder ${volta ?? "assim que der"}. Bora ver um horário?`,
+      ? `Claro! Vou pausar o atendimento virtual pra você falar com a equipe. Abrimos ${volta}; ainda não tenho um prazo de resposta.`
+      : "Claro! Vou pausar o atendimento virtual pra você falar com a equipe. Ainda não tenho um prazo de resposta.",
+  reclamacao: () =>
+    "Sinto muito pelo ocorrido. A equipe precisa cuidar dessa situação; vou pausar o atendimento virtual.",
+  naoSei: () => "Esse detalhe eu não tenho confirmado. Precisa ser verificado com a equipe.",
   preco: (p) => `${p.servico} sai ${p.preco}${p.duracao ? ` e leva ${p.duracao}` : ""}.`,
   semPreco: (servico) =>
-    `O valor de ${servico} eu não tenho certinho aqui. Deixei anotado pro pessoal te passar. Bora ver um horário?`,
-  agradecimento: "Tamo junto! Qualquer coisa, chama aqui 😄",
-  teto: (p) => `Opa! ${p.apresentacao}. Recebi sua mensagem e o pessoal te responde ${p.volta ?? "assim que der"}.`,
-  limiteDoDia: (volta) => `Deixei tudo anotado pro pessoal, que te responde ${volta ?? "assim que der"}.`,
+    `O valor de ${servico} eu ainda não tenho confirmado. A equipe precisa verificar esse preço.`,
+  agradecimento: "Por nada! Se precisar, estou por aqui 😄",
+  teto: (p) => `Olá! ${p.apresentacao}. A equipe precisa continuar este atendimento. Ainda não tenho um prazo de resposta.`,
+  limiteDoDia: () => "A equipe precisa continuar esta conversa. Ainda não tenho um prazo de resposta.",
 };
 
 const TEXTOS: Record<Jeito, Textos> = { ACOLHEDOR, DIRETO, DESCONTRAIDO };
@@ -256,19 +251,19 @@ export function textosDoJeito(jeito: Jeito): Textos {
 export function URGENCIA(empresa: string): string {
   return (
     "Entendi. Se for uma emergência, ligue 192 (SAMU) ou procure o pronto-socorro mais próximo. " +
-    `Já deixei avisado para a equipe da ${empresa}.`
+    `O atendimento virtual da ${empresa} não substitui ajuda de emergência.`
   );
 }
 
 /**
  * RISCO À PRÓPRIA VIDA — texto fixo que aponta para o CVV (188), gratuito e 24
- * horas. Nenhuma orientação além de buscar ajuda; a equipe é avisada.
+ * horas. Nenhuma orientação além de buscar ajuda; não presume notificação.
  */
 export function URGENCIA_CVV(empresa: string): string {
   return (
     "Sinto muito que você esteja passando por isso. Se estiver pensando em se machucar, " +
     "o CVV atende agora, de graça, pelo 188 ou em cvv.org.br. " +
-    `Já deixei avisado para a equipe da ${empresa}.`
+    `O atendimento virtual da ${empresa} não substitui ajuda de emergência.`
   );
 }
 
@@ -297,19 +292,17 @@ export function conversaDeExemplo(
 ): Bolha[] {
   const t = textosDoJeito(jeito);
   const ap = apresentacao({ nome: d.nome, empresa: d.empresa });
-  const link = d.linkAgenda || "https://meunexora.com.br/agendar";
-
-  const perguntaAgenda =
-    jeito === "DESCONTRAIDO"
-      ? `Tenho horários disponíveis amanhã às 10:30 e às 15:00 😄\n\nQuer agendar algum desses ou prefere fazer o agendamento você mesmo pela nossa agenda online?\n${link}`
-      : jeito === "DIRETO"
-        ? `Temos horários disponíveis amanhã às 10:30 e às 15:00.\n\nQual horário você prefere, ou prefere fazer o agendamento você mesmo pela nossa agenda online?\n${link}`
-        : `Temos horários disponíveis amanhã às 10:30 e às 15:00 💛\n\nQual horário você prefere, ou prefere fazer o agendamento você mesmo pela nossa agenda online?\n${link}`;
+  const perguntaAgenda = [
+    t.ofertaLead({ servico: d.servico, detalhe: d.detalhe, quando: null }),
+    ...d.opcoes,
+    t.respondaComNumero,
+    ...(d.linkAgenda ? [t.linkAgenda(d.linkAgenda)] : []),
+  ].join("\n");
 
   return [
     {
       de: "cliente",
-      texto: `${d.cumprimento}! Tem horário amanhã${d.servico ? ` pra ${d.servico.toLocaleLowerCase("pt-BR")}` : ""}?`,
+      texto: `${d.cumprimento}! Tem horário${d.servico ? ` pra ${d.servico.toLocaleLowerCase("pt-BR")}` : ""}?`,
     },
     {
       de: "atendente",
@@ -321,7 +314,7 @@ export function conversaDeExemplo(
     },
     {
       de: "cliente",
-      texto: "Pode ser às 15:00, por favor!",
+      texto: `Pode ser ${d.escolhida.quando}, por favor!`,
     },
     {
       de: "atendente",

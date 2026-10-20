@@ -59,10 +59,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     }
 
-    // Mensagem de texto recebida de um cliente
+    // Texto ou mídia conhecida recebida de um cliente (sem interpretar o arquivo).
     const incoming = parseWebhookPayload(payload);
     if (!incoming) {
-      // Evento que não tratamos (mídia sem texto, grupo, status...) — confirma e ignora
+      // Evento que não tratamos (reação, grupo, status...) — confirma e ignora.
       return NextResponse.json({ ignored: true });
     }
 

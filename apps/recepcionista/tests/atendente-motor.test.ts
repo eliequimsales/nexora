@@ -109,14 +109,14 @@ const entrada = (texto: string, p: Partial<EntradaDoMotor> = {}): EntradaDoMotor
 });
 
 describe("saudação e apresentação", () => {
-  it("a primeira do dia se apresenta, diz quando a equipe volta e convida", async () => {
+  it("a primeira saudação se apresenta e abre espaço para a necessidade do cliente", async () => {
     const s = await responder(entrada("oi", { primeiraDoDia: true }), deps);
     expect(s.mensagens).toHaveLength(1);
     expect(s.mensagens[0]).toContain("Boa noite, Rafael!");
     expect(s.mensagens[0]).toContain("Eu sou Bia, atendente virtual da Barbearia do Léo");
-    expect(s.mensagens[0]).toContain("A equipe volta amanhã às 9h");
-    expect(s.mensagens[0]).toContain("Quer que eu te mostre os horários livres?");
-    expect(s.estado?.tipo).toBe("CONVITE");
+    expect(s.mensagens[0]).toContain("Como posso ajudar?");
+    expect(s.mensagens[0]).not.toMatch(/equipe volta|horários livres/);
+    expect(s.estado).toBeNull();
     expect(s.usouIa).toBe(false);
   });
 
@@ -125,19 +125,19 @@ describe("saudação e apresentação", () => {
     expect(s.mensagens.join(" ")).not.toContain("Eu sou Bia");
   });
 
-  it("no expediente, diz que a equipe está atendendo", async () => {
+  it("no expediente, não presume o que a equipe está fazendo", async () => {
     const s = await responder(entrada("oi", { primeiraDoDia: true, contexto: "EXPEDIENTE", agora: TERCA_10H }), deps);
     expect(s.mensagens[0]).toContain("Bom dia, Rafael!");
-    expect(s.mensagens[0]).toContain("A equipe está no atendimento agora");
+    expect(s.mensagens[0]).not.toContain("A equipe está no atendimento agora");
+    expect(s.mensagens[0]).toContain("Como posso ajudar?");
   });
 });
 
 describe("pedido de horário", () => {
   it("com o serviço citado: três horários de verdade, com preço, duração e o número para marcar", async () => {
     const s = await responder(entrada("tem horário amanhã pra corte?", { primeiraDoDia: true }), deps);
-    expect(s.mensagens).toHaveLength(2);
-    expect(s.mensagens[0]).toContain("Eu sou Bia");
-    const oferta = s.mensagens[1];
+    expect(s.mensagens).toHaveLength(1);
+    const oferta = s.mensagens[0];
     expect(oferta).toContain("Tenho estes horários para Corte (R$ 45,00, 40 min) amanhã:");
     expect(oferta).toContain("1 · qua 23/09, 9h com Léo");
     expect(oferta).toContain("2 · qua 23/09, 10h30 com Léo");
@@ -179,7 +179,7 @@ describe("pedido de horário", () => {
     const oferta = await responder(entrada("tem horário amanhã pra corte?"), deps);
     deps.marcar.mockResolvedValueOnce({ ok: false, motivo: "OCUPADO" });
     const s = await responder(entrada("2", { estado: oferta.estado }), deps);
-    expect(s.mensagens[0]).toContain("acabou de ser ocupado");
+    expect(s.mensagens[0]).toContain("não está mais disponível");
     expect(s.estado?.tipo).toBe("HORARIO");
     expect(s.marcou).toBeUndefined();
     // A agenda falsa ainda devolve as 10h30 como livre: o motor tira mesmo assim.
@@ -200,9 +200,11 @@ describe("pedido de horário", () => {
   it("sem link e sem marcar direto, a escolha vira anotação para a equipe confirmar", async () => {
     const fatos = { ...FATOS, marcaDireto: false, linkAgenda: null };
     const oferta = await responder(entrada("tem horário amanhã pra corte?", { fatos }), deps);
-    expect(oferta.mensagens[0]).toContain("deixo anotado para a equipe confirmar");
+    expect(oferta.mensagens[0]).toContain("ainda precisa de confirmação da equipe");
     const s = await responder(entrada("1", { estado: oferta.estado, fatos }), deps);
-    expect(s.mensagens[0]).toContain("Anotei: quarta, 23/09, às 9h");
+    expect(s.mensagens[0]).toContain("Você escolheu quarta, 23/09, às 9h");
+    expect(s.mensagens[0]).toContain("ainda precisa de confirmação");
+    expect(deps.marcar).not.toHaveBeenCalled();
     expect(s.anotar).toBeDefined();
   });
 
@@ -214,18 +216,14 @@ describe("pedido de horário", () => {
     expect(s.estado).toBeNull();
   });
 
-  // Sem serviço, o horário é de 30 minutos — mas o cliente não lê um serviço
-  // que o dono nunca cadastrou ("horários para Atendimento").
-  it("sem serviço cadastrado, oferece horários sem inventar nome de serviço", async () => {
+  it("sem serviço cadastrado, não inventa serviço nem duração para reservar", async () => {
     const fatos = { ...FATOS, servicos: [] };
     const oferta = await responder(entrada("tem horário amanhã?", { fatos }), deps);
-    expect(oferta.mensagens[0]).toContain("Tenho estes horários amanhã:");
+    expect(oferta.mensagens[0]).toContain("Não tenho essa informação confirmada");
     expect(oferta.mensagens[0]).not.toMatch(/Atendimento|30 min/);
-    expect(deps.livres.mock.calls[0][0].servico.duracaoMin).toBe(30);
-
-    const s = await responder(entrada("2", { estado: oferta.estado, fatos }), deps);
-    expect(s.mensagens[0]).toContain("Prontinho! Quarta, 23/09, às 10h30 com Léo.");
-    expect(s.mensagens[0]).not.toContain("Atendimento");
+    expect(oferta.estado).toBeNull();
+    expect(deps.livres).not.toHaveBeenCalled();
+    expect(deps.marcar).not.toHaveBeenCalled();
   });
 
   it("o \"sim\" depois do convite mostra os horários", async () => {
@@ -237,16 +235,15 @@ describe("pedido de horário", () => {
 });
 
 describe("preço, horário, endereço e pagamento — do cadastro, sem IA", () => {
-  it("preço do serviço citado, com o convite", async () => {
+  it("preço do serviço citado sem convite compulsório nem duração não solicitada", async () => {
     const s = await responder(entrada("quanto custa a barba?"), deps);
-    expect(s.mensagens[0]).toContain("Barba sai por R$ 35,00 e leva 30 min.");
-    expect(s.mensagens[0]).toContain("horários livres");
-    expect(s.estado?.tipo).toBe("CONVITE");
+    expect(s.mensagens).toEqual(["Barba sai por R$ 35,00."]);
+    expect(s.estado).toBeNull();
   });
 
   it("serviço sem preço: não inventa e anota", async () => {
     const s = await responder(entrada("quanto custa as luzes?"), deps);
-    expect(s.mensagens[0]).toContain("O valor de Luzes eu não tenho confirmado");
+    expect(s.mensagens[0]).toContain("Não tenho o valor de Luzes confirmado");
     expect(s.anotar).toBeDefined();
   });
 
@@ -301,9 +298,10 @@ describe("preço, horário, endereço e pagamento — do cadastro, sem IA", () =
 });
 
 describe("pessoa, reclamação e urgência — texto fixo, anotação e a conversa passa para a equipe", () => {
-  it("pedido de pessoa diz quando a equipe volta", async () => {
+  it("pedido de pessoa informa a abertura sem prometer resposta nesse horário", async () => {
     const s = await responder(entrada("quero falar com um atendente"), deps);
-    expect(s.mensagens[0]).toContain("A equipe volta amanhã às 9h");
+    expect(s.mensagens[0]).toContain("A próxima abertura é amanhã às 9h");
+    expect(s.mensagens[0]).toContain("não tenho um prazo de resposta confirmado");
     expect(s.anotar?.motivo).toMatch(/falar com alguém/i);
     expect(s.equipe).toBe(true);
   });
@@ -324,11 +322,12 @@ describe("pessoa, reclamação e urgência — texto fixo, anotação e a conver
     expect(s.equipe).toBe(true);
   });
 
-  // Quem quer remarcar ainda pode pedir horário novo: o Atendente continua ajudando.
-  it("desmarcar é anotado, e o Atendente segue na conversa", async () => {
+  it("desmarcar requer equipe e não confirma alteração inexistente", async () => {
     const s = await responder(entrada("quero desmarcar meu horário de amanhã"), deps);
     expect(s.anotar?.motivo).toMatch(/desmarcar/i);
-    expect(s.equipe).toBeUndefined();
+    expect(s.equipe).toBe(true);
+    expect(s.mensagens[0]).toContain("ainda não significa que o horário foi cancelado ou alterado");
+    expect(deps.marcar).not.toHaveBeenCalled();
   });
 
   it("dúvida sem resposta é anotada sem tirar o Atendente da conversa", async () => {
@@ -337,20 +336,23 @@ describe("pessoa, reclamação e urgência — texto fixo, anotação e a conver
   });
 });
 
-describe("pergunta livre — a IA escreve, o verificador confere", () => {
-  it("resposta com fatos do cadastro sai como veio", async () => {
+describe("pergunta livre — a IA seleciona fontes, o motor usa o cadastro", () => {
+  it("usa o texto da fonte autorizada em vez da redação livre do modelo", async () => {
     deps.ia.mockResolvedValueOnce({
       resposta: "Temos estacionamento conveniado na rua de trás.",
       transferir_humano: false,
       motivo_transferencia: "",
       nome_cliente: "",
       interesse: "",
+      fontes_ids: ["faq:0"],
+      duvida_pendente: false,
     });
     const s = await responder(entrada("tem onde parar o carro?", { primeiraDoDia: true }), deps);
-    expect(s.mensagens).toEqual([expect.stringContaining("Eu sou Bia"), "Temos estacionamento conveniado na rua de trás."]);
+    expect(s.mensagens).toEqual(["Sim, conveniado na rua de trás."]);
     expect(s.usouIa).toBe(true);
     const prompt = deps.ia.mock.calls[0][0].systemPrompt as string;
-    expect(prompt).toContain("Corte — R$ 45,00, 40 min");
+    expect(prompt).toContain('"id":"servico:s1:preco"');
+    expect(prompt).toContain("Corte custa R$ 45,00.");
     expect(prompt).toContain("atendente virtual");
   });
 
@@ -364,7 +366,7 @@ describe("pergunta livre — a IA escreve, o verificador confere", () => {
     });
     const s = await responder(entrada("vocês fazem progressiva?"), deps);
     expect(s.mensagens.join(" ")).not.toContain("R$ 80");
-    expect(s.mensagens[0]).toContain("não tenho confirmada");
+    expect(s.mensagens[0]).toContain("Não tenho essa informação confirmada");
     expect(s.anotar?.pergunta).toBe("vocês fazem progressiva?");
   });
 
@@ -377,13 +379,14 @@ describe("pergunta livre — a IA escreve, o verificador confere", () => {
       interesse: "",
     });
     const s = await responder(entrada("vocês fazem progressiva?"), deps);
-    expect(s.anotar).toMatchObject({ motivo: "Pergunta fora do cadastro", pergunta: "vocês fazem progressiva?" });
+    expect(s.anotar).toMatchObject({ motivo: "A resposta não indicou fontes autorizadas", pergunta: "vocês fazem progressiva?" });
+    expect(s.mensagens.join(" ")).not.toContain("deixei anotado");
   });
 
   it("se a IA falhar, a resposta segura sai e a pergunta fica anotada", async () => {
     deps.ia.mockRejectedValueOnce(new Error("fora do ar"));
     const s = await responder(entrada("vocês fazem progressiva?"), deps);
-    expect(s.mensagens[0]).toContain("não tenho confirmada");
+    expect(s.mensagens[0]).toContain("Não tenho essa informação confirmada");
     expect(s.anotar?.pergunta).toBe("vocês fazem progressiva?");
   });
 });

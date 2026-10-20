@@ -5,16 +5,19 @@ import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 // Banco falso e módulos de fora trocados por espiões: o executor é conferido
 // ponta a ponta — do plano ao envio, à agenda e às anotações — sem Postgres,
 // sem WhatsApp e sem IA.
-vi.mock("@/lib/db", () => ({
-  prisma: {
+vi.mock("@/lib/db", () => {
+  const db: Record<string, unknown> = {
     companyProfile: { findUnique: vi.fn() },
     company: { findUnique: vi.fn() },
-    conversation: { findFirst: vi.fn(), update: vi.fn() },
+    conversation: { findFirst: vi.fn(), updateMany: vi.fn() },
     message: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn() },
     recoveryTouch: { updateMany: vi.fn() },
     lead: { upsert: vi.fn() },
-  },
-}));
+    $transaction: vi.fn(async (cb: (tx: unknown) => unknown) => cb(db)),
+  };
+  return { prisma: db };
+});
+vi.mock("@/lib/errors", () => ({ logError: vi.fn() }));
 vi.mock("@/lib/whatsapp/envio", async (original) => ({
   ...(await original<typeof import("@/lib/whatsapp/envio")>()),
   enviarWhatsApp: vi.fn(),
@@ -70,7 +73,7 @@ import { enviarWhatsApp } from "@/lib/whatsapp/envio";
  * O EXECUTOR — O CAMINHO REAL DO WHATSAPP.
  *
  * O motor decide a resposta; o executor decide SE e QUANDO ela sai, manda com
- * "digitando…", salva, e deixa o rastro: estado da conversa, atendimento do
+ * salva as decisões, envia, e deixa o rastro: estado da conversa, atendimento do
  * dia, anotação para o dono, lacuna no Treinamento, marcação da Onda e aviso de
  * urgência.
  */
@@ -187,6 +190,14 @@ describe("planejar — se e quando o Atendente responde", () => {
     });
   });
 
+  it("pedido humano permanece pausado depois de 12 horas e só Reativar devolve", () => {
+    expect(planejar(planoBase({ statusDaConversa: "WAITING_HUMAN", donoAssumiuEm: new Date(AGORA.getTime() - 24 * 60 * MIN) })))
+      .toEqual({ acao: "SILENCIO", motivo: "EQUIPE_NA_CONVERSA" });
+    expect(planejar(planoBase({ statusDaConversa: "WAITING_HUMAN", donoAssumiuEm: null })))
+      .toEqual({ acao: "SILENCIO", motivo: "EQUIPE_NA_CONVERSA" });
+    expect(planejar(planoBase({ statusDaConversa: "AI", donoAssumiuEm: null }))).toMatchObject({ acao: "RESPONDER" });
+  });
+
   it("loja aberta: o webhook espera; o resgate responde depois de 5 minutos, como expediente", () => {
     const mensagens = [msg("m1", "CUSTOMER", "tem horário?", new Date(TERCA_10H.getTime() - 6 * MIN))];
     expect(planejar(planoBase({ agora: TERCA_10H, mensagens }))).toEqual({ acao: "ESPERAR" });
@@ -243,7 +254,8 @@ describe("o aviso de urgência para o dono", () => {
     const texto = avisoDeUrgencia({ cliente: "Rafael", telefone: "5511988887777", trecho: "meu filho está sangrando" });
     expect(texto).toContain("Rafael");
     expect(texto).toContain("meu filho está sangrando");
-    expect(texto).toMatch(/192/);
+    expect(texto).toMatch(/precisa da atenção da equipe/);
+    expect(texto).not.toMatch(/orientou|notificou|já respondeu/);
   });
 });
 
@@ -253,10 +265,11 @@ type Fn = Mock;
 const db = prisma as unknown as {
   companyProfile: { findUnique: Fn };
   company: { findUnique: Fn };
-  conversation: { findFirst: Fn; update: Fn };
+  conversation: { findFirst: Fn; updateMany: Fn };
   message: { findMany: Fn; findFirst: Fn; create: Fn };
   recoveryTouch: { updateMany: Fn };
   lead: { upsert: Fn };
+  $transaction: Fn;
 };
 
 const PERFIL = {
@@ -277,7 +290,26 @@ const CONVERSA = {
   customerPhone: "5511988887777",
   customerName: "Rafael Souza",
   atendenteEstado: null as unknown,
+  updatedAt: new Date(AGORA.getTime() - MIN),
 };
+
+let conversaAtual: Omit<typeof CONVERSA, "status" | "donoAssumiuEm"> & { status: string; donoAssumiuEm: Date | null };
+function bancoComConversa(estado: unknown = null) {
+  conversaAtual = { ...CONVERSA, atendenteEstado: estado };
+  db.conversation.findFirst.mockImplementation(async () => ({ ...conversaAtual }));
+  db.conversation.updateMany.mockImplementation(async ({ where, data }) => {
+    if (where.updatedAt && where.updatedAt.getTime() !== conversaAtual.updatedAt.getTime()) return { count: 0 };
+    if (where.status && where.status !== conversaAtual.status) return { count: 0 };
+    if ("donoAssumiuEm" in where && where.donoAssumiuEm?.getTime() !== conversaAtual.donoAssumiuEm?.getTime()) return { count: 0 };
+    const execucao = (conversaAtual.atendenteEstado as { _execucaoAtendente?: { token: string } } | null)?._execucaoAtendente;
+    if (where.atendenteEstado?.equals && where.atendenteEstado.equals !== execucao?.token) return { count: 0 };
+    conversaAtual = { ...conversaAtual, ...data,
+      ...(data.atendenteEstado === Prisma.DbNull ? { atendenteEstado: null } : {}),
+      updatedAt: data.updatedAt ?? new Date(conversaAtual.updatedAt.getTime() + 1),
+    };
+    return { count: 1 };
+  });
+}
 
 /** Grade das 9h às 18h30, de meia em meia hora, com o Léo, nos dias pedidos. */
 function grade(dias: string[]): Livre[] {
@@ -305,7 +337,15 @@ const rodar = (p: Partial<Parameters<typeof atender>[0]> = {}) =>
 beforeEach(() => {
   vi.clearAllMocks();
   db.companyProfile.findUnique.mockResolvedValue(PERFIL);
-  db.conversation.findFirst.mockResolvedValue(CONVERSA);
+  bancoComConversa();
+  db.message.create.mockResolvedValue({ id: "salva" });
+  db.recoveryTouch.updateMany.mockResolvedValue({ count: 1 });
+  db.lead.upsert.mockResolvedValue({ id: "lead1" });
+  db.$transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => {
+    const anterior = { ...conversaAtual };
+    try { return await cb(db); }
+    catch (erro) { conversaAtual = anterior; throw erro; }
+  });
   db.company.findUnique.mockResolvedValue({ name: "Barbearia do Léo", phone: "(11) 97777-6666", email: "dono@exemplo.com" });
   (estadoDaEmpresa as Fn).mockResolvedValue("ATIVO");
   (usoDoAtendente as Fn).mockResolvedValue({ conversasNoMes: 10, conversasNaSemana: 0, primeiraVezEm: null });
@@ -314,32 +354,34 @@ beforeEach(() => {
   (horariosLivres as Fn).mockImplementation(async ({ dias }: { dias: string[] }) => grade(dias));
   (enviarWhatsApp as Fn).mockResolvedValue({ messageId: "wa1" });
   (enviarEmail as Fn).mockResolvedValue({ enviado: true });
+  (recordKnowledgeGap as Fn).mockResolvedValue(undefined);
+  (registrarAtendimento as Fn).mockResolvedValue(undefined);
 });
 
 describe("atender — loja fechada, pedido de horário", () => {
-  it("se apresenta, oferece três horários com \"digitando…\", salva e grava o estado", async () => {
+  it("se apresenta, oferece três horários sem espera artificial, salva e grava o estado", async () => {
     conversaCom(msg("m1", "CUSTOMER", "tem horário amanhã pra corte?", new Date(AGORA.getTime() - MIN)));
     const r = await rodar();
 
-    expect(r).toEqual({ acao: "RESPONDEU", mensagens: 2 });
+    expect(r).toEqual({ acao: "RESPONDEU", mensagens: 1 });
     const envios = (enviarWhatsApp as Fn).mock.calls;
-    expect(envios).toHaveLength(2);
+    expect(envios).toHaveLength(1);
     expect(envios[0][0]).toBe("nexora-c1");
     expect(envios[0][1]).toBe("5511988887777");
-    expect(envios[0][2]).toContain("Eu sou Bia, atendente virtual da Barbearia do Léo");
-    expect(envios[1][2]).toContain("1 · qua 23/09, 9h com Léo");
+    expect(envios[0][2]).toContain("1 · qua 23/09, 9h com Léo");
     for (const e of envios) {
-      expect(e[3].atrasoMs).toBeGreaterThanOrEqual(1000);
-      expect(e[3].atrasoMs).toBeLessThanOrEqual(3000);
+      expect(e[3]).toBeUndefined();
     }
 
-    expect(db.message.create).toHaveBeenCalledTimes(2);
-    expect(db.message.create.mock.calls[1][0]).toEqual({
-      data: { conversationId: "conv1", role: "AI", content: envios[1][2] },
+    expect(db.message.create).toHaveBeenCalledTimes(1);
+    expect(db.message.create.mock.calls[0][0]).toEqual({
+      data: { conversationId: "conv1", role: "AI", content: envios[0][2] },
     });
-    const atualizacao = db.conversation.update.mock.calls[0][0];
-    expect(atualizacao.where).toEqual({ id: "conv1" });
-    expect(atualizacao.data.atendenteEstado.tipo).toBe("HORARIO");
+    const atualizacao = db.conversation.updateMany.mock.calls[0][0];
+    expect(atualizacao.where).toMatchObject({ id: "conv1", companyId: "c1", status: "AI", donoAssumiuEm: null });
+    expect(atualizacao.data.atendenteEstado._execucaoAtendente.mensagemId).toBe("m1");
+    expect(conversaAtual.atendenteEstado).toMatchObject({ tipo: "HORARIO" });
+    expect(db.conversation.updateMany.mock.invocationCallOrder.at(-1)).toBeGreaterThan(db.message.create.mock.invocationCallOrder.at(-1)!);
     expect(registrarAtendimento).toHaveBeenCalledWith(
       expect.objectContaining({
         companyId: "c1",
@@ -369,6 +411,172 @@ describe("atender — loja fechada, pedido de horário", () => {
       .mockResolvedValueOnce({ id: "h1", role: "HUMAN" });
     const r = await rodar();
     expect(r).toEqual({ acao: "SILENCIO", motivo: "JA_RESPONDIDA" });
+    expect(enviarWhatsApp).not.toHaveBeenCalled();
+  });
+
+  it("o dono assumir após preparar a resposta impede envio e escrita do estado", async () => {
+    conversaCom(msg("m1", "CUSTOMER", "tem horário amanhã pra corte?", AGORA));
+    db.conversation.findFirst.mockResolvedValueOnce(CONVERSA).mockResolvedValueOnce(CONVERSA)
+      .mockResolvedValue({ ...CONVERSA, status: "HUMAN" });
+    expect(await rodar()).toEqual({ acao: "SILENCIO", motivo: "EQUIPE_NA_CONVERSA" });
+    expect(enviarWhatsApp).not.toHaveBeenCalled();
+    expect(db.conversation.updateMany.mock.calls.every(([q]) => q.data.status === undefined)).toBe(true);
+  });
+
+  it("conferência imediatamente antes do envio respeita quem assumiu após persistir", async () => {
+    conversaCom(msg("m1", "CUSTOMER", "tem horário amanhã pra corte?", AGORA));
+    const gravar = db.conversation.updateMany.getMockImplementation()!;
+    db.conversation.updateMany.mockImplementation(async (q) => {
+      const r = await gravar(q);
+      if (q.data.atendenteEstado?._execucaoAtendente?.proposta) conversaAtual.status = "HUMAN";
+      return r;
+    });
+    expect(await rodar()).toEqual({ acao: "SILENCIO", motivo: "EQUIPE_NA_CONVERSA" });
+    expect(enviarWhatsApp).not.toHaveBeenCalled();
+  });
+
+  it("nova mensagem após persistir interrompe a resposta antiga", async () => {
+    conversaCom(msg("m1", "CUSTOMER", "tem horário amanhã pra corte?", AGORA));
+    const gravar = db.conversation.updateMany.getMockImplementation()!;
+    db.conversation.updateMany.mockImplementation(async (q) => {
+      const r = await gravar(q);
+      if (q.data.atendenteEstado?._execucaoAtendente?.proposta) db.message.findFirst.mockResolvedValue({ id: "m2", role: "CUSTOMER" });
+      return r;
+    });
+    expect(await rodar()).toEqual({ acao: "SILENCIO", motivo: "RAJADA" });
+    expect(enviarWhatsApp).not.toHaveBeenCalled();
+  });
+
+  it("atualização condicional impede sobrescrever quem assumiu entre leitura e gravação", async () => {
+    conversaCom(msg("m1", "CUSTOMER", "tem horário amanhã pra corte?", AGORA));
+    db.conversation.updateMany.mockResolvedValueOnce({ count: 0 });
+    expect(await rodar()).toEqual({ acao: "SILENCIO", motivo: "EM_PROCESSAMENTO" });
+    expect(enviarWhatsApp).not.toHaveBeenCalled();
+  });
+
+  it("webhook e resgate sobre a mesma versão só publicam uma resposta", async () => {
+    conversaCom(msg("m1", "CUSTOMER", "tem horário amanhã pra corte?", AGORA));
+    const resultados = await Promise.all([rodar(), rodar({ origem: "RESGATE" })]);
+
+    expect(resultados.filter((r) => r.acao === "RESPONDEU")).toHaveLength(1);
+    expect(enviarWhatsApp).toHaveBeenCalledTimes(1);
+    expect(conversaAtual.updatedAt.getTime()).toBeGreaterThan(CONVERSA.updatedAt.getTime());
+  });
+
+  it("execução iniciada depois da persistência reconhece a mensagem já em processamento", async () => {
+    conversaCom(msg("m1", "CUSTOMER", "tem horário amanhã pra corte?", AGORA));
+    let chegouNoEnvio!: () => void;
+    let terminarEnvio!: () => void;
+    const entrou = new Promise<void>((resolve) => { chegouNoEnvio = resolve; });
+    const bloqueio = new Promise<void>((resolve) => { terminarEnvio = resolve; });
+    (enviarWhatsApp as Fn).mockImplementationOnce(async () => {
+      chegouNoEnvio();
+      await bloqueio;
+      return { messageId: "wa1" };
+    });
+    const primeira = rodar();
+    await entrou;
+    // A oferta preparada ainda não foi entregue; só o claim está ativo.
+    expect(conversaAtual.atendenteEstado).not.toHaveProperty("tipo");
+    expect(conversaAtual.atendenteEstado).toHaveProperty("_execucaoAtendente.proposta.estado.tipo", "HORARIO");
+    expect(await rodar({ origem: "RESGATE" })).toEqual({ acao: "SILENCIO", motivo: "EM_PROCESSAMENTO" });
+    terminarEnvio();
+    expect(await primeira).toEqual({ acao: "RESPONDEU", mensagens: 1 });
+    expect(enviarWhatsApp).toHaveBeenCalledTimes(1);
+    expect(conversaAtual.atendenteEstado).toHaveProperty("tipo", "HORARIO");
+    expect(conversaAtual.atendenteEstado).not.toHaveProperty("_execucaoAtendente");
+  });
+
+  it("claim vencido vira revisão visível sem repetir reserva ou envio", async () => {
+    bancoComConversa({ _execucaoAtendente: {
+      token: "anterior", mensagemId: "m1", iniciadaEm: new Date(AGORA.getTime() - 6 * MIN).toISOString(),
+      proposta: { estado: null, mensagens: ["Reserva confirmada"], reserva: {
+        appointmentId: "ag-interrompida", servico: "Corte", inicio: "2026-09-23T13:30:00.000Z",
+      } },
+    } });
+    conversaCom(msg("m1", "CUSTOMER", "2", AGORA));
+    expect(await rodar({ origem: "RESGATE" })).toEqual({ acao: "SILENCIO", motivo: "EQUIPE_NA_CONVERSA" });
+    expect(conversaAtual.status).toBe("WAITING_HUMAN");
+    expect(conversaAtual.atendenteEstado).toBeNull();
+    expect(db.message.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
+      role: "SYSTEM", content: expect.stringMatching(/cinco minutos[\s\S]*registro ag-interrompida/),
+    }) }));
+    expect(marcarNaAgenda).not.toHaveBeenCalled();
+    expect(enviarWhatsApp).not.toHaveBeenCalled();
+    expect(await rodar()).toEqual({ acao: "SILENCIO", motivo: "EQUIPE_NA_CONVERSA" });
+  });
+
+  it("claim vencido antes de preparar resultado também exige revisão manual", async () => {
+    bancoComConversa({ _execucaoAtendente: {
+      token: "anterior", mensagemId: "m1", iniciadaEm: new Date(AGORA.getTime() - 6 * MIN).toISOString(),
+    } });
+    conversaCom(msg("m1", "CUSTOMER", "2", AGORA));
+    await rodar();
+    expect(conversaAtual.status).toBe("WAITING_HUMAN");
+    expect(db.message.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
+      content: expect.stringContaining("Verifique a agenda e o histórico antes de reativar"),
+    }) }));
+    expect(enviarWhatsApp).not.toHaveBeenCalled();
+    expect(marcarNaAgenda).not.toHaveBeenCalled();
+  });
+
+  it("claim vencido depois de salvar AI também é revisado sem publicar novamente a oferta", async () => {
+    const anterior = { tipo: "CONVITE", criadoEm: new Date(AGORA.getTime() - 7 * MIN).toISOString() };
+    bancoComConversa({ ...anterior, _execucaoAtendente: {
+      token: "anterior", mensagemId: "m1", iniciadaEm: new Date(AGORA.getTime() - 6 * MIN).toISOString(),
+      proposta: { estado: { tipo: "HORARIO" }, mensagens: ["Tenho estes horários"] },
+    } });
+    conversaCom(msg("m1", "CUSTOMER", "tem horário?", new Date(AGORA.getTime() - 7 * MIN)),
+      msg("a1", "AI", "Tenho estes horários", new Date(AGORA.getTime() - 6 * MIN)));
+    expect(await rodar({ origem: "RESGATE" })).toEqual({ acao: "SILENCIO", motivo: "EQUIPE_NA_CONVERSA" });
+    expect(conversaAtual.status).toBe("WAITING_HUMAN");
+    expect(conversaAtual.atendenteEstado).toEqual(anterior);
+    expect(enviarWhatsApp).not.toHaveBeenCalled();
+    expect(db.message.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
+      role: "SYSTEM", content: expect.stringContaining("não foi repetido automaticamente"),
+    }) }));
+  });
+
+  it("perder a confirmação da aquisição não inicia efeitos externos", async () => {
+    conversaCom(msg("m1", "CUSTOMER", "tem horário amanhã pra corte?", AGORA));
+    const gravar = db.conversation.updateMany.getMockImplementation()!;
+    db.conversation.updateMany.mockImplementationOnce(async (q) => {
+      await gravar(q);
+      throw new Error("commit confirmado só no banco");
+    });
+    expect(await rodar()).toEqual({ acao: "SILENCIO", motivo: "EM_PROCESSAMENTO" });
+    expect(conversaAtual.atendenteEstado).toHaveProperty("_execucaoAtendente.mensagemId", "m1");
+    expect(horariosLivres).not.toHaveBeenCalled();
+    expect(enviarWhatsApp).not.toHaveBeenCalled();
+    expect(await rodar()).toEqual({ acao: "SILENCIO", motivo: "EM_PROCESSAMENTO" });
+  });
+
+  it("uma execução antiga não libera nem sobrescreve o claim de outra mensagem", async () => {
+    conversaCom(msg("m1", "CUSTOMER", "tem horário amanhã pra corte?", AGORA));
+    const gravar = db.conversation.updateMany.getMockImplementation()!;
+    const outra = { _execucaoAtendente: { token: "outra", mensagemId: "m2", iniciadaEm: AGORA.toISOString() } };
+    db.conversation.updateMany.mockImplementation(async (q) => {
+      const r = await gravar(q);
+      if (q.data.atendenteEstado?._execucaoAtendente?.proposta) conversaAtual.atendenteEstado = outra;
+      return r;
+    });
+    expect(await rodar()).toEqual({ acao: "SILENCIO", motivo: "EM_PROCESSAMENTO" });
+    expect(conversaAtual.atendenteEstado).toEqual(outra);
+    expect(enviarWhatsApp).not.toHaveBeenCalled();
+  });
+
+  it("mensagem nova interrompe oferta ainda não enviada e preserva apenas estado anterior", async () => {
+    const anterior = { tipo: "CONVITE", criadoEm: AGORA.toISOString() };
+    bancoComConversa(anterior);
+    conversaCom(msg("m1", "CUSTOMER", "tem horário amanhã pra corte?", AGORA));
+    const gravar = db.conversation.updateMany.getMockImplementation()!;
+    db.conversation.updateMany.mockImplementation(async (q) => {
+      const r = await gravar(q);
+      if (q.data.atendenteEstado?._execucaoAtendente?.proposta) db.message.findFirst.mockResolvedValue({ id: "m2", role: "CUSTOMER" });
+      return r;
+    });
+    expect(await rodar()).toEqual({ acao: "SILENCIO", motivo: "RAJADA" });
+    expect(conversaAtual.atendenteEstado).toEqual(anterior);
     expect(enviarWhatsApp).not.toHaveBeenCalled();
   });
 
@@ -406,7 +614,7 @@ describe("atender — a escolha vira marcação", () => {
   };
 
   beforeEach(() => {
-    db.conversation.findFirst.mockResolvedValue({ ...CONVERSA, atendenteEstado: ESTADO });
+    bancoComConversa(ESTADO);
     (atendimentoDoDia as Fn).mockResolvedValue({ respostas: 1 });
     (marcarNaAgenda as Fn).mockResolvedValue({
       ok: true,
@@ -437,7 +645,7 @@ describe("atender — a escolha vira marcação", () => {
       }),
     );
     expect((enviarWhatsApp as Fn).mock.calls[0][2]).toMatch(/quarta, 23\/09, às 10h30/i);
-    expect(db.conversation.update.mock.calls[0][0].data.atendenteEstado).toBe(Prisma.DbNull);
+    expect(conversaAtual.atendenteEstado).toBeNull();
     expect(registrarAtendimento).toHaveBeenCalledWith(
       expect.objectContaining({ respostas: 1, marcados: 1, valorMarcadoCents: 4500 }),
     );
@@ -456,6 +664,118 @@ describe("atender — a escolha vira marcação", () => {
     });
     expect(db.lead.upsert).toHaveBeenCalledWith(expect.objectContaining({ where: { conversationId: "conv1" } }));
   });
+
+  it("reserva usa identidade estável da mensagem para recuperação e retry", async () => {
+    await rodar();
+    expect(marcarNaAgenda).toHaveBeenCalledWith(expect.objectContaining({ chaveOperacao: "c1:conv1:m2" }));
+  });
+
+  it("reserva reutilizada pode ser confirmada sem contar novamente o valor e a marcação", async () => {
+    (marcarNaAgenda as Fn).mockResolvedValueOnce({
+      ok: true, profissional: "Léo", inicio: emBrasilia("2026-09-23", 10, 30),
+      fim: emBrasilia("2026-09-23", 11, 10), appointmentId: "ag1", clienteId: "cli1", reutilizada: true,
+    });
+    expect(await rodar()).toEqual({ acao: "RESPONDEU", mensagens: 1 });
+    expect((enviarWhatsApp as Fn).mock.calls[0][2]).toMatch(/quarta, 23\/09, às 10h30/i);
+    expect(registrarAtendimento).toHaveBeenCalledWith(expect.objectContaining({ respostas: 1, marcados: 0, valorMarcadoCents: 0 }));
+  });
+
+  it("reserva confirmada com falha de envio conserva resultado em revisão e não repete a operação", async () => {
+    (enviarWhatsApp as Fn).mockRejectedValueOnce(new Error("conexão interrompida"));
+    await expect(rodar()).rejects.toThrow("conexão interrompida");
+    expect(conversaAtual.status).toBe("WAITING_HUMAN");
+    expect(conversaAtual.atendenteEstado).toBeNull();
+    expect(db.message.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
+      role: "SYSTEM", content: expect.stringMatching(/não reenviar automaticamente[\s\S]*registro ag1[\s\S]*quarta, 23\/09/i),
+    }) }));
+    expect(await rodar({ origem: "RESGATE" })).toEqual({ acao: "SILENCIO", motivo: "EQUIPE_NA_CONVERSA" });
+    expect(marcarNaAgenda).toHaveBeenCalledTimes(1);
+    expect(enviarWhatsApp).toHaveBeenCalledTimes(1);
+  });
+
+  it("envio aceito sem mensagem AI salva também pausa sem reenviar a confirmação", async () => {
+    db.message.create.mockRejectedValueOnce(new Error("histórico indisponível"));
+    await expect(rodar()).rejects.toThrow("histórico indisponível");
+    expect(conversaAtual.status).toBe("WAITING_HUMAN");
+    expect(db.message.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
+      role: "SYSTEM", content: expect.stringContaining("registro ag1"),
+    }) }));
+    await rodar({ origem: "RESGATE" });
+    expect(marcarNaAgenda).toHaveBeenCalledTimes(1);
+    expect(enviarWhatsApp).toHaveBeenCalledTimes(1);
+  });
+
+  it("canal sem identificador do envio não confirma entrega nem publica oferta para novo turno", async () => {
+    (enviarWhatsApp as Fn).mockResolvedValueOnce({ messageId: null });
+    await expect(rodar()).rejects.toThrow("resultado desconhecido");
+    expect(conversaAtual.status).toBe("WAITING_HUMAN");
+    expect(conversaAtual.atendenteEstado).toBeNull();
+    expect(db.message.create.mock.calls.some(([q]) => q.data.role === "AI")).toBe(false);
+    expect(db.message.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
+      role: "SYSTEM", content: expect.stringMatching(/não reenviar automaticamente[\s\S]*registro ag1/),
+    }) }));
+    expect(await rodar({ origem: "RESGATE" })).toEqual({ acao: "SILENCIO", motivo: "EQUIPE_NA_CONVERSA" });
+    expect(marcarNaAgenda).toHaveBeenCalledTimes(1);
+    expect(enviarWhatsApp).toHaveBeenCalledTimes(1);
+  });
+
+  it("mensagem nova durante reserva guarda o appointmentId e exige revisão antes de continuar", async () => {
+    (marcarNaAgenda as Fn).mockImplementationOnce(async () => {
+      db.message.findFirst.mockResolvedValue({ id: "m3", role: "CUSTOMER" });
+      return { ok: true, profissional: "Léo", inicio: emBrasilia("2026-09-23", 10, 30),
+        fim: emBrasilia("2026-09-23", 11, 10), appointmentId: "ag1", clienteId: "cli1" };
+    });
+    expect(await rodar()).toEqual({ acao: "SILENCIO", motivo: "RAJADA" });
+    expect(conversaAtual.status).toBe("WAITING_HUMAN");
+    expect(db.message.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
+      role: "SYSTEM", content: expect.stringContaining("registro ag1"),
+    }) }));
+    expect(enviarWhatsApp).not.toHaveBeenCalled();
+  });
+
+  it("se o dono assume durante a reserva, conserva o registro e não envia por cima dele", async () => {
+    (marcarNaAgenda as Fn).mockImplementationOnce(async () => {
+      conversaAtual.status = "HUMAN";
+      return { ok: true, profissional: "Léo", inicio: emBrasilia("2026-09-23", 10, 30),
+        fim: emBrasilia("2026-09-23", 11, 10), appointmentId: "ag1", clienteId: "cli1" };
+    });
+    expect(await rodar()).toEqual({ acao: "SILENCIO", motivo: "EQUIPE_NA_CONVERSA" });
+    expect(marcarNaAgenda).toHaveBeenCalledTimes(1);
+    expect(enviarWhatsApp).not.toHaveBeenCalled();
+    expect(db.conversation.updateMany.mock.calls.every(([q]) => q.data.status === undefined)).toBe(true);
+    expect(db.message.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
+      role: "SYSTEM", content: expect.stringContaining("registro ag1"),
+    }) }));
+    expect(registrarAtendimento).toHaveBeenCalledWith(expect.objectContaining({ respostas: 0, marcados: 1, precisaDoDono: true }));
+  });
+
+  it("falha no acompanhamento da conversa não transforma reserva confirmada em falha", async () => {
+    db.$transaction.mockRejectedValueOnce(new Error("falha ao salvar conversa"));
+    expect(await rodar()).toEqual({ acao: "RESPONDEU", mensagens: 1 });
+    expect((enviarWhatsApp as Fn).mock.calls[0][2]).toMatch(/quarta, 23\/09, às 10h30/i);
+    expect((enviarWhatsApp as Fn).mock.calls[0][2]).not.toMatch(/não consegui|não foi registrada/i);
+  });
+
+  it("reserva com resultado desconhecido mantém oferta e encaminha verificação sem tentar de novo", async () => {
+    (marcarNaAgenda as Fn).mockResolvedValueOnce({ ok: false, motivo: "RESULTADO_DESCONHECIDO" });
+    expect(await rodar()).toEqual({ acao: "RESPONDEU", mensagens: 1 });
+    expect(marcarNaAgenda).toHaveBeenCalledTimes(1);
+    expect((enviarWhatsApp as Fn).mock.calls[0][2]).toMatch(/não consegui confirmar o resultado/i);
+    expect((enviarWhatsApp as Fn).mock.calls[0][2]).not.toMatch(/horário não está mais disponível|está na agenda/i);
+    expect(db.conversation.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: "WAITING_HUMAN", atendenteEstado: expect.objectContaining({ tipo: "HORARIO" }) }),
+    }));
+    expect(registrarAtendimento).toHaveBeenCalledWith(expect.objectContaining({ marcados: 0, precisaDoDono: true }));
+  });
+
+  it("resultado da reserva permanece desconhecido mesmo se registrar revisão falhar", async () => {
+    (marcarNaAgenda as Fn).mockResolvedValueOnce({ ok: false, motivo: "RESULTADO_DESCONHECIDO" });
+    db.$transaction.mockRejectedValueOnce(new Error("timeout ao registrar revisão"));
+    await rodar();
+    expect((enviarWhatsApp as Fn).mock.calls[0][2]).toMatch(/resultado dessa reserva/i);
+    expect((enviarWhatsApp as Fn).mock.calls[0][2]).toMatch(/não consegui confirmar o encaminhamento/i);
+    expect(marcarNaAgenda).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("atender — anotações para o dono", () => {
@@ -463,16 +783,45 @@ describe("atender — anotações para o dono", () => {
     (atendimentoDoDia as Fn).mockResolvedValue({ respostas: 2 });
   });
 
-  it("pedido de pessoa: a conversa passa para a equipe e o Atendente sai por 12 horas", async () => {
+  it("pedido de pessoa: persiste encaminhamento e pausa até devolução explícita", async () => {
     conversaCom(msg("m1", "CUSTOMER", "quero falar com um atendente", new Date(AGORA.getTime() - MIN)));
     await rodar();
-    expect(db.conversation.update.mock.calls[0][0].data).toMatchObject({ status: "WAITING_HUMAN", donoAssumiuEm: AGORA });
+    expect(conversaAtual).toMatchObject({ status: "WAITING_HUMAN", donoAssumiuEm: AGORA });
     expect(db.message.create).toHaveBeenCalledWith({
       data: { conversationId: "conv1", role: "SYSTEM", content: expect.stringContaining("Anotado para você") },
     });
     expect(registrarAtendimento).toHaveBeenCalledWith(
       expect.objectContaining({ precisaDoDono: true, motivo: expect.stringMatching(/falar com alguém/) }),
     );
+    expect(db.message.create.mock.invocationCallOrder[0]).toBeLessThan((enviarWhatsApp as Fn).mock.invocationCallOrder[0]);
+    expect(db.conversation.updateMany.mock.invocationCallOrder[0]).toBeLessThan((enviarWhatsApp as Fn).mock.invocationCallOrder[0]);
+    expect((enviarWhatsApp as Fn).mock.calls[0][2]).not.toMatch(/já avisei|notifiqu|equipe foi avisada/i);
+  });
+
+  it("a resposta que confirma pausa pode sair após o próprio encaminhamento persistido", async () => {
+    conversaCom(msg("m1", "CUSTOMER", "quero falar com uma pessoa", AGORA));
+    expect(await rodar()).toEqual({ acao: "RESPONDEU", mensagens: 1 });
+    expect((enviarWhatsApp as Fn).mock.calls[0][2]).toMatch(/pausar/i);
+  });
+
+  it("falha ao salvar anotação não afirma registro nem notifica como se tivesse funcionado", async () => {
+    conversaCom(msg("m1", "CUSTOMER", "quero falar com uma pessoa", AGORA));
+    db.message.create.mockRejectedValueOnce(new Error("falha de persistência"));
+    expect(await rodar()).toEqual({ acao: "RESPONDEU", mensagens: 1 });
+    expect((enviarWhatsApp as Fn).mock.calls[0][2]).toMatch(/não consegui confirmar o encaminhamento/i);
+    expect((enviarWhatsApp as Fn).mock.calls[0][2]).not.toMatch(/já avisei|deixei anotado|vou pausar/i);
+    expect(db.company.findUnique).not.toHaveBeenCalled();
+    expect(recordKnowledgeGap).not.toHaveBeenCalled();
+  });
+
+  it("falha de notificação não desfaz a resposta nem vira uma afirmação de aviso enviado", async () => {
+    (generateReceptionistReply as Fn).mockRejectedValue(new Error("fora do ar"));
+    conversaCom(msg("m1", "CUSTOMER", "vocês fazem progressiva?", AGORA));
+    (enviarWhatsApp as Fn).mockResolvedValueOnce({ messageId: "cliente" }).mockRejectedValueOnce(new Error("aviso falhou"));
+    (enviarEmail as Fn).mockRejectedValueOnce(new Error("email falhou"));
+    expect(await rodar()).toEqual({ acao: "RESPONDEU", mensagens: 1 });
+    expect((enviarWhatsApp as Fn).mock.calls[0][2]).not.toMatch(/já avisei|notifiqu|já encaminhei/i);
+    expect(db.message.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ role: "SYSTEM" }) }));
   });
 
   it("urgência: orienta o cliente e avisa o dono no WhatsApp dele e por e-mail", async () => {
@@ -491,12 +840,21 @@ describe("atender — anotações para o dono", () => {
     expect(registrarAtendimento).toHaveBeenCalledWith(expect.objectContaining({ urgente: true }));
   });
 
+  it("falha de persistência não suprime a orientação de emergência", async () => {
+    conversaCom(msg("m1", "CUSTOMER", "meu filho está sangrando", AGORA));
+    db.$transaction.mockRejectedValueOnce(new Error("registro indisponível"));
+    expect(await rodar()).toEqual({ acao: "RESPONDEU", mensagens: 1 });
+    expect((enviarWhatsApp as Fn).mock.calls[0][2]).toContain("192");
+    expect((enviarWhatsApp as Fn).mock.calls[0][2]).toMatch(/não consegui confirmar o encaminhamento/i);
+    expect((enviarWhatsApp as Fn).mock.calls[0][2]).not.toMatch(/já avisei|deixei anotado/i);
+  });
+
   it("pergunta que ele não soube responder vira lacuna no Treinamento e consulta o dono", async () => {
     (generateReceptionistReply as Fn).mockRejectedValue(new Error("fora do ar"));
     conversaCom(msg("m1", "CUSTOMER", "vocês fazem progressiva?", new Date(AGORA.getTime() - MIN)));
     await rodar();
-    expect((enviarWhatsApp as Fn).mock.calls[0][2]).toContain("não tenho confirmada");
-    expect(recordKnowledgeGap).toHaveBeenCalledWith("c1", "vocês fazem progressiva?", expect.any(String));
+    expect((enviarWhatsApp as Fn).mock.calls[0][2]).toMatch(/não tenho essa informação confirmada/i);
+    expect(recordKnowledgeGap).toHaveBeenCalledWith("c1", expect.stringMatching(/^vocês fazem progressiva\??$/), expect.any(String));
     expect((enviarWhatsApp as Fn).mock.calls[1][1]).toBe("5511977776666");
     expect((enviarWhatsApp as Fn).mock.calls[1][2]).toContain("Você poderia me ensinar como responder");
   });
@@ -507,16 +865,16 @@ describe("atender — limite do dia e conversas contínuas", () => {
     (usoDoAtendente as Fn).mockResolvedValue({ conversasNoMes: 50_000, conversasNaSemana: 0, primeiraVezEm: null });
     conversaCom(msg("m1", "CUSTOMER", "tem horário amanhã?", new Date(AGORA.getTime() - MIN)));
     const r = await rodar();
-    expect(r).toEqual({ acao: "RESPONDEU", mensagens: 2 });
+    expect(r).toEqual({ acao: "RESPONDEU", mensagens: 1 });
     expect(enviarWhatsApp).toHaveBeenCalled();
   });
 
-  it("limite do dia: \"deixei anotado\" uma vez, e a conta de respostas passa do limite", async () => {
+  it("limite do dia: encaminha e informa que a equipe precisa continuar", async () => {
     (atendimentoDoDia as Fn).mockResolvedValue({ respostas: MAX_RESPOSTAS_POR_DIA });
     conversaCom(msg("m1", "CUSTOMER", "e aí?", new Date(AGORA.getTime() - MIN)));
     const r = await rodar();
     expect(r).toEqual({ acao: "RESPONDEU", mensagens: 1 });
-    expect((enviarWhatsApp as Fn).mock.calls[0][2]).toContain("Deixei tudo anotado");
+    expect((enviarWhatsApp as Fn).mock.calls[0][2]).toMatch(/equipe/i);
     expect(registrarAtendimento).toHaveBeenCalledWith(expect.objectContaining({ respostas: 1, precisaDoDono: true }));
   });
 });
@@ -551,9 +909,9 @@ describe("a conversa do WhatsApp passa pelo Atendente, e só por ele", () => {
     expect(rota).toMatch(/status === "AI" \? \{ donoAssumiuEm: null \}/);
   });
 
-  it("o executor manda pelo registro de envios, com \"digitando…\"", () => {
+  it("o executor usa o registro de envios sem simular digitação humana", () => {
     const executor = leia("lib/atendente/executar.ts");
-    expect(executor).toMatch(/enviarWhatsApp\([^)]*atrasoMs: atrasoDeDigitacao\(/);
+    expect(executor).not.toMatch(/atrasoDeDigitacao|atrasoMs/);
     expect(executor).not.toMatch(/sendWhatsAppText/);
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatBusinessHoursCompact, isPureGreeting } from "@/lib/ai/quick-reply";
+import { formatBusinessHoursCompact, isPureGreeting, pedeAtendimentoHumano } from "@/lib/ai/quick-reply";
 import { detectarIntencao } from "@/lib/atendente/intencao";
 import type { BusinessHour } from "@/lib/validation";
 
@@ -52,6 +52,32 @@ describe("isPureGreeting", () => {
 
   it("não confunde pergunta com cumprimento", () => {
     expect(isPureGreeting("oi, quanto custa?")).toBe(false);
+  });
+});
+
+describe("pedido humano contextual", () => {
+  it.each([
+    "quero um atendente", "quero falar com a gerente",
+    "preciso de uma pessoa", "me transfira para um atendente", "não quero falar com o robô, quero uma pessoa",
+  ])("preserva pedido legítimo: %s", (texto) => {
+    expect(pedeAtendimentoHumano(texto)).toBe(true);
+  });
+
+  it.each([
+    "Qual o nome da atendente?", "Vocês oferecem suporte depois do serviço?", "Você é humano?",
+    "Não quero falar com atendente", "Não precisa chamar uma pessoa", "Sem chamar suporte",
+    "Não vou falar com humano", "O responsável atende aos sábados?", "A atendente é simpática",
+    "atendente?", "suporte", "humano", "Prefiro não falar com atendente", "Não sei se quero falar com atendente",
+    "Se eu precisar falar com uma pessoa eu aviso",
+  ])("não transfere menção ou negação: %s", (texto) => {
+    expect(pedeAtendimentoHumano(texto)).toBe(false);
+  });
+
+  it("preserva gatilhos específicos cadastrados, limites de palavra e negação", () => {
+    expect(pedeAtendimentoHumano("preciso de orçamento especial", ["orçamento especial"])).toBe(true);
+    expect(pedeAtendimentoHumano("não quero orçamento especial", ["orçamento especial"])).toBe(false);
+    expect(pedeAtendimentoHumano("lista", ["lista vip"])).toBe(false);
+    expect(pedeAtendimentoHumano("qual o nome da atendente?", ["atendente"])).toBe(false);
   });
 });
 

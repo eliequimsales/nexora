@@ -45,11 +45,14 @@ function lerDia(item: unknown): BusinessHour | null {
  * não mexe no padrão.
  */
 export function horarioDaEmpresa(valor: unknown): BusinessHour[] {
-  if (Array.isArray(valor)) {
-    const validos = valor.map(lerDia).filter((d): d is BusinessHour => d !== null);
-    if (validos.length > 0) return validos;
-  }
+  const validos = horarioCadastrado(valor);
+  if (validos.length > 0) return validos;
   return HORARIO_PADRAO.map((h) => ({ ...h }));
+}
+
+/** Somente os horários informados: o padrão da tela não é fato para o cliente. */
+export function horarioCadastrado(valor: unknown): BusinessHour[] {
+  return Array.isArray(valor) ? valor.map(lerDia).filter((d): d is BusinessHour => d !== null) : [];
 }
 
 const DATA = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;

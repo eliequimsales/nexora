@@ -111,8 +111,9 @@ describe("decidirQuando — os casos de sempre", () => {
     });
   });
 
-  it("passadas 12 horas, a conversa volta a ser do Atendente", () => {
-    expect(decidirQuando(ctx({ donoAssumiuEm: minutosAntes(TERCA_22H, 13 * 60) }))).toEqual({ acao: "RESPONDER" });
+  it("passadas 12 horas, permanece pausada até a equipe devolver", () => {
+    expect(decidirQuando(ctx({ donoAssumiuEm: minutosAntes(TERCA_22H, 13 * 60) }))).toEqual({ acao: "SILENCIO", motivo: "DONO_ASSUMIU" });
+    expect(decidirQuando(ctx({ donoAssumiuEm: null }))).toEqual({ acao: "RESPONDER" });
   });
 
   it("desligado vale mais que qualquer outro motivo", () => {

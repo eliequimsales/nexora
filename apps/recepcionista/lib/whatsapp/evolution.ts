@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { problemaNoGateway } from "./endereco";
+import { textoDeMidiaNaoInterpretada, type TipoDeMidia } from "./midia";
 
-/** Mensagem de texto recebida via webhook da Evolution API (v2). */
+/** Texto ou registro explícito de mídia não interpretada recebido via webhook. */
 export interface IncomingWhatsAppMessage {
   instance: string;
   phone: string;
@@ -37,10 +38,51 @@ const webhookSchema = z
 
 const MAX_TEXT_LENGTH = 4000;
 
+function objeto(valor: unknown): Record<string, unknown> | null {
+  return valor !== null && typeof valor === "object" && !Array.isArray(valor)
+    ? valor as Record<string, unknown>
+    : null;
+}
+
+/** Abre somente envelopes de mensagem conhecidos, com profundidade limitada. */
+function conteudoDaMensagem(valor: unknown): Record<string, unknown> | null {
+  let mensagem = objeto(valor);
+  for (let profundidade = 0; mensagem && profundidade < 4; profundidade++) {
+    const envelope = ["ephemeralMessage", "viewOnceMessage", "viewOnceMessageV2", "viewOnceMessageV2Extension", "documentWithCaptionMessage"]
+      .map((chave) => objeto(mensagem![chave]))
+      .find((item) => objeto(item?.message));
+    if (!envelope) return mensagem;
+    mensagem = objeto(envelope.message);
+  }
+  return mensagem;
+}
+
+function textoRecebido(valor: unknown): string {
+  const mensagem = conteudoDaMensagem(valor);
+  if (!mensagem) return "";
+  const tipos: [string, TipoDeMidia][] = [
+    ["audioMessage", "audio"], ["imageMessage", "imagem"], ["documentMessage", "documento"],
+    ["videoMessage", "video"], ["stickerMessage", "figurinha"],
+  ];
+  for (const [chave, tipo] of tipos) {
+    const midia = objeto(mensagem[chave]);
+    if (!midia) continue;
+    // Caption é texto digitado pelo remetente. URL, nome de arquivo e metadados
+    // não são uma transcrição nem uma descrição confiável do conteúdo.
+    const legenda = typeof midia.caption === "string" ? midia.caption.trim() : "";
+    return textoDeMidiaNaoInterpretada(tipo, legenda).slice(0, MAX_TEXT_LENGTH);
+  }
+  const estendida = objeto(mensagem.extendedTextMessage);
+  const texto = typeof mensagem.conversation === "string"
+    ? mensagem.conversation
+    : typeof estendida?.text === "string" ? estendida.text : "";
+  return texto.trim().slice(0, MAX_TEXT_LENGTH);
+}
+
 /**
  * Valida e normaliza o payload do webhook. Retorna null para tudo que não é
- * mensagem de texto recebida de um contato individual (grupos, mensagens
- * enviadas por nós, mídia, eventos de status etc.).
+ * mensagem de contato individual. Mídias conhecidas viram um registro explícito
+ * de conteúdo não interpretado; grupos, envios próprios e status são ignorados.
  */
 export function parseWebhookPayload(payload: unknown): IncomingWhatsAppMessage | null {
   const parsed = webhookSchema.safeParse(payload);
@@ -59,8 +101,7 @@ export function parseWebhookPayload(payload: unknown): IncomingWhatsAppMessage |
   const phone = jid.split("@")[0].replace(/\D/g, "");
   if (phone.length < 8) return null;
 
-  const rawText = data.message?.conversation ?? data.message?.extendedTextMessage?.text ?? "";
-  const text = rawText.trim().slice(0, MAX_TEXT_LENGTH);
+  const text = textoRecebido(data.message);
   if (!text) return null;
 
   return {

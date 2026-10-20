@@ -69,7 +69,7 @@ const db = prisma as unknown as {
   companyProfile: { findUnique: Fn; update: Fn; updateMany: Fn };
   atendenteAtendimento: { updateMany: Fn };
   knowledgeItem: { create: Fn };
-  knowledgeGap: { updateMany: Fn };
+  knowledgeGap: { updateMany: Fn; upsert: Fn };
 };
 
 const RAIZ = join(__dirname, "..");
@@ -262,7 +262,7 @@ describe("POST /api/atendente/simular — o motor de verdade, sem enviar e sem m
     const r = await SIMULAR(pedido({ mensagens: [{ de: "cliente", texto: "tem horário amanhã pra corte?" }] }));
     expect(r.status).toBe(200);
     const corpo = await r.json();
-    expect(corpo.mensagens.join("\n")).toContain("Eu sou Bia, atendente virtual da Barbearia do Léo");
+    expect(corpo.mensagens).toHaveLength(1);
     expect(corpo.mensagens.join("\n")).toMatch(/1 · \S{3} \d{2}\/\d{2}, 9h com Léo/);
     expect(corpo.estado.tipo).toBe("HORARIO");
     expect(corpo.fontes.length).toBeGreaterThan(0);

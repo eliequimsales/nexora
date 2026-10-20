@@ -1,431 +1,204 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { responder, type DependenciasDoMotor, type EntradaDoMotor } from "@/lib/atendente/motor";
+import { identificarRamo, identificarRamoNoHistorico, montarPromptComercial } from "@/lib/atendente/comercial";
 import { ID_CONTA_MESTRE_PADRAO, ehContaComercialNexora } from "@/lib/atendente/comercial-config";
 import type { Fatos } from "@/lib/atendente/fatos";
+import type { ReceptionistReply } from "@/lib/ai/provider";
 
-const FATOS_MESTRE: Fatos = {
-  empresa: "Nexora",
-  nome: "Nexora",
-  jeito: "FORMAL",
-  marcaDireto: false,
-  expediente: true,
-  servicos: [],
-  profissionais: [],
-  horarios: [],
-  diasFechados: [],
-  endereco: "",
-  pagamento: "",
-  descricao: "Plataforma de inteligência artificial para atendimento no WhatsApp",
-  perguntas: [],
-  linkAgenda: null,
-  comercial: true,
+const FATOS: Fatos = {
+  empresa: "Nexora", nome: "Sofia", jeito: "ACOLHEDOR", marcaDireto: false, expediente: true,
+  servicos: [], profissionais: [], horarios: [], diasFechados: [], endereco: "", pagamento: "",
+  descricao: "Plataforma de atendimento virtual para empresas.", perguntas: [], linkAgenda: null, comercial: true,
 };
-
-const deps: DependenciasDoMotor = {
-  livres: async () => [],
-  marcar: async () => ({ ok: false, motivo: "Nao se aplica" }),
-  ia: async () => ({ resposta: "IA fallback" }),
-};
-
-function criarEntrada(texto: string, extras: Partial<EntradaDoMotor> = {}): EntradaDoMotor {
+function entrada(texto: string, extras: Partial<EntradaDoMotor> = {}): EntradaDoMotor {
+  return { texto, historico: [{ role: "CUSTOMER", content: texto }], estado: null, primeiraDoDia: false,
+    clienteNome: "Visitante", telefone: "5511999999999", fatos: FATOS,
+    agora: new Date("2026-10-10T23:00:00Z"), contexto: "EXPEDIENTE", palavrasDoDono: [], ...extras };
+}
+function dependencias(extra: Partial<ReceptionistReply> = {}) {
   return {
-    texto,
-    historico: [{ role: "CUSTOMER", content: texto }],
-    estado: null,
-    primeiraDoDia: false,
-    clienteNome: "Visitante",
-    telefone: "5511999999999",
-    fatos: FATOS_MESTRE,
-    agora: new Date("2026-10-10T23:00:00Z"),
-    contexto: "EXPEDIENTE",
-    palavrasDoDono: [],
-    ...extras,
+    livres: vi.fn<Parameters<DependenciasDoMotor["livres"]>, ReturnType<DependenciasDoMotor["livres"]>>(async () => []),
+    marcar: vi.fn<Parameters<DependenciasDoMotor["marcar"]>, ReturnType<DependenciasDoMotor["marcar"]>>(async () => ({ ok: false, motivo: "OCUPADO" })),
+    ia: vi.fn<Parameters<DependenciasDoMotor["ia"]>, ReturnType<DependenciasDoMotor["ia"]>>(async () => ({
+      resposta: "Texto livre que não deve ser publicado", transferir_humano: false,
+      motivo_transferencia: "", nome_cliente: "", interesse: "", fontes_ids: [], duvida_pendente: true, ...extra,
+    })),
   };
 }
+const texto = (s: Awaited<ReturnType<typeof responder>>) => s.mensagens.join("\n");
+const promessas = /40%|100%|perfeitamente|blindad[oa]|j[aá] notifiquei|j[aá] deixei|em instantes|compra confirmada|pagamento confirmado|conta ativada|sem risco/i;
 
-describe("Atendente Comercial da Nexora — Cobertura Total de Ramos e Nichos", () => {
-  it("identifica corretamente a conta mestre padrão como conta comercial", () => {
+describe("Atendimento comercial sustentado em fatos", () => {
+  it("reconhece a conta comercial configurada", () => {
     expect(ehContaComercialNexora(ID_CONTA_MESTRE_PADRAO)).toBe(true);
-    expect(ehContaComercialNexora("outra-empresa-qualquer")).toBe(false);
+    expect(ehContaComercialNexora("outra-empresa")).toBe(false);
   });
-
-  it("responde ao primeiro 'Olá' com prova de velocidade, gancho das 23h e pergunta do ramo", async () => {
-    const res = await responder(criarEntrada("Olá", { primeiraDoDia: true }), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("Viu a velocidade dessa resposta?");
-    expect(msg).toContain("23h");
-    expect(msg).toContain("Qual o ramo do seu negócio?");
-    expect(msg).not.toContain("Olá! Tudo bem?");
-    expect(res.usouIa).toBe(false);
+  it("apresenta identidade virtual sem alegação de velocidade ou resultados", async () => {
+    const d = dependencias();
+    const r = await responder(entrada("Olá", { primeiraDoDia: true }), d);
+    expect(texto(r)).toContain("Sofia, atendente virtual da Nexora");
+    expect(texto(r)).toContain("Como posso ajudar?");
+    expect(texto(r)).not.toMatch(/velocidade|23h|concorrente|100%/);
+    expect(d.ia).not.toHaveBeenCalled();
   });
-
-  // --- SETORES MAPEADOS DO CATÁLOGO ---
-
-  it("responde a Clínica Médica / Consultório sem menção a 7 dias grátis ou cartão", async () => {
-    const res = await responder(criarEntrada("Clínica médica"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("40% das consultas fora do horário");
-    expect(msg).toContain("meunexora.com.br/ativar/clinica");
-    expect(msg).toContain("Já deixei seu Atendente 100% pré-configurado para você ativar agora:");
-    expect(msg).not.toContain("7 dias grátis");
-    expect(msg).not.toContain("cartão");
+  it("não repete apresentação na mesma conversa", async () => {
+    const r = await responder(entrada("Oi", { historico: [
+      { role: "AI", content: "Sou Sofia, atendente virtual da Nexora." }, { role: "CUSTOMER", content: "Oi" },
+    ] }), dependencias());
+    expect(texto(r)).not.toContain("atendente virtual");
   });
-
-  it("responde a Odontologia / Dentista", async () => {
-    const res = await responder(criarEntrada("Consultório odontológico"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("pacientes de alto valor fora do horário comercial");
-    expect(msg).toContain("meunexora.com.br/ativar/odonto");
+  it.each([
+    ["Clínica médica", "clinica"], ["Consultório odontológico", "odonto"], ["Barbearia", "barbearia"],
+    ["Salão de beleza e manicure", "salao"], ["Clínica de estética", "estetica"], ["Pet shop e banho e tosa", "pet"],
+    ["Oficina mecânica", "automotivo"], ["Sou personal trainer", "fitness"], ["Escritório de advocacia", "advocacia"],
+    ["Imobiliária", "imobiliaria"], ["Escritório de contabilidade", "contabilidade"], ["Estúdio de tattoo", "tattoo"],
+    ["Estúdio de fotografia", "eventos"], ["Trabalho com ar condicionado", "manutencao"],
+    ["Escola de idiomas", "educacao"], ["Restaurante e pizzaria", "gastronomia"], ["Agência de marketing", "consultoria"],
+    ["Tenho uma floricultura", "floricultura"], ["Sou relojoeiro", "relojoeiro"],
+  ])("mantém o ramo %s sem métricas ou configuração fictícia", async (mensagem, slug) => {
+    const d = dependencias();
+    const r = await responder(entrada(mensagem), d);
+    expect(texto(r)).toContain("meunexora.com.br/ativar/" + slug);
+    expect(texto(r)).toContain("demonstração");
+    expect(texto(r)).toContain("antes de conectar");
+    expect(texto(r)).toContain("Revise as informações");
+    expect(texto(r)).not.toMatch(promessas);
+    expect(d.ia).not.toHaveBeenCalled();
+    expect(d.marcar).not.toHaveBeenCalled();
   });
-
-  it("responde a Barbearia", async () => {
-    const res = await responder(criarEntrada("Barbearia"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("tentam agendar à noite e no fim de semana");
-    expect(msg).toContain("meunexora.com.br/ativar/barbearia");
+  it("interpreta ramo curto somente após pergunta da equipe", () => {
+    expect(identificarRamo("Ótica", [{ role: "AI", content: "Qual é o ramo do seu negócio?" }])?.slug).toBe("otica");
+    expect(identificarRamo("Ótica", [{ role: "CUSTOMER", content: "Qual é o ramo do seu negócio?" }])).toBeNull();
   });
-
-  it("responde a Salão de Beleza / Cabeleireiro / Manicure / Lash", async () => {
-    const res = await responder(criarEntrada("Salão de beleza e manicure"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("Salões de beleza e profissionais de estética perdem dezenas de agendamentos");
-    expect(msg).toContain("meunexora.com.br/ativar/salao");
+  it("não usa o ramo inventado pela IA como fala do cliente", async () => {
+    const historico = [{ role: "AI" as const, content: "Você tem uma clínica." }, { role: "CUSTOMER" as const, content: "Quero testar" }];
+    expect(identificarRamoNoHistorico(historico)).toBeNull();
+    const r = await responder(entrada("Quero testar", { historico }), dependencias());
+    expect(texto(r)).not.toContain("/clinica");
   });
-
-  it("responde a Estética / Spa", async () => {
-    const res = await responder(criarEntrada("Clínica de estética"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("Espaços de estética e beleza perdem agendamentos");
-    expect(msg).toContain("meunexora.com.br/ativar/estetica");
+  it("usa a correção mais recente do cliente", async () => {
+    const historico = [{ role: "CUSTOMER" as const, content: "Tenho uma barbearia" }, { role: "CUSTOMER" as const, content: "Na verdade sou dentista" }];
+    const r = await responder(entrada("Quero testar", { historico }), dependencias());
+    expect(texto(r)).toContain("/odonto");
+    expect(texto(r)).not.toContain("/barbearia");
   });
-
-  it("responde a Pet Shop e Veterinária", async () => {
-    const res = await responder(criarEntrada("Pet shop e banho e tosa"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("Pet shops e clínicas veterinárias perdem agendamentos");
-    expect(msg).toContain("meunexora.com.br/ativar/pet");
+  it("declaração de compra não confirma pagamento ou ativação", async () => {
+    const r = await responder(entrada("Acabei de comprar e quero ativar meu atendente para minha barbearia"), dependencias());
+    expect(texto(r)).toContain("/barbearia");
+    expect(texto(r)).not.toMatch(promessas);
+    expect(r.marcou).toBeUndefined();
   });
-
-  it("responde a Oficina Mecânica / Centro Automotivo", async () => {
-    const res = await responder(criarEntrada("Oficina mecânica"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("Oficinas e centros automotivos perdem orçamentos");
-    expect(msg).toContain("meunexora.com.br/ativar/automotivo");
+  it.each(["Você é humano?", "Você é uma IA?", "Sou veterinária. Você é uma pessoa?"])("esclarece identidade: %s", async (m) => {
+    const r = await responder(entrada(m), dependencias());
+    expect(texto(r)).toContain("atendente virtual");
+    expect(r.equipe).toBeUndefined();
+    expect(texto(r)).not.toContain("/ativar");
   });
-
-  it("responde a Fitness / Academia / Personal Trainer", async () => {
-    const res = await responder(criarEntrada("Sou personal trainer"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("Academias, estúdios e personais perdem alunos novos");
-    expect(msg).toContain("meunexora.com.br/ativar/fitness");
+  it.each(["atendente?", "suporte", "humano"])("esclarece menção isolada %s sem transferência", async (m) => {
+    const r = await responder(entrada(m), dependencias());
+    expect(r.equipe).toBeUndefined();
+    expect(texto(r)).toContain("Você quer falar");
   });
-
-  it("responde a Advocacia", async () => {
-    const res = await responder(criarEntrada("Escritório de advocacia"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("Escritórios de advocacia perdem clientes");
-    expect(msg).toContain("meunexora.com.br/ativar/advocacia");
+  it("prioriza pedido explícito de pessoa sem notificação fictícia", async () => {
+    const r = await responder(entrada("Tenho uma clínica e quero falar com uma pessoa"), dependencias());
+    expect(r.equipe).toBe(true);
+    expect(r.anotar).toBeDefined();
+    expect(texto(r)).not.toMatch(promessas);
+    expect(texto(r)).not.toContain("/ativar");
   });
-
-  it("responde a Imobiliária e Corretores", async () => {
-    const res = await responder(criarEntrada("Imobiliária"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("Imobiliárias e corretores perdem leads quentes");
-    expect(msg).toContain("meunexora.com.br/ativar/imobiliaria");
+  it("não transfere pedido negado", async () => {
+    const r = await responder(entrada("Não quero falar com atendente. Quanto custa?"), dependencias());
+    expect(r.equipe).toBeUndefined();
   });
-
-  it("responde a Contabilidade", async () => {
-    const res = await responder(criarEntrada("Escritório de contabilidade"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("Escritórios de contabilidade perdem clientes empresariais");
-    expect(msg).toContain("meunexora.com.br/ativar/contabilidade");
+  it("prioriza emergência sobre oportunidade comercial", async () => {
+    const r = await responder(entrada("Tenho uma clínica e estou com falta de ar"), dependencias());
+    expect(r.urgente).toBe(true);
+    expect(r.equipe).toBe(true);
+    expect(texto(r)).not.toContain("/ativar");
   });
-
-  it("responde a Estúdio de Tatuagem / Piercing", async () => {
-    const res = await responder(criarEntrada("Estúdio de tattoo e piercing"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("Estúdios de tatuagem e piercing perdem clientes");
-    expect(msg).toContain("meunexora.com.br/ativar/tattoo");
+  it("encaminha suporte de conta sem alegar notificação", async () => {
+    const r = await responder(entrada("Já sou cliente e tenho um problema no painel"), dependencias());
+    expect(r.equipe).toBe(true);
+    expect(texto(r)).toContain("meunexora.com.br/painel");
+    expect(texto(r)).not.toMatch(promessas);
   });
-
-  it("responde a Fotografia / Eventos", async () => {
-    const res = await responder(criarEntrada("Estúdio de fotografia"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("Profissionais de eventos e fotografia perdem contratos");
-    expect(msg).toContain("meunexora.com.br/ativar/eventos");
+  it.each([
+    "Ele entende áudio?", "Vocês emitem nota fiscal para CNPJ?", "Tem integração com Google Agenda?",
+    "É seguro e sem risco de banimento?", "Preciso de chip novo ou WhatsApp Business?",
+    "Como funciona o teste grátis? Pede cartão?", "Como cancelo a assinatura?", "Precisa de computador ligado?",
+    "E se a inteligência errar ou inventar resposta?",
+  ])("não promete capacidade sem fonte: %s", async (m) => {
+    const r = await responder(entrada(m), dependencias({ resposta: "Sim! Tudo garantido 100% e já notifiquei a equipe!" }));
+    expect(texto(r)).toContain("não tenho informação confirmada");
+    expect(texto(r)).not.toMatch(promessas);
+    expect(r.anotar?.pergunta).toBe(m);
+    expect(r.equipe).toBeUndefined();
   });
-
-  it("responde a Manutenção / Marcenaria / Vidraçaria / Ar Condicionado", async () => {
-    const res = await responder(criarEntrada("Trabalho com ar condicionado e refrigeração"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("Profissionais de manutenção e reformas perdem chamados");
-    expect(msg).toContain("meunexora.com.br/ativar/manutencao");
+  it("usa preço cadastrado sem fixar oferta no código", async () => {
+    const d = dependencias();
+    const r = await responder(entrada("Quanto custa?", { fatos: { ...FATOS, pricingInfo: "Plano de teste interno: R$ 123 por mês." } }), d);
+    expect(texto(r)).toBe("Plano de teste interno: R$ 123 por mês.");
+    expect(d.ia).not.toHaveBeenCalled();
   });
-
-  it("responde a Educação / Cursos", async () => {
-    const res = await responder(criarEntrada("Escola de cursos e idiomas"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("Escolas e cursos perdem matrículas valiosas");
-    expect(msg).toContain("meunexora.com.br/ativar/educacao");
+  it("responde FAQ exata sem gerar complemento", async () => {
+    const d = dependencias();
+    const r = await responder(entrada("Vocês emitem nota fiscal?", { fatos: {
+      ...FATOS, perguntas: [{ question: "Vocês emitem nota fiscal?", answer: "A equipe precisa confirmar as condições de emissão." }],
+    } }), d);
+    expect(texto(r)).toBe("A equipe precisa confirmar as condições de emissão.");
+    expect(d.ia).not.toHaveBeenCalled();
   });
-
-  it("responde a Gastronomia / Restaurante / Confeitaria", async () => {
-    const res = await responder(criarEntrada("Restaurante e pizzaria"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("Restaurantes e confeitarias perdem reservas");
-    expect(msg).toContain("meunexora.com.br/ativar/gastronomia");
+  it("publica fontes aprovadas e ignora texto livre e transferência sugeridos pela IA", async () => {
+    const d = dependencias({ fontes_ids: ["faq:0"], duvida_pendente: false,
+      resposta: "Integração completa e 100% segura.", transferir_humano: true });
+    const r = await responder(entrada("Conecta com outras agendas?", { fatos: {
+      ...FATOS, perguntas: [{ question: "Integrações", answer: "Integrações externas precisam de avaliação da equipe." }],
+    } }), d);
+    expect(texto(r)).toBe("Integrações externas precisam de avaliação da equipe.");
+    expect(r.equipe).toBeUndefined();
+    expect(r.usouIa).toBe(true);
   });
-
-  it("responde a Consultoria / Agência", async () => {
-    const res = await responder(criarEntrada("Agência de consultoria e marketing"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("Empresas e consultorias perdem oportunidades");
-    expect(msg).toContain("meunexora.com.br/ativar/consultoria");
+  it("responde parte conhecida e sinaliza pendência em pergunta composta com ramo", async () => {
+    const r = await responder(entrada("Tenho uma clínica. Quanto custa e tem nota fiscal?", {
+      fatos: { ...FATOS, pricingInfo: "Mensalidade autorizada: R$ 123." },
+    }), dependencias({ fontes_ids: ["precos"], duvida_pendente: true }));
+    expect(texto(r)).toContain("Mensalidade autorizada: R$ 123.");
+    expect(texto(r)).toContain("não tenho informação confirmada");
+    expect(r.anotar).toBeDefined();
+    expect(texto(r)).not.toContain("/ativar");
   });
-
-  // --- EXTRAÇÃO UNIVERSAL DINÂMICA PARA QUALQUER RAMO NÃO CATALOGADO ---
-
-  it("reconhece dinamicamente ramo específico informado com 'tenho uma floricultura'", async () => {
-    const res = await responder(criarEntrada("Tenho uma floricultura"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("floricultura");
-    expect(msg).toContain("perdem orçamentos e clientes valiosos toda noite e fim de semana");
-    expect(msg).toContain("meunexora.com.br/ativar/floricultura");
+  it("rejeita toda seleção que contenha fonte inexistente", async () => {
+    const r = await responder(entrada("Como funciona?"), dependencias({ fontes_ids: ["descricao", "inventada"], duvida_pendente: false }));
+    expect(texto(r)).not.toContain(FATOS.descricao);
+    expect(texto(r)).toContain("não tenho informação confirmada");
   });
-
-  it("reconhece dinamicamente ramo informado com 'trabalho com energia solar'", async () => {
-    const res = await responder(criarEntrada("Trabalho com energia solar"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("manutencao"); // Energia solar foi mapeado para manutenção
+  it("exige estado de cobertura mesmo com ID válido", async () => {
+    const r = await responder(entrada("Como funciona?"), dependencias({ fontes_ids: ["descricao"], duvida_pendente: undefined }));
+    expect(texto(r)).toContain("não tenho informação confirmada");
   });
-
-  it("reconhece dinamicamente ramo informado com 'sou relojoeiro'", async () => {
-    const res = await responder(criarEntrada("Sou relojoeiro"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("relojoeiro");
-    expect(msg).toContain("meunexora.com.br/ativar/relojoeiro");
+  it("seleção vazia permanece pendente", async () => {
+    const r = await responder(entrada("O teste aceita minha empresa?"), dependencias({ fontes_ids: [], duvida_pendente: false }));
+    expect(texto(r)).toContain("não tenho informação confirmada");
+    expect(r.anotar).toBeDefined();
   });
-
-  it("reconhece resposta direta à pergunta do atendente (ex: 'Ótica')", async () => {
-    const entrada = criarEntrada("Ótica", {
-      historico: [
-        { role: "CUSTOMER", content: "Olá" },
-        {
-          role: "AI",
-          content: "Olá! Viu a velocidade dessa resposta? Me conta: qual é o ramo do seu negócio?",
-        },
-        { role: "CUSTOMER", content: "Ótica" },
-      ],
-    });
-    const res = await responder(entrada, deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("otica");
-    expect(msg).toContain("meunexora.com.br/ativar/otica");
+  it("falha do provedor não inventa entendimento ou capacidades", async () => {
+    const d = dependencias();
+    d.ia.mockRejectedValue(new Error("timeout"));
+    const r = await responder(entrada("Funciona no meu sistema específico?"), d);
+    expect(texto(r)).toContain("não tenho informação confirmada");
+    expect(texto(r)).not.toMatch(/entendi perfeitamente|mesmo segundo/);
   });
-
-  it("reconhece resposta direta à pergunta do atendente (ex: 'Bicicletaria')", async () => {
-    const entrada = criarEntrada("Bicicletaria", {
-      historico: [
-        { role: "CUSTOMER", content: "Olá" },
-        {
-          role: "AI",
-          content: "Olá! Viu a velocidade dessa resposta? Me conta: qual é o ramo do seu negócio?",
-        },
-        { role: "CUSTOMER", content: "Bicicletaria" },
-      ],
-    });
-    const res = await responder(entrada, deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("bicicletaria");
-    expect(msg).toContain("meunexora.com.br/ativar/bicicletaria");
+  it("inclui a pergunta atual quando faltar no histórico", async () => {
+    const d = dependencias();
+    await responder(entrada("Emite nota?", { historico: [] }), d);
+    expect(d.ia.mock.calls[0][0].historico.at(-1)).toEqual({ role: "CUSTOMER", content: "Emite nota?" });
   });
-
-  // --- PERGUNTAS DE PREÇO E DÚVIDAS OPERACIONAIS ---
-
-  it("quando o lead pergunta preço sem nicho definido, inverte o risco e convida para informar o nicho", async () => {
-    const res = await responder(criarEntrada("Quanto custa?"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("A primeira semana é 100% por nossa conta");
-    expect(msg).toContain("sem pedir cartão de crédito");
-    expect(msg).toContain("R$ 97/mês");
-    expect(msg).toContain("qual é o ramo da sua empresa");
-  });
-
-  it("quando o lead pergunta 'Mas quanto custa isso depois?', responde com a cópia exata de preço e inversão de risco", async () => {
-    const entrada = criarEntrada("Mas quanto custa isso depois?", {
-      historico: [
-        { role: "CUSTOMER", content: "Olá" },
-        { role: "AI", content: "Qual o seu ramo?" },
-        { role: "CUSTOMER", content: "Pet shop" },
-        {
-          role: "AI",
-          content:
-            "Pet shops e clínicas veterinárias perdem agendamentos.\n\nJá deixei seu Atendente 100% pré-configurado para você ativar agora:\n👉 meunexora.com.br/ativar/pet",
-        },
-        { role: "CUSTOMER", content: "Mas quanto custa isso depois?" },
-      ],
-    });
-    const res = await responder(entrada, deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain(
-      "A primeira semana é 100% por nossa conta — grátis e sem pedir cartão de crédito. Você testa com seus clientes na prática e só decide se quer continuar depois de ver o resultado.",
-    );
-    expect(msg).toContain(
-      "Depois, o plano é super acessível, apenas R$ 97/mês (no Pix ou Cartão), sem contrato e sem fidelidade.",
-    );
-    expect(msg).toContain("Já deixei seu modelo pré-configurado para você ativar agora:");
-    expect(msg).toContain("meunexora.com.br/ativar/pet");
-  });
-
-  it("esclarece dúvida de computador ligado / nuvem sem atrito", async () => {
-    const res = await responder(criarEntrada("Precisa deixar o computador ligado?"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("Não precisa deixar o computador ligado");
-    expect(msg).toContain("100% em nuvem");
-    expect(msg).toContain("meunexora.com.br/ativar");
-  });
-
-  it("esclarece dúvida sobre alucinações da IA", async () => {
-    const res = await responder(criarEntrada("E se a inteligência errar ou inventar resposta?"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("blindada contra invenções");
-    expect(msg).toContain("só responde estritamente o que você ensina");
-  });
-
-  it("esclarece dúvida sobre chip novo ou WhatsApp Business", async () => {
-    const res = await responder(criarEntrada("Preciso de chip novo ou WhatsApp Business?"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("Não precisa de chip novo nem de número extra");
-    expect(msg).toContain("WhatsApp atual mesmo em 30 segundos pelo QR Code");
-  });
-
-  it("esclarece dúvida sobre como funciona o teste de 7 dias grátis", async () => {
-    const res = await responder(criarEntrada("Como funciona o teste grátis? Pede cartão?"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("7 dias completos");
-    expect(msg).toContain("sem pedir cartão de crédito");
-  });
-
-  it("esclarece dúvida sobre como conectar o WhatsApp", async () => {
-    const res = await responder(criarEntrada("Como faz para conectar no WhatsApp?"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("menos de 1 minuto");
-    expect(msg).toContain("QR Code");
-    expect(msg).toContain("meunexora.com.br/ativar");
-  });
-
-  it("transfere para atendimento humano com acolhimento quando solicitado", async () => {
-    const res = await responder(criarEntrada("Quero falar com uma pessoa real"), deps);
-    expect(res.equipe).toBe(true);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("especialista vai te atender por aqui em instantes");
-    expect(msg).toContain("meunexora.com.br/ativar");
-  });
-
-  // --- NOVOS TESTES DE SITUAÇÕES REAIS DO DIA A DIA ---
-
-  it("entrega o link de ativação limpo e direto sem fricção prematura de conexão", async () => {
-    const res = await responder(criarEntrada("Clínica de estética"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("meunexora.com.br/ativar/estetica");
-    expect(msg).not.toContain("câmera");
-    expect(msg).not.toContain("QR Code");
-    expect(msg).not.toContain("8 dígitos");
-  });
-
-  it("responde sobre compreensão e áudio de clientes", async () => {
-    const res = await responder(criarEntrada("Ele entende áudio que os clientes mandam?"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("Sim! O Nexora ouve e compreende áudios perfeitamente");
-    expect(msg).toContain("respondendo em texto instantaneamente");
-    expect(msg).not.toContain("Empresas de entende");
-  });
-
-  it("atende cliente já existente e direciona para suporte sem tratar como lead", async () => {
-    const res = await responder(criarEntrada("Já sou cliente e preciso de suporte com meu painel"), deps);
-    expect(res.equipe).toBe(true);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("Como você já é nosso cliente");
-    expect(msg).toContain("meunexora.com.br/painel");
-    expect(msg).toContain("suporte para te ajudar por aqui");
-    expect(msg).not.toContain("Empresas de cliente");
-  });
-
-  it("esclarece emissão de nota fiscal para CNPJ sem confundir com contabilidade", async () => {
-    const res = await responder(criarEntrada("Vocês emitem nota fiscal para CNPJ?"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("Emitimos nota fiscal automaticamente");
-    expect(msg).toContain("tanto para CNPJ quanto para CPF");
-    expect(msg).not.toContain("Escritórios de contabilidade perdem");
-  });
-
-  it("esclarece integração com Google Agenda e Webhooks", async () => {
-    const res = await responder(criarEntrada("Tem integração com a Agenda do Google?"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("integração nativa com o Google Agenda");
-    expect(msg).toContain("bloqueado na sua agenda para evitar choque");
-  });
-
-  it("esclarece segurança e LGPD sem confundir com seguro empresarial", async () => {
-    const res = await responder(criarEntrada("É seguro colocar os dados dos meus clientes?"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("É 100% seguro");
-    expect(msg).toContain("LGPD");
-    expect(msg).toContain("criptografia de ponta a ponta");
-    expect(msg).not.toContain("Empresas de seguro");
-  });
-
-  it("esclarece cancelamento sem fidelidade e com 1 clique", async () => {
-    const res = await responder(criarEntrada("Como funciona para cancelar se eu não gostar?"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("Zero fidelidade e zero burocracia");
-    expect(msg).toContain("cancelar quando quiser com 1 clique");
-  });
-
-  it("responde com naturalidade a elogios ou desconfiança ('kkkk isso é de verdade?')", async () => {
-    const res = await responder(criarEntrada("Kkkk que massa, isso é de verdade?"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("Sou 100% inteligência artificial da Nexora rodando ao vivo");
-    expect(msg).not.toContain("Empresas de massa");
-  });
-
-  it("quando o usuário diz o ramo E pergunta como funciona, une a explicação de valor com o gancho do ramo", async () => {
-    const res = await responder(criarEntrada("Boa tarde, sou veterinária e quero saber como funciona"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("O Nexora é o seu atendente");
-    expect(msg).toContain("Pet shops e clínicas veterinárias perdem agendamentos");
-    expect(msg).toContain("meunexora.com.br/ativar/pet");
-    expect(msg).not.toContain("Qual é o ramo do seu negócio para eu te mostrar");
-  });
-
-  // --- GATILHOS EXATOS DO FUNIL E BOTÃO DE OBRIGADO ---
-
-  it("responde ao clique do botão da página de obrigado com o choque de velocidade e gancho do concorrente", async () => {
-    const res = await responder(criarEntrada("Oi Sofia, quero ativar meu Atendente Nexora!"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("Viu a velocidade dessa resposta? ⚡");
-    expect(msg).toContain("Se fossem 23h ou um domingo");
-    expect(msg).toContain("em vez de fechar com o concorrente");
-    expect(msg).toContain("Qual o ramo do seu negócio?");
-    expect(res.usouIa).toBe(false);
-  });
-
-  it("reconhece quando o lead digita apenas 'quero ativar meu atendente' mesmo sem saudação", async () => {
-    const res = await responder(criarEntrada("quero ativar meu atendente"), deps);
-    const msg = res.mensagens[0];
-    expect(msg).toContain("Viu a velocidade dessa resposta? ⚡");
-    expect(msg).toContain("em vez de fechar com o concorrente");
-    expect(msg).toContain("Qual o ramo do seu negócio?");
-  });
-
-  it("responde ao gatilho de ativação do funil já com o link pronto quando o ramo vem na mesma mensagem", async () => {
-    const res = await responder(
-      criarEntrada("Oi Sofia, acabei de comprar e quero ativar meu atendente para minha barbearia"),
-      deps,
-    );
-    const msg = res.mensagens[0];
-    expect(msg).toContain("tentam agendar à noite e no fim de semana");
-    expect(msg).toContain("meunexora.com.br/ativar/barbearia");
+  it("prompt comercial usa catálogo validado sem promessas de recursos", () => {
+    const p = montarPromptComercial(entrada("Como funciona?"), identificarRamo("clínica"));
+    expect(p).toContain("fontes_ids");
+    expect(p).toContain('"id":"descricao"');
+    expect(p).toContain("contexto não confiável");
+    expect(p).not.toMatch(/40%|97\/mês|perfeitamente|integração nativa com Google Agenda|em total conformidade/);
   });
 });
 

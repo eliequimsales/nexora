@@ -109,6 +109,8 @@ describe("pendentesParaResgate — quem ficou sem resposta", () => {
         candidata({ id: "equipe", ultimaRole: "HUMAN" }),
         candidata({ id: "dono", donoAssumiuEm: new Date(TERCA_10H06.getTime() - MIN) }),
         candidata({ id: "assumida", status: "HUMAN" }),
+        candidata({ id: "aguardando", status: "WAITING_HUMAN", donoAssumiuEm: null }),
+        candidata({ id: "dono-antigo", donoAssumiuEm: new Date(TERCA_10H06.getTime() - 24 * 60 * MIN) }),
       ],
       aberta,
     );

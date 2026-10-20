@@ -143,6 +143,37 @@ describe("os três jeitos", () => {
       );
       expect(t.semPreco("Luzes")).toContain("Luzes");
     });
+
+    it(`${NOME_DO_JEITO[jeito]}: falta de informação não vende agenda nem afirma notificação`, () => {
+      const t = textosDoJeito(jeito);
+      for (const texto of [t.naoSei(null), t.naoSei("amanhã às 9h"), t.semPreco("Luzes")]) {
+        expect(texto).toMatch(/confirmad/);
+        expect(texto).not.toMatch(/horário|agendar|bora|\?/i);
+        expect(texto).not.toMatch(/anotei|anotad|registrei|registrad|avisei|encaminhei|em breve|assim que|amanhã/i);
+      }
+    });
+
+    it(`${NOME_DO_JEITO[jeito]}: mensagens sem resultado operacional não alegam registro ou prazo`, () => {
+      const t = textosDoJeito(jeito);
+      const semResultado = [
+        t.pessoa(null), t.pessoa("amanhã às 9h"), t.reclamacao(null),
+        t.semAgenda, t.limiteDoDia(null), t.teto({ apresentacao: "Atendimento virtual", volta: null }),
+      ];
+      for (const texto of semResultado) {
+        expect(texto).not.toMatch(/anotei|deixei.*anotad|registrei|foi registrad|avisei|já chamei|em breve|assim que|vai falar|te responde/i);
+      }
+      expect(t.contextoExpediente).not.toMatch(/ocupad|correria|está atendendo|já responde|já te responde/i);
+    });
+
+    it(`${NOME_DO_JEITO[jeito]}: a escolha não equivale a reserva nem a anotação persistida`, () => {
+      const t = textosDoJeito(jeito);
+      for (const volta of [null, "amanhã às 9h"]) {
+        const texto = t.anoteiHorario({ quando: "sexta, 16/10, às 14h", volta });
+        expect(texto).toContain("sexta, 16/10, às 14h");
+        expect(texto).toMatch(/ainda.*confirma/i);
+        expect(texto).not.toMatch(/anotei|anotad|já está|já tá|em breve|assim que|amanhã às 9h/i);
+      }
+    });
   }
 
   it("a mesma saudação soa diferente em cada jeito", () => {
@@ -165,6 +196,12 @@ describe("os três jeitos", () => {
     const texto = URGENCIA_CVV("Clínica Sorriso");
     expect(texto).toContain("188");
     expect(texto.match(EMOJI)).toBeNull();
+  });
+
+  it("urgências não afirmam que uma notificação foi enviada", () => {
+    for (const texto of [URGENCIA("Clínica Sorriso"), URGENCIA_CVV("Clínica Sorriso")]) {
+      expect(texto).not.toMatch(/avisad|avisei|notificad|encaminhei/i);
+    }
   });
 });
 
@@ -196,8 +233,9 @@ describe("sem serviço cadastrado, nenhum texto inventa um", () => {
       volta: "amanhã às 9h",
       cumprimento: "Boa noite",
     });
-    expect(bolhas[0].texto).toBe("Boa noite! Tem horário amanhã?");
-    expect(bolhas.map((b) => b.texto).join(" ")).not.toMatch(/atendimento\b(?! virtual)/i);
+    expect(bolhas[0].texto).toBe("Boa noite! Tem horário?");
+    expect(bolhas[2].texto).not.toMatch(/para atendimento|pra atendimento/i);
+    expect(bolhas.at(-1)?.texto).not.toMatch(/atendimento/i);
   });
 });
 
@@ -247,13 +285,21 @@ describe("conversaDeExemplo — a mesma conversa nos três jeitos", () => {
     cumprimento: "Boa noite",
   };
 
-  it("o cliente pergunta, o Atendente se apresenta, envia o link da agenda, e confirma", () => {
+  it("o cliente pergunta, o Atendente usa opções fornecidas e confirma a mesma escolha", () => {
     for (const jeito of JEITOS) {
       const bolhas = conversaDeExemplo(jeito, dados);
       expect(bolhas[0].de).toBe("cliente");
       expect(bolhas.some((b) => b.de === "atendente" && b.texto.includes("Eu sou Bia"))).toBe(true);
-      expect(bolhas.some((b) => b.texto.includes("https://meunexora.com.br/agendar"))).toBe(true);
+      for (const opcao of dados.opcoes) expect(bolhas[2].texto).toContain(opcao);
+      expect(bolhas[3].texto).toContain(dados.escolhida.quando);
+      expect(bolhas.map((b) => b.texto).join(" ")).not.toMatch(/10:30|15:00|https?:\/\//);
       expect(bolhas.at(-1)?.texto).toMatch(/quarta, 23\/09, às 11h/i);
     }
+  });
+
+  it("mostra o link somente quando fornecido", () => {
+    const linkAgenda = "https://exemplo.app/agenda/barbearia";
+    const bolhas = conversaDeExemplo("DIRETO", { ...dados, linkAgenda });
+    expect(bolhas[2].texto).toContain(linkAgenda);
   });
 });

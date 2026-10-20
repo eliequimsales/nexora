@@ -48,7 +48,7 @@ export async function GET(request: Request) {
   try {
     const hasPreset = Boolean(ramoParam);
     const preset = hasPreset ? obterPresetDoRamo(ramoParam) : null;
-    const nomeEmpresa = empresaParam && empresaParam.length <= 100 ? empresaParam : (preset ? preset.nomeEmpresa : "Minha Empresa");
+    const nomeEmpresa = empresaParam && empresaParam.length <= 100 ? empresaParam : "Minha Empresa";
     const telefoneEmpresa = telefoneParam && telefoneParam.length <= 25 ? telefoneParam.replace(/[^\d+() -]/g, "") : "";
 
     const randomHex = randomBytes(8).toString("hex");
@@ -70,10 +70,6 @@ export async function GET(request: Request) {
           create: preset
             ? {
                 atendenteNome: preset.atendenteNome,
-                description: preset.description,
-                address: preset.endereco,
-                paymentMethods: preset.pagamento,
-                serviceRules: preset.serviceRules,
               }
             : {},
         },
@@ -81,33 +77,10 @@ export async function GET(request: Request) {
       select: { id: true, sessaoEpoca: true },
     });
 
-    // Cria serviços inteligentes de referência do segmento
-    if (preset && preset.servicos.length > 0) {
-      await prisma.service.createMany({
-        data: preset.servicos.map((s, idx) => ({
-          companyId: company.id,
-          name: s.name,
-          durationMin: s.durationMin,
-          priceCents: s.priceCents,
-          order: idx,
-          active: true,
-        })),
-      });
-    }
-
-    // Cria conhecimento inicial do atendente (aprovado) para responder na hora
-    if (preset && preset.duvidas.length > 0) {
-      await prisma.knowledgeItem.createMany({
-        data: preset.duvidas.map((d) => ({
-          companyId: company.id,
-          question: d.question,
-          answer: d.answer,
-          source: "TRAINING",
-          status: "APPROVED",
-          approvedAt: new Date(),
-        })),
-      });
-    }
+    // O ramo sugere somente a identidade do atendimento. Preços, serviços,
+    // endereço, pagamento e respostas de exemplo não são fatos da empresa.
+    // A tela mantém a demonstração identificada como exemplo; o dono ensina
+    // as informações reais antes de elas entrarem no atendimento.
 
     const token = await createSessionToken(company.id, company.sessaoEpoca);
     setSessionCookie(token);

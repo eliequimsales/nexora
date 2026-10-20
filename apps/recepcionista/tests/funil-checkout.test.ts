@@ -1,4 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+// O caminho de autenticação inválida também registra erro; o teste não deve abrir banco real.
+vi.mock("@/lib/errors", () => ({ logError: vi.fn(async () => undefined) }));
 import { POST as checkoutPost } from "@/app/api/billing/checkout/route";
 import { POST as asaasWebhookPost } from "@/app/api/billing/asaas-webhook/route";
 import { prisma } from "@/lib/db";

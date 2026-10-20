@@ -10,7 +10,7 @@ import {
   quandoFalado,
   textoDaVolta,
 } from "@/lib/atendente/datas";
-import { detectarIntencao, lerEscolha, type ContextoDaIntencao } from "@/lib/atendente/intencao";
+import { acharServicos, detectarIntencao, detectarIntencoes, lerEscolha, type ContextoDaIntencao } from "@/lib/atendente/intencao";
 
 /**
  * O QUE O CLIENTE QUER, DECIDIDO POR CÓDIGO.
@@ -249,5 +249,144 @@ describe("lerEscolha", () => {
 
   it("hora que não bate com nenhuma opção não é escolha", () => {
     expect(lerEscolha("às 15h", opcoes)).toBeNull();
+  });
+});
+
+describe("compreensão profissional com contexto", () => {
+  it.each(["Você é uma IA?", "Você é humano?", "Você é um robô?", "Estou falando com uma pessoa?"])("responde à identidade sem encaminhar: %s", (texto) => {
+    expect(tipo(texto)).toBe("IDENTIDADE");
+  });
+
+  it("duração não é preço nem escolha de horário", () => {
+    expect(tipo("Quanto tempo dura a barba?")).toBe("DURACAO");
+    expect(tipo("Quanto dura a opção 2?", { estado: "HORARIO", opcoes: [{ n: 2, minutos: 660 }] })).toBe("DURACAO");
+    expect(tipo("Vocês aceitam crianças?")).toBe("LIVRE");
+  });
+
+  it("resolve referência apenas ao serviço mencionado pelo cliente", () => {
+    const historico = [
+      { role: "CUSTOMER", content: "Queria fazer barba" },
+      { role: "AI", content: "O corte custa R$ 999." },
+      { role: "CUSTOMER", content: "E quanto custa?" },
+    ];
+    expect(detectarIntencao("E quanto custa?", { ...CTX, historico }).servicoId).toBe("s3");
+    expect(detectarIntencao("Quanto custa esse serviço?", { ...CTX, historico: [historico[1]] }).servicoId).toBeUndefined();
+    expect(detectarIntencao("Quanto tempo demora?", { ...CTX, historico: [
+      { role: "CUSTOMER", content: "Quanto custa corte?" },
+      { role: "AI", content: "O corte sai por R$ 45." },
+    ] }).servicoId).toBe("s1");
+  });
+
+  it("não atribui referência ambígua, assunto abandonado ou serviço desconhecido ao anterior", () => {
+    const historico = [{ role: "CUSTOMER", content: "Quanto custa corte e quanto custa barba?" }];
+    expect(detectarIntencao("Quanto dura esse serviço?", { ...CTX, historico }).servicoId).toBeUndefined();
+    expect(detectarIntencao("Quanto custa?", { ...CTX, historico: [
+      { role: "CUSTOMER", content: "quero corte" },
+      { role: "CUSTOMER", content: "esquece, outro assunto" },
+    ] }).servicoId).toBeUndefined();
+    expect(detectarIntencao("Quanto custa luzes?", { ...CTX, servicoAtualId: "s1" }).servicoId).toBeUndefined();
+    expect(detectarIntencao("Quanto custa?", { ...CTX, servicoAtualId: "s1", historico: [
+      { role: "CUSTOMER", content: "quero corte" },
+      { role: "CUSTOMER", content: "e depilação?" },
+    ] }).servicoId).toBeUndefined();
+  });
+
+  it("usa serviço escolhido confiável e dá preferência à correção atual", () => {
+    expect(detectarIntencao("Quanto dura esse serviço?", { ...CTX, servicoAtualId: "s1" }).servicoId).toBe("s1");
+    expect(detectarIntencao("Não quero corte, quero barba", { ...CTX, servicoAtualId: "s1" }).servicoId).toBe("s3");
+    expect(detectarIntencao("Corte, na verdade barba", CTX).servicoId).toBe("s3");
+    expect(detectarIntencao("Quero barba em vez de corte", CTX).servicoId).toBe("s3");
+    expect(detectarIntencao("Não quero corte e sim barba", CTX).servicoId).toBe("s3");
+    expect(detectarIntencao("Quero barba, não corte", CTX).servicoId).toBe("s3");
+  });
+
+  it("uma troca recente do cliente supera oferta antiga, mas respeita nova escolha numérica", () => {
+    const historico = [
+      { role: "CUSTOMER", content: "quero corte" },
+      { role: "AI", content: "Tenho horários para corte." },
+      { role: "CUSTOMER", content: "Quanto custa barba?" },
+      { role: "AI", content: "Barba sai por R$ 35." },
+    ];
+    expect(detectarIntencao("Quanto tempo demora?", { ...CTX, servicoAtualId: "s1", historico }).servicoId).toBe("s3");
+    expect(detectarIntencao("Quanto tempo demora?", { ...CTX, servicoAtualId: "s1", historico: [
+      ...historico, { role: "CUSTOMER", content: "1" },
+    ] }).servicoId).toBe("s1");
+    expect(detectarIntencao("Quanto tempo demora?", { ...CTX, servicoAtualId: "s1", historico: [
+      ...historico, { role: "CUSTOMER", content: "Esquece, não quero mais" },
+    ] }).servicoId).toBeUndefined();
+  });
+
+  it("corrige dia sem somar o dia rejeitado ao pedido", () => {
+    expect(detectarIntencao("quinta não, sexta à tarde", CTX).pedido).toMatchObject({ dia: "2026-09-25", periodo: "TARDE" });
+    expect(detectarIntencao("não amanhã, sábado", CTX).pedido.dia).toBe("2026-09-26");
+    expect(tipo("quinta não, sexta à tarde")).toBe("HORARIO");
+  });
+
+  it("não escolhe variação de serviço por ordem de cadastro", () => {
+    const servicos = [{ id: "a", nome: "Corte masculino" }, { id: "b", nome: "Corte feminino" }];
+    expect(acharServicos("quanto custa corte?", servicos)).toEqual([]);
+    expect(acharServicos("quanto custa corte feminino?", servicos)).toEqual(["b"]);
+    expect(acharServicos("quanto custa a cortesia?", CTX.servicos)).toEqual([]);
+    expect(acharServicos("quero cortar", CTX.servicos)).toEqual(["s1"]);
+    expect(acharServicos("quanto custa massagem 60?", [
+      { id: "m30", nome: "Massagem 30" }, { id: "m60", nome: "Massagem 60" },
+    ])).toEqual(["m60"]);
+  });
+
+  it("perguntar o preço durante uma oferta não confirma nem recusa a operação", () => {
+    expect(tipo("2, quanto custa?", { estado: "HORARIO", opcoes: [{ n: 2, minutos: 660 }] })).toBe("PRECO");
+    expect(tipo("Não, qual o preço?", { estado: "CONVITE" })).toBe("PRECO");
+    expect(tipo("Não quero agendar agora, qual o preço do corte?")).toBe("PRECO");
+  });
+
+  it("pergunta não reconhecida e recusa não confirmam escolha", () => {
+    const ctx = { estado: "HORARIO" as const, opcoes: [{ n: 1, minutos: 600 }, { n: 2, minutos: 660 }] };
+    expect(tipo("2, tem estacionamento?", ctx)).not.toBe("ESCOLHA");
+    expect(tipo("2, estacionamento?", ctx)).not.toBe("ESCOLHA");
+    expect(tipo("Não quero a primeira", ctx)).toBe("NEGA");
+  });
+});
+
+describe("perguntas compostas", () => {
+  it("preserva texto original da pergunta única para registrar a pendência", () => {
+    expect(detectarIntencoes("Tem estacionamento?", CTX)[0].texto).toBe("Tem estacionamento?");
+  });
+
+  it("separa três perguntas mesmo com vírgula, sem trocar funcionamento por agenda", () => {
+    const intencoes = detectarIntencoes("Quanto é o corte, que horas vocês abrem amanhã e aceita cartão?", CTX);
+    expect(intencoes.map((i) => i.tipo)).toEqual(["PRECO", "FUNCIONAMENTO", "PAGAMENTO"]);
+    expect(intencoes[0].servicoId).toBe("s1");
+    expect(intencoes[1].pedido.dia).toBe("2026-09-23");
+  });
+  it("preserva preço, duração e pergunta desconhecida com seu texto", () => {
+    const intencoes = detectarIntencoes("Quanto custa corte? E quanto dura? E tem estacionamento?", CTX);
+    expect(intencoes.map((i) => i.tipo)).toEqual(["PRECO", "DURACAO", "LIVRE"]);
+    expect(intencoes[0].servicoId).toBe("s1");
+    expect(intencoes[1].servicoId).toBe("s1");
+    expect(intencoes[2].texto).toBe("tem estacionamento");
+  });
+
+  it("mantém o serviço de cada pergunta e não confunde duas perguntas com combo", () => {
+    const intencoes = detectarIntencoes("Quanto custa corte e quanto custa barba?", CTX);
+    expect(intencoes.map((i) => [i.tipo, i.servicoId])).toEqual([["PRECO", "s1"], ["PRECO", "s3"]]);
+    expect(detectarIntencoes("Quanto custa corte e barba?", CTX)[0].servicoId).toBe("s2");
+    expect(detectarIntencoes("Aceita Pix e cartão?", CTX)).toHaveLength(1);
+  });
+
+  it("preço e disponibilidade permanecem juntos sem confirmar uma reserva", () => {
+    const intencoes = detectarIntencoes("Quanto custa corte e tem vaga amanhã?", CTX);
+    expect(intencoes.map((i) => i.tipo)).toEqual(["PRECO", "HORARIO"]);
+    expect(intencoes[1].pedido.dia).toBe("2026-09-23");
+    expect(intencoes[1].servicoId).toBe("s1");
+    expect(detectarIntencoes("Quanto custa corte e tem vaga para luzes amanhã?", CTX)[1].servicoId).toBeUndefined();
+    expect(detectarIntencoes("Quanto custa barba e tem vaga amanhã?", { ...CTX,
+      servicoAtualId: "s1", historico: [{ role: "CUSTOMER", content: "quero corte" }],
+    })[1].servicoId).toBe("s3");
+    expect(detectarIntencoes("Quanto custa corte? E tem depilação? Quanto dura?", CTX)[2].servicoId).toBeUndefined();
+  });
+
+  it("urgência e pedido de pessoa mantêm precedência", () => {
+    expect(detectarIntencoes("Quanto custa corte? Meu filho está sangrando", CTX).map((i) => i.tipo)).toEqual(["URGENCIA"]);
+    expect(detectarIntencoes("Você é uma IA? Quero falar com uma pessoa", CTX).map((i) => i.tipo)).toEqual(["PESSOA"]);
   });
 });

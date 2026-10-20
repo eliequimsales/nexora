@@ -1,7 +1,7 @@
 import { formatBusinessHoursCompact } from "@/lib/ai/quick-reply";
-import { horarioDaEmpresa, lerDiasFechados } from "@/lib/agenda/horario";
+import { horarioCadastrado, lerDiasFechados } from "@/lib/agenda/horario";
 import { ehEquipeDeExemplo } from "@/lib/agenda/livres";
-import { listarProfissionais, listarServicos } from "@/lib/agenda/painel";
+import { listarProfissionais } from "@/lib/agenda/painel";
 import { emReais } from "@/lib/billing/preco";
 import { prisma } from "@/lib/db";
 import { getApprovedKnowledge } from "@/lib/training";
@@ -84,13 +84,20 @@ export async function fatosDaEmpresa(companyId: string, sobrescrever: Sobrescrit
         },
       },
     }),
-    listarServicos(companyId),
+    // Uma sugestão de serviço ainda não revisada não pode virar preço ou
+    // disponibilidade prometida ao cliente. Leitura sem alterar o cadastro.
+    prisma.service.findMany({
+      where: { companyId, active: true, suggested: false },
+      orderBy: { order: "asc" },
+      select: { id: true, name: true, priceCents: true, durationMin: true },
+    }),
     listarProfissionais(companyId),
     getApprovedKnowledge(companyId),
   ]);
 
   const perfil = empresa?.profile;
   const appUrl = (process.env.APP_URL ?? "").replace(/\/+$/, "");
+  const horarios = horarioCadastrado(perfil?.businessHours);
 
   return {
     empresa: empresa?.name ?? "",
@@ -100,7 +107,7 @@ export async function fatosDaEmpresa(companyId: string, sobrescrever: Sobrescrit
     expediente: perfil?.atendenteExpediente ?? true,
     servicos: servicos.map((s) => ({ id: s.id, nome: s.name, precoCents: s.priceCents, duracaoMin: s.durationMin })),
     profissionais: ehEquipeDeExemplo(equipe) ? [] : equipe.map((e) => e.nome),
-    horarios: horarioDaEmpresa(perfil?.businessHours),
+    horarios,
     diasFechados: lerDiasFechados(perfil?.diasFechados),
     endereco: (perfil?.address ?? "").trim(),
     pagamento: (perfil?.paymentMethods ?? "").trim(),
@@ -109,7 +116,8 @@ export async function fatosDaEmpresa(companyId: string, sobrescrever: Sobrescrit
     serviceRules: (perfil?.serviceRules ?? "").trim(),
     productsServices: (perfil?.productsServices ?? "").trim(),
     perguntas: [...lerPerguntas(perfil?.faqs), ...treinamento],
-    linkAgenda: appUrl && (empresa?.slug || companyId) ? `${appUrl}/agendar/${empresa?.slug || companyId}` : null,
+    linkAgenda: appUrl && servicos.length && horarios.length && (empresa?.slug || companyId)
+      ? `${appUrl}/agendar/${empresa?.slug || companyId}` : null,
     comercial: ehContaComercialNexora(companyId),
   };
 }

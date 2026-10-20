@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
   redirect: vi.fn().mockImplementation((url: string) => {
-    const error = new Error(`NEXT_REDIRECT:${url}`);
-    (error as Record<string, unknown>).digest = `NEXT_REDIRECT;replace;${url};307;`;
+    const error = Object.assign(new Error(`NEXT_REDIRECT:${url}`), {
+      digest: `NEXT_REDIRECT;replace;${url};307;`,
+    });
     throw error;
   }),
 }));
@@ -64,13 +65,15 @@ const db = prisma as unknown as {
   company: {
     create: Fn;
     findUnique: Fn;
+    findUniqueOrThrow: Fn;
     update: Fn;
+    updateMany: Fn;
   };
 };
 
 describe("Página /comecar", () => {
   it("redireciona para o Route Handler /api/auth/comecar", () => {
-    expect(() => ComecarPage()).toThrow("NEXT_REDIRECT:/api/auth/comecar");
+    expect(() => ComecarPage({})).toThrow("NEXT_REDIRECT:/api/auth/comecar");
     expect(redirect).toHaveBeenCalledWith("/api/auth/comecar");
   });
 });
@@ -122,6 +125,25 @@ describe("Entrada Instantânea (/api/auth/comecar) — Sem atrito e com isolamen
     // Nenhuma empresa criada no banco
     expect(db.company.create).not.toHaveBeenCalled();
     expect(res.headers.get("location")).toBe("https://www.meunexora.com.br/painel/atendente");
+  });
+
+  it("ramo não aprova exemplos de preço, endereço, pagamento ou respostas", async () => {
+    const res = await comecarRouteGET(new Request("https://www.meunexora.com.br/api/auth/comecar?ramo=barbearia&empresa=Barbearia%20Real"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/painel/atendente?origem=instantaneo");
+    const data = db.company.create.mock.calls[0][0].data;
+    expect(data.name).toBe("Barbearia Real");
+    expect(Object.keys(data.profile.create)).toEqual(["atendenteNome"]);
+    expect(data.profile.create.atendenteNome).toEqual(expect.any(String));
+    // O mock não disponibiliza escrita em serviços/conhecimento: se a rota
+    // voltasse a semear exemplos, cairia no erro em vez de abrir o produto.
+    expect(data.services).toBeUndefined();
+    expect(data.knowledgeItems).toBeUndefined();
+  });
+
+  it("ramo sem nome informado não se passa pelo nome de uma empresa", async () => {
+    await comecarRouteGET(new Request("https://www.meunexora.com.br/api/auth/comecar?ramo=clinica"));
+    expect(db.company.create.mock.calls[0][0].data.name).toBe("Minha Empresa");
   });
 
   it("aplica rate limit contra flood de criação de contas anônimas", async () => {

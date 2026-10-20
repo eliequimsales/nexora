@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { Prisma } from "@nexora/recepcionista-prisma";
 import { horarioDaEmpresa, lerDiasFechados } from "@/lib/agenda/horario";
 import { horariosLivres } from "@/lib/agenda/livres";
@@ -12,12 +13,12 @@ import { telefoneFalado } from "@/lib/recuperacao/telefone";
 import { enviarEmail } from "@/lib/reengajamento/email";
 import { recordKnowledgeGap } from "@/lib/training";
 import type { BusinessHour } from "@/lib/validation";
-import { atrasoDeDigitacao, enviarWhatsApp } from "@/lib/whatsapp/envio";
-import { ESPERA_DA_RAJADA_MS, JANELA_DO_DONO_MS, MAX_RESPOSTAS_POR_DIA, TETO_CONVERSAS_MES } from "./constantes";
+import { enviarWhatsApp } from "@/lib/whatsapp/envio";
+import { ESPERA_DA_RAJADA_MS, MAX_RESPOSTAS_POR_DIA, TETO_CONVERSAS_MES } from "./constantes";
 import { localDe, proximaAbertura, textoDaVolta } from "./datas";
 import { fatosDaEmpresa, lerPalavrasDoDono } from "./fatos";
 import { apresentacao, primeiroNomeDoCliente, textosDoJeito } from "./jeitos";
-import { responder, type Contexto } from "./motor";
+import { responder, type Contexto, type SaidaDoMotor } from "./motor";
 import { lerEstado } from "./oferta";
 import { acessoDoAtendente, decidirQuando, lojaFechada, type Silencio } from "./portao";
 import { atendimentoDoDia, registrarAtendimento, usoDoAtendente, type RegistroDeAtendimento } from "./uso";
@@ -36,7 +37,7 @@ import { atendimentoDoDia, registrarAtendimento, usoDoAtendente, type RegistroDe
  *   3. O motor, com a agenda, a marcação e a IA de verdade.
  *   4. Conferência antes de enviar: se a equipe respondeu enquanto a resposta
  *      era preparada, nada sai.
- *   5. Envio com "digitando…", mensagem salva, estado da conversa, atendimento
+ *   5. Estado e pendências persistidos antes da resposta, mensagem salva, atendimento
  *      do dia, anotação para o dono, lacuna no Treinamento, Onda que virou
  *      marcação e aviso de urgência.
  *
@@ -61,6 +62,7 @@ export type MotivoDoSilencio =
   | "SEM_WHATSAPP"
   | "TETO_AVISADO"
   | "LIMITE_DO_DIA"
+  | "EM_PROCESSAMENTO"
   | "RAJADA";
 
 export type Plano =
@@ -84,6 +86,31 @@ const silencio = (motivo: MotivoDoSilencio): { acao: "SILENCIO"; motivo: MotivoD
 const MAX_TEXTO = 1_000;
 const MAX_TRECHO = 200;
 const DIA_MS = 86_400_000;
+const PRAZO_EXECUCAO_MS = 5 * 60_000;
+
+type ExecucaoPersistida = {
+  token: string;
+  mensagemId: string;
+  iniciadaEm: string;
+  proposta?: {
+    estado: Prisma.InputJsonValue | null;
+    mensagens: string[];
+    reserva?: { appointmentId: string | null; servico: string; inicio: string };
+  };
+};
+
+function execucaoDoEstado(estado: unknown): ExecucaoPersistida | null {
+  if (!estado || typeof estado !== "object") return null;
+  const execucao = (estado as Record<string, unknown>)._execucaoAtendente as ExecucaoPersistida | undefined;
+  return execucao && typeof execucao.token === "string" && typeof execucao.mensagemId === "string"
+    && typeof execucao.iniciadaEm === "string" && Number.isFinite(Date.parse(execucao.iniciadaEm)) ? execucao : null;
+}
+
+function estadoSemExecucao(estado: unknown): Prisma.InputJsonValue | null {
+  if (!estado || typeof estado !== "object" || Array.isArray(estado)) return null;
+  const { _execucaoAtendente: _execucao, ...restante } = estado as Record<string, Prisma.InputJsonValue>;
+  return Object.keys(restante).length ? restante : null;
+}
 
 /**
  * O que o cliente escreveu depois da última resposta — do Atendente ou da equipe
@@ -119,7 +146,7 @@ export function planejar(p: {
 }): Plano {
   if (!p.ligado) return silencio("DESLIGADO");
   // A equipe assumiu pelo painel: a conversa é dela até devolver.
-  if (p.statusDaConversa === "HUMAN") return silencio("EQUIPE_NA_CONVERSA");
+  if (p.statusDaConversa === "HUMAN" || p.statusDaConversa === "WAITING_HUMAN") return silencio("EQUIPE_NA_CONVERSA");
 
   const pendentes = semResposta(p.mensagens);
   if (pendentes.length === 0) return silencio("JA_RESPONDIDA");
@@ -183,7 +210,7 @@ export function avisoDeUrgencia(p: { cliente: string | null; telefone: string; t
   const quem = p.cliente ? `${p.cliente} (${telefoneFalado(p.telefone)})` : telefoneFalado(p.telefone);
   return (
     `Urgência no seu WhatsApp: ${quem} escreveu "${p.trecho}". ` +
-    "O Atendente orientou a procurar o 192 (ou o 188, se for risco à própria vida) e saiu da conversa. " +
+    "A mensagem foi identificada como urgente e precisa da atenção da equipe. " +
     "Fale com a pessoa assim que puder."
   );
 }
@@ -207,7 +234,7 @@ export async function atender(
   const agora = p.agora ?? new Date();
   const dia = localDe(agora).data;
 
-  const [perfil, conversa, recentes] = await Promise.all([
+  const [perfil, conversaBruta, recentes] = await Promise.all([
     prisma.companyProfile.findUnique({
       where: { companyId: p.companyId },
       select: {
@@ -230,6 +257,7 @@ export async function atender(
         customerPhone: true,
         customerName: true,
         atendenteEstado: true,
+        updatedAt: true,
       },
     }),
     prisma.message.findMany({
@@ -239,7 +267,8 @@ export async function atender(
       select: { id: true, role: true, content: true, createdAt: true },
     }),
   ]);
-  if (!perfil || !conversa) return silencio("SEM_CONVERSA");
+  if (!perfil || !conversaBruta) return silencio("SEM_CONVERSA");
+  const conversa = conversaBruta;
   // Ligado é o que passou pelo "Ligar": ele exige o teste e grava o começo da
   // semana grátis. A chave ligada por fora dele responderia de graça para
   // sempre, porque a semana nunca começaria. Desligado, nem conta nem uso são lidos.
@@ -252,6 +281,7 @@ export async function atender(
     atendimentoDoDia(conversa.id, dia),
   ]);
 
+  const execucaoAnterior = execucaoDoEstado(conversa.atendenteEstado);
   const plano = planejar({
     ligado: true,
     statusDaConversa: conversa.status,
@@ -268,28 +298,102 @@ export async function atender(
     agora,
     origem: p.origem,
   });
-  if (plano.acao === "SILENCIO" || plano.acao === "ESPERAR") return plano;
+  // Uma resposta pode ter sido salva antes de o processo finalizar o claim.
+  // Ainda há trabalho de recuperação, mesmo sem mensagem do cliente pendente.
+  if ((plano.acao === "SILENCIO" || plano.acao === "ESPERAR")
+    && !(execucaoAnterior && plano.acao === "SILENCIO" && plano.motivo === "JA_RESPONDIDA")) return plano;
 
   const instance = perfil.whatsappInstance!;
   const pendentes = semResposta(mensagens);
   const ultima = pendentes[pendentes.length - 1];
+  const mensagensDestaResposta: string[] = [];
+  let encaminhamentoPersistido = false;
+  const estadoAnterior = estadoSemExecucao(conversa.atendenteEstado);
+  let execucao: ExecucaoPersistida = execucaoAnterior ?? {
+    token: randomUUID(), mensagemId: ultima.id, iniciadaEm: agora.toISOString(),
+  };
+  let temosExecucao = false;
+  let encerrada = false;
+  const filtroDaExecucao = () => ({
+    id: conversa.id, companyId: p.companyId,
+    atendenteEstado: { path: ["_execucaoAtendente", "token"], equals: execucao.token },
+  });
+  const estadoComExecucao = () => ({
+    ...(estadoAnterior && typeof estadoAnterior === "object" ? estadoAnterior : {}),
+    _execucaoAtendente: execucao,
+  }) as unknown as Prisma.InputJsonValue;
+
+  // O prazo libera uma pendência para a equipe, nunca autoriza refazer um
+  // efeito externo cujo resultado se perdeu. A nota preserva a confirmação de
+  // reserva mesmo quando a resposta ao cliente não chegou a ser enviada.
+  async function revisarExecucao(motivo: string): Promise<boolean> {
+    const reserva = execucao.proposta?.reserva;
+    const detalhe = reserva
+      ? ` Reserva confirmada: ${reserva.servico}, ${reserva.inicio}; registro ${reserva.appointmentId ?? "não informado"}.`
+      : " Verifique a agenda e o histórico antes de reativar; o resultado da execução pode estar incompleto.";
+    const resposta = execucao.proposta?.mensagens?.length
+      ? ` Resposta preparada (entrega não confirmada): ${execucao.proposta.mensagens.join("\n\n")}` : "";
+    const revisada = await prisma.$transaction(async (tx) => {
+      const atual = await tx.conversation.findFirst({
+        where: { id: conversa.id, companyId: p.companyId }, select: { status: true, donoAssumiuEm: true },
+      });
+      if (!atual) return false;
+      const pausar = atual.status === "AI" && !atual.donoAssumiuEm;
+      const alteradas = await tx.conversation.updateMany({
+        where: { ...filtroDaExecucao(), status: atual.status, donoAssumiuEm: atual.donoAssumiuEm },
+        data: {
+          atendenteEstado: reserva ? Prisma.DbNull : estadoAnterior ?? Prisma.DbNull,
+          ...(pausar ? { status: "WAITING_HUMAN" as const, donoAssumiuEm: agora } : {}),
+        },
+      });
+      if (!alteradas.count) return false;
+      await tx.message.create({ data: { conversationId: conversa.id, role: "SYSTEM",
+        content: `Revisão necessária: ${motivo}.${detalhe}${resposta}` } });
+      return true;
+    });
+    if (revisada) encerrada = true;
+    return revisada;
+  }
+
+  async function liberarExecucao(estado: Prisma.InputJsonValue | null = estadoAnterior): Promise<void> {
+    if (!temosExecucao || encerrada) return;
+    await prisma.conversation.updateMany({ where: filtroDaExecucao(), data: { atendenteEstado: estado ?? Prisma.DbNull } });
+    encerrada = true;
+  }
+
+  if (execucaoAnterior) {
+    if (agora.getTime() - Date.parse(execucaoAnterior.iniciadaEm) < PRAZO_EXECUCAO_MS) return silencio("EM_PROCESSAMENTO");
+    await revisarExecucao("o processamento anterior excedeu cinco minutos; não foi repetido automaticamente")
+      .catch((erro) => logError("atendente-revisao", erro, p.companyId));
+    return silencio("EQUIPE_NA_CONVERSA");
+  }
+  if (plano.acao === "SILENCIO") return plano;
 
   /** Ainda é a vez do Atendente? A equipe, o dono ou uma mensagem nova podem ter chegado. */
   async function conferir(): Promise<MotivoDoSilencio | null> {
     const [atual, maisNova] = await Promise.all([
       prisma.conversation.findFirst({
         where: { id: conversa!.id, companyId: p.companyId },
-        select: { status: true, donoAssumiuEm: true },
+        select: { status: true, donoAssumiuEm: true, atendenteEstado: true },
       }),
       prisma.message.findFirst({
-        where: { conversationId: conversa!.id },
+        where: {
+          conversationId: conversa!.id,
+          role: { not: "SYSTEM" },
+          ...(mensagensDestaResposta.length ? { id: { notIn: mensagensDestaResposta } } : {}),
+        },
         orderBy: { createdAt: "desc" },
         select: { id: true, role: true },
       }),
     ]);
-    if (!atual || atual.status === "HUMAN") return "EQUIPE_NA_CONVERSA";
-    if (atual.donoAssumiuEm && agora.getTime() - atual.donoAssumiuEm.getTime() < JANELA_DO_DONO_MS) {
+    const nossoEncaminhamento = encaminhamentoPersistido && atual?.status === "WAITING_HUMAN"
+      && atual.donoAssumiuEm?.getTime() === agora.getTime();
+    if (!atual || atual.status === "HUMAN" || (atual.status === "WAITING_HUMAN" && !nossoEncaminhamento)) return "EQUIPE_NA_CONVERSA";
+    if (atual.donoAssumiuEm && !nossoEncaminhamento) {
       return "DONO_ASSUMIU";
+    }
+    if (temosExecucao && !encerrada && execucaoDoEstado(atual.atendenteEstado)?.token !== execucao.token) {
+      return "EM_PROCESSAMENTO";
     }
     if (maisNova && maisNova.id !== ultima.id) return maisNova.role === "CUSTOMER" ? "RAJADA" : "JA_RESPONDIDA";
     return null;
@@ -301,23 +405,115 @@ export async function atender(
     if (motivo) return silencio(motivo);
   }
 
+  // A posse é da mensagem, não apenas da versão que dois processos leram.
+  // Quem chega depois desta gravação também vê a execução em andamento.
+  try {
+    const adquirida = await prisma.conversation.updateMany({
+      where: { id: conversa.id, companyId: p.companyId, status: conversa.status,
+        donoAssumiuEm: conversa.donoAssumiuEm, updatedAt: conversa.updatedAt },
+      data: { atendenteEstado: estadoComExecucao(),
+        updatedAt: new Date(Math.max(Date.now(), conversa.updatedAt.getTime() + 1)) },
+    });
+    if (!adquirida.count) return silencio("EM_PROCESSAMENTO");
+    temosExecucao = true;
+  } catch (erro) {
+    // Um timeout pode ter gravado a posse. Sem confirmação, não começa o motor.
+    await logError("atendente-posse", erro, p.companyId);
+    return silencio("EM_PROCESSAMENTO");
+  }
+  const antesDePreparar = await conferir();
+  if (antesDePreparar) {
+    await liberarExecucao();
+    return silencio(antesDePreparar);
+  }
+
   const fatos = await fatosDaEmpresa(p.companyId);
   const t = textosDoJeito(fatos.jeito);
   const fechada = lojaFechada({ horarios: fatos.horarios, diasFechados: fatos.diasFechados, agora });
   const volta = fechada ? textoDaVolta(proximaAbertura(fatos.horarios, fatos.diasFechados, agora), agora) : null;
   const clienteNome = primeiroNomeDoCliente(conversa.customerName);
 
-  async function enviarESalvar(textos: string[]): Promise<void> {
+  async function enviarESalvar(textos: string[]): Promise<ResultadoDoAtendimento> {
+    let enviadas = 0;
     for (const texto of textos) {
-      await enviarWhatsApp(instance, conversa!.customerPhone, texto, { atrasoMs: atrasoDeDigitacao(texto) });
-      await prisma.message.create({ data: { conversationId: conversa!.id, role: "AI", content: texto } });
+      const motivo = await conferir();
+      if (motivo) {
+        if (execucao.proposta?.reserva || enviadas) await revisarExecucao("a conversa mudou durante uma operação ou envio");
+        else await liberarExecucao();
+        return enviadas ? { acao: "RESPONDEU", mensagens: enviadas } : silencio(motivo);
+      }
+      try {
+        const envio = await enviarWhatsApp(instance, conversa!.customerPhone, texto);
+        if (!envio.messageId) throw new Error("O canal não confirmou o identificador do envio; resultado desconhecido");
+        enviadas += 1;
+        const salva = await prisma.message.create({ data: { conversationId: conversa!.id, role: "AI", content: texto } });
+        if (salva?.id) mensagensDestaResposta.push(salva.id);
+      } catch (erro) {
+        await revisarExecucao("não foi possível confirmar envio e registro da resposta; não reenviar automaticamente")
+          .catch((falha) => logError("atendente-revisao-envio", falha, p.companyId));
+        throw erro;
+      }
     }
+    // Só um envio confirmado pelo canal e salvo torna uma oferta visível ao próximo
+    // turno. O token impede sobrescrever a execução de outra mensagem.
+    await liberarExecucao(execucao.proposta ? execucao.proposta.estado : estadoAnterior)
+      .catch(async (erro) => {
+        await logError("atendente-finalizacao", erro, p.companyId);
+        await revisarExecucao("a resposta saiu, mas não foi possível finalizar o estado da conversa")
+          .catch((falha) => logError("atendente-revisao", falha, p.companyId));
+      });
+    return { acao: "RESPONDEU", mensagens: enviadas };
   }
 
-  async function anotarNaConversa(motivo: string): Promise<void> {
-    await prisma.message.create({
-      data: { conversationId: conversa!.id, role: "SYSTEM", content: `Anotado para você: ${motivo}` },
+  class AtendimentoInterrompido extends Error {}
+
+  // Uma anotação e o encaminhamento são persistidos juntos. Não se confirma
+  // uma ação que só existiu no texto do motor, e um dono que assumiu no caminho
+  // não pode ter seu estado sobrescrito pela resposta que estava em preparação.
+  async function persistir(estado: Prisma.InputJsonValue | typeof Prisma.DbNull, motivo?: string, equipe = false,
+    mensagens: string[] = [], reserva?: SaidaDoMotor["marcou"]) {
+    execucao = { ...execucao, proposta: {
+      estado: estado === Prisma.DbNull ? null : estado as Prisma.InputJsonValue,
+      mensagens,
+      ...(reserva ? { reserva: { appointmentId: reserva.appointmentId,
+        servico: reserva.servico, inicio: reserva.inicio.toISOString() } } : {}),
+    } };
+    await prisma.$transaction(async (tx) => {
+      const alteradas = await tx.conversation.updateMany({
+        where: {
+          ...filtroDaExecucao(),
+          status: conversa!.status,
+          donoAssumiuEm: conversa!.donoAssumiuEm,
+        },
+        data: {
+          atendenteEstado: estadoComExecucao(),
+          ...(equipe ? { status: "WAITING_HUMAN" as const, donoAssumiuEm: agora } : {}),
+        },
+      });
+      if (!alteradas.count) throw new AtendimentoInterrompido();
+      if (motivo) await tx.message.create({
+        data: { conversationId: conversa!.id, role: "SYSTEM", content: `Anotado para você: ${motivo}` },
+      });
     });
+    encaminhamentoPersistido = equipe;
+  }
+
+  async function tratarFalhaDeRegistro(erro: unknown, equipe: boolean, mensagensIndependentes: string[] = []): Promise<ResultadoDoAtendimento> {
+    if (erro instanceof AtendimentoInterrompido) {
+      await liberarExecucao();
+      return silencio("EQUIPE_NA_CONVERSA");
+    }
+    await logError("atendente-registro", erro, p.companyId);
+    const aviso = equipe
+      ? "Não consegui confirmar o encaminhamento para a equipe agora. Seu pedido continua nesta conversa, mas não tenho confirmação de que alguém foi avisado."
+      : "Não consegui confirmar o registro desta etapa. Sua mensagem continua nesta conversa.";
+    const revisada = await revisarExecucao("não foi possível confirmar o registro desta etapa")
+      .catch(async (falha) => { await logError("atendente-revisao", falha, p.companyId); return false; });
+    if (!revisada) return silencio("EQUIPE_NA_CONVERSA");
+    // A pendência ficou visível e bloqueada. A própria confirmação pode sair,
+    // desde que a equipe ainda não tenha assumido nem chegue nova mensagem.
+    encaminhamentoPersistido = true;
+    return enviarESalvar([[...mensagensIndependentes, aviso].join("\n\n")]);
   }
 
   const registro = (r: Omit<RegistroDeAtendimento, "companyId" | "conversationId" | "dia" | "clienteNome" | "clienteTelefone" | "foraDoHorario">) =>
@@ -329,23 +525,31 @@ export async function atender(
       clienteNome,
       clienteTelefone: conversa.customerPhone,
       ...r,
-    });
+    }).catch((erro) => logError("atendente-uso", erro, p.companyId));
 
   if (plano.acao === "AVISO_DO_TETO") {
     const motivo = `Chegou depois das ${TETO_CONVERSAS_MES} conversas do mês: responda por você`;
-    await enviarESalvar([t.teto({ apresentacao: apresentacao({ nome: fatos.nome, empresa: fatos.empresa }), volta })]);
+    const impedimento = await conferir();
+    if (impedimento) { await liberarExecucao(); return silencio(impedimento); }
+    const textos = [t.teto({ apresentacao: apresentacao({ nome: fatos.nome, empresa: fatos.empresa }), volta })];
+    try { await persistir(Prisma.DbNull, motivo, true, textos); }
+    catch (erro) { return tratarFalhaDeRegistro(erro, true); }
+    const envio = await enviarESalvar(textos);
     // Zero respostas: o aviso não conta como conversa do mês, mas marca o dia.
     await registro({ respostas: 0, precisaDoDono: true, motivo });
-    await anotarNaConversa(motivo);
-    return { acao: "RESPONDEU", mensagens: 1 };
+    return envio;
   }
 
   if (plano.acao === "AVISO_DO_LIMITE") {
     const motivo = "Conversa longa: continue por você";
-    await enviarESalvar([t.limiteDoDia(volta)]);
-    await registro({ respostas: 1, precisaDoDono: true, motivo });
-    await anotarNaConversa(motivo);
-    return { acao: "RESPONDEU", mensagens: 1 };
+    const impedimento = await conferir();
+    if (impedimento) { await liberarExecucao(); return silencio(impedimento); }
+    const textos = [t.limiteDoDia(volta)];
+    try { await persistir(Prisma.DbNull, motivo, true, textos); }
+    catch (erro) { return tratarFalhaDeRegistro(erro, true); }
+    const envio = await enviarESalvar(textos);
+    await registro({ respostas: envio.acao === "RESPONDEU" ? 1 : 0, precisaDoDono: true, motivo });
+    return envio;
   }
 
   const nomeDaAgenda = nomeParaAgenda(conversa.customerName);
@@ -381,53 +585,74 @@ export async function atender(
           profissional: q.profissional,
           cliente: { nome: nomeDaAgenda ?? q.cliente.nome, telefone: q.cliente.telefone },
           origem: "ATENDENTE",
+          chaveOperacao: `${p.companyId}:${conversa.id}:${ultima.id}`,
           agora,
         }),
       ia: ({ systemPrompt, historico }) => generateReceptionistReply({ systemPrompt, history: historico }),
     },
   );
 
-  // Com a marcação feita, a confirmação sai de qualquer jeito: o cliente
-  // precisa saber que o horário é dele.
-  if (!saida.marcou) {
-    const motivo = await conferir();
-    if (motivo) return silencio(motivo);
+  execucao = { ...execucao, proposta: {
+    estado: saida.estado ? saida.estado as Prisma.InputJsonValue : null,
+    mensagens: saida.mensagens,
+    ...(saida.marcou ? { reserva: { appointmentId: saida.marcou.appointmentId,
+      servico: saida.marcou.servico, inicio: saida.marcou.inicio.toISOString() } } : {}),
+  } };
+
+  // Uma reserva confirmada permanece na agenda se o dono assumiu no caminho.
+  // Sua confirmação automática também respeita a intervenção humana.
+  let impedimento = await conferir();
+  let registroPersistido = false;
+  if (!impedimento) {
+    try {
+      await persistir(saida.estado ? (saida.estado as Prisma.InputJsonValue) : Prisma.DbNull,
+        saida.anotar?.motivo, Boolean(saida.equipe), saida.mensagens, saida.marcou);
+      registroPersistido = true;
+    } catch (erro) {
+      if (!saida.marcou) return tratarFalhaDeRegistro(erro, Boolean(saida.equipe),
+        saida.urgente || (saida.equipe && saida.estado?.tipo === "HORARIO") ? saida.mensagens : []);
+      // A confirmação da agenda continua válida mesmo que o acompanhamento
+      // da conversa falhe. Nunca se descreve essa reserva como não concluída.
+      if (erro instanceof AtendimentoInterrompido) impedimento = "EQUIPE_NA_CONVERSA";
+      else {
+        await logError("atendente-registro-apos-reserva", erro, p.companyId);
+        const revisada = await revisarExecucao("a reserva foi confirmada, mas o acompanhamento da conversa falhou")
+          .catch(async (falha) => { await logError("atendente-revisao", falha, p.companyId); return false; });
+        if (revisada) encaminhamentoPersistido = true;
+        else impedimento = "EQUIPE_NA_CONVERSA";
+      }
+    }
+  }
+  if (impedimento) {
+    if (saida.marcou || (saida.equipe && saida.estado?.tipo === "HORARIO")) {
+      await revisarExecucao("a conversa mudou durante a reserva; conferir o resultado antes de responder");
+    } else await liberarExecucao();
+    if (!saida.marcou) return silencio(impedimento);
   }
 
-  await enviarESalvar(saida.mensagens);
-
-  await prisma.conversation.update({
-    where: { id: conversa.id },
-    data: {
-      atendenteEstado: saida.estado ? (saida.estado as Prisma.InputJsonValue) : Prisma.DbNull,
-      // Pessoa, reclamação ou urgência: a conversa passa para a equipe, e o
-      // Atendente fica fora dela pelas mesmas 12 horas de quando o dono
-      // responde pelo celular. "Reativar" no painel devolve na hora.
-      ...(saida.equipe ? { status: "WAITING_HUMAN" as const, donoAssumiuEm: agora } : {}),
-    },
-  });
+  const envio = impedimento ? silencio(impedimento) : await enviarESalvar(saida.mensagens);
 
   await registro({
-    respostas: 1,
-    marcados: saida.marcou ? 1 : 0,
-    valorMarcadoCents: saida.marcou?.valorCents ?? 0,
-    precisaDoDono: Boolean(saida.anotar),
+    respostas: envio.acao === "RESPONDEU" ? 1 : 0,
+    marcados: saida.marcou && !saida.marcou.reutilizada ? 1 : 0,
+    valorMarcadoCents: saida.marcou && !saida.marcou.reutilizada ? saida.marcou.valorCents : 0,
+    precisaDoDono: Boolean(saida.anotar) || Boolean(impedimento && saida.marcou),
     motivo: saida.anotar?.motivo,
     urgente: saida.urgente,
   });
 
-  if (saida.anotar) {
-    await anotarNaConversa(saida.anotar.motivo);
+  if (saida.anotar && registroPersistido && !impedimento) {
     // Só pergunta vira lacuna: pedido de pessoa ou reclamação não é falta de conhecimento.
     if (saida.anotar.pergunta) {
-      await recordKnowledgeGap(p.companyId, saida.anotar.pergunta, saida.anotar.motivo);
+      await recordKnowledgeGap(p.companyId, saida.anotar.pergunta, saida.anotar.motivo)
+        .catch((erro) => logError("atendente-lacuna", erro, p.companyId));
       await consultarDonoSobreDuvida({
         companyId: p.companyId,
         instance,
         pergunta: saida.anotar.pergunta,
         cliente: clienteNome,
         telefone: conversa.customerPhone,
-      });
+      }).catch((erro) => logError("atendente-consultar-dono", erro, p.companyId));
     }
   }
 
@@ -442,7 +667,7 @@ export async function atender(
           sentAt: { gte: new Date(agora.getTime() - JANELA_DIAS * DIA_MS) },
         },
         data: { outcome: "MARCOU", outcomeAt: agora },
-      });
+      }).catch((erro) => logError("atendente-atribuicao", erro, p.companyId));
     }
     await prisma.lead.upsert({
       where: { conversationId: conversa.id },
@@ -454,7 +679,7 @@ export async function atender(
         interest: saida.marcou.servico,
       },
       update: { interest: saida.marcou.servico, ...(nomeDaAgenda ? { name: nomeDaAgenda } : {}) },
-    });
+    }).catch((erro) => logError("atendente-lead", erro, p.companyId));
   }
 
   if (saida.urgente) {
@@ -465,10 +690,10 @@ export async function atender(
       cliente: clienteNome,
       telefone: conversa.customerPhone,
       trecho: plano.texto.replace(/\s+/g, " ").slice(0, MAX_TRECHO),
-    });
+    }).catch((erro) => logError("atendente-urgencia", erro, p.companyId));
   }
 
-  return { acao: "RESPONDEU", mensagens: saida.mensagens.length };
+  return envio;
 }
 
 /**

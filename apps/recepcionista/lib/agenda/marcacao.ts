@@ -38,6 +38,8 @@ export type PedidoDeMarcacao = {
   profissional: string | null;
   cliente: { nome: string; telefone: string };
   origem: "LINK" | "ATENDENTE";
+  /** Identidade estável da solicitação; o retry reutiliza a reserva confirmada. */
+  chaveOperacao?: string;
   simulacao?: boolean;
   agora?: Date;
 };
@@ -50,10 +52,13 @@ export type ResultadoDaMarcacao =
       fim: Date;
       appointmentId: string | null;
       clienteId: string | null;
+      /** A reserva já existia antes desta tentativa; não contar como nova. */
+      reutilizada?: boolean;
     }
-  | { ok: false; motivo: "OCUPADO" };
+  | { ok: false; motivo: "OCUPADO" | "RESULTADO_DESCONHECIDO" };
 
 const OCUPADO: ResultadoDaMarcacao = { ok: false, motivo: "OCUPADO" };
+const DESCONHECIDO: ResultadoDaMarcacao = { ok: false, motivo: "RESULTADO_DESCONHECIDO" };
 
 /** Sinaliza, de dentro da transação, que o horário foi ocupado no caminho. */
 class HorarioOcupado extends Error {}
@@ -66,12 +71,50 @@ export async function marcarNaAgenda(p: PedidoDeMarcacao): Promise<ResultadoDaMa
   const hora = formatarHoraLocal(p.inicio);
   const diaData = new Date(`${dia}T00:00:00.000Z`);
   const fim = new Date(p.inicio.getTime() + p.servico.duracaoMin * 60_000);
+  let criadaNestaTentativa = false;
+  const operacao = p.origem === "ATENDENTE" && p.chaveOperacao ? {
+    chave: p.chaveOperacao,
+    servicoId: p.servico.id,
+    servicoNome: p.servico.nome,
+    duracaoMin: p.servico.duracaoMin,
+    inicio: p.inicio.toISOString(),
+    profissionalSolicitado: p.profissional,
+    telefone: p.cliente.telefone.replace(/\D/g, ""),
+  } : null;
+
+  async function recuperar(db: Leitor): Promise<ResultadoDaMarcacao | null> {
+    if (!operacao) return null;
+    // A chave é gravada com a reserva, na mesma transação serializável. A
+    // consulta inclui canceladas: um retry não pode ressuscitar uma reserva.
+    const anterior = await db.appointment.findFirst({
+      where: {
+        companyId: p.companyId,
+        source: "ATENDENTE",
+        notes: { contains: JSON.stringify({ chave: operacao.chave }).slice(1, -1) },
+      },
+      select: { id: true, customerId: true, serviceId: true, startsAt: true, endsAt: true, notes: true, status: true },
+    });
+    if (!anterior) return null;
+    try {
+      const dados = JSON.parse(anterior.notes ?? "{}");
+      const salva = dados._nexoraMarcacao;
+      const mesmaOperacao = salva && Object.entries(operacao).every(([k, v]) => salva[k] === v);
+      if (!mesmaOperacao || !["MARCADO", "CONFIRMADO"].includes(anterior.status)
+        || anterior.serviceId !== p.servico.id || anterior.startsAt.getTime() !== p.inicio.getTime()
+        || anterior.endsAt.getTime() !== fim.getTime() || typeof dados.profissional !== "string") return DESCONHECIDO;
+      if (p.profissional && dados.profissional.trim().toLowerCase() !== p.profissional.trim().toLowerCase()) return DESCONHECIDO;
+      return { ok: true, profissional: dados.profissional, inicio: anterior.startsAt, fim: anterior.endsAt,
+        appointmentId: anterior.id, clienteId: anterior.customerId, reutilizada: true };
+    } catch {
+      return DESCONHECIDO;
+    }
+  }
 
   const perfil = await prisma.companyProfile.findUnique({
     where: { companyId: p.companyId },
     select: { businessHours: true, diasFechados: true },
   });
-  if (lerDiasFechados(perfil?.diasFechados).includes(dia)) return OCUPADO;
+  const diaFechado = lerDiasFechados(perfil?.diasFechados).includes(dia);
   const horarios = horarioDaEmpresa(perfil?.businessHours);
 
   /** O profissional que fica com o horário, ou null se ninguém pode. */
@@ -118,6 +161,7 @@ export async function marcarNaAgenda(p: PedidoDeMarcacao): Promise<ResultadoDaMa
   }
 
   if (p.simulacao) {
+    if (diaFechado) return OCUPADO;
     const profissional = await quemAtende(prisma);
     return profissional
       ? { ok: true, profissional, inicio: p.inicio, fim, appointmentId: null, clienteId: null }
@@ -125,8 +169,11 @@ export async function marcarNaAgenda(p: PedidoDeMarcacao): Promise<ResultadoDaMa
   }
 
   try {
-    const criado = await prisma.$transaction(
+    return await prisma.$transaction(
       async (tx) => {
+        const anterior = await recuperar(tx);
+        if (anterior) return anterior;
+        if (diaFechado) return OCUPADO;
         const profissional = await quemAtende(tx);
         if (!profissional) throw new HorarioOcupado();
 
@@ -164,21 +211,33 @@ export async function marcarNaAgenda(p: PedidoDeMarcacao): Promise<ResultadoDaMa
             startsAt: p.inicio,
             endsAt: fim,
             source: p.origem,
-            notes: JSON.stringify({ profissional, servicoNome: p.servico.nome }),
+            notes: JSON.stringify({ profissional, servicoNome: p.servico.nome, ...(operacao ? { _nexoraMarcacao: operacao } : {}) }),
           },
           select: { id: true },
         });
+        criadaNestaTentativa = true;
 
-        return { profissional, appointmentId: agendamento.id, clienteId: cliente.id };
+        return { ok: true as const, inicio: p.inicio, fim, profissional, appointmentId: agendamento.id, clienteId: cliente.id };
       },
       { isolationLevel: "Serializable" },
     );
-
-    return { ok: true, inicio: p.inicio, fim, ...criado };
   } catch (erro) {
+    // Uma resposta perdida não prova rollback. Procura a identidade persistida
+    // antes de anunciar qualquer resultado; uma falha de consulta mantém dúvida.
+    if (operacao) {
+      try {
+        const anterior = await recuperar(prisma);
+        if (anterior) return anterior.ok
+          ? { ...anterior, reutilizada: !criadaNestaTentativa || ehConflitoDeConcorrencia(erro) }
+          : anterior;
+      } catch {
+        return DESCONHECIDO;
+      }
+    }
     // Perder a corrida não é falha do sistema: é o horário ter acabado de ser
     // ocupado — que é o que quem pediu precisa ler, e não um erro.
     if (erro instanceof HorarioOcupado || ehConflitoDeConcorrencia(erro)) return OCUPADO;
+    if (p.origem === "ATENDENTE") return DESCONHECIDO;
     throw erro;
   }
 }

@@ -61,9 +61,69 @@ describe("parseWebhookPayload", () => {
     expect(parseWebhookPayload({ ...basePayload(), event: "connection.update" })).toBeNull();
   });
 
-  it("ignora mensagens sem texto (mídia)", () => {
-    const payload = basePayload({ message: { imageMessage: { url: "..." } } });
-    expect(parseWebhookPayload(payload)).toBeNull();
+  it.each([
+    ["audioMessage", "áudio"], ["imageMessage", "imagem"], ["documentMessage", "documento"],
+    ["videoMessage", "vídeo"], ["stickerMessage", "figurinha"],
+  ])("registra %s como mídia não interpretada", (campo, rotulo) => {
+    const payload = basePayload({ message: { [campo]: { url: "https://arquivo.example/privado", fileName: "diagnóstico inventado.pdf" } } });
+    const recebida = parseWebhookPayload(payload);
+    expect(recebida?.text).toBe(`[Mídia recebida: ${rotulo}; conteúdo não interpretado]`);
+    expect(recebida?.messageId).toBe("MSG123");
+    expect(recebida?.text).not.toMatch(/https:|diagnóstico/i);
+  });
+
+  it("preserva legenda escrita sem confundi-la com leitura da imagem", () => {
+    const recebida = parseWebhookPayload(basePayload({
+      message: { imageMessage: { caption: " Quero falar com uma pessoa ", url: "https://arquivo.example" } },
+    }));
+    expect(recebida?.text).toBe("[Mídia recebida: imagem; conteúdo não interpretado]\nQuero falar com uma pessoa");
+  });
+
+  it("normaliza documento com legenda e áudio em mensagem temporária", () => {
+    const documento = parseWebhookPayload(basePayload({ message: {
+      documentWithCaptionMessage: { message: { documentMessage: { caption: "Segue o comprovante" } } },
+    } }));
+    expect(documento?.text).toBe("[Mídia recebida: documento; conteúdo não interpretado]\nSegue o comprovante");
+    const audio = parseWebhookPayload(basePayload({ message: {
+      ephemeralMessage: { message: { viewOnceMessageV2: { message: { audioMessage: { seconds: 12 } } } } },
+    } }));
+    expect(audio?.text).toBe("[Mídia recebida: áudio; conteúdo não interpretado]");
+  });
+
+  it("limita a legenda longa sem cortar o aviso de conteúdo não interpretado", () => {
+    const recebida = parseWebhookPayload(basePayload({ message: {
+      imageMessage: { caption: "a".repeat(6000) },
+    } }));
+    expect(recebida?.text).toHaveLength(4000);
+    expect(recebida?.text).toMatch(/^\[Mídia recebida: imagem; conteúdo não interpretado\]\na+$/);
+  });
+
+  it("não transforma metadados e legendas inválidas em descrição do arquivo", () => {
+    const recebida = parseWebhookPayload(basePayload({ message: {
+      documentMessage: { caption: { text: "pago" }, fileName: "pago.pdf", title: "Pagamento confirmado" },
+    } }));
+    expect(recebida?.text).toBe("[Mídia recebida: documento; conteúdo não interpretado]");
+  });
+
+  it("encerra envelopes excessivamente aninhados sem inventar conteúdo", () => {
+    let message: Record<string, unknown> = { audioMessage: { seconds: 12 } };
+    for (let i = 0; i < 5; i++) message = { ephemeralMessage: { message } };
+    expect(parseWebhookPayload(basePayload({ message }))).toBeNull();
+  });
+
+  it("ignora reação, evento de protocolo e objeto de mídia inválido", () => {
+    for (const message of [{ reactionMessage: { text: "👍" } }, { protocolMessage: { type: 0 } }, { audioMessage: "inválido" }]) {
+      expect(parseWebhookPayload(basePayload({ message }))).toBeNull();
+    }
+  });
+
+  it("mídia continua respeitando grupos e remetente dono", () => {
+    for (const key of [
+      { remoteJid: "123456789@g.us", fromMe: false, id: "X" },
+      { remoteJid: "5511999998888@s.whatsapp.net", fromMe: true, id: "X" },
+    ]) {
+      expect(parseWebhookPayload(basePayload({ key, message: { audioMessage: { seconds: 12 } } }))).toBeNull();
+    }
   });
 
   it("trunca mensagens muito longas em 4000 caracteres", () => {

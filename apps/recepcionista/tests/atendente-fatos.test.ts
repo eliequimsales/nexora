@@ -89,6 +89,27 @@ describe("fatosDaEmpresa", () => {
     delete process.env.APP_URL;
     expect((await fatosDaEmpresa("c1")).linkAgenda).toBeNull();
   });
+
+  it("serviços sugeridos não revisados ficam fora da fonte de respostas", async () => {
+    await fatosDaEmpresa("c1");
+    expect(db.service.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { companyId: "c1", active: true, suggested: false },
+    }));
+    expect(db.service.updateMany).not.toHaveBeenCalled();
+  });
+
+  it.each([[], null, [{ day: 2, open: "99:00", close: "18:00" }]])("horário ausente ou inválido não vira horário padrão: %j", async (businessHours) => {
+    db.company.findUnique.mockResolvedValue({ name: "Loja", profile: { ...PERFIL, businessHours } });
+    const f = await fatosDaEmpresa("c1");
+    expect(f.horarios).toEqual([]);
+    expect(f.linkAgenda).toBeNull();
+    expect(textoDosFatos(f)).toContain("Horário de funcionamento: não cadastrado.");
+  });
+
+  it("não sugere link de agenda quando não há serviço confirmado", async () => {
+    db.service.findMany.mockResolvedValue([]);
+    expect((await fatosDaEmpresa("c1")).linkAgenda).toBeNull();
+  });
 });
 
 describe("textoDosFatos — o que a IA recebe e o verificador confere", () => {

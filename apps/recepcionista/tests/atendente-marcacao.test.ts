@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // callback com o mesmo objeto.
 vi.mock("@/lib/db", () => {
   const db: Record<string, unknown> = {
-    appointment: { findMany: vi.fn(), create: vi.fn() },
+    appointment: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn() },
     customer: { findFirst: vi.fn(), create: vi.fn() },
     supressao: { count: vi.fn() },
     companyProfile: { findUnique: vi.fn(), update: vi.fn() },
@@ -30,7 +30,7 @@ import { marcarNaAgenda } from "@/lib/agenda/marcacao";
 
 type Fn = ReturnType<typeof vi.fn>;
 const db = prisma as unknown as {
-  appointment: { findMany: Fn; create: Fn };
+  appointment: { findMany: Fn; findFirst: Fn; create: Fn };
   customer: { findFirst: Fn; create: Fn };
   supressao: { count: Fn };
   companyProfile: { findUnique: Fn; update: Fn };
@@ -71,6 +71,8 @@ describe("marcarNaAgenda", () => {
     vi.clearAllMocks();
     db.companyProfile.findUnique.mockResolvedValue({ businessHours: HORARIOS, diasFechados: [], serviceRules: EQUIPE });
     db.appointment.findMany.mockResolvedValue([]);
+    db.appointment.findFirst.mockResolvedValue(null);
+    db.$transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => cb(db));
     db.customer.findFirst.mockResolvedValue(null);
     db.customer.create.mockResolvedValue({ id: "cli1" });
     db.supressao.count.mockResolvedValue(0);
@@ -142,6 +144,76 @@ describe("marcarNaAgenda", () => {
     expect(db.$transaction).not.toHaveBeenCalled();
     expect(db.appointment.create).not.toHaveBeenCalled();
     expect(db.customer.create).not.toHaveBeenCalled();
+  });
+
+  it("retry da mesma solicitação devolve a reserva existente sem criar outra", async () => {
+    let persistida: Record<string, unknown> | null = null;
+    db.appointment.findFirst.mockImplementation(async () => persistida);
+    db.appointment.create.mockImplementation(async ({ data }) => {
+      persistida = { ...data, id: "ag-idempotente", status: "MARCADO" };
+      return { id: "ag-idempotente" };
+    });
+    const p = pedido({ chaveOperacao: "c1:conv1:m2" });
+    const primeira = await marcarNaAgenda(p);
+    expect(await marcarNaAgenda(p)).toEqual({ ...primeira, reutilizada: true });
+    expect(db.appointment.create).toHaveBeenCalledTimes(1);
+    expect(db.appointment.findMany).toHaveBeenCalledTimes(1);
+    expect(db.appointment.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ companyId: "c1", source: "ATENDENTE" }),
+    }));
+  });
+
+  it("resposta da transação perdida: recupera a reserva persistida pela chave", async () => {
+    let persistida: Record<string, unknown> | null = null;
+    db.appointment.findFirst.mockImplementation(async () => persistida);
+    db.appointment.create.mockImplementation(async ({ data }) => {
+      persistida = { ...data, id: "ag-commit", status: "MARCADO" };
+      return { id: "ag-commit" };
+    });
+    db.$transaction.mockImplementationOnce(async (cb) => {
+      await cb(db);
+      throw new Error("connection lost after commit");
+    });
+    expect(await marcarNaAgenda(pedido({ chaveOperacao: "c1:conv1:m2" })))
+      .toMatchObject({ ok: true, appointmentId: "ag-commit", reutilizada: false });
+    expect(db.appointment.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("timeout sem confirmação é desconhecido, e um retry usa a mesma identidade", async () => {
+    db.$transaction.mockRejectedValueOnce(new Error("timeout"));
+    const p = pedido({ chaveOperacao: "c1:conv1:m2" });
+    expect(await marcarNaAgenda(p)).toEqual({ ok: false, motivo: "RESULTADO_DESCONHECIDO" });
+    expect(db.appointment.create).not.toHaveBeenCalled();
+    expect(await marcarNaAgenda(p)).toMatchObject({ ok: true });
+    expect(db.appointment.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("falha ao consultar o resultado não é tratada como horário ocupado", async () => {
+    db.$transaction.mockRejectedValueOnce(new Error("timeout"));
+    db.appointment.findFirst.mockRejectedValueOnce(new Error("banco indisponível"));
+    expect(await marcarNaAgenda(pedido({ chaveOperacao: "c1:conv1:m2" })))
+      .toEqual({ ok: false, motivo: "RESULTADO_DESCONHECIDO" });
+  });
+
+  it("a chave não pode confirmar uma reserva de serviço diferente nem recriar cancelada", async () => {
+    let persistida: Record<string, unknown> | null = null;
+    db.appointment.findFirst.mockImplementation(async () => persistida);
+    db.appointment.create.mockImplementation(async ({ data }) => {
+      persistida = { ...data, id: "ag1", status: "MARCADO" };
+      return { id: "ag1" };
+    });
+    const p = pedido({ chaveOperacao: "c1:conv1:m2" });
+    await marcarNaAgenda(p);
+    expect(await marcarNaAgenda({ ...p, servico: { ...p.servico, nome: "Barba", id: "s2" } }))
+      .toEqual({ ok: false, motivo: "RESULTADO_DESCONHECIDO" });
+    persistida = { ...persistida!, status: "CANCELADO" };
+    expect(await marcarNaAgenda(p)).toEqual({ ok: false, motivo: "RESULTADO_DESCONHECIDO" });
+    expect(db.appointment.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("falha na página pública mantém o contrato de erro existente", async () => {
+    db.$transaction.mockRejectedValueOnce(new Error("timeout"));
+    await expect(marcarNaAgenda(pedido({ origem: "LINK" }))).rejects.toThrow("timeout");
   });
 });
 

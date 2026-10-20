@@ -46,6 +46,18 @@ describe("parseReceptionistReply", () => {
     expect(() => parseReceptionistReply("desculpe, não entendi")).toThrow();
   });
 
+  it("preserva seleção de fontes sem transformar texto livre em prova", () => {
+    const reply = parseReceptionistReply(JSON.stringify({ resposta: "interpretação interna",
+      transferir_humano: false, fontes_ids: ["servico:s1:preco"], duvida_pendente: "true" }));
+    expect(reply.fontes_ids).toEqual(["servico:s1:preco"]);
+    expect(reply.duvida_pendente).toBe(true);
+  });
+
+  it.each([[1], [""], Array(13).fill("faq:0")])("rejeita seleção de fontes malformada: %j", (fontes_ids) => {
+    expect(() => parseReceptionistReply(JSON.stringify({ resposta: "interpretação",
+      transferir_humano: false, fontes_ids, duvida_pendente: false }))).toThrow();
+  });
+
   it("rejeita JSON sem o campo resposta", () => {
     expect(() => parseReceptionistReply('{"transferir_humano":false}')).toThrow();
   });

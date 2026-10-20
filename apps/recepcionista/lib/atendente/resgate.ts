@@ -49,9 +49,9 @@ export function pendentesParaResgate(candidatas: Candidata[], p: { agora: Date; 
   const minimo = p.fechada ? CARENCIA_DO_RESGATE_MS : MINUTOS_SEM_RESPOSTA * 60_000;
   return candidatas
     .filter((c) => {
-      if (c.status === "HUMAN" || c.ultimaRole !== "CUSTOMER" || !c.ultimaDoClienteEm) return false;
+      if (c.status === "HUMAN" || c.status === "WAITING_HUMAN" || c.ultimaRole !== "CUSTOMER" || !c.ultimaDoClienteEm) return false;
       // O dono respondeu pelo celular depois da mensagem: a conversa é dele.
-      if (c.donoAssumiuEm && c.donoAssumiuEm.getTime() >= c.ultimaDoClienteEm.getTime()) return false;
+      if (c.donoAssumiuEm) return false;
       const idade = p.agora.getTime() - c.ultimaDoClienteEm.getTime();
       return idade >= minimo && idade <= IDADE_MAXIMA_DO_RESGATE_MS;
     })

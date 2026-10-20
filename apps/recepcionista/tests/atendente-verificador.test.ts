@@ -85,10 +85,28 @@ describe("montarPrompt — as instruções da IA do Atendente", () => {
     expect(prompt).toMatch(/orientação médica/i);
   });
 
-  it("orienta dúvidas conceituais com consenso geral e convite para avaliação", () => {
-    expect(prompt).toMatch(/conhecimentos gerais e dúvidas conceituais/i);
-    expect(prompt).toMatch(/avaliação ou visita/i);
-    expect(prompt).toMatch(/horários livres/i);
+  it("dúvidas conceituais exigem fonte autorizada sem convite compulsório", () => {
+    expect(prompt).toMatch(/Dúvidas conceituais e sobre procedimentos também exigem informação autorizada/i);
+    expect(prompt).toMatch(/Não acrescente convites de agendamento automaticamente/i);
+    expect(prompt).not.toMatch(/consenso geral|Sempre termine convidando/i);
+  });
+
+  it("seleciona IDs de fatos sem permitir que a resposta livre vire mensagem ao cliente", () => {
+    expect(prompt).toContain("fontes_ids");
+    expect(prompt).toContain("duvida_pendente=true");
+    expect(prompt).toContain("fontes_ids=[]");
+    expect(prompt).toContain("nunca esse texto livre");
+    expect(prompt).toMatch(/preço válido para outro serviço não responde/i);
+    expect(prompt).toMatch(/ausência de um serviço ou regra no catálogo não significa/i);
+  });
+
+  it("distingue contexto, dúvida e solicitação de intervenção sem afirmar execução", () => {
+    expect(prompt).toMatch(/correção explícita mais recente/i);
+    expect(prompt).toMatch(/todas as perguntas da mensagem/i);
+    expect(prompt).toMatch(/Não peça que o cliente repita/i);
+    expect(prompt).toMatch(/não obriga transferir toda a conversa/i);
+    expect(prompt).toMatch(/registro persistido, notificação enviada e ação concluída/i);
+    expect(prompt).toMatch(/Timeout pode significar resultado desconhecido/i);
   });
 
   it("cada jeito orienta a escrita de um modo", () => {
@@ -104,5 +122,7 @@ describe("montarPrompt — as instruções da IA do Atendente", () => {
     expect(direto).not.toEqual(prompt);
     expect(direto).toContain("ABERTA");
     expect(direto).toContain("atendimento virtual");
+    expect(direto).not.toMatch(/equipe está ocupada|equipe está na correria/i);
+    expect(direto).toMatch(/não informa o que a equipe está fazendo/i);
   });
 });

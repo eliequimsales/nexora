@@ -66,7 +66,7 @@ export default function PaginaDoAtendente() {
     };
   }, []);
 
-  async function ajustar(dados: Record<string, unknown>) {
+  async function ajustar(dados: Record<string, unknown>): Promise<boolean> {
     setErro("");
     try {
       const r = await fetch("/api/atendente", {
@@ -77,14 +77,16 @@ export default function PaginaDoAtendente() {
       const j = await r.json().catch(() => null);
       if (!r.ok || !j) {
         setErro(j?.error ?? "Não consegui salvar agora. Tente de novo.");
-        return;
+        return false;
       }
       setTela(j);
       setSalvo(true);
       clearTimeout(esperaDoSalvo.current);
       esperaDoSalvo.current = setTimeout(() => setSalvo(false), 1500);
+      return true;
     } catch {
       setErro("Sem conexão agora. Tente de novo.");
+      return false;
     }
   }
 
@@ -215,7 +217,7 @@ export default function PaginaDoAtendente() {
             setTestado(true);
             void recarregar();
           }}
-          aoAjustar={(dados) => void ajustar(dados)}
+          aoAjustar={ajustar}
           aoMudarNome={mudarNome}
           aoMudarJeito={mudarJeito}
           aoAtualizarTela={recarregar}

@@ -74,7 +74,7 @@ export function Celular({
   nome: string;
   jeito: Jeito;
   aoTestar: () => void;
-  aoAjustar?: (dados: Record<string, unknown>) => void;
+  aoAjustar?: (dados: Record<string, unknown>) => Promise<boolean>;
   aoMudarNome?: (novo: string) => void;
   aoMudarJeito?: (novo: Jeito) => void;
   aoAtualizarTela?: () => void;
@@ -181,11 +181,14 @@ export function Celular({
   }, [mensagensExibidas.length, digitando, modoChat, abaAtiva, ajustandoIdx]);
 
   // Salvar ajustes no servidor
-  async function executarAjuste(dados: Record<string, unknown>) {
+  async function executarAjuste(dados: Record<string, unknown>): Promise<boolean> {
     setErro("");
     try {
       if (aoAjustar) {
-        await aoAjustar(dados);
+        if (!(await aoAjustar(dados))) {
+          setErro("Não consegui confirmar o salvamento. Tente de novo.");
+          return false;
+        }
       } else {
         const r = await fetch("/api/atendente", {
           method: "PUT",
@@ -195,14 +198,16 @@ export function Celular({
         if (!r.ok) {
           const j = await r.json().catch(() => null);
           setErro(j?.error ?? "Não consegui salvar agora. Tente de novo.");
-          return;
+          return false;
         }
       }
       setNotificacaoSalvo(true);
       setTimeout(() => setNotificacaoSalvo(false), 2000);
       aoAtualizarTela?.();
+      return true;
     } catch {
       setErro("Sem conexão agora. Tente de novo.");
+      return false;
     }
   }
 
@@ -267,7 +272,7 @@ export function Celular({
         ...atual,
         {
           de: "atendente",
-          texto: j.resposta ?? "Anotado com sucesso!",
+          texto: j.resposta ?? (algoSalvo ? "Informação salva." : "Não consegui confirmar o salvamento. Tente de novo."),
           salvo: algoSalvo,
         },
       ]);
@@ -375,13 +380,14 @@ export function Celular({
 
   const regrasAtuais = useMemo(() => extrairRegras(tela.sabe.descricao), [tela.sabe.descricao]);
 
-  function adicionarRegra(texto: string) {
+  async function adicionarRegra(texto: string): Promise<boolean> {
     const limpo = texto.trim();
-    if (!limpo) return;
+    if (!limpo) return false;
     const novas = [...regrasAtuais, limpo];
-    void executarAjuste({ descricao: novas.join("\n") });
+    if (!(await executarAjuste({ descricao: novas.join("\n") }))) return false;
     setTemaRegraAtivo(null);
     setNovaRegraInput("");
+    return true;
   }
 
   function removerRegra(indice: number) {
@@ -393,7 +399,7 @@ export function Celular({
   async function salvarAjusteResposta(novoTexto: string) {
     const limpo = novoTexto.trim();
     if (!limpo) return;
-    adicionarRegra(limpo);
+    if (!(await adicionarRegra(limpo))) return;
     setAjustandoIdx(null);
     setAjusteTexto("");
 
@@ -499,7 +505,7 @@ export function Celular({
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold text-white">
-                    {modoChat === "ensinar" ? `${nome.trim() || "Atendente"} · Nexora IA` : tela.empresa}
+                    {modoChat === "ensinar" ? `${nome.trim() || "Atendente"} · atendimento virtual` : tela.empresa}
                   </p>
                   <p className="text-[11px] text-amber-300">
                     {digitando
@@ -507,8 +513,8 @@ export function Celular({
                       : modoChat === "ensinar"
                         ? "online · ver dados do negócio ›"
                         : teste
-                          ? "online agora"
-                          : "exemplo ao vivo"}
+                          ? "simulação"
+                          : "exemplo"}
                   </p>
                 </div>
               </button>
@@ -610,8 +616,8 @@ export function Celular({
 
                 <div className="mx-auto max-w-[340px] rounded-lg bg-[#FFEECD] border border-[#F5C358]/40 px-3 py-1.5 text-center text-[10.5px] leading-tight text-[#54656F] shadow-2xs font-medium">
                   {modoChat === "ensinar"
-                    ? "✨ Nexora IA: digite preços, horários ou regras. O atendente aprende tudo na hora."
-                    : "🔒 Teste como um cliente. A inteligência da Nexora responde seguindo as suas regras."}
+                    ? "Informe os dados reais do seu negócio. Revise as sugestões antes de enviar e salvar."
+                    : "Simulação: não envia mensagens nem cria agendamentos reais."}
                 </div>
 
                 {modoChat === "ensinar"
@@ -775,7 +781,8 @@ export function Celular({
                     disabled={digitando}
                     onClick={() => {
                       if (modoChat === "ensinar") {
-                        void enviarEnsino(s);
+                        setEntrada(s);
+                        campoInput.current?.focus();
                       } else {
                         void enviarCliente(s);
                       }
