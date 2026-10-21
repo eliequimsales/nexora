@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { formatarTelefoneWhatsApp } from "@/components/painel/modal-conectar-whatsapp";
 
 const RAIZ = join(__dirname, "..");
 
@@ -18,12 +19,33 @@ describe("Fase 2: Conexão Direta do WhatsApp & Disparo com 1 Clique", () => {
       join(RAIZ, "components/painel/modal-conectar-whatsapp.tsx"),
       "utf8",
     );
-    expect(modal).toContain("Ligar meu WhatsApp");
+    expect(modal).toContain("Conectar WhatsApp da empresa");
     expect(modal).toContain("Aparelhos conectados");
     expect(modal).toContain("Conectar um aparelho");
     // Não pode conter termos técnicos
     expect(modal).not.toContain("webhook");
     expect(modal).not.toContain("instância");
+  });
+
+  it("conectar não é anunciado como ativação nem como uma notificação comprovada", () => {
+    const modal = readFileSync(join(RAIZ, "components/painel/modal-conectar-whatsapp.tsx"), "utf8");
+    expect(modal).toContain("Volte à configuração para conferir e ativar");
+    expect(modal).toContain("Se aparecer uma notificação");
+    expect(modal).not.toContain("acabou de enviar uma notificação");
+    expect(modal).not.toContain("mensagens já saem");
+    expect(modal).not.toContain("atualiza sozinho a cada minuto");
+    expect(modal).toContain("Gerar novo QR Code");
+  });
+
+  it.each([
+    ["+55 (11) 98888-7777", "(11) 98888-7777"],
+    ["5511988887777", "(11) 98888-7777"],
+    ["+55 (11) 3888-7777", "(11) 3888-7777"],
+    ["11988887777", "(11) 98888-7777"],
+    ["55988887777", "(55) 98888-7777"],
+    ["11", "11"],
+  ])("preserva o número brasileiro ao exibir %s", (entrada, esperado) => {
+    expect(formatarTelefoneWhatsApp(entrada)).toBe(esperado);
   });
 
   it("a rota /api/onda/enviar valida parâmetros e auto-registra AGUARDANDO", () => {

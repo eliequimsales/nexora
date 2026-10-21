@@ -171,7 +171,7 @@ export function pendenciasDaConfiguracao(e: EnvelopeConfiguracaoNexa): Pendencia
   const falta = (campo: string, mensagem: string, etapa: number, bloqueia = true) => p.push({ campo, mensagem, etapa, bloqueia });
   if (c.negocio.nome.length < 2) falta("negocio.nome", "Informe o nome do negócio.", 0);
   if (c.negocio.segmento.length < 2) falta("negocio.segmento", "Informe a área de atuação.", 0);
-  if (c.atendimento.nome.length < 2) falta("atendimento.nome", "Escolha o nome da atendente.", 2);
+  if (c.atendimento.nome.length < 2) falta("atendimento.nome", "Informe como o atendente se apresenta.", 2);
   const conferir = (i: InformacaoNexa, campo: string, label: string, etapa: number, obrigatorio = false) => {
     if (i.situacao === "REVISAR") falta(campo, `Revise ${label}.`, etapa);
     else if (i.situacao === "CONFIRMADO" && !i.valor) falta(campo, `Preencha ${label} ou indique que não foi informado.`, etapa);
@@ -217,7 +217,7 @@ export function pendenciasDaConfiguracao(e: EnvelopeConfiguracaoNexa): Pendencia
     nomes.add(k);
   }
   if (!ativos.length && !(c.negocio.descricao.situacao === "CONFIRMADO" && c.negocio.descricao.valor) && !c.conhecimento.itens.some((i) => i.situacao === "CONFIRMADO" && i.pergunta && i.resposta)) falta("conhecimento", "Cadastre uma descrição, serviço ou resposta confirmada para o atendente utilizar.", 3);
-  for (let etapa = 0; etapa < 4; etapa++) if (!e.revisadas.includes(etapa)) falta(`etapa:${etapa}`, "Conclua a revisão desta etapa.", etapa);
+  for (let etapa = 0; etapa < 4; etapa++) if (!e.revisadas.includes(etapa)) falta(`etapa:${etapa}`, "Confira as informações desta seção antes de testar.", etapa);
   const cenarios: CenarioNexa[] = ["INFORMACOES", "HUMANO", "DESCONHECIDA", ...(agenda ? ["HORARIO" as const] : [])];
   for (const cenario of cenarios) if ([...e.testes].reverse().find((t) => t.cenario === cenario && t.revisao === e.revisao)?.correto !== true) falta(`teste:${cenario}`, `Teste e aprove o cenário ${cenario === "INFORMACOES" ? "Informações do negócio" : cenario === "HUMANO" ? "Pedir uma pessoa" : cenario === "HORARIO" ? "Consultar um horário" : "Informação não cadastrada"}.`, 4);
   return p;
@@ -239,7 +239,8 @@ function tela(carregado: Awaited<ReturnType<typeof carregar>>): TelaConfiguracao
   return { rascunho: e.rascunho, revisao: e.revisao, etapa: e.etapa, revisadas: e.revisadas, testes: e.testes,
     pendencias, publicadoEm: e.publicado?.em ?? null,
     haAlteracoes: divergente || !e.publicado || e.publicado.revisao !== e.revisao || !mesmo(e.publicado.rascunho, e.rascunho),
-    conexao: { conectado: perfil.whatsappStatus === "CONNECTED" && !!perfil.whatsappInstance, telefone: carregado.empresa.phone, ligado: perfil.plantaoAtivo } };
+    conexao: { conectado: perfil.whatsappStatus === "CONNECTED" && !!perfil.whatsappInstance, telefone: carregado.empresa.phone,
+      ligado: Boolean(perfil.plantaoAtivo && perfil.atendenteLigadoPrimeiraVezEm) } };
 }
 
 export async function getConfiguracao(companyId: string): Promise<TelaConfiguracaoNexa> { return tela(await carregar(companyId)); }

@@ -1,6 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useId } from "react";
+
+/** O cadastro pode trazer o DDI; o formulário pede somente DDD e número. */
+export function formatarTelefoneWhatsApp(valor: string) {
+  const digitos = valor.replace(/\D/g, "");
+  const nums = ((digitos.length === 12 || digitos.length === 13) && digitos.startsWith("55") ? digitos.slice(2) : digitos).slice(0, 11);
+  if (nums.length <= 2) return nums;
+  if (nums.length <= 7) return `(${nums.slice(0, 2)}) ${nums.slice(2)}`;
+  const corte = nums.length === 10 ? 6 : 7;
+  return `(${nums.slice(0, 2)}) ${nums.slice(2, corte)}-${nums.slice(corte)}`;
+}
 
 interface ModalConectarWhatsAppProps {
   aberto: boolean;
@@ -24,20 +34,60 @@ export function ModalConectarWhatsApp({
   const [status, setStatus] = useState<"DESLIGADO" | "AGUARDANDO_QR" | "CONECTADO" | "ERRO">("DESLIGADO");
   const [erro, setErro] = useState("");
   const [copiado, setCopiado] = useState(false);
+  const [avisoCopia, setAvisoCopia] = useState("");
   const telefoneIniciado = useRef(false);
   const ultimoNumeroTentado = useRef<string | null>(null);
+  const painelRef = useRef<HTMLDivElement>(null);
+  const tituloRef = useRef<HTMLHeadingElement>(null);
+  const telefoneRef = useRef<HTMLInputElement>(null);
+  const tituloId = useId();
+  const descricaoId = useId();
+  const telefoneId = useId();
+  const copiarTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const aoFecharAgora = useRef(aoFechar);
+  aoFecharAgora.current = aoFechar;
 
-  // Formata telefone (XX) XXXXX-XXXX
-  const formatarTelefoneInput = (valor: string) => {
-    const nums = valor.replace(/\D/g, "").slice(0, 11);
-    if (nums.length <= 2) return nums;
-    if (nums.length <= 7) return `(${nums.slice(0, 2)}) ${nums.slice(2)}`;
-    return `(${nums.slice(0, 2)}) ${nums.slice(2, 7)}-${nums.slice(7)}`;
-  };
+  useEffect(() => {
+    if (!aberto) return;
+    const anterior = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const rolagemAnterior = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    tituloRef.current?.focus({ preventScroll: true });
+    const aoTeclar = (evento: KeyboardEvent) => {
+      const painel = painelRef.current;
+      if (!painel) return;
+      if (evento.key === "Escape") {
+        evento.preventDefault(); evento.stopPropagation(); aoFecharAgora.current(); return;
+      }
+      if (evento.key !== "Tab") return;
+      const campos = [...painel.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]')]
+        .filter((campo) => campo.getClientRects().length > 0);
+      const primeiro = campos[0]; const ultimo = campos[campos.length - 1];
+      const atual = document.activeElement;
+      if (!primeiro) { evento.preventDefault(); painel.focus(); return; }
+      if (evento.shiftKey && (atual === primeiro || atual === tituloRef.current || !painel.contains(atual))) {
+        evento.preventDefault(); ultimo.focus();
+      } else if (!evento.shiftKey && (atual === ultimo || !painel.contains(atual))) {
+        evento.preventDefault(); primeiro.focus();
+      }
+    };
+    document.addEventListener("keydown", aoTeclar);
+    return () => {
+      document.removeEventListener("keydown", aoTeclar);
+      document.body.style.overflow = rolagemAnterior;
+      if (anterior?.isConnected) anterior.focus({ preventScroll: true });
+    };
+  }, [aberto]);
+
+  useEffect(() => () => { if (copiarTimeout.current) clearTimeout(copiarTimeout.current); }, []);
+  useEffect(() => {
+    // O teclado só abre depois de uma ação explícita para editar o número.
+    if (aberto && editandoTelefone && !erro) telefoneRef.current?.focus({ preventScroll: true });
+  }, [aberto, editandoTelefone, erro]);
 
   useEffect(() => {
     if (telefonePadrao && !telefoneIniciado.current) {
-      setTelefone(formatarTelefoneInput(telefonePadrao));
+      setTelefone(formatarTelefoneWhatsApp(telefonePadrao));
       telefoneIniciado.current = true;
     }
   }, [telefonePadrao]);
@@ -55,7 +105,7 @@ export function ModalConectarWhatsApp({
       const data = await res.json();
       if (data.state?.phone && !telefoneIniciado.current) {
         telefoneIniciado.current = true;
-        setTelefone(formatarTelefoneInput(data.state.phone));
+        setTelefone(formatarTelefoneWhatsApp(data.state.phone));
       }
       if (data.state?.status === "CONNECTED") {
         setStatus("CONECTADO");
@@ -143,13 +193,18 @@ export function ModalConectarWhatsApp({
     void iniciarConexao(limpo);
   };
 
-  const handleCopiarEAbrirWhatsApp = () => {
+  const handleCopiarEAbrirWhatsApp = async () => {
     if (!pairingCode) return;
+    setAvisoCopia("");
     try {
-      navigator.clipboard.writeText(pairingCode);
-    } catch {}
-    setCopiado(true);
-    setTimeout(() => setCopiado(false), 3000);
+      await navigator.clipboard.writeText(pairingCode);
+      setCopiado(true);
+      if (copiarTimeout.current) clearTimeout(copiarTimeout.current);
+      copiarTimeout.current = setTimeout(() => setCopiado(false), 3000);
+    } catch {
+      setCopiado(false);
+      setAvisoCopia("Não foi possível copiar automaticamente. Selecione o código acima e copie para usar no WhatsApp.");
+    }
 
     try {
       window.location.href = "whatsapp://";
@@ -188,7 +243,7 @@ export function ModalConectarWhatsApp({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-lg rounded-2xl border border-panel-line bg-panel-card p-6 shadow-2xl sm:p-8">
+      <div ref={painelRef} role="dialog" aria-modal="true" aria-labelledby={tituloId} aria-describedby={descricaoId} tabIndex={-1} className="relative max-h-[90dvh] w-full max-w-lg overflow-y-auto overscroll-contain rounded-2xl border border-panel-line bg-panel-card p-5 shadow-2xl outline-none sm:p-8">
         <button
           type="button"
           onClick={aoFechar}
@@ -202,12 +257,11 @@ export function ModalConectarWhatsApp({
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-2xl">
             💬
           </div>
-          <h2 className="font-display text-xl font-bold sm:text-2xl text-panel-ink">
-            Ligar meu WhatsApp na Nexora
+          <h2 ref={tituloRef} id={tituloId} tabIndex={-1} className="font-display text-xl font-bold sm:text-2xl text-panel-ink outline-none">
+            Conectar WhatsApp da empresa
           </h2>
-          <p className="mt-1 text-xs text-panel-sub max-w-md mx-auto">
-            As mensagens da Onda saem pelo seu número — e, se você ligar o Atendente Virtual, é por ele que ele
-            responde quando você não pode.
+          <p id={descricaoId} className="mt-2 text-sm leading-relaxed text-panel-sub max-w-md mx-auto">
+            Conecte o número que seus clientes usam para falar com a empresa. Depois, volte à configuração para ativar seu atendente.
           </p>
         </div>
 
@@ -216,6 +270,7 @@ export function ModalConectarWhatsApp({
             <button
               type="button"
               onClick={() => setAba("CODIGO")}
+              aria-pressed={aba === "CODIGO"}
               className={`flex-1 rounded-lg py-2 text-center transition ${
                 aba === "CODIGO"
                   ? "bg-amber text-night font-bold shadow-sm"
@@ -230,6 +285,7 @@ export function ModalConectarWhatsApp({
                 setAba("QR");
                 if (!qrCode) void iniciarConexao();
               }}
+              aria-pressed={aba === "QR"}
               className={`flex-1 rounded-lg py-2 text-center transition ${
                 aba === "QR"
                   ? "bg-amber text-night font-bold shadow-sm"
@@ -243,7 +299,7 @@ export function ModalConectarWhatsApp({
 
         <div className="mt-6">
           {status === "CONECTADO" ? (
-            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-6 text-center">
+            <div role="status" className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-6 text-center">
               <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-2xl font-bold text-white shadow-lg shadow-emerald-500/30">
                 ✓
               </div>
@@ -251,19 +307,19 @@ export function ModalConectarWhatsApp({
                 WhatsApp conectado com sucesso!
               </h3>
               <p className="mt-1 text-xs text-panel-sub">
-                Pronto: as mensagens já saem pelo seu número.
+                A conexão está pronta. Volte à configuração para conferir e ativar as respostas do seu atendente.
               </p>
               <button
                 type="button"
                 onClick={aoFechar}
                 className="mt-5 inline-flex items-center justify-center rounded-xl bg-emerald-500 px-6 py-2.5 font-display text-xs font-bold text-night transition hover:bg-emerald-400"
               >
-                Continuar
+                Voltar à configuração
               </button>
             </div>
           ) : erro ? (
             <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-5 text-center">
-              <p className="text-xs font-medium text-red-400">{erro}</p>
+              <p className="text-xs font-medium text-red-400" role="alert">{erro}</p>
               {erro.includes("expirou") || erro.includes("autenticado") ? (
                 <a
                   href="/login"
@@ -274,6 +330,7 @@ export function ModalConectarWhatsApp({
               ) : (
                 <button
                   type="button"
+                  disabled={carregando || aba === "CODIGO" && telefone.replace(/\D/g, "").length < 10}
                   onClick={() => {
                     if (aba === "CODIGO") {
                       const limpo = (telefone || telefonePadrao || "").replace(/\D/g, "");
@@ -283,11 +340,12 @@ export function ModalConectarWhatsApp({
                       void iniciarConexao();
                     }
                   }}
-                  className="mt-3 rounded-lg bg-red-500/20 px-4 py-2 text-xs font-bold text-red-300 transition hover:bg-red-500/30"
+                  className="mt-3 rounded-lg bg-red-500/20 px-4 py-2 text-xs font-bold text-red-300 transition hover:bg-red-500/30 disabled:opacity-50"
                 >
                   Tentar novamente
                 </button>
               )}
+              {aba === "CODIGO" && !erro.includes("expirou") && !erro.includes("autenticado") && <button type="button" onClick={() => { setErro(""); setStatus("DESLIGADO"); setPairingCode(null); setEditandoTelefone(true); }} className="mx-auto mt-3 block min-h-11 rounded-xl px-4 py-2 text-xs font-semibold text-panel-ink underline">Conferir ou alterar número</button>}
             </div>
           ) : aba === "CODIGO" ? (
             /* ========================================================================= */
@@ -299,7 +357,7 @@ export function ModalConectarWhatsApp({
                   {telefone && !editandoTelefone ? (
                     <div className="rounded-2xl border border-panel-line bg-panel-bg/70 p-4 text-left">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-panel-sub">WhatsApp cadastrado:</span>
+                        <span className="text-xs font-semibold text-panel-sub">Número para conectar:</span>
                         <button
                           type="button"
                           onClick={() => setEditandoTelefone(true)}
@@ -317,8 +375,8 @@ export function ModalConectarWhatsApp({
                     <form onSubmit={handleGerarCodigo} className="space-y-3">
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <label className="block text-xs font-medium text-panel-sub">
-                            Seu número de WhatsApp com DDD
+                          <label htmlFor={telefoneId} className="block text-xs font-medium text-panel-sub">
+                            WhatsApp da empresa com DDD
                           </label>
                           {telefone && (
                             <button
@@ -331,12 +389,15 @@ export function ModalConectarWhatsApp({
                           )}
                         </div>
                         <input
+                          ref={telefoneRef}
                           type="tel"
+                          id={telefoneId}
+                          autoComplete="tel-national"
+                          inputMode="tel"
                           required
-                          autoFocus
                           placeholder="Ex: (11) 98888-7777"
                           value={telefone}
-                          onChange={(e) => setTelefone(formatarTelefoneInput(e.target.value))}
+                          onChange={(e) => setTelefone(formatarTelefoneWhatsApp(e.target.value))}
                           className="w-full rounded-xl border border-panel-line bg-panel-bg px-3.5 py-2.5 text-sm text-panel-ink placeholder:text-panel-sub/50 focus:border-amber focus:outline-none"
                         />
                       </div>
@@ -352,23 +413,23 @@ export function ModalConectarWhatsApp({
                     {carregando ? (
                       <div className="h-5 w-5 animate-spin rounded-full border-2 border-night border-t-transparent" />
                     ) : (
-                      <span>⚡ Conectar meu WhatsApp</span>
+                      <span>Gerar código de conexão</span>
                     )}
                   </button>
 
                   <p className="text-[11px] text-panel-sub text-center leading-relaxed">
-                    Ao clicar, o WhatsApp enviará uma notificação no seu aparelho para confirmar.
+                    Use o código gerado para autorizar a conexão no WhatsApp da empresa.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-4 text-center">
                   {/* NOTIFICAÇÃO OFICIAL NO CELULAR */}
                   <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-left text-xs space-y-1">
-                    <div className="flex items-center gap-1.5 font-bold text-emerald-800">
-                      <span className="text-base animate-bounce">🔔</span> Notificação no seu celular
+                    <div className="flex items-center gap-1.5 font-bold text-panel-ink">
+                      <span className="text-base">📱</span> Confirme no seu WhatsApp
                     </div>
-                    <p className="text-emerald-900 leading-relaxed">
-                      O WhatsApp acabou de enviar uma notificação no seu aparelho: <strong>&ldquo;Toque para confirmar o novo aparelho&rdquo;</strong>.
+                    <p className="text-panel-sub leading-relaxed">
+                      Se aparecer uma notificação para conectar um aparelho, toque nela e siga os passos. Você também pode usar o caminho abaixo.
                     </p>
                   </div>
 
@@ -389,17 +450,18 @@ export function ModalConectarWhatsApp({
                     className="w-full flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 hover:bg-emerald-400 py-3.5 text-sm font-bold text-white shadow-md transition-all active:scale-[0.98]"
                   >
                     <span className="text-lg">📲</span>
-                    <span>{copiado ? "Código copiado! Abrindo WhatsApp..." : "Copiar código e Abrir WhatsApp ↗"}</span>
+                    <span>{copiado ? "Código copiado. Abrir WhatsApp ↗" : "Copiar código e abrir WhatsApp ↗"}</span>
                   </button>
+                  {avisoCopia && <p className="text-xs leading-relaxed text-panel-sub" role="status">{avisoCopia}</p>}
 
                   <p className="text-[11px] text-panel-sub text-center leading-relaxed">
-                    Caso a notificação não apareça na barra do seu celular: abra o <strong>WhatsApp &gt; Aparelhos conectados &gt; Conectar com número de telefone</strong> e cole o código.
+                    No WhatsApp da empresa, abra <strong>Aparelhos conectados &gt; Conectar um aparelho &gt; Conectar com número de telefone</strong> e informe o código.
                   </p>
 
                   <div className="pt-1 flex items-center justify-center gap-4">
                     <button
                       type="button"
-                      onClick={() => setPairingCode(null)}
+                      onClick={() => { setPairingCode(null); setEditandoTelefone(true); }}
                       className="text-xs text-panel-sub hover:text-panel-ink underline"
                     >
                       Trocar número ou gerar novo código
@@ -425,23 +487,26 @@ export function ModalConectarWhatsApp({
             /* ========================================================================= */
             <div className="flex flex-col items-center">
               {carregando ? (
-                <div className="flex h-60 w-60 flex-col items-center justify-center rounded-2xl border border-dashed border-panel-line bg-panel-bg/50">
+                <div className="flex h-60 w-60 max-w-full flex-col items-center justify-center rounded-2xl border border-dashed border-panel-line bg-panel-bg/50">
                   <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber border-t-transparent" />
                   <p className="mt-3 text-xs font-medium text-panel-sub">Gerando QR Code...</p>
                 </div>
               ) : qrCode ? (
                 <div className="flex flex-col items-center">
-                  <div className="relative rounded-2xl border border-panel-line bg-white p-3 shadow-inner">
+                  <div className="relative max-w-full rounded-2xl border border-panel-line bg-white p-3 shadow-inner">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={qrCode}
                       alt="Código QR para conexão do WhatsApp"
-                      className="h-56 w-56 rounded-lg object-contain"
+                      className="aspect-square h-auto w-56 max-w-full rounded-lg object-contain"
                     />
                   </div>
                   <p className="mt-3 text-xs text-panel-sub">
-                    O código atualiza sozinho a cada minuto
+                    Se o WhatsApp disser que o QR Code expirou, gere outro abaixo.
                   </p>
+                  <button type="button" onClick={() => void iniciarConexao()} className="mt-2 min-h-11 rounded-xl border border-panel-line px-4 py-2 text-xs font-semibold text-panel-ink transition hover:bg-panel-bg">
+                    Gerar novo QR Code
+                  </button>
                 </div>
               ) : null}
 

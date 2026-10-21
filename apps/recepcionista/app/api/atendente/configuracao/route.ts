@@ -8,6 +8,9 @@ import { validarOrigemECsrfe } from "@/lib/seguranca/origem";
 import { ConfiguracaoErro, confirmarTesteConfiguracao, getConfiguracao, importarCadastroConfiguracao, publicarConfiguracao, salvarConfiguracao, salvarConfiguracaoSchema } from "@/lib/atendente/configuracao";
 
 export const dynamic = "force-dynamic";
+// Uma sessão de preenchimento pode salvar várias vezes por minuto. O rascunho
+// usa uma cota própria para não consumir as leituras nem bloquear ações finais.
+const limiteDoRascunho = { limit: 120, windowMs: 60_000 };
 const acao = z.discriminatedUnion("acao", [
   z.object({ acao: z.literal("PUBLICAR"), revisao: z.number().int().min(0) }).strict(),
   z.object({ acao: z.literal("IMPORTAR_CADASTRO"), revisao: z.number().int().min(0) }).strict(),
@@ -27,7 +30,8 @@ async function responder(request: Request, metodo: "GET" | "PUT" | "POST") {
   }
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
-  if (!limitar("atendente-configuracao", companyId, metodo === "GET" ? LIMITES.leitura : LIMITES.escrita)) return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
+  const politica = metodo === "GET" ? LIMITES.leitura : metodo === "PUT" ? limiteDoRascunho : LIMITES.escrita;
+  if (!limitar(`atendente-configuracao:${metodo}`, companyId, politica)) return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
   try {
     if (metodo === "GET") return NextResponse.json(await getConfiguracao(companyId));
     const body = await request.json().catch(() => null);

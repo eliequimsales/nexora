@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/auth", () => ({ getSessionCompanyId: vi.fn() }));
-vi.mock("@/lib/limites", () => ({ limitar: vi.fn(), LIMITES: { leitura: {}, escrita: {} } }));
+vi.mock("@/lib/limites", () => ({ limitar: vi.fn(), LIMITES: { leitura: { limit: 120, windowMs: 300_000 }, escrita: { limit: 60, windowMs: 300_000 } } }));
 vi.mock("@/lib/errors", () => ({ logError: vi.fn() }));
 vi.mock("@/lib/atendente/configuracao", async (original) => {
   const real = await original<typeof import("@/lib/atendente/configuracao")>();
@@ -27,6 +27,17 @@ describe("API de configuração isolada pela sessão", () => {
   it("limita leituras e escritas autenticadas", async () => {
     vi.mocked(limitar).mockReturnValue(false);
     expect((await GET(req("GET"))).status).toBe(429); expect((await POST(req("POST", {}))).status).toBe(429);
+    expect((await PUT(req("PUT", { revisao: 4, etapa: 0, rascunho: configuracaoExemplo() }))).status).toBe(429);
+    expect(salvarConfiguracao).not.toHaveBeenCalled(); expect(publicarConfiguracao).not.toHaveBeenCalled();
+  });
+  it("salvamentos automáticos têm cota própria sem consumir leituras nem publicação", async () => {
+    vi.mocked(salvarConfiguracao).mockResolvedValue({ revisao: 5 } as Awaited<ReturnType<typeof getConfiguracao>>);
+    await PUT(req("PUT", { revisao: 4, etapa: 0, rascunho: configuracaoExemplo() }));
+    await GET(req("GET"));
+    await POST(req("POST", { acao: "PUBLICAR", revisao: 4 }));
+    expect(limitar).toHaveBeenNthCalledWith(1, "atendente-configuracao:PUT", "c-sessao", { limit: 120, windowMs: 60_000 });
+    expect(limitar).toHaveBeenNthCalledWith(2, "atendente-configuracao:GET", "c-sessao", { limit: 120, windowMs: 300_000 });
+    expect(limitar).toHaveBeenNthCalledWith(3, "atendente-configuracao:POST", "c-sessao", { limit: 60, windowMs: 300_000 });
   });
   it("lê somente a empresa da sessão", async () => {
     vi.mocked(getConfiguracao).mockResolvedValue({ revisao: 4 } as Awaited<ReturnType<typeof getConfiguracao>>);

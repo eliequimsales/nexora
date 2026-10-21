@@ -30,7 +30,7 @@ describe("Configuração e Provedor do Asaas", () => {
 
   it("define URL base de sandbox vs produção", () => {
     expect(obterAsaasBaseUrl({ ASAAS_SANDBOX: "true", ASAAS_API_KEY: "key" })).toBe(
-      "https://sandbox.asaas.com/api/v3",
+      "https://api-sandbox.asaas.com/v3",
     );
     expect(
       obterAsaasBaseUrl({
@@ -38,7 +38,7 @@ describe("Configuração e Provedor do Asaas", () => {
         ASAAS_API_KEY: "$aact_prod_123",
         NODE_ENV: "production",
       }),
-    ).toBe("https://api.asaas.com/api/v3");
+    ).toBe("https://api.asaas.com/v3");
   });
 
   it("valida o token do webhook do Asaas de forma segura", () => {

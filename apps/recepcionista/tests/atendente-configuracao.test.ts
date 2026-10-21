@@ -31,7 +31,8 @@ function envelope(c = config()): EnvelopeConfiguracaoNexa {
 }
 type Perfil = { atendenteConfiguracao: unknown; description: string; address: string; paymentMethods: string; businessHours: unknown; diasFechados: unknown;
   faqs: unknown; segments: unknown; pricingInfo: string; productsServices: string; serviceRules: string; atendenteNome: string; atendenteJeito: string;
-  atendenteMarca: boolean; atendenteExpediente: boolean; handoffKeywords: unknown; whatsappStatus: string; whatsappInstance: string | null; plantaoAtivo: boolean };
+  atendenteMarca: boolean; atendenteExpediente: boolean; handoffKeywords: unknown; whatsappStatus: string; whatsappInstance: string | null; plantaoAtivo: boolean;
+  atendenteLigadoPrimeiraVezEm: Date | null };
 type Servico = { id: string; companyId: string; name: string; priceCents: number; durationMin: number; active: boolean; suggested: boolean; order: number };
 let perfil: Perfil;
 let empresa: { id: string; name: string; phone: string };
@@ -43,7 +44,8 @@ beforeEach(() => {
   vi.clearAllMocks(); idCriado = 0;
   perfil = { atendenteConfiguracao: null, description: "Texto legado", address: "", paymentMethods: "", businessHours: [], diasFechados: [], faqs: [], segments: [],
     pricingInfo: "", productsServices: "", serviceRules: '[{"nome":"Ana","cargo":"Equipe"}]', atendenteNome: "Bia", atendenteJeito: "ACOLHEDOR",
-    atendenteMarca: false, atendenteExpediente: true, handoffKeywords: [], whatsappStatus: "CONNECTED", whatsappInstance: "empresa-c1", plantaoAtivo: false };
+    atendenteMarca: false, atendenteExpediente: true, handoffKeywords: [], whatsappStatus: "CONNECTED", whatsappInstance: "empresa-c1", plantaoAtivo: false,
+    atendenteLigadoPrimeiraVezEm: null };
   empresa = { id: "c1", name: "Empresa antes", phone: "5511999998888" }; servicos = [];
   db.company.findUnique.mockImplementation(async () => ({ ...clone(empresa), profile: clone(perfil) }));
   db.knowledgeItem.findMany.mockResolvedValue([]);
@@ -68,6 +70,20 @@ beforeEach(() => {
 });
 
 describe("rascunho separado do atendimento publicado", () => {
+  it("não anuncia perfil legado parcialmente ativado como atendente ligado", async () => {
+    perfil.plantaoAtivo = true;
+    const t = await getConfiguracao("c1");
+    expect(t.conexao).toMatchObject({ conectado: true, ligado: false });
+    expect(db.companyProfile.updateMany).not.toHaveBeenCalled();
+  });
+  it("usa a mesma regra do atendimento real para ativado e pausado", async () => {
+    perfil.plantaoAtivo = true; perfil.atendenteLigadoPrimeiraVezEm = new Date("2026-10-21T12:00:00Z");
+    expect((await getConfiguracao("c1")).conexao.ligado).toBe(true);
+    perfil.plantaoAtivo = false;
+    expect((await getConfiguracao("c1")).conexao.ligado).toBe(false);
+    expect(perfil.atendenteLigadoPrimeiraVezEm).not.toBeNull();
+    expect(db.companyProfile.updateMany).not.toHaveBeenCalled();
+  });
   it("lê dados reais como REVISAR, sem escrever nem fabricar duração", async () => {
     servicos.push({ id: "s1", companyId: "c1", name: "Ajuste", durationMin: 0, priceCents: 0, active: true, suggested: false, order: 0 });
     db.knowledgeItem.findMany.mockResolvedValue([{ id: "k1", question: "Prazo?", answer: "Combinado por peça." }]);
@@ -98,6 +114,40 @@ describe("rascunho separado do atendimento publicado", () => {
       where: { companyId: "c1", atendenteConfiguracao: { equals: e } },
       data: { atendenteConfiguracao: { etapa: 2, revisadas: [0, 1, 2, 3] } },
     });
+  });
+  it("confere a página inteira em uma escrita sem aprovar automaticamente informações ou testes", async () => {
+    const e = envelope(); e.revisadas = []; perfil.atendenteConfiguracao = e;
+    const c = config(); c.informacoes.pagamento = { valor: "Pix e cartão", situacao: "REVISAR", origem: "ASSISTENTE" };
+    const t = await salvarConfiguracao("c1", { revisao: 3, rascunho: c, etapa: 4, concluirEtapas: [0, 1, 2, 3] });
+    expect(t.revisadas).toEqual([0, 1, 2, 3]); expect(t.revisao).toBe(4); expect(t.testes).toEqual([]);
+    expect(t.pendencias.some((p) => p.campo.startsWith("etapa:"))).toBe(false);
+    expect(t.pendencias).toEqual(expect.arrayContaining([
+      expect.objectContaining({ campo: "informacoes.pagamento", bloqueia: true }),
+      expect.objectContaining({ campo: "teste:INFORMACOES", bloqueia: true }),
+    ]));
+    expect(t.rascunho.informacoes.pagamento.situacao).toBe("REVISAR");
+    expect(db.companyProfile.updateMany).toHaveBeenCalledTimes(1);
+    expect(db.companyProfile.updateMany.mock.calls[0][0].where.atendenteConfiguracao).toEqual({ equals: e });
+    await expect(publicarConfiguracao("c1", 4)).rejects.toMatchObject({ status: 409 });
+    expect(db.company.update).not.toHaveBeenCalled();
+  });
+  it("salva e recarrega preenchimento parcial sem completar dados nem manter testes de outra versão", async () => {
+    const e = envelope(); e.publicado = { revisao: 3, em: "2026-10-21", rascunho: config() }; perfil.atendenteConfiguracao = e;
+    const c = config(); c.negocio.nome = "";
+    c.informacoes.horarios = [{ day: 1, open: "09:", close: "", closed: false }];
+    c.informacoes.servicos = [{ id: "novo:servico", nome: "", descricao: "", precoModo: "FIXO", precoCents: null,
+      duracaoMin: null, situacao: "CONFIRMADO", origem: "MANUAL" }];
+    await salvarConfiguracao("c1", { revisao: 3, rascunho: c, etapa: 0 });
+    const t = await getConfiguracao("c1");
+    expect(t.rascunho).toEqual(c); expect(t.revisao).toBe(4); expect(t.testes).toEqual([]);
+    expect(t.revisadas).toEqual([2, 3]);
+    expect(t.pendencias).toEqual(expect.arrayContaining([
+      expect.objectContaining({ campo: "negocio.nome", bloqueia: true }),
+      expect.objectContaining({ campo: "informacoes.horarios", bloqueia: true }),
+      expect.objectContaining({ campo: "servico:novo:servico:preco", bloqueia: true }),
+    ]));
+    expect(lerConfiguracaoPublicada(perfil.atendenteConfiguracao)).toEqual(e.publicado.rascunho);
+    expect(perfil.businessHours).toEqual([]); expect(servicos).toEqual([]); expect(perfil.plantaoAtivo).toBe(false);
   });
   it("salvar e concluir um grupo invalida testes da revisão antiga sem perder as outras etapas", async () => {
     const e = envelope(); e.revisadas.push(4); e.publicado = { revisao: 3, em: "2026-10-21", rascunho: config() }; perfil.atendenteConfiguracao = e;
