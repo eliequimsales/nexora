@@ -251,14 +251,41 @@ export async function sendWhatsAppText(
 }
 
 /**
+ * Formata um telefone para o formato internacional aceito pela Evolution API / WhatsApp.
+ * Telefones com DDD brasileiro (10 ou 11 dígitos) recebem o prefixo 55.
+ */
+export function formatarNumeroWhatsApp(phone: string): string {
+  const cleanPhone = phone.replace(/\D/g, "");
+  if (!cleanPhone) return "";
+  if (cleanPhone.length === 10 || cleanPhone.length === 11) {
+    return `55${cleanPhone}`;
+  }
+  if (cleanPhone.length >= 12 && cleanPhone.startsWith("55")) {
+    return cleanPhone;
+  }
+  return cleanPhone;
+}
+
+/**
  * Cria a instância na Evolution. Se já existir ou estiver acessível, segue em frente sem erro
  * (a Evolution devolve 400/403/409 quando já existe ou sob conflito de integração/sessão).
+ * Se phone for fornecido, a instância é criada especificamente para pareamento por número (qrcode: false).
  */
-export async function createInstance(instance: string): Promise<void> {
+export async function createInstance(instance: string, phone?: string): Promise<void> {
+  const fullPhone = phone ? formatarNumeroWhatsApp(phone) : null;
+  const payload: Record<string, unknown> = {
+    instanceName: instance,
+    qrcode: !fullPhone,
+    integration: "WHATSAPP-BAILEYS",
+  };
+  if (fullPhone) {
+    payload.number = fullPhone;
+  }
+
   try {
     await evoFetch("/instance/create", {
       method: "POST",
-      body: { instanceName: instance, qrcode: true, integration: "WHATSAPP-BAILEYS" },
+      body: payload,
     });
   } catch (error) {
     const message = String(error).toLowerCase();
@@ -285,7 +312,7 @@ export async function createInstance(instance: string): Promise<void> {
       await deleteInstance(instance).catch(() => {});
       await evoFetch("/instance/create", {
         method: "POST",
-        body: { instanceName: instance, qrcode: true, integration: "WHATSAPP-BAILEYS" },
+        body: payload,
       });
       return;
     } catch {
@@ -324,17 +351,7 @@ export async function connectInstance(
   instance: string,
   phone?: string,
 ): Promise<{ qrCode: string | null; pairingCode: string | null; state: string | null }> {
-  const cleanPhone = phone ? phone.replace(/\D/g, "") : null;
-  let fullPhone: string | null = null;
-  if (cleanPhone) {
-    if (cleanPhone.length === 10 || cleanPhone.length === 11) {
-      fullPhone = `55${cleanPhone}`;
-    } else if (cleanPhone.length >= 12 && cleanPhone.startsWith("55")) {
-      fullPhone = cleanPhone;
-    } else {
-      fullPhone = cleanPhone;
-    }
-  }
+  const fullPhone = phone ? formatarNumeroWhatsApp(phone) : null;
 
   const url = fullPhone
     ? `/instance/connect/${encodeURIComponent(instance)}?number=${encodeURIComponent(fullPhone)}`

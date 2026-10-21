@@ -17,6 +17,7 @@ const salvarContaSchema = z.object({
   email: z.string().email("E-mail inválido").max(100),
   password: z.string().min(8, "A senha deve ter pelo menos 8 caracteres").max(100),
   name: z.string().min(2, "Nome da empresa muito curto").max(100).optional(),
+  phone: z.string().optional(),
 });
 
 export async function POST(request: Request) {
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { email, password, name } = parsed.data;
+    const { email, password, name, phone } = parsed.data;
     const emailDestino = email.trim().toLowerCase();
     if (emailDestino.endsWith("@temporario.meunexora.com.br")) {
       return NextResponse.json(
@@ -98,6 +99,7 @@ export async function POST(request: Request) {
         emailVerificadoEm: null,
         sessaoEpoca: { increment: 1 },
         ...(name ? { name: name.trim() } : {}),
+        ...(phone ? { phone: phone.replace(/\D/g, "") } : {}),
       },
     });
 

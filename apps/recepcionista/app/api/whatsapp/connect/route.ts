@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
 import { getSessionCompanyId } from "@/lib/auth";
 import { exigirAcesso } from "@/lib/billing/guarda";
 import { rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
@@ -32,7 +33,26 @@ export async function POST(request: Request) {
       phone = body.phone;
     }
   } catch {
-    // Chamada sem body JSON (conexão QR padrão)
+    // Chamada sem body JSON (conexão padrão)
+  }
+
+  if (phone) {
+    const limpo = phone.replace(/\D/g, "");
+    if (limpo.length >= 10) {
+      await prisma.company.update({
+        where: { id: companyId },
+        data: { phone: limpo },
+      }).catch(() => {});
+    }
+  } else {
+    // Se o telefone não veio no body, verifica se já está cadastrado na empresa
+    const company = await prisma.company.findUnique({
+      where: { id: companyId },
+      select: { phone: true },
+    });
+    if (company?.phone && company.phone.replace(/\D/g, "").length >= 10) {
+      phone = company.phone;
+    }
   }
 
   const state = await connectWhatsApp(companyId, phone);

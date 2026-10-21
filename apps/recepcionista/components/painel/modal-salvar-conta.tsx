@@ -7,27 +7,38 @@ export function ModalSalvarConta({
   aoFechar,
   aoSalvarSucesso,
   nomePadrao = "",
+  telefonePadrao = "",
 }: {
   aberto: boolean;
   aoFechar: () => void;
   aoSalvarSucesso: (email: string) => void;
   nomePadrao?: string;
+  telefonePadrao?: string;
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [nome, setNome] = useState(nomePadrao);
+  const [telefone, setTelefone] = useState(telefonePadrao);
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState(false);
+
+  function formatarTelefone(v: string) {
+    const nums = v.replace(/\D/g, "").slice(0, 11);
+    if (nums.length <= 2) return nums;
+    if (nums.length <= 7) return `(${nums.slice(0, 2)}) ${nums.slice(2)}`;
+    return `(${nums.slice(0, 2)}) ${nums.slice(2, 7)}-${nums.slice(7)}`;
+  }
 
   useEffect(() => {
     if (aberto) {
       setErro("");
       setSucesso(false);
       setNome(nomePadrao);
+      setTelefone(telefonePadrao);
     }
-  }, [aberto, nomePadrao]);
+  }, [aberto, nomePadrao, telefonePadrao]);
 
   useEffect(() => {
     function aoTeclar(e: KeyboardEvent) {
@@ -47,7 +58,12 @@ export function ModalSalvarConta({
       const res = await fetch("/api/auth/salvar-conta", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, name: nome || undefined }),
+        body: JSON.stringify({
+          email,
+          password,
+          name: nome || undefined,
+          phone: telefone ? telefone.replace(/\D/g, "") : undefined,
+        }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.ok) {
@@ -114,6 +130,20 @@ export function ModalSalvarConta({
                 placeholder="voce@empresa.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                className="w-full rounded-lg border border-panel-line bg-white px-3 py-2 text-sm text-panel-ink outline-none focus:border-amber focus:ring-1 focus:ring-amber"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="salvar-telefone" className="mb-1 block text-xs font-semibold text-panel-ink">
+                WhatsApp ou celular da empresa
+              </label>
+              <input
+                id="salvar-telefone"
+                type="tel"
+                placeholder="(11) 98888-7777"
+                value={telefone}
+                onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
                 className="w-full rounded-lg border border-panel-line bg-white px-3 py-2 text-sm text-panel-ink outline-none focus:border-amber focus:ring-1 focus:ring-amber"
               />
             </div>

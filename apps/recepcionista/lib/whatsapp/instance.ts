@@ -3,6 +3,7 @@ import { logError } from "@/lib/errors";
 import {
   connectInstance,
   createInstance,
+  deleteInstance,
   getConnectionState,
   setWebhook,
 } from "./evolution";
@@ -80,14 +81,30 @@ export async function connectWhatsApp(companyId: string, phone?: string): Promis
   let pairingCode: string | null = null;
 
   try {
-    await createInstance(name);
+    await createInstance(name, phone);
     try {
       await setWebhook(name, webhookUrl());
     } catch (whErr) {
       await logError("whatsapp-webhook-set", whErr, companyId).catch(() => {});
     }
-    const result = await connectInstance(name, phone);
+    let result = await connectInstance(name, phone);
     pairingCode = result.pairingCode;
+
+    // Se o usuário solicitou pareamento por número (phone fornecido),
+    // mas a instância existente não retornou pairingCode (ex: foi instanciada antes no modo QR),
+    // limpamos a instância anterior e a recriamos com foco exclusivo em pareamento por número.
+    if (phone && !pairingCode && result.state !== "open") {
+      try {
+        await deleteInstance(name).catch(() => {});
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        await createInstance(name, phone);
+        await setWebhook(name, webhookUrl()).catch(() => {});
+        result = await connectInstance(name, phone);
+        pairingCode = result.pairingCode;
+      } catch (errRecriar) {
+        await logError("whatsapp-recreate-pairing", errRecriar, companyId).catch(() => {});
+      }
+    }
 
     // Garante que o webhook está configurado após a inicialização da conexão
     setWebhook(name, webhookUrl()).catch(() => {});

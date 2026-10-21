@@ -13,11 +13,18 @@ import { registrar } from "@/components/funil";
 
 export default function CadastroPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", phone: "" });
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const jaIniciou = useRef(false);
+
+  function formatarTelefoneInput(valor: string) {
+    const nums = valor.replace(/\D/g, "").slice(0, 11);
+    if (nums.length <= 2) return nums;
+    if (nums.length <= 7) return `(${nums.slice(0, 2)}) ${nums.slice(2)}`;
+    return `(${nums.slice(0, 2)}) ${nums.slice(2, 7)}-${nums.slice(7)}`;
+  }
 
   useEffect(() => {
     trackViewContent("Página de Cadastro");
@@ -37,10 +44,16 @@ export default function CadastroPage() {
     try {
       const emailPrefix = form.email.split("@")[0] || "Minha Empresa";
       const name = form.name?.trim() || (emailPrefix.length >= 2 ? emailPrefix : "Minha Empresa");
+      const phoneClean = form.phone.replace(/\D/g, "");
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, name, aceite: true }),
+        body: JSON.stringify({
+          ...form,
+          name,
+          phone: phoneClean,
+          aceite: true,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -121,6 +134,25 @@ export default function CadastroPage() {
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 className="w-full rounded-lg border border-nx-border bg-nx-surface-2 px-3 py-2.5 placeholder:text-nx-muted text-sm text-nx-primary outline-none focus:border-nx-gold/60 focus:ring-2 focus:ring-nx-gold/15"
               />
+            </div>
+
+            <div>
+              <label htmlFor="company-phone" className="mb-1 block text-xs font-semibold text-nx-primary">
+                WhatsApp ou celular da empresa
+              </label>
+              <input
+                id="company-phone"
+                type="tel"
+                autoComplete="tel"
+                placeholder="(11) 98888-7777"
+                value={form.phone}
+                onFocus={aoFocarCampo}
+                onChange={(e) => setForm({ ...form, phone: formatarTelefoneInput(e.target.value) })}
+                className="w-full rounded-lg border border-nx-border bg-nx-surface-2 px-3 py-2.5 placeholder:text-nx-muted text-sm text-nx-primary outline-none focus:border-nx-gold/60 focus:ring-2 focus:ring-nx-gold/15"
+              />
+              <p className="mt-1 text-[11px] text-nx-secondary">
+                O Atendente conectará no WhatsApp deste número via código oficial no celular.
+              </p>
             </div>
 
             <div>

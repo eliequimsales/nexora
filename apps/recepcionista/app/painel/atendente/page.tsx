@@ -228,6 +228,7 @@ export default function PaginaDoAtendente() {
         aberto={salvarAberto}
         aoFechar={() => setSalvarAberto(false)}
         nomePadrao={nome}
+        telefonePadrao={tela.empresaTelefone}
         aoSalvarSucesso={(novoEmail) => {
           setTela((prev) => (prev ? { ...prev, isGuest: false, email: novoEmail } : null));
         }}

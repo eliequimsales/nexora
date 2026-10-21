@@ -25,6 +25,7 @@ export function ModalConectarWhatsApp({
   const [erro, setErro] = useState("");
   const [copiado, setCopiado] = useState(false);
   const telefoneIniciado = useRef(false);
+  const ultimoNumeroTentado = useRef<string | null>(null);
 
   // Formata telefone (XX) XXXXX-XXXX
   const formatarTelefoneInput = (valor: string) => {
@@ -110,10 +111,11 @@ export function ModalConectarWhatsApp({
       } else {
         if (ehPairingCodeValido(data.state?.pairingCode)) {
           setPairingCode(data.state.pairingCode);
+          setErro("");
         } else {
           setPairingCode(null);
-          if (data.state?.qrCode) {
-            setAba("QR");
+          if (phoneParam) {
+            setErro("Não conseguimos gerar o código para este número agora. Verifique se o DDD está correto e tente novamente.");
           }
         }
         if (data.state?.qrCode) {
@@ -137,6 +139,7 @@ export function ModalConectarWhatsApp({
       setEditandoTelefone(true);
       return;
     }
+    ultimoNumeroTentado.current = limpo;
     void iniciarConexao(limpo);
   };
 
@@ -156,12 +159,22 @@ export function ModalConectarWhatsApp({
   };
 
   useEffect(() => {
-    if (!aberto) return;
+    if (!aberto || status === "CONECTADO" || carregando) return;
     // Se abrir na aba QR, inicia conexão QR padrão
     if (aba === "QR" && !qrCode) {
       void iniciarConexao();
+      return;
     }
-  }, [aberto, aba, qrCode, iniciarConexao]);
+
+    // Se estiver na aba CODIGO e tiver telefone preenchido, inicia conexão automaticamente
+    if (aba === "CODIGO" && !pairingCode) {
+      const numLimpo = (telefone || telefonePadrao || "").replace(/\D/g, "");
+      if (numLimpo.length >= 10 && ultimoNumeroTentado.current !== numLimpo) {
+        ultimoNumeroTentado.current = numLimpo;
+        void iniciarConexao(numLimpo);
+      }
+    }
+  }, [aberto, aba, qrCode, pairingCode, status, carregando, telefone, telefonePadrao, iniciarConexao]);
 
   useEffect(() => {
     if (!aberto || status === "CONECTADO") return;
@@ -261,7 +274,15 @@ export function ModalConectarWhatsApp({
               ) : (
                 <button
                   type="button"
-                  onClick={() => (aba === "CODIGO" ? iniciarConexao(telefone) : iniciarConexao())}
+                  onClick={() => {
+                    if (aba === "CODIGO") {
+                      const limpo = (telefone || telefonePadrao || "").replace(/\D/g, "");
+                      ultimoNumeroTentado.current = limpo;
+                      void iniciarConexao(limpo);
+                    } else {
+                      void iniciarConexao();
+                    }
+                  }}
                   className="mt-3 rounded-lg bg-red-500/20 px-4 py-2 text-xs font-bold text-red-300 transition hover:bg-red-500/30"
                 >
                   Tentar novamente

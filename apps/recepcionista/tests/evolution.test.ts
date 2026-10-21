@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatarNumeroWhatsApp,
   idDoEnvio,
   isPairingCode,
   parseConnectionUpdate,
@@ -313,5 +314,28 @@ describe("isPairingCode", () => {
     expect(isPairingCode("")).toBe(false);
     expect(isPairingCode(12345678)).toBe(false);
     expect(isPairingCode({})).toBe(false);
+  });
+});
+
+describe("formatarNumeroWhatsApp", () => {
+  it("adiciona prefixo 55 para telefones com 10 dígitos (DDD + fixo)", () => {
+    expect(formatarNumeroWhatsApp("1133334444")).toBe("551133334444");
+    expect(formatarNumeroWhatsApp("(11) 3333-4444")).toBe("551133334444");
+  });
+
+  it("adiciona prefixo 55 para celulares com 11 dígitos (DDD + 9 dígitos)", () => {
+    expect(formatarNumeroWhatsApp("11988887777")).toBe("5511988887777");
+    expect(formatarNumeroWhatsApp("(21) 97777-6666")).toBe("5521977776666");
+  });
+
+  it("preserva números que já possuem DDI 55", () => {
+    expect(formatarNumeroWhatsApp("5511988887777")).toBe("5511988887777");
+    expect(formatarNumeroWhatsApp("+55 (11) 98888-7777")).toBe("5511988887777");
+  });
+
+  it("retorna string vazia se não houver dígitos", () => {
+    expect(formatarNumeroWhatsApp("")).toBe("");
+    expect(formatarNumeroWhatsApp("   ")).toBe("");
+    expect(formatarNumeroWhatsApp("abc")).toBe("");
   });
 });
