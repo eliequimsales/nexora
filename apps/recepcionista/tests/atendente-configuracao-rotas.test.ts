@@ -11,6 +11,7 @@ import { getSessionCompanyId } from "@/lib/auth";
 import { limitar } from "@/lib/limites";
 import { ConfiguracaoErro, confirmarTesteConfiguracao, getConfiguracao, importarCadastroConfiguracao, publicarConfiguracao, salvarConfiguracao } from "@/lib/atendente/configuracao";
 import { GET, POST, PUT } from "@/app/api/atendente/configuracao/route";
+import { configuracaoExemplo } from "./fixtures/configuracao-nexa";
 
 function req(method: string, body?: unknown, headers: Record<string, string> = {}) {
   return new Request("http://localhost:3002/api/atendente/configuracao", { method, headers: { origin: "http://localhost:3002", "content-type": "application/json", ...headers }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
@@ -36,6 +37,21 @@ describe("API de configuração isolada pela sessão", () => {
     expect((await POST(req("POST", { acao: "PUBLICAR", revisao: 4, companyId: "outra" }))).status).toBe(400);
     expect((await PUT(req("PUT", { revisao: 4, etapa: 1, rascunho: {} }))).status).toBe(400);
     expect(publicarConfiguracao).not.toHaveBeenCalled(); expect(salvarConfiguracao).not.toHaveBeenCalled();
+  });
+  it("encaminha grupo e destino completos em uma única chamada da empresa autenticada", async () => {
+    const input = { revisao: 4, etapa: 4, rascunho: configuracaoExemplo(), concluirEtapas: [2, 3] };
+    vi.mocked(salvarConfiguracao).mockResolvedValue({ revisao: 4, etapa: 4, revisadas: [0, 1, 2, 3] } as Awaited<ReturnType<typeof getConfiguracao>>);
+    const resposta = await PUT(req("PUT", input));
+    expect(resposta.status).toBe(200); expect(await resposta.json()).toMatchObject({ etapa: 4, revisadas: [0, 1, 2, 3] });
+    expect(salvarConfiguracao).toHaveBeenCalledTimes(1); expect(salvarConfiguracao).toHaveBeenCalledWith("c-sessao", input);
+  });
+  it.each([
+    { concluirEtapas: [] }, { concluirEtapas: [0, 0] }, { concluirEtapas: [4] },
+    { concluirEtapas: [0, 1], concluirEtapa: true },
+  ])("recusa conclusão inválida ou ambígua antes de salvar (%j)", async (conclusao) => {
+    const resposta = await PUT(req("PUT", { revisao: 4, etapa: 2, rascunho: configuracaoExemplo(), ...conclusao }));
+    expect(resposta.status).toBe(400); expect(await resposta.json()).toMatchObject({ pendencias: expect.any(Array) });
+    expect(salvarConfiguracao).not.toHaveBeenCalled();
   });
   it("bloqueia formulários e origem cruzada antes de qualquer mutação", async () => {
     expect((await POST(req("POST", { acao: "PUBLICAR", revisao: 4 }, { origin: "https://site-invasor.invalid" }))).status).toBe(403);

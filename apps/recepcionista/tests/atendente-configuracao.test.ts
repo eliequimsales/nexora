@@ -89,6 +89,68 @@ describe("rascunho separado do atendimento publicado", () => {
     const t = await salvarConfiguracao("c1", { revisao: 3, rascunho: config(), etapa: 4, concluirEtapa: true });
     expect(t.revisao).toBe(3); expect(t.testes).toHaveLength(3); expect(t.revisadas).toEqual([0, 1, 2, 3, 4]); expect(t.etapa).toBe(5);
   });
+  it("conclui um grupo em uma única escrita e usa a etapa informada como destino", async () => {
+    const e = envelope(); e.revisadas = [2, 3]; perfil.atendenteConfiguracao = e;
+    const t = await salvarConfiguracao("c1", { revisao: 3, rascunho: config(), etapa: 2, concluirEtapas: [1, 0] });
+    expect(t.etapa).toBe(2); expect(t.revisadas).toEqual([0, 1, 2, 3]); expect(t.revisao).toBe(3); expect(t.testes).toEqual(e.testes);
+    expect(db.companyProfile.updateMany).toHaveBeenCalledTimes(1);
+    expect(db.companyProfile.updateMany.mock.calls[0][0]).toMatchObject({
+      where: { companyId: "c1", atendenteConfiguracao: { equals: e } },
+      data: { atendenteConfiguracao: { etapa: 2, revisadas: [0, 1, 2, 3] } },
+    });
+  });
+  it("salvar e concluir um grupo invalida testes da revisão antiga sem perder as outras etapas", async () => {
+    const e = envelope(); e.revisadas.push(4); e.publicado = { revisao: 3, em: "2026-10-21", rascunho: config() }; perfil.atendenteConfiguracao = e;
+    const c = config(); c.atendimento.nome = "Bia"; c.conhecimento.itens = [{
+      id: "novo:entrega", pergunta: "Faz entrega?", resposta: "Não fazemos entrega.", situacao: "REVISAR", origem: "MANUAL",
+    }];
+    const t = await salvarConfiguracao("c1", { revisao: 3, rascunho: c, etapa: 4, concluirEtapas: [2, 3] });
+    expect(t.etapa).toBe(2); expect(t.revisao).toBe(4); expect(t.revisadas).toEqual([0, 1, 2, 3]); expect(t.testes).toEqual([]);
+    expect(t.rascunho.conhecimento.itens[0].situacao).toBe("REVISAR");
+    expect(t.pendencias).toContainEqual(expect.objectContaining({ campo: "pergunta:novo:entrega", bloqueia: true }));
+    expect(lerConfiguracaoPublicada(perfil.atendenteConfiguracao)?.atendimento.nome).toBe("Nexa");
+    expect(db.companyProfile.updateMany).toHaveBeenCalledTimes(1);
+    expect((await getConfiguracao("c1")).etapa).toBe(2);
+    await expect(publicarConfiguracao("c1", 4)).rejects.toMatchObject({ status: 409 });
+    expect(db.company.update).not.toHaveBeenCalled();
+  });
+  it("retoma o começo do grupo de informações com conteúdo a conferir, sem perder o rascunho", async () => {
+    perfil.atendenteConfiguracao = envelope();
+    const c = config(); c.informacoes.pagamento = { valor: "Pix e cartão", situacao: "REVISAR", origem: "ASSISTENTE" };
+    const t = await salvarConfiguracao("c1", { revisao: 3, rascunho: c, etapa: 2, concluirEtapas: [1, 0] });
+    expect(t.etapa).toBe(0); expect(t.revisao).toBe(4); expect(t.rascunho.informacoes.pagamento).toEqual(c.informacoes.pagamento);
+    const recarregado = await getConfiguracao("c1");
+    expect(recarregado.etapa).toBe(0); expect(recarregado.rascunho.informacoes.pagamento.situacao).toBe("REVISAR");
+    expect(recarregado.pendencias).toContainEqual(expect.objectContaining({ campo: "informacoes.pagamento", bloqueia: true }));
+  });
+  it("grupo de comportamento válido avança para testes mesmo com testes antigos invalidados", async () => {
+    perfil.atendenteConfiguracao = envelope();
+    const c = config(); c.atendimento.nome = "Bia";
+    const t = await salvarConfiguracao("c1", { revisao: 3, rascunho: c, etapa: 4, concluirEtapas: [2, 3] });
+    expect(t.etapa).toBe(4); expect(t.revisao).toBe(4); expect(t.testes).toEqual([]);
+    expect((await getConfiguracao("c1")).etapa).toBe(4);
+  });
+  it("a conclusão individual legada preserva o avanço mesmo quando há conteúdo pendente", async () => {
+    perfil.atendenteConfiguracao = envelope();
+    const c = config(); c.informacoes.pagamento.situacao = "REVISAR";
+    const t = await salvarConfiguracao("c1", { revisao: 3, rascunho: c, etapa: 1, concluirEtapa: true });
+    expect(t.etapa).toBe(2); expect(t.rascunho.informacoes.pagamento.situacao).toBe("REVISAR");
+  });
+  it("o conflito de um grupo não conclui nenhuma das etapas", async () => {
+    const e = envelope(); e.revisadas = [0, 1]; perfil.atendenteConfiguracao = e;
+    db.companyProfile.updateMany.mockResolvedValueOnce({ count: 0 });
+    await expect(salvarConfiguracao("c1", { revisao: 3, rascunho: config(), etapa: 4, concluirEtapas: [2, 3] })).rejects.toThrow("mudou enquanto");
+    expect(perfil.atendenteConfiguracao).toEqual(e); expect(e.revisadas).toEqual([0, 1]);
+    expect(db.companyProfile.updateMany).toHaveBeenCalledTimes(1);
+  });
+  it.each([[], [0, 0], [-1], [4], [1.5], [0, 1, 2, 3, 0]].map((concluirEtapas) => ({ concluirEtapas })))("recusa um grupo de etapas inválido ($concluirEtapas) antes da escrita", async ({ concluirEtapas }) => {
+    await expect(salvarConfiguracao("c1", { revisao: 0, rascunho: config(), etapa: 2, concluirEtapas })).rejects.toThrow();
+    expect(db.company.findUnique).not.toHaveBeenCalled(); expect(db.companyProfile.updateMany).not.toHaveBeenCalled();
+  });
+  it("recusa conclusão de grupo junto da conclusão individual sem interpretar o destino", async () => {
+    await expect(salvarConfiguracao("c1", { revisao: 0, rascunho: config(), etapa: 2, concluirEtapa: true, concluirEtapas: [0, 1] })).rejects.toThrow("Conclua uma etapa ou um grupo");
+    expect(db.companyProfile.updateMany).not.toHaveBeenCalled();
+  });
   it("ordem das chaves JSON não transforma navegação em edição", async () => {
     const e = envelope(); e.rascunho.atendimento = { agendamento: "DESLIGADO", quando: "APOIO_EXPEDIENTE", nome: "Nexa", handoffKeywords: ["responsável"], jeito: "ACOLHEDOR" };
     perfil.atendenteConfiguracao = e;

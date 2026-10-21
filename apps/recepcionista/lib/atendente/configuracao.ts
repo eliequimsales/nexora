@@ -43,7 +43,11 @@ export const configuracaoNexaSchema: z.ZodType<ConfiguracaoNexa> = z.object({
 export const salvarConfiguracaoSchema = z.object({
   revisao: z.number().int().min(0), rascunho: configuracaoNexaSchema,
   etapa: z.number().int().min(0).max(5), concluirEtapa: z.boolean().optional(),
-}).strict();
+  concluirEtapas: z.array(z.number().int().min(0).max(3)).min(1).max(4)
+    .refine((etapas) => new Set(etapas).size === etapas.length, "Informe cada etapa uma única vez.").optional(),
+}).strict().refine((input) => !input.concluirEtapa || input.concluirEtapas === undefined, {
+  message: "Conclua uma etapa ou um grupo de etapas por vez.", path: ["concluirEtapas"],
+});
 const cenarioSchema = z.enum(["INFORMACOES", "HORARIO", "HUMANO", "DESCONHECIDA", "MULTIPLA", "CANCELAMENTO", "MIDIA"]);
 const testeSchema = z.object({ id, cenario: cenarioSchema, revisao: z.number().int().min(0), em: z.string(),
   pergunta: texto(3000), respostas: z.array(texto(5000)).min(1).max(12), correto: z.boolean().nullable() });
@@ -269,7 +273,13 @@ export async function salvarConfiguracao(companyId: string, entrada: z.infer<typ
   const alteradas = new Set(blocos.flatMap((bloco, etapa) => mesmo(e.rascunho[bloco], input.rascunho[bloco]) ? [] : [etapa]));
   const novo: EnvelopeConfiguracaoNexa = { ...e, rascunho: input.rascunho, etapa: input.concluirEtapa ? Math.min(5, input.etapa + 1) : input.etapa,
     revisao: e.revisao + (alterado ? 1 : 0), revisadas: e.revisadas.filter((etapa) => etapa < 4 ? !alteradas.has(etapa) : !alterado), testes: alterado ? [] : e.testes };
-  if (input.concluirEtapa) novo.revisadas = [...new Set([...novo.revisadas, input.etapa])].sort();
+  const concluidas = input.concluirEtapas ?? (input.concluirEtapa ? [input.etapa] : []);
+  if (concluidas.length) novo.revisadas = [...new Set([...novo.revisadas, ...concluidas])].sort();
+  const grupo = input.concluirEtapas;
+  if (grupo && pendenciasDaConfiguracao(novo).some((p) =>
+    p.bloqueia && grupo.includes(p.etapa) && !p.campo.startsWith("etapa:"))) {
+    novo.etapa = Math.min(...grupo);
+  }
   await gravar(companyId, l.original, novo);
   return tela({ ...l, envelope: novo });
 }
