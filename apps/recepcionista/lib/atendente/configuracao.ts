@@ -179,13 +179,13 @@ export function pendenciasDaConfiguracao(e: EnvelopeConfiguracaoNexa): Pendencia
   conferir(c.informacoes.pagamento, "informacoes.pagamento", "as formas de pagamento", 1);
   const agenda = c.negocio.objetivo === "AGENDAMENTOS" || c.atendimento.agendamento !== "DESLIGADO";
   if (c.negocio.objetivo !== "AGENDAMENTOS" && c.atendimento.agendamento !== "DESLIGADO") falta("atendimento.agendamento", "Escolha o objetivo de agendamentos para autorizar a agenda.", 2);
-  if (c.negocio.objetivo === "AGENDAMENTOS" && c.atendimento.agendamento === "DESLIGADO") falta("atendimento.agendamento", "Defina se a Nexa envia o link ou confirma na agenda.", 2);
+  if (c.negocio.objetivo === "AGENDAMENTOS" && c.atendimento.agendamento === "DESLIGADO") falta("atendimento.agendamento", "Defina se o atendente envia o link ou confirma na agenda.", 2);
   const h = c.informacoes.horarios;
   const hora = /^([01]\d|2[0-3]):[0-5]\d$/;
   const horariosValidos = h.length === 7 && new Set(h.map((d) => d.day)).size === 7 && h.every((d) => d.closed || hora.test(d.open) && hora.test(d.close) && d.open < d.close);
   if (c.informacoes.horariosSituacao === "REVISAR") falta("informacoes.horarios", "Revise os horários de funcionamento.", 1);
   else if (c.informacoes.horariosSituacao === "CONFIRMADO" && !horariosValidos) falta("informacoes.horarios", "Confira os sete dias e os horários de abertura e fechamento.", 1);
-  else if (c.informacoes.horariosSituacao !== "CONFIRMADO" || !horariosValidos || !h.some((d) => !d.closed)) falta("informacoes.horarios", "Informe e confirme o expediente para definir quando a Nexa deve responder.", 1);
+  else if (c.informacoes.horariosSituacao !== "CONFIRMADO" || !horariosValidos || !h.some((d) => !d.closed)) falta("informacoes.horarios", "Informe e confirme o expediente para definir quando o atendente deve responder.", 1);
   const ativos = c.informacoes.servicos.filter((s) => s.situacao === "CONFIRMADO");
   for (const s of c.informacoes.servicos) {
     if (s.situacao === "REVISAR") falta(`servico:${s.id}`, `Revise o serviço ${s.nome || "sem nome"}.`, 1);
@@ -212,7 +212,7 @@ export function pendenciasDaConfiguracao(e: EnvelopeConfiguracaoNexa): Pendencia
     if (nomes.has(k)) falta(`servico:${s.id}:nome`, "Diferencie os nomes dos serviços para evitar uma escolha ambígua.", 1);
     nomes.add(k);
   }
-  if (!ativos.length && !(c.negocio.descricao.situacao === "CONFIRMADO" && c.negocio.descricao.valor) && !c.conhecimento.itens.some((i) => i.situacao === "CONFIRMADO" && i.pergunta && i.resposta)) falta("conhecimento", "Cadastre uma descrição, serviço ou resposta confirmada para a Nexa utilizar.", 3);
+  if (!ativos.length && !(c.negocio.descricao.situacao === "CONFIRMADO" && c.negocio.descricao.valor) && !c.conhecimento.itens.some((i) => i.situacao === "CONFIRMADO" && i.pergunta && i.resposta)) falta("conhecimento", "Cadastre uma descrição, serviço ou resposta confirmada para o atendente utilizar.", 3);
   for (let etapa = 0; etapa < 4; etapa++) if (!e.revisadas.includes(etapa)) falta(`etapa:${etapa}`, "Conclua a revisão desta etapa.", etapa);
   const cenarios: CenarioNexa[] = ["INFORMACOES", "HUMANO", "DESCONHECIDA", ...(agenda ? ["HORARIO" as const] : [])];
   for (const cenario of cenarios) if ([...e.testes].reverse().find((t) => t.cenario === cenario && t.revisao === e.revisao)?.correto !== true) falta(`teste:${cenario}`, `Teste e aprove o cenário ${cenario === "INFORMACOES" ? "Informações do negócio" : cenario === "HUMANO" ? "Pedir uma pessoa" : cenario === "HORARIO" ? "Consultar um horário" : "Informação não cadastrada"}.`, 4);

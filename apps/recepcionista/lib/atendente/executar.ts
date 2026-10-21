@@ -530,7 +530,7 @@ export async function atender(
   if (fatos.configuracaoDivergente) {
     try {
       await persistir(estadoAnterior ?? Prisma.DbNull,
-        "O cadastro foi alterado em outra área. Importe e revise a configuração da Nexa antes de reativar esta conversa.", true);
+        "O cadastro foi alterado em outra área. Importe e revise a configuração do atendente antes de reativar esta conversa.", true);
       await liberarExecucao();
     } catch (erro) {
       await logError("atendente-configuracao-divergente", erro, p.companyId);

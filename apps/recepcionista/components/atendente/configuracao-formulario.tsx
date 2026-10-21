@@ -15,9 +15,9 @@ export function FormularioConfiguracaoNexa({ etapa, dados: d, editar }: Props) {
     <Campo titulo="Nome do negócio" campo="negocio.nome"><input className={CAMPO} maxLength={120} value={d.negocio.nome} onChange={e => editar("negocio", { nome: e.target.value })} autoComplete="organization" /></Campo>
     <Campo campo="negocio.segmento" titulo="Segmento" dica="Por exemplo: barbearia, clínica, assistência técnica ou consultoria."><input className={CAMPO} maxLength={120} value={d.negocio.segmento} onChange={e => editar("negocio", { segmento: e.target.value })} /></Campo>
     <Campo titulo="Como o negócio atende"><select className={CAMPO} value={d.negocio.modalidade} onChange={e => editar("negocio", { modalidade: e.target.value as typeof d.negocio.modalidade })}><option value="PRESENCIAL">Presencial, em um endereço</option><option value="ONLINE">Online</option><option value="DOMICILIO">Na casa ou local do cliente</option><option value="HIBRIDO">Mais de uma forma</option></select></Campo>
-    <Informacao campo="negocio.regiao" titulo="Região atendida" dica="Informe os locais ou limites de atendimento que a Nexa pode mencionar." valor={d.negocio.regiao} mudar={regiao => editar("negocio", { regiao })} />
+    <Informacao campo="negocio.regiao" titulo="Região atendida" dica="Informe os locais ou limites de atendimento que o atendente pode mencionar." valor={d.negocio.regiao} mudar={regiao => editar("negocio", { regiao })} />
     <Informacao campo="negocio.descricao" titulo="Como funciona o negócio" valor={d.negocio.descricao} multiline mudar={descricao => editar("negocio", { descricao })} />
-    <Escolha titulo="Qual é o principal objetivo da Nexa?" valor={d.negocio.objetivo} mudar={objetivo => editar("negocio", { objetivo })} opcoes={[
+    <Escolha titulo="Qual é o principal objetivo do atendente?" valor={d.negocio.objetivo} mudar={objetivo => editar("negocio", { objetivo })} opcoes={[
       { valor: "DUVIDAS", titulo: "Responder dúvidas", descricao: "Explicar as informações e regras que você cadastrar." },
       { valor: "SOLICITACOES", titulo: "Receber solicitações", descricao: "Conversar e encaminhar o que precisa da equipe, sem prometer uma ação concluída." },
       { valor: "AGENDAMENTOS", titulo: "Ajudar com agendamentos", descricao: "Consultar a agenda ou oferecer o link, conforme sua autorização." },
@@ -25,12 +25,12 @@ export function FormularioConfiguracaoNexa({ etapa, dados: d, editar }: Props) {
   </Cartao>;
 
   if (etapa === 1) return <>
-    <Cartao titulo="Local e pagamento" descricao="Cadastre somente o que a Nexa pode afirmar aos seus clientes.">
+    <Cartao titulo="Local e pagamento" descricao="Cadastre somente o que o atendente pode afirmar aos seus clientes.">
       {d.negocio.modalidade === "ONLINE" && <p className="rounded-xl bg-panel-bg p-3 text-xs leading-relaxed text-panel-sub">Seu negócio está definido como online. Se não existe endereço de atendimento presencial, marque o endereço como “Não se aplica”.</p>}
       <Informacao campo="informacoes.endereco" titulo="Endereço e orientações" valor={d.informacoes.endereco} multiline mudar={endereco => editar("informacoes", { endereco })} />
       <Informacao campo="informacoes.pagamento" titulo="Formas e condições de pagamento" valor={d.informacoes.pagamento} multiline mudar={pagamento => editar("informacoes", { pagamento })} />
     </Cartao>
-    <Cartao titulo="Funcionamento do negócio" descricao="São os horários do seu negócio. Você escolhe quando a Nexa responde na próxima etapa.">
+    <Cartao titulo="Funcionamento do negócio" descricao="São os horários do seu negócio. Você escolhe quando o atendente responde na próxima etapa.">
       <div className="flex flex-wrap items-center justify-between gap-2"><Situacao valor={d.informacoes.horariosSituacao} /><div className="max-w-full sm:max-w-60"><SeletorSituacao titulo="Situação dos horários" valor={d.informacoes.horariosSituacao} mudar={horariosSituacao => editar("informacoes", { horariosSituacao })} /></div></div>
       <div className="space-y-3">{DIAS.map((dia, day) => {
         const h = d.informacoes.horarios.find(h => h.day === day) || { day, open: "", close: "", closed: false };
@@ -44,8 +44,8 @@ export function FormularioConfiguracaoNexa({ etapa, dados: d, editar }: Props) {
       {d.informacoes.horariosSituacao === "REVISAR" && <button className={BOTAO} type="button" onClick={() => editar("informacoes", { horariosSituacao: "CONFIRMADO" })}>Conferi todos os horários exibidos</button>}
       <div className="space-y-2"><p className="text-sm font-medium">Datas sem atendimento</p>{d.informacoes.diasFechados.map((dia, i) => <div className="flex items-center gap-2" key={i}><input aria-label={`Data sem atendimento ${i + 1}`} type="date" className={CAMPO} value={dia} onChange={e => editar("informacoes", { diasFechados: d.informacoes.diasFechados.map((v, n) => n === i ? e.target.value : v) })} /><button type="button" className={BOTAO} aria-label={`Excluir data ${i + 1}`} onClick={() => editar("informacoes", { diasFechados: d.informacoes.diasFechados.filter((_, n) => n !== i) })}>Excluir</button></div>)}<button type="button" className={BOTAO} onClick={() => editar("informacoes", { diasFechados: [...d.informacoes.diasFechados, ""] })}>Adicionar data</button></div>
     </Cartao>
-    <Cartao titulo="Serviços e preços" descricao="Preço sob consulta não significa gratuito. A duração é necessária quando a Nexa consulta ou reserva um horário.">
-      {!d.informacoes.servicos.length && <p className="rounded-xl bg-panel-bg p-4 text-sm text-panel-sub">Você ainda não cadastrou serviços. Adicione os que a Nexa pode apresentar aos clientes.</p>}
+    <Cartao titulo="Serviços e preços" descricao="Preço sob consulta não significa gratuito. A duração é necessária quando o atendente consulta ou reserva um horário.">
+      {!d.informacoes.servicos.length && <p className="rounded-xl bg-panel-bg p-4 text-sm text-panel-sub">Você ainda não cadastrou serviços. Adicione os que o atendente pode apresentar aos clientes.</p>}
       {d.informacoes.servicos.map((s, i) => {
         const mudar = (novo: Partial<typeof s>) => editar("informacoes", { servicos: d.informacoes.servicos.map(v => v.id === s.id ? { ...v, ...novo, origem: "MANUAL" } : v) });
         return <div className="space-y-3 rounded-xl border border-panel-line p-4" key={s.id}>
@@ -64,17 +64,17 @@ export function FormularioConfiguracaoNexa({ etapa, dados: d, editar }: Props) {
   </>;
 
   if (etapa === 2) return <>
-    <Cartao titulo="Identidade e linguagem" descricao="A Nexa atende de forma natural e profissional, com identidade de atendente virtual.">
-      <Campo titulo="Nome da atendente" campo="atendimento.nome"><input className={CAMPO} maxLength={80} value={d.atendimento.nome} onChange={e => editar("atendimento", { nome: e.target.value })} /></Campo>
-      <Escolha titulo="Como ela deve conversar?" valor={d.atendimento.jeito} mudar={jeito => editar("atendimento", { jeito })} opcoes={[{ valor: "ACOLHEDOR", titulo: "Acolhedora", descricao: "Educada, atenciosa e próxima, sem perder a objetividade." }, { valor: "DIRETO", titulo: "Direta", descricao: "Respostas claras e concisas, com cordialidade." }, { valor: "DESCONTRAIDO", titulo: "Descontraída", descricao: "Linguagem leve, com respeito e profissionalismo." }]} />
+    <Cartao titulo="Identidade e linguagem" descricao="O atendente responde de forma natural e profissional, com identidade de atendente virtual.">
+      <Campo titulo="Nome do atendente" campo="atendimento.nome"><input className={CAMPO} maxLength={80} value={d.atendimento.nome} onChange={e => editar("atendimento", { nome: e.target.value })} /></Campo>
+      <Escolha titulo="Como ele deve conversar?" valor={d.atendimento.jeito} mudar={jeito => editar("atendimento", { jeito })} opcoes={[{ valor: "ACOLHEDOR", titulo: "Acolhedor", descricao: "Educado, atencioso e próximo, sem perder a objetividade." }, { valor: "DIRETO", titulo: "Direto", descricao: "Respostas claras e concisas, com cordialidade." }, { valor: "DESCONTRAIDO", titulo: "Descontraído", descricao: "Linguagem leve, com respeito e profissionalismo." }]} />
     </Cartao>
     <Cartao titulo="Quando responder" descricao="A intervenção de uma pessoa da equipe pausa a automação naquela conversa até a reativação manual.">
       <Escolha titulo="Período de atuação" valor={d.atendimento.quando} mudar={quando => editar("atendimento", { quando })} opcoes={[{ valor: "FORA_EXPEDIENTE", titulo: "Fora do expediente", descricao: "Responde quando o negócio está fechado, conforme os horários cadastrados." }, { valor: "APOIO_EXPEDIENTE", titulo: "Fora do expediente e como apoio durante o dia", descricao: "Fora do expediente, responde às novas mensagens. Durante o expediente, espera cinco minutos sem resposta da equipe antes de atuar." }]} />
     </Cartao>
-    <Cartao titulo="O que você autoriza a Nexa a fazer?" descricao="Ela responde com o que você confirmou e reconhece quando precisa de uma pessoa.">
+    <Cartao titulo="O que você autoriza o atendente a fazer?" descricao="Ele responde com o que você confirmou e reconhece quando precisa de uma pessoa.">
       <Escolha titulo="Agendamentos" valor={d.atendimento.agendamento} mudar={agendamento => editar("atendimento", { agendamento })} opcoes={[{ valor: "DESLIGADO", titulo: "Responder sem agendar", descricao: "Informa e encaminha o que depende da equipe. Não confirma reservas." }, { valor: "LINK", titulo: "Oferecer o link da agenda", descricao: "O cliente escolhe e conclui o agendamento pelo link de autoagendamento." }, { valor: "DIRETO", titulo: "Consultar e confirmar pela conversa", descricao: "Consulta a disponibilidade e só confirma depois que a reserva é registrada. Exige serviços, durações e horários conferidos." }]} />
       <Campo campo="atendimento.handoffKeywords" titulo="Assuntos que devem ir para a equipe" dica="Um por linha. Use assuntos específicos, como reclamação ou pedido de desconto. O cliente também pode pedir uma pessoa diretamente."><textarea className={CAMPO} rows={4} maxLength={2000} value={d.atendimento.handoffKeywords.join("\n")} onChange={e => editar("atendimento", { handoffKeywords: e.target.value.split("\n") })} /></Campo>
-      <p className="rounded-xl bg-panel-bg p-3 text-xs leading-relaxed text-panel-sub">A Nexa não confirma descontos, reembolsos, cancelamentos ou outras ações que não tenha realizado. Solicitações fora da sua autonomia ficam para a equipe.</p>
+      <p className="rounded-xl bg-panel-bg p-3 text-xs leading-relaxed text-panel-sub">O atendente não confirma descontos, reembolsos, cancelamentos ou outras ações que não tenha realizado. Solicitações fora da sua autonomia ficam para a equipe.</p>
     </Cartao>
   </>;
 
@@ -91,7 +91,7 @@ export function FormularioConfiguracaoNexa({ etapa, dados: d, editar }: Props) {
       </div>;
     })}
     <button type="button" className={BOTAO} onClick={() => editar("conhecimento", { itens: [...d.conhecimento.itens, { id: `novo:${crypto.randomUUID()}`, pergunta: "", resposta: "", situacao: "REVISAR", origem: "MANUAL" }] })}>Adicionar pergunta ou regra</button>
-    <p className="rounded-xl bg-panel-bg p-3 text-xs leading-relaxed text-panel-sub">“Não informado” significa que a Nexa ainda não sabe. “Não se aplica” significa que você decidiu que aquele assunto não faz parte deste atendimento. Informações aguardando revisão precisam da sua conferência.</p>
+    <p className="rounded-xl bg-panel-bg p-3 text-xs leading-relaxed text-panel-sub">“Não informado” significa que o atendente ainda não sabe. “Não se aplica” significa que você decidiu que aquele assunto não faz parte deste atendimento. Informações aguardando revisão precisam da sua conferência.</p>
   </Cartao>;
 
   return null;

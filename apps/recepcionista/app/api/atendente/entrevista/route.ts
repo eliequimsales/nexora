@@ -35,7 +35,7 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     error: "Use a configuração guiada para revisar as informações antes de aplicá-las.",
-    resposta: "Abra a configuração da Nexa e use o preenchimento assistido. Vou preparar uma proposta para sua revisão.",
+    resposta: "Abra a configuração do atendente e use o preenchimento assistido. Vou preparar uma proposta para sua revisão.",
     proximoPasso: "/painel/atendente",
   }, { status: 410 });
 }
