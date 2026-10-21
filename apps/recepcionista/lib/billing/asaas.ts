@@ -50,8 +50,8 @@ export function obterAsaasBaseUrl(
       (env.ASAAS_API_KEY?.includes("sandbox") || env.NODE_ENV !== "production"));
 
   return sandbox
-    ? "https://sandbox.asaas.com/api/v3"
-    : "https://api.asaas.com/api/v3";
+    ? "https://api-sandbox.asaas.com/v3"
+    : "https://api.asaas.com/v3";
 }
 
 async function requisicaoAsaas<T>(
