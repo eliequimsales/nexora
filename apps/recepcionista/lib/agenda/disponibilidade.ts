@@ -79,6 +79,9 @@ export function calcularSlots(entrada: EntradaSlots): string[] {
     antecedenciaMinutos = 0,
   } = entrada;
 
+  // Duração ausente no cadastro é desconhecida, não uma reserva de zero minutos.
+  if (!Number.isFinite(duracaoMin) || duracaoMin <= 0 || !Number.isFinite(passoMin) || passoMin <= 0) return [];
+
   const diaSemana = diaDaSemanaLocal(dia);
   const config = horarios.find((h) => h.day === diaSemana);
 

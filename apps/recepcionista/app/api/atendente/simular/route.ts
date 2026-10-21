@@ -14,6 +14,7 @@ import { logError } from "@/lib/errors";
 import { LIMITES, limitar } from "@/lib/limites";
 import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 import { recordKnowledgeGap } from "@/lib/training";
+import { getConfiguracao, registrarTesteConfiguracao, fatosDoRascunho } from "@/lib/atendente/configuracao";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -53,10 +54,19 @@ export async function POST(request: Request) {
       ...(p.jeito ? { jeito: p.jeito } : {}),
       ...(p.marcaDireto !== undefined ? { marcaDireto: p.marcaDireto } : {}),
     };
-    const [fatos, perfil] = await Promise.all([
+    const [base, perfil] = await Promise.all([
       fatosDaEmpresa(companyId, sobrescrita),
       prisma.companyProfile.findUnique({ where: { companyId }, select: { handoffKeywords: true } }),
     ]);
+    const configuracao = p.configuracaoRevisao !== undefined ? await getConfiguracao(companyId) : null;
+    if (configuracao && configuracao.revisao !== p.configuracaoRevisao) {
+      return NextResponse.json({ error: "A configuração mudou. Salve ou recarregue os ajustes antes de testar." }, { status: 409 });
+    }
+    const fatos = configuracao ? fatosDoRascunho(configuracao.rascunho, {
+      ...base,
+      linkAgenda: base.linkAgenda ?? (process.env.APP_URL
+        ? `${process.env.APP_URL.replace(/\/+$/, "")}/agendar/${companyId}` : null),
+    }) : base;
 
     // Sem a configuração, as respostas livres ficam de fora e o resto funciona.
     // O nome da variável vai para o log do servidor, uma vez; a tela recebe só o
@@ -84,11 +94,12 @@ export async function POST(request: Request) {
         fatos,
         agora,
         contexto,
-        palavrasDoDono: lerPalavrasDoDono(perfil?.handoffKeywords),
+        palavrasDoDono: configuracao ? configuracao.rascunho.atendimento.handoffKeywords : lerPalavrasDoDono(perfil?.handoffKeywords),
       },
       {
         livres: (q) =>
-          horariosLivres({ companyId, duracaoMin: q.servico.duracaoMin, dias: q.dias, agora, profissional: q.profissional }),
+          horariosLivres({ companyId, duracaoMin: q.servico.duracaoMin, dias: q.dias, agora, profissional: q.profissional,
+            ...(configuracao ? { configuracaoSimulada: { horarios: fatos.horarios, diasFechados: fatos.diasFechados } } : {}) }),
         marcar: (q) =>
           marcarNaAgenda({
             companyId,
@@ -98,6 +109,7 @@ export async function POST(request: Request) {
             cliente: q.cliente,
             origem: "ATENDENTE",
             simulacao: true,
+            ...(configuracao ? { configuracaoSimulada: { horarios: fatos.horarios, diasFechados: fatos.diasFechados } } : {}),
             agora,
           }),
         ia: async ({ systemPrompt, historico }) => {
@@ -109,14 +121,21 @@ export async function POST(request: Request) {
 
     await prisma.companyProfile.update({ where: { companyId }, data: { atendenteTestadoEm: agora } });
 
-    if (saida.anotar) {
+    // Perguntas artificiais de revisão não poluem as lacunas dos clientes reais.
+    if (saida.anotar && !configuracao) {
       const perguntaParaAprender = saida.anotar.pergunta || (pendentes.length > 0 ? pendentes[pendentes.length - 1] : null);
       if (perguntaParaAprender && perguntaParaAprender.trim().length >= 4) {
         await recordKnowledgeGap(companyId, perguntaParaAprender, saida.anotar.motivo || "Pergunta feita no simulador");
       }
     }
 
+    const teste = configuracao && p.cenario ? await registrarTesteConfiguracao(companyId, {
+      revisao: configuracao.revisao, cenario: p.cenario,
+      pergunta: pendentes.join("\n"), respostas: saida.mensagens,
+    }) : null;
+
     return NextResponse.json({
+      testeId: teste?.id ?? null,
       mensagens: saida.mensagens,
       estado: saida.estado,
       fontes: saida.fontes,
@@ -128,6 +147,9 @@ export async function POST(request: Request) {
       respostasLivres: !faltando,
     });
   } catch (erro) {
+    if (erro instanceof Error && "status" in erro && typeof erro.status === "number" && erro.status >= 400 && erro.status < 500) {
+      return NextResponse.json({ error: erro.message }, { status: erro.status });
+    }
     await logError("atendente-simular", erro, companyId);
     return NextResponse.json({ error: "O teste não rodou agora. Tente de novo em instantes." }, { status: 500 });
   }

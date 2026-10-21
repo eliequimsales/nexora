@@ -8,6 +8,8 @@ import { getApprovedKnowledge } from "@/lib/training";
 import type { BusinessHour, Faq } from "@/lib/validation";
 import { lerJeito, type Jeito } from "./jeitos";
 import { ehContaComercialNexora } from "./comercial-config";
+import { aplicarConfiguracaoAosFatos } from "./configuracao-fatos";
+import { cadastroDivergeDaPublicacao, lerConfiguracaoPublicada } from "./configuracao";
 
 /**
  * OS FATOS DA EMPRESA — A ÚNICA FONTE DO ATENDENTE VIRTUAL.
@@ -24,13 +26,20 @@ import { ehContaComercialNexora } from "./comercial-config";
  *     inteligente; aqui ele nunca entra como "regra da empresa".
  */
 
-export type ServicoDoAtendente = { id: string; nome: string; precoCents: number; duracaoMin: number };
+export type ServicoDoAtendente = {
+  id: string; nome: string; precoCents: number; duracaoMin: number;
+  precoModo?: "FIXO" | "SOB_CONSULTA";
+  descricao?: string;
+};
 
 export type Fatos = {
   empresa: string;
   nome: string;
   jeito: Jeito;
   marcaDireto: boolean;
+  /** Ausente nas contas antigas. Configurações revisadas têm autonomia explícita. */
+  agendamento?: "DESLIGADO" | "LINK" | "DIRETO";
+  configuracaoDivergente?: boolean;
   expediente: boolean;
   servicos: ServicoDoAtendente[];
   profissionais: string[];
@@ -80,6 +89,8 @@ export async function fatosDaEmpresa(companyId: string, sobrescrever: Sobrescrit
             pricingInfo: true,
             serviceRules: true,
             productsServices: true,
+            atendenteConfiguracao: true,
+            handoffKeywords: true,
           },
         },
       },
@@ -99,7 +110,7 @@ export async function fatosDaEmpresa(companyId: string, sobrescrever: Sobrescrit
   const appUrl = (process.env.APP_URL ?? "").replace(/\/+$/, "");
   const horarios = horarioCadastrado(perfil?.businessHours);
 
-  return {
+  const base: Fatos = {
     empresa: empresa?.name ?? "",
     nome: sobrescrever.nome ?? perfil?.atendenteNome ?? "",
     jeito: sobrescrever.jeito ?? lerJeito(perfil?.atendenteJeito),
@@ -120,6 +131,19 @@ export async function fatosDaEmpresa(companyId: string, sobrescrever: Sobrescrit
       ? `${appUrl}/agendar/${empresa?.slug || companyId}` : null,
     comercial: ehContaComercialNexora(companyId),
   };
+  const publicada = lerConfiguracaoPublicada(perfil?.atendenteConfiguracao);
+  const fatos = publicada ? {
+    ...aplicarConfiguracaoAosFatos(publicada, {
+    ...base,
+    linkAgenda: appUrl ? `${appUrl}/agendar/${empresa?.slug || companyId}` : null,
+    }),
+    // Bloqueios de datas são operacionais: mudanças na Agenda valem de imediato.
+    diasFechados: base.diasFechados,
+    configuracaoDivergente: cadastroDivergeDaPublicacao(publicada, {
+      empresa: empresa?.name ?? "", perfil: perfil ?? {}, servicos,
+    }),
+  } : base;
+  return { ...fatos, ...sobrescrever };
 }
 
 /** As palavras que o dono cadastrou para ser chamado ("gerente", "orçamento"). */
@@ -145,7 +169,7 @@ export function textoDosFatos(f: Fatos): string {
     ? f.servicos
         .map(
           (s) =>
-            `${s.nome} — ${s.precoCents > 0 ? precoFalado(s.precoCents) : "valor não cadastrado"}, ${duracaoFalada(s.duracaoMin)}`,
+            `${s.nome} — ${s.precoModo === "SOB_CONSULTA" ? "valor sob consulta" : s.precoCents > 0 || s.precoModo === "FIXO" ? precoFalado(s.precoCents) : "valor não cadastrado"}, ${s.duracaoMin > 0 ? duracaoFalada(s.duracaoMin) : "duração não informada"}`,
         )
         .join("; ")
     : "nenhum cadastrado";

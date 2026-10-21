@@ -4,6 +4,32 @@ import { POST as garantiaPOST } from "@/app/api/billing/garantia/route";
 import { POST as logoutPOST } from "@/app/api/auth/logout/route";
 import { POST as whatsappConnectPOST } from "@/app/api/whatsapp/connect/route";
 import { PUT as profilePUT } from "@/app/api/company/profile/route";
+import type { Company, Prisma, StripeEvent, VerificacaoEmail } from "@nexora/recepcionista-prisma";
+import { prisma as bancoImportado } from "@/lib/db";
+
+vi.mock("@/lib/db", () => ({ prisma: {
+  company: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
+  verificacaoEmail: { findFirst: vi.fn(), create: vi.fn(), updateMany: vi.fn() },
+  stripeEvent: { findUnique: vi.fn() },
+  $transaction: vi.fn(),
+} }));
+
+/** Estes doubles implementam await de linhas, sem a API fluente de relações do Prisma. */
+type BancoSimulado = {
+  company: {
+    findUnique: (args: Prisma.CompanyFindUniqueArgs) => Promise<Partial<Company> | null>;
+    update: (args: Prisma.CompanyUpdateArgs) => Promise<Partial<Company>>;
+    updateMany: (args: Prisma.CompanyUpdateManyArgs) => Promise<Prisma.BatchPayload>;
+  };
+  verificacaoEmail: {
+    findFirst: (args: Prisma.VerificacaoEmailFindFirstArgs) => Promise<Partial<VerificacaoEmail> | null>;
+    create: (args: Prisma.VerificacaoEmailCreateArgs) => Promise<Partial<VerificacaoEmail>>;
+    updateMany: (args: Prisma.VerificacaoEmailUpdateManyArgs) => Promise<Prisma.BatchPayload>;
+  };
+  stripeEvent: { findUnique: (args: Prisma.StripeEventFindUniqueArgs) => Promise<Partial<StripeEvent> | null> };
+  $transaction: (operacoes: Promise<unknown>[]) => Promise<unknown[]>;
+};
+const bancoSimulado = bancoImportado as unknown as BancoSimulado;
 
 describe("Segurança R6 — Proteção de Origem e Anti-CSRF em Mutações", () => {
   it("rejeita subdomínio de atacante mesmo sob o mesmo domínio base (attacker.meunexora.com.br)", () => {
@@ -118,7 +144,7 @@ describe("Segurança R6 — Proteção de Origem e Anti-CSRF em Mutações", () 
 describe("Segurança R1 — Cobrança: Exclusão Mútua, Fencing e Dunning Concorrente", () => {
   it("falhasSeguidas não regride se uma tentativa menor terminar depois de uma maior", async () => {
     const { registrarFalhaPagamento } = await import("@/lib/billing/converger");
-    const { prisma } = await import("@/lib/db");
+    const prisma = bancoSimulado;
 
     let company = { falhasSeguidas: 1, dunningIniciadoEm: new Date("2026-10-08") };
 
@@ -149,7 +175,7 @@ describe("Segurança R1 — Cobrança: Exclusão Mútua, Fencing e Dunning Conco
 
 describe("Segurança R3 — Vínculo Google e Distinção de Token Invalidado vs Comprovado", () => {
   it("invalidação por reemissão não é prova de identidade e reseta senha pré-cadastrada", async () => {
-    const { prisma } = await import("@/lib/db");
+    const prisma = bancoSimulado;
     const { abrirVerificacao } = await import("@/lib/auth/verificacao");
 
     const tokens: any[] = [
@@ -219,7 +245,7 @@ describe("Segurança R3 — Vínculo Google e Distinção de Token Invalidado vs
   });
 
   it("consumo legítimo de token gera comprovação válida com emailConfirmado", async () => {
-    const { prisma } = await import("@/lib/db");
+    const prisma = bancoSimulado;
 
     const tokens: any[] = [
       {
@@ -339,7 +365,7 @@ describe("Segurança R1 & R6 — Provas Permanentes dos Achados 01, 02 e 03", ()
 
   it("reserva de confirmação de e-mail não é revertida se o e-mail foi enviado com sucesso", async () => {
     const { aplicarAssinatura } = await import("@/lib/billing/converger");
-    const { prisma } = await import("@/lib/db");
+    const prisma = bancoSimulado;
 
     let emails = 0;
     const company = {
@@ -389,7 +415,7 @@ describe("Segurança R1 & R6 — Provas Permanentes dos Achados 01, 02 e 03", ()
 
   it("indisponibilidade da Stripe na reconsulta de execução antiga não revoga assinatura ativa", async () => {
     const { aplicarAssinatura } = await import("@/lib/billing/converger");
-    const { prisma } = await import("@/lib/db");
+    const prisma = bancoSimulado;
     const stripeModule = await import("@/lib/billing/stripe");
 
     const agora = new Date();
@@ -454,7 +480,7 @@ describe("Segurança R1 & R6 — Provas Permanentes dos Achados 01, 02 e 03", ()
 
   it("reconsulta defasada com snapshot canceled não sobrescreve reativação legítima", async () => {
     const { aplicarAssinatura } = await import("@/lib/billing/converger");
-    const { prisma } = await import("@/lib/db");
+    const prisma = bancoSimulado;
     const stripeModule = await import("@/lib/billing/stripe");
 
     const agora = new Date();

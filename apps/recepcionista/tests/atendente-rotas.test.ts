@@ -18,6 +18,11 @@ vi.mock("@/lib/limites", async (original) => ({
 vi.mock("@/lib/errors", () => ({ logError: vi.fn() }));
 vi.mock("@/lib/billing/guarda", () => ({ exigirAcesso: vi.fn(async () => null) }));
 vi.mock("@/lib/atendente/tela", () => ({ telaDoAtendente: vi.fn(async () => ({ tela: "atualizada" })) }));
+vi.mock("@/lib/atendente/configuracao", async (original) => ({
+  ...(await original<typeof import("@/lib/atendente/configuracao")>()),
+  validarAtivacaoConfiguracao: vi.fn(async () => []),
+  getConfiguracao: vi.fn(), registrarTesteConfiguracao: vi.fn(),
+}));
 vi.mock("@/lib/atendente/fatos", async (original) => ({
   ...(await original<typeof import("@/lib/atendente/fatos")>()),
   fatosDaEmpresa: vi.fn(),
@@ -54,6 +59,9 @@ import { exigirAcesso } from "@/lib/billing/guarda";
 import { prisma } from "@/lib/db";
 import { limitar } from "@/lib/limites";
 import { enviarWhatsApp } from "@/lib/whatsapp/envio";
+import { getConfiguracao, registrarTesteConfiguracao, validarAtivacaoConfiguracao } from "@/lib/atendente/configuracao";
+import type { TelaConfiguracaoNexa } from "@/lib/atendente/configuracao-schema";
+import { configuracaoExemplo } from "./fixtures/configuracao-nexa";
 
 /**
  * AS ROTAS DA TELA "ATENDENTE VIRTUAL".
@@ -121,6 +129,7 @@ beforeEach(() => {
   (getSessionCompanyId as Fn).mockResolvedValue("c1");
   (limitar as Fn).mockReturnValue(true);
   (exigirAcesso as Fn).mockResolvedValue(null);
+  (validarAtivacaoConfiguracao as Fn).mockResolvedValue([]);
   (fatosDaEmpresa as Fn).mockResolvedValue(FATOS);
   (horariosLivres as Fn).mockImplementation(async ({ dias }: { dias: string[] }) => grade(dias));
   (configuracaoDaIaFaltando as Fn).mockReturnValue(null);
@@ -215,11 +224,12 @@ describe("GET e PUT /api/atendente", () => {
 });
 
 describe("POST /api/atendente/ligar", () => {
-  it("liga mesmo sem teste prévio no simulador", async () => {
+  it("usa a revisão da configuração, em vez do indicador antigo de teste", async () => {
     db.companyProfile.findUnique.mockResolvedValue({ atendenteTestadoEm: null, whatsappStatus: "CONNECTED", whatsappInstance: "x" });
     const r = await LIGAR(pedido({ ligar: true }));
     expect(r.status).toBe(200);
-    expect(db.companyProfile.update).toHaveBeenCalledWith({ where: { companyId: "c1" }, data: { plantaoAtivo: true } });
+    expect(validarAtivacaoConfiguracao).toHaveBeenCalledWith("c1");
+    expect(db.companyProfile.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: { plantaoAtivo: true } }));
   });
 
   it("sem o WhatsApp ligado, não liga — e diz o que falta", async () => {
@@ -242,7 +252,7 @@ describe("POST /api/atendente/ligar", () => {
   it("liga, e a primeira vez fica gravada uma vez só", async () => {
     const r = await LIGAR(pedido({ ligar: true }));
     expect(r.status).toBe(200);
-    expect(db.companyProfile.update).toHaveBeenCalledWith({ where: { companyId: "c1" }, data: { plantaoAtivo: true } });
+    expect(db.companyProfile.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: { plantaoAtivo: true } }));
     expect(db.companyProfile.updateMany).toHaveBeenCalledWith({
       where: { companyId: "c1", atendenteLigadoPrimeiraVezEm: null },
       data: { atendenteLigadoPrimeiraVezEm: expect.any(Date) },
@@ -254,10 +264,53 @@ describe("POST /api/atendente/ligar", () => {
     expect(r.status).toBe(200);
     expect(db.companyProfile.update).toHaveBeenCalledWith({ where: { companyId: "c1" }, data: { plantaoAtivo: false } });
     expect(exigirAcesso).not.toHaveBeenCalled();
+    expect(validarAtivacaoConfiguracao).not.toHaveBeenCalled();
+  });
+
+  it("não ativa configuração com pendências mesmo conectado e com acesso", async () => {
+    (validarAtivacaoConfiguracao as Fn).mockResolvedValue([{ campo: "publicacao", etapa: 5, mensagem: "Revise os ajustes", bloqueia: true }]);
+    const r = await LIGAR(pedido({ ligar: true }));
+    expect(r.status).toBe(409);
+    expect((await r.json()).faltando).toBe("CONFIGURACAO");
+    expect(db.companyProfile.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("não ativa se a configuração mudar entre a conferência e a escrita", async () => {
+    db.companyProfile.updateMany.mockResolvedValueOnce({ count: 0 });
+    expect((await LIGAR(pedido({ ligar: true }))).status).toBe(409);
+    expect(db.companyProfile.updateMany).toHaveBeenCalledTimes(1);
   });
 });
 
 describe("POST /api/atendente/simular — o motor de verdade, sem enviar e sem marcar", () => {
+  it("testa o rascunho salvo, registra o cenário na revisão e não usa o preço publicado antigo", async () => {
+    const rascunho = configuracaoExemplo();
+    rascunho.informacoes.servicos[0] = { ...rascunho.informacoes.servicos[0], id: "s1", nome: "Corte", precoCents: 8200 };
+    const configuracao: TelaConfiguracaoNexa = { rascunho, revisao: 3, etapa: 4, revisadas: [0, 1, 2, 3],
+      testes: [], publicadoEm: null, haAlteracoes: true, pendencias: [], conexao: { conectado: false, ligado: false, telefone: "" } };
+    (getConfiguracao as Fn).mockResolvedValue(configuracao);
+    (registrarTesteConfiguracao as Fn).mockResolvedValue({ id: "teste:1" });
+    const r = await SIMULAR(pedido({ configuracaoRevisao: 3, cenario: "INFORMACOES", mensagens: [{ de: "cliente", texto: "Quanto custa o corte?" }] }));
+    expect(r.status).toBe(200);
+    const corpo = await r.json();
+    expect(corpo.mensagens.join(" ")).toContain("R$ 82,00");
+    expect(corpo.mensagens.join(" ")).not.toContain("R$ 45,00");
+    expect(corpo.testeId).toBe("teste:1");
+    expect(registrarTesteConfiguracao).toHaveBeenCalledWith("c1", expect.objectContaining({ revisao: 3, cenario: "INFORMACOES", respostas: corpo.mensagens }));
+    expect(enviarWhatsApp).not.toHaveBeenCalled();
+    expect(marcarNaAgenda).not.toHaveBeenCalled();
+    expect(db.knowledgeGap.upsert).not.toHaveBeenCalled();
+  });
+
+  it("recusa teste de versão antiga antes de consultar agenda ou gravar avaliação", async () => {
+    (getConfiguracao as Fn).mockResolvedValue({ revisao: 4 });
+    const r = await SIMULAR(pedido({ configuracaoRevisao: 3, cenario: "HORARIO", mensagens: [{ de: "cliente", texto: "Tem horário amanhã?" }] }));
+    expect(r.status).toBe(409);
+    expect(registrarTesteConfiguracao).not.toHaveBeenCalled();
+    expect(horariosLivres).not.toHaveBeenCalled();
+    expect(db.companyProfile.update).not.toHaveBeenCalled();
+  });
+
   it("responde com os horários livres de verdade, e o teste fica registrado", async () => {
     const r = await SIMULAR(pedido({ mensagens: [{ de: "cliente", texto: "tem horário amanhã pra corte?" }] }));
     expect(r.status).toBe(200);

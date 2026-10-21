@@ -527,6 +527,19 @@ export async function atender(
       ...r,
     }).catch((erro) => logError("atendente-uso", erro, p.companyId));
 
+  if (fatos.configuracaoDivergente) {
+    try {
+      await persistir(estadoAnterior ?? Prisma.DbNull,
+        "O cadastro foi alterado em outra área. Importe e revise a configuração da Nexa antes de reativar esta conversa.", true);
+      await liberarExecucao();
+    } catch (erro) {
+      await logError("atendente-configuracao-divergente", erro, p.companyId);
+      await revisarExecucao("os dados do cadastro divergem da configuração publicada")
+        .catch((falha) => logError("atendente-revisao", falha, p.companyId));
+    }
+    return silencio("EQUIPE_NA_CONVERSA");
+  }
+
   if (plano.acao === "AVISO_DO_TETO") {
     const motivo = `Chegou depois das ${TETO_CONVERSAS_MES} conversas do mês: responda por você`;
     const impedimento = await conferir();

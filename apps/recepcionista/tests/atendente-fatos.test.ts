@@ -14,6 +14,7 @@ vi.mock("@/lib/db", () => {
 import { prisma } from "@/lib/db";
 import { fatosDaEmpresa, textoDosFatos, type Fatos } from "@/lib/atendente/fatos";
 import { mesDoDia, registrarAtendimento, usoDoAtendente } from "@/lib/atendente/uso";
+import { configuracaoExemplo } from "./fixtures/configuracao-nexa";
 
 /**
  * OS FATOS DA EMPRESA — A ÚNICA FONTE DO ATENDENTE.
@@ -109,6 +110,27 @@ describe("fatosDaEmpresa", () => {
   it("não sugere link de agenda quando não há serviço confirmado", async () => {
     db.service.findMany.mockResolvedValue([]);
     expect((await fatosDaEmpresa("c1")).linkAgenda).toBeNull();
+  });
+
+  it("publicação usa somente conhecimento revisado e respeita bloqueios atuais da Agenda", async () => {
+    const c = configuracaoExemplo();
+    const perfil = { ...PERFIL, atendenteNome: c.atendimento.nome, atendenteJeito: c.atendimento.jeito,
+      atendenteMarca: true, atendenteExpediente: true, description: c.negocio.descricao.valor,
+      address: c.informacoes.endereco.valor, paymentMethods: c.informacoes.pagamento.valor,
+      businessHours: c.informacoes.horarios, handoffKeywords: c.atendimento.handoffKeywords,
+      faqs: c.conhecimento.itens.map((f) => ({ question: f.pergunta, answer: f.resposta })),
+      diasFechados: ["2026-10-23"], atendenteConfiguracao: { versao: 1, revisao: 1, etapa: 5, revisadas: [0, 1, 2, 3], testes: [],
+        rascunho: c, publicado: { revisao: 1, em: "2026-10-21T12:00:00Z", rascunho: c } } };
+    db.company.findUnique.mockResolvedValue({ name: c.negocio.nome, slug: "oficina", profile: perfil });
+    db.companyProfile.findUnique.mockResolvedValue(perfil);
+    db.service.findMany.mockResolvedValue([{ id: "servico1", name: "Revisão", durationMin: 45, priceCents: 9900 }]);
+    const f = await fatosDaEmpresa("c1");
+    expect(f.configuracaoDivergente).toBe(false);
+    expect(f.diasFechados).toEqual(["2026-10-23"]);
+    expect(f.perguntas).toEqual([{ question: "Tem estacionamento?", answer: "Não há estacionamento próprio." }]);
+    expect(f.perguntas.some((p) => p.question === "Fazem barba?")).toBe(false);
+    db.service.findMany.mockResolvedValue([{ id: "servico1", name: "Revisão", durationMin: 45, priceCents: 12000 }]);
+    expect((await fatosDaEmpresa("c1")).configuracaoDivergente).toBe(true);
   });
 });
 

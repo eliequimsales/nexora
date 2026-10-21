@@ -13,6 +13,7 @@ import { logError } from "@/lib/errors";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { respostaDeLimite } from "@/lib/limites";
 import { extrairProfissional, gerarTextoLembrete, listarProfissionais } from "@/lib/agenda/painel";
+import { lerConfiguracaoPublicada } from "@/lib/atendente/configuracao";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +59,7 @@ async function carregarNegocio(slug: string) {
     select: {
       id: true,
       name: true,
-      profile: { select: { businessHours: true, address: true, diasFechados: true } },
+      profile: { select: { businessHours: true, address: true, diasFechados: true, atendenteConfiguracao: true } },
       services: {
         where: {
           active: true,
@@ -106,9 +107,16 @@ export async function GET(
     const serviceId = url.searchParams.get("serviceId");
     const profissionalFiltro = url.searchParams.get("profissional")?.trim();
 
-    const servicosDisponiveis = negocio.services.length > 0
-      ? negocio.services
-      : [{ id: "atendimento", name: "Atendimento Geral", durationMin: 30, priceCents: 0 }];
+    const configurado = !!lerConfiguracaoPublicada(negocio.profile?.atendenteConfiguracao);
+    const agendaveis = negocio.services.filter((s) => s.durationMin > 0);
+    const servicosDisponiveis = agendaveis.length ? agendaveis
+      : !configurado && !negocio.services.length
+        ? [{ id: "atendimento", name: "Atendimento Geral", durationMin: 30, priceCents: 0 }] : [];
+    if (!servicosDisponiveis.length) {
+      return NextResponse.json({ negocio: { nome: negocio.name, endereco: negocio.profile?.address ?? "" },
+        servicos: [], servicoSelecionado: null, profissionais: [], dias: [],
+        aviso: "O negócio ainda precisa confirmar os serviços e suas durações para disponibilizar horários." });
+    }
 
     const servico = serviceId
       ? servicosDisponiveis.find((s) => s.id === serviceId) || servicosDisponiveis[0]
@@ -281,12 +289,19 @@ export async function POST(
       return NextResponse.json({ error: "Página não encontrada" }, { status: 404 });
     }
 
-    const servicosDisponiveis = negocio.services.length > 0
-      ? negocio.services
-      : [{ id: "atendimento", name: "Atendimento Geral", durationMin: 30, priceCents: 0 }];
+    const configurado = !!lerConfiguracaoPublicada(negocio.profile?.atendenteConfiguracao);
+    const agendaveis = negocio.services.filter((s) => s.durationMin > 0);
+    const servicosDisponiveis = agendaveis.length ? agendaveis
+      : !configurado && !negocio.services.length
+        ? [{ id: "atendimento", name: "Atendimento Geral", durationMin: 30, priceCents: 0 }] : [];
+    if (!servicosDisponiveis.length || (serviceId && negocio.services.some((s) => s.id === serviceId && s.durationMin <= 0))
+      || (configurado && serviceId && !servicosDisponiveis.some((s) => s.id === serviceId))
+      || (configurado && !serviceId && servicosDisponiveis.length > 1)) {
+      return NextResponse.json({ error: "Escolha um serviço disponível com duração confirmada antes de agendar." }, { status: 409 });
+    }
 
     const servicoNomeInformado = servicoNome?.trim();
-    const servico = (serviceId ? servicosDisponiveis.find((s) => s.id === serviceId) : null) ?? {
+    const servico = (serviceId ? servicosDisponiveis.find((s) => s.id === serviceId) : configurado ? servicosDisponiveis[0] : null) ?? {
       id: "atendimento",
       name: servicoNomeInformado || "Atendimento Geral",
       durationMin: 30,

@@ -335,6 +335,8 @@ model CompanyProfile {
   atendenteExpediente          Boolean   @default(true)
   // O "Ligar" só aparece depois do primeiro teste no simulador.
   atendenteTestadoEm           DateTime?
+  // Rascunho, revisão e publicação da configuração guiada. Salvar não ativa.
+  atendenteConfiguracao        Json?
   // Começo da primeira semana por nossa conta (lib/atendente/portao.ts).
   atendenteLigadoPrimeiraVezEm DateTime?
   // Último dia ("AAAA-MM-DD") com resumo da manhã enviado: é a reivindicação.

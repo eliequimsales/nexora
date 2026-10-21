@@ -359,6 +359,17 @@ beforeEach(() => {
 });
 
 describe("atender — loja fechada, pedido de horário", () => {
+  it("cadastro divergente pausa a conversa antes de consultar ou confirmar dados antigos", async () => {
+    (fatosDaEmpresa as Fn).mockResolvedValue({ ...FATOS, configuracaoDivergente: true });
+    conversaCom(msg("m1", "CUSTOMER", "tem horário amanhã pra corte?", new Date(AGORA.getTime() - MIN)));
+    expect(await rodar()).toEqual({ acao: "SILENCIO", motivo: "EQUIPE_NA_CONVERSA" });
+    expect(conversaAtual.status).toBe("WAITING_HUMAN");
+    expect(db.message.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ role: "SYSTEM", content: expect.stringContaining("cadastro foi alterado") }) }));
+    expect(enviarWhatsApp).not.toHaveBeenCalled();
+    expect(horariosLivres).not.toHaveBeenCalled();
+    expect(marcarNaAgenda).not.toHaveBeenCalled();
+  });
+
   it("se apresenta, oferece três horários sem espera artificial, salva e grava o estado", async () => {
     conversaCom(msg("m1", "CUSTOMER", "tem horário amanhã pra corte?", new Date(AGORA.getTime() - MIN)));
     const r = await rodar();

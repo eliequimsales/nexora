@@ -94,6 +94,8 @@ export async function horariosLivres(p: {
   dias: string[];
   agora: Date;
   profissional?: string | null;
+  /** Somente o simulador passa o expediente do rascunho salvo pelo responsável. */
+  configuracaoSimulada?: { horarios: Horario[]; diasFechados: string[] };
 }): Promise<Livre[]> {
   if (p.dias.length === 0) return [];
   const [perfil, equipe] = await Promise.all([
@@ -103,8 +105,8 @@ export async function horariosLivres(p: {
     }),
     listarProfissionais(p.companyId),
   ]);
-  const horarios = horarioDaEmpresa(perfil?.businessHours);
-  const fechados = lerDiasFechados(perfil?.diasFechados);
+  const horarios = p.configuracaoSimulada?.horarios ?? horarioDaEmpresa(perfil?.businessHours);
+  const fechados = p.configuracaoSimulada?.diasFechados ?? lerDiasFechados(perfil?.diasFechados);
   const dias = p.dias.filter((d) => !fechados.includes(d));
   if (dias.length === 0) return [];
 

@@ -1,22 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSessionCompanyId } from "@/lib/auth";
-import { logError } from "@/lib/errors";
 import { LIMITES, limitar } from "@/lib/limites";
 import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
-import {
-  obterMensagemInicialEntrevista,
-  processarEntrevistaDono,
-} from "@/lib/atendente/entrevista";
+import { validarOrigemECsrfe } from "@/lib/seguranca/origem";
 
 export const dynamic = "force-dynamic";
 
-/**
- * API DA ENTREVISTA DA ONDA DO MAR.
- *
- * GET: Retorna o cumprimento inicial e sugestões de resposta adequadas ao status da empresa.
- * POST: Processa a resposta do dono, extrai serviços/endereço/horários/pagamentos/perguntas,
- * salva no banco e devolve a próxima onda da conversa com sugestões.
- */
+/** Compatibilidade de leitura. A entrevista antiga não aprova mais dados automaticamente. */
 
 export async function GET() {
   const companyId = await getSessionCompanyId();
@@ -26,19 +16,16 @@ export async function GET() {
     return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
   }
 
-  try {
-    const dados = await obterMensagemInicialEntrevista(companyId);
-    return NextResponse.json(dados);
-  } catch (erro) {
-    await logError("atendente-entrevista-get", erro, companyId);
-    return NextResponse.json(
-      { error: "Não consegui iniciar a conversa com a atendente agora." },
-      { status: 500 },
-    );
-  }
+  return NextResponse.json({
+    mensagem: "A configuração agora tem uma área própria. Você pode descrever seu negócio no preenchimento assistido e revisar cada informação antes de aplicar.",
+    sugestoes: [],
+    proximoPasso: "/painel/atendente",
+  });
 }
 
 export async function POST(request: Request) {
+  const erroOrigem = validarOrigemECsrfe(request, { exigirJson: true });
+  if (erroOrigem) return erroOrigem;
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
@@ -46,27 +33,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: TOO_MANY_ATTEMPTS }, { status: 429 });
   }
 
-  const body = await request.json().catch(() => null);
-  const mensagem = typeof body?.mensagem === "string" ? body.mensagem.trim() : "";
-  const historico = Array.isArray(body?.historico) ? body.historico : undefined;
-
-  if (!mensagem) {
-    return NextResponse.json({ error: "Mensagem vazia." }, { status: 400 });
-  }
-
-  try {
-    const resultado = await processarEntrevistaDono({
-      companyId,
-      mensagem,
-      historico,
-    });
-
-    return NextResponse.json(resultado);
-  } catch (erro) {
-    await logError("atendente-entrevista-post", erro, companyId);
-    return NextResponse.json(
-      { error: "Não consegui processar a resposta agora. Tente de novo." },
-      { status: 500 },
-    );
-  }
+  return NextResponse.json({
+    error: "Use a configuração guiada para revisar as informações antes de aplicá-las.",
+    resposta: "Abra a configuração da Nexa e use o preenchimento assistido. Vou preparar uma proposta para sua revisão.",
+    proximoPasso: "/painel/atendente",
+  }, { status: 410 });
 }

@@ -175,6 +175,7 @@ describe("Processamento da Entrevista", () => {
 });
 
 describe("Rotas /api/atendente/entrevista", () => {
+  beforeEach(() => { vi.clearAllMocks(); });
   it("GET retorna 401 quando não autenticado", async () => {
     const { getSessionCompanyId } = await import("@/lib/auth");
     vi.mocked(getSessionCompanyId).mockResolvedValueOnce(null as any);
@@ -196,7 +197,7 @@ describe("Rotas /api/atendente/entrevista", () => {
     expect(body.sugestoes).toBeDefined();
   });
 
-  it("POST processa mensagem e retorna resposta estruturada", async () => {
+  it("POST legado orienta configuração sem aprovar dados automaticamente", async () => {
     const { getSessionCompanyId } = await import("@/lib/auth");
     vi.mocked(getSessionCompanyId).mockResolvedValueOnce("comp_123");
 
@@ -208,10 +209,14 @@ describe("Rotas /api/atendente/entrevista", () => {
     });
 
     const res = await POST(req);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(410);
     const body = await res.json();
     expect(body.resposta).toBeDefined();
-    expect(body.salvou).toBeDefined();
+    expect(body.proximoPasso).toContain("/painel/atendente");
+    const { prisma } = await import("@/lib/db");
+    expect(prisma.knowledgeItem.create).not.toHaveBeenCalled();
+    expect(prisma.service.create).not.toHaveBeenCalled();
+    expect(prisma.companyProfile.update).not.toHaveBeenCalled();
   });
 });
 

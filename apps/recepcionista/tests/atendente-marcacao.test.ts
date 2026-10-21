@@ -17,7 +17,7 @@ vi.mock("@/lib/db", () => {
 
 import { prisma } from "@/lib/db";
 import { lerDiasFechados } from "@/lib/agenda/horario";
-import { livresDoDia } from "@/lib/agenda/livres";
+import { horariosLivres, livresDoDia } from "@/lib/agenda/livres";
 import { marcarNaAgenda } from "@/lib/agenda/marcacao";
 
 /**
@@ -92,6 +92,26 @@ describe("marcarNaAgenda", () => {
   it("a transação é serializável, como na página pública", async () => {
     await marcarNaAgenda(pedido());
     expect(db.$transaction.mock.calls[0][1]).toEqual({ isolationLevel: "Serializable" });
+  });
+
+  it("a simulação considera o expediente do rascunho, sem reservar no expediente antigo", async () => {
+    const configuracaoSimulada = { horarios: [{ day: 3, open: "12:00", close: "13:00", closed: false }], diasFechados: [] };
+    const r = await marcarNaAgenda(pedido({ simulacao: true, configuracaoSimulada }));
+    expect(r).toEqual({ ok: false, motivo: "OCUPADO" });
+    expect(db.$transaction).not.toHaveBeenCalled();
+    expect(db.appointment.create).not.toHaveBeenCalled();
+    const slots = await horariosLivres({ companyId: "c1", duracaoMin: 40, dias: ["2026-09-23"], agora: AGORA, configuracaoSimulada });
+    expect(slots.length).toBeGreaterThan(0);
+    expect(slots.every((s) => s.inicio.getUTCHours() === 15)).toBe(true);
+  });
+
+  it("datas fechadas no rascunho valem apenas na simulação", async () => {
+    const configuracaoSimulada = { horarios: HORARIOS, diasFechados: ["2026-09-23"] };
+    expect(await marcarNaAgenda(pedido({ simulacao: true, configuracaoSimulada }))).toEqual({ ok: false, motivo: "OCUPADO" });
+    expect(db.appointment.create).not.toHaveBeenCalled();
+    const real = await marcarNaAgenda(pedido({ simulacao: false, configuracaoSimulada }));
+    expect(real.ok).toBe(true);
+    expect(db.appointment.create).toHaveBeenCalledTimes(1);
   });
 
   it("profissional pedido ocupado: não marca", async () => {

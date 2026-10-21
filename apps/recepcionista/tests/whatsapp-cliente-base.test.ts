@@ -43,7 +43,6 @@ describe("clientes do WhatsApp salvos em Meus clientes", () => {
       senderName: "Carlos Pereira",
       text: "Olá, tem horário para amanhã?",
       messageId: "msg_123",
-      timestamp: Date.now(),
     });
 
     expect(prisma.customer.create).not.toHaveBeenCalled();
@@ -61,7 +60,6 @@ describe("clientes do WhatsApp salvos em Meus clientes", () => {
       senderName: "Carlos Pereira",
       text: "Quero agendar",
       messageId: "msg_124",
-      timestamp: Date.now(),
     });
 
     expect(prisma.customer.update).toHaveBeenCalledWith({

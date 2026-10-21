@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { hashTelefone } from "@/lib/dados/excluir";
 import { variantesDeTelefone } from "@/lib/recuperacao/telefone";
 import { ehConflitoDeConcorrencia } from "./concorrencia";
-import { calcularSlots } from "./disponibilidade";
+import { calcularSlots, type Horario } from "./disponibilidade";
 import { entradaPorLink } from "./entrada-publica";
 import { horarioDaEmpresa, lerDiasFechados } from "./horario";
 import { ANTECEDENCIA_MINUTOS } from "./livres";
@@ -41,6 +41,8 @@ export type PedidoDeMarcacao = {
   /** Identidade estável da solicitação; o retry reutiliza a reserva confirmada. */
   chaveOperacao?: string;
   simulacao?: boolean;
+  /** Nunca é aplicada em uma reserva real. */
+  configuracaoSimulada?: { horarios: Horario[]; diasFechados: string[] };
   agora?: Date;
 };
 
@@ -114,8 +116,9 @@ export async function marcarNaAgenda(p: PedidoDeMarcacao): Promise<ResultadoDaMa
     where: { companyId: p.companyId },
     select: { businessHours: true, diasFechados: true },
   });
-  const diaFechado = lerDiasFechados(perfil?.diasFechados).includes(dia);
-  const horarios = horarioDaEmpresa(perfil?.businessHours);
+  const simulada = p.simulacao ? p.configuracaoSimulada : undefined;
+  const diaFechado = (simulada?.diasFechados ?? lerDiasFechados(perfil?.diasFechados)).includes(dia);
+  const horarios = simulada?.horarios ?? horarioDaEmpresa(perfil?.businessHours);
 
   /** O profissional que fica com o horário, ou null se ninguém pode. */
   async function quemAtende(db: Leitor): Promise<string | null> {

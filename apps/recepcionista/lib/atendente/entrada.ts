@@ -72,12 +72,13 @@ export const pedidoDeSimulacao = z
         z
           .object({
             de: z.enum(["cliente", "atendente"]),
-            texto: z.string().default("").transform(limpo).pipe(z.string().max(500, "Mensagem longa demais.")),
+            texto: z.string().default("").transform(limpo).pipe(z.string().max(5000, "Mensagem longa demais.")),
             /** Tipo simulado, sem carregar arquivo ou afirmar interpretação. */
             midia: z.enum(TIPOS_DE_MIDIA).optional(),
           })
           .strict()
           .superRefine((m, ctx) => {
+            if (m.de === "cliente" && m.texto.length > 500) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Mensagem longa demais (máximo de 500 caracteres)." });
             if (!m.texto && !m.midia) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Mensagem vazia." });
             if (m.midia && m.de !== "cliente") ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Simule a mídia como mensagem do cliente." });
           })
@@ -87,6 +88,9 @@ export const pedidoDeSimulacao = z
       .max(30),
     /** A escolha pendente que o próprio simulador devolveu; o servidor confere de novo. */
     estado: z.unknown().optional(),
+    /** O servidor carrega a versão salva; o cliente não injeta fatos no motor. */
+    configuracaoRevisao: z.number().int().nonnegative().optional(),
+    cenario: z.enum(["INFORMACOES", "HORARIO", "HUMANO", "DESCONHECIDA", "MULTIPLA", "CANCELAMENTO", "MIDIA"]).optional(),
     nome: nomeDoAtendente.optional(),
     jeito: jeito.optional(),
     marcaDireto: z.boolean().optional(),

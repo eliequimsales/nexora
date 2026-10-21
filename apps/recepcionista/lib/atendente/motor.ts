@@ -172,6 +172,8 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
     aviso: string | null,
     ocupado?: { inicio: number; profissional: string | null },
   ): Promise<SaidaDoMotor> {
+    if (fatos.agendamento === "DESLIGADO") return pedidoParaEquipe();
+    if (servico.duracaoMin <= 0) return naoSei(`Duração não confirmada para agendar ${servico.nome}`, e.texto);
     const primeiroDia = pedido.dia ?? localDe(agora).data;
     const dias = Array.from({ length: DIAS_DE_BUSCA }, (_, i) => somarDias(primeiroDia, i));
     // O horário que acabou de ser tomado não volta na lista, mesmo que a leitura
@@ -208,8 +210,6 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
       (pedido.dia && !noDiaPedido
         ? t.semHorario(diaFalado(pedido.dia, agora))
         : t.ofertaLead({
-            // Sem serviço cadastrado, o horário é de 30 minutos, mas o cliente não
-            // lê um serviço que o dono nunca cadastrou.
             servico: servico.id ? servico.nome : null,
             detalhe: servico.id ? detalhe : null,
             quando: pedido.dia ? diaFalado(pedido.dia, agora) : null,
@@ -242,11 +242,19 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
     });
   }
 
+  function pedidoParaEquipe(): SaidaDoMotor {
+    return saida({ mensagens: ["Os pedidos de agendamento precisam ser tratados com a equipe. Vou pausar o atendimento virtual para você continuar com uma pessoa."],
+      equipe: true, anotar: { motivo: "Pedido de agendamento: confirmação automática não autorizada pelo negócio" },
+      fontes: ["Autonomia definida pelo responsável"] });
+  }
+
   function pedirHorario(
     servicoId: string | undefined,
     pedido: PedidoDeDia,
     profissional: string | undefined,
   ): Promise<SaidaDoMotor> | SaidaDoMotor {
+    if (fatos.agendamento === "DESLIGADO") return pedidoParaEquipe();
+    if (fatos.agendamento === "LINK" && !fatos.linkAgenda) return naoSei("Link de agendamento não disponível", e.texto);
     if (!fatos.horarios.length || !fatos.servicos.length) {
       return naoSei("A agenda precisa de serviços e horários confirmados antes de oferecer uma reserva", e.texto);
     }
@@ -288,6 +296,8 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
   }
 
   async function escolher(n: number): Promise<SaidaDoMotor> {
+    if (fatos.agendamento === "DESLIGADO") return pedidoParaEquipe();
+    if (fatos.agendamento === "LINK" && !fatos.linkAgenda) return naoSei("Link de agendamento não disponível", e.texto);
     const estado = e.estado;
     if (estado?.tipo === "SERVICO") {
       const opcao = estado.opcoes.find((o) => o.n === n);
@@ -305,7 +315,7 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
     const opcao = estado?.tipo === "HORARIO" ? estado.opcoes.find((o) => o.n === n) : undefined;
     if (estado?.tipo === "HORARIO" && opcao) {
       const servicoAtual = fatos.servicos.find((s) => s.id === estado.servicoId);
-      if (!fatos.horarios.length || !servicoAtual || servicoAtual.duracaoMin !== estado.duracaoMin) {
+      if (!fatos.horarios.length || !servicoAtual || servicoAtual.duracaoMin <= 0 || servicoAtual.duracaoMin !== estado.duracaoMin) {
         return saida({ mensagens: ["Os dados dessa opção precisam ser conferidos novamente antes de reservar. A equipe pode verificar o serviço e o horário para você."],
           anotar: { motivo: "Oferta anterior incompatível com os dados atuais da agenda" },
           fontes: ["Reserva pendente de nova verificação"] });
@@ -469,7 +479,8 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
               if (servico.duracaoMin > 0) textos.push(`${servico.nome} leva ${duracaoFalada(servico.duracaoMin)}.`);
               else return naoSei(`Duração não confirmada: ${servico.nome}`, pergunta);
             }
-            else if (servico.precoCents > 0) textos.push(t.preco({ servico: servico.nome,
+            else if (servico.precoModo === "SOB_CONSULTA") textos.push(`O valor de ${servico.nome} é sob consulta com a equipe.`);
+            else if (servico.precoCents > 0 || servico.precoModo === "FIXO") textos.push(t.preco({ servico: servico.nome,
               preco: precoFalado(servico.precoCents), duracao: null }));
             else { textos.push(t.semPreco(servico.nome)); semPreco.push(servico.nome); }
           }
@@ -481,8 +492,8 @@ export async function responder(e: EntradaDoMotor, deps: DependenciasDoMotor): P
         if (faq) return saida({ mensagens: [faq.answer.trim()], estado: e.estado, fontes: [`Dúvida que você ensinou: "${faq.question}"`] });
         // Lista só quando o cliente pediu uma tabela. Um serviço desconhecido não vira outro serviço.
         if (/\b(tabela|precos|valores|servicos)\b/.test(normalizarParaBusca(pergunta)) && intencao.tipo === "PRECO") {
-          const lista = fatos.servicos.filter((s) => s.precoCents > 0).slice(0, MAX_SERVICOS_NA_LISTA);
-          if (lista.length) return saida({ mensagens: [lista.map((s) => `${s.nome}: ${precoFalado(s.precoCents)}.`).join("\n")], estado: e.estado,
+          const lista = fatos.servicos.filter((s) => s.precoCents > 0 || s.precoModo).slice(0, MAX_SERVICOS_NA_LISTA);
+          if (lista.length) return saida({ mensagens: [lista.map((s) => `${s.nome}: ${s.precoModo === "SOB_CONSULTA" ? "valor sob consulta com a equipe" : precoFalado(s.precoCents)}.`).join("\n")], estado: e.estado,
             fontes: lista.map((s) => `Preço do serviço ${s.nome}`) });
         }
         const generica = /^(?:(?:qual|quais) (?:e |sao )?(?:o |os )?)?(?:preco|valor|quanto custa|quanto e|quanto fica|quanto tempo|quanto dura)$/.test(normalizarParaBusca(pergunta));

@@ -11,7 +11,9 @@ export function catalogoDeRespostas(fatos: Fatos): FonteDeResposta[] {
     if (texto?.trim()) fontes.push({ id, assunto, texto: texto.trim() });
   };
   for (const servico of fatos.servicos) {
-    if (servico.precoCents > 0) {
+    if (servico.precoModo === "SOB_CONSULTA") {
+      incluir(`servico:${servico.id}:preco`, `Preço de ${servico.nome}`, `O valor de ${servico.nome} é sob consulta com a equipe.`);
+    } else if (servico.precoCents > 0 || servico.precoModo === "FIXO") {
       incluir(`servico:${servico.id}:preco`, `Preço de ${servico.nome}`,
         `${servico.nome} custa ${precoFalado(servico.precoCents)}.`);
     }
@@ -21,7 +23,7 @@ export function catalogoDeRespostas(fatos: Fatos): FonteDeResposta[] {
     }
   }
   incluir("endereco", "Endereço da empresa", fatos.endereco ? `Estamos em ${fatos.endereco}.` : "");
-  incluir("pagamento", "Formas de pagamento autorizadas", fatos.pagamento ? `Aceitamos ${fatos.pagamento}.` : "");
+  incluir("pagamento", "Formas de pagamento autorizadas", fatos.pagamento ? `Formas de pagamento: ${fatos.pagamento}.` : "");
   incluir("funcionamento", "Horários habituais de funcionamento; não são vagas na agenda",
     fatos.horarios.length ? `Funcionamos ${horarioFalado(fatos.horarios)}.` : "");
   incluir("descricao", "Apresentação da empresa", fatos.descricao);

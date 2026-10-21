@@ -204,16 +204,19 @@ describe("a tela do Atendente não explica a si mesma", () => {
     });
   }
 
-  it("é uma tela só: sem passo a passo e sem botão de continuar", () => {
+  it("a página usa a configuração guiada dedicada", () => {
     const pagina = fonte("app/painel/atendente/page.tsx");
-    expect(pagina).not.toMatch(/Passo \d|PASSOS|Continuar para/);
+    expect(pagina).toContain("ConfiguracaoDaNexa");
+    expect(pagina).not.toContain("<Celular");
   });
 
   // A coluna "auto" de uma grade cresce até o item mais largo: no celular, o
   // celular e os cartões passavam da borda da tela.
-  it("cabe no celular: a coluna única encolhe até a tela", () => {
-    const pagina = fonte("app/painel/atendente/page.tsx");
-    expect(pagina).toMatch(/className="grid grid-cols-1 /);
+  it("a configuração permite encolher o formulário e reserva as três colunas para desktop", () => {
+    const configuracao = fonte("components/atendente/configuracao.tsx");
+    expect(configuracao).toContain("min-w-0");
+    expect(configuracao).toContain("xl:grid-cols-");
+    expect(configuracao).not.toContain("max-w-[440px]");
   });
 });
 
