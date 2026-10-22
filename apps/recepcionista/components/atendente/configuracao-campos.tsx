@@ -18,7 +18,7 @@ export function DetalhesNexa({ titulo, aberto = false, campo, children }: { titu
   const pendencias = useContext(PendenciasNexaContext);
   const campos = campo ? Array.isArray(campo) ? campo : [campo] : [];
   const temErro = pendencias.some(p => correspondeAoCampo(p, campos));
-  return <details open={aberto || temErro} className="group rounded-xl border border-panel-line bg-panel-bg/40 p-3 sm:p-4"><summary className="min-h-7 cursor-pointer text-sm font-medium text-panel-ink marker:text-panel-sub">{titulo}</summary><div className="mt-4 space-y-4">{children}</div></details>;
+  return <details open={aberto || temErro} className="py-2"><summary className="min-h-7 cursor-pointer text-sm font-medium text-panel-ink marker:text-panel-sub">{titulo}</summary><div className="mt-4 space-y-4">{children}</div></details>;
 }
 
 export function AvisoCampoNexa({ campo }: { campo: string | string[] }) {
@@ -29,7 +29,7 @@ export function AvisoCampoNexa({ campo }: { campo: string | string[] }) {
 }
 
 export function CartaoNexa({ titulo, descricao, children }: { titulo: string; descricao?: string; children: ReactNode }) {
-  return <section className="rounded-2xl border border-panel-line bg-panel-card p-4 shadow-sm sm:p-6"><h3 className="text-base font-semibold text-panel-ink">{titulo}</h3>{descricao && <p className="mt-1 text-sm leading-relaxed text-panel-sub">{descricao}</p>}<div className="mt-5 space-y-4">{children}</div></section>;
+  return <section className="py-2"><h3 className="text-base font-semibold text-panel-ink">{titulo}</h3>{descricao && <p className="mt-1 text-sm leading-relaxed text-panel-sub">{descricao}</p>}<div className="mt-4 space-y-4">{children}</div></section>;
 }
 export function CampoNexa({ titulo, dica, campo, children }: { titulo: string; dica?: string; campo?: string | string[]; children: ReactNode }) {
   const pendencias = useContext(PendenciasNexaContext);
@@ -45,9 +45,8 @@ export function SeletorSituacaoNexa({ titulo, valor, mudar }: { titulo: string; 
   return <select aria-label={titulo} className={CAMPO_NEXA} value={valor} onChange={e => mudar(e.target.value as SituacaoInformacao)}>{Object.entries(SITUACOES_NEXA).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select>;
 }
 export function RevisaoNexa({ titulo, valor, mudar, confirmavel = true, confirmarTexto = "Confirmar informação" }: { titulo: string; valor: SituacaoInformacao; mudar: (v: SituacaoInformacao) => void; confirmavel?: boolean; confirmarTexto?: string }) {
-  if (valor === "REVISAR") return <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-amber/10 p-3"><span className="text-xs leading-relaxed text-panel-ink">{confirmavel ? "Confira o conteúdo. Só o que você confirmar será usado." : "Complete as informações para usar este item no atendimento."}</span><button type="button" className={BOTAO_NEXA} disabled={!confirmavel} aria-label={`Confirmar informação: ${titulo}`} onClick={() => mudar("CONFIRMADO")}>{confirmarTexto}</button></div>;
-  if (valor === "NAO_APLICA" || valor === "NAO_INFORMADO") return null;
-  return <p className="text-xs text-emerald-700">Informação pronta para usar no atendimento.</p>;
+  if (valor === "REVISAR") return <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-amber/10 p-3"><span className="text-xs leading-relaxed text-panel-ink">{confirmavel ? "Confira e confirme para usar no atendimento." : "Preencha os dados antes de confirmar."}</span><button type="button" className={BOTAO_NEXA} disabled={!confirmavel} aria-label={`Confirmar informação: ${titulo}`} onClick={() => mudar("CONFIRMADO")}>{confirmarTexto}</button></div>;
+  return null;
 }
 export function EscolhaNexa<T extends string>({ titulo, valor, opcoes, mudar }: { titulo: string; valor: T; opcoes: { valor: T; titulo: string; descricao: string }[]; mudar: (v: T) => void }) {
   const nome = useId();

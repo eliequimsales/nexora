@@ -17,9 +17,11 @@ type Props = {
   prepararTeste: () => Promise<TelaConfiguracaoNexa | null>;
   aplicar: (tela: TelaConfiguracaoNexa) => void;
   corrigir: (cenario: CenarioNexa) => void;
+  proximoCenario?: CenarioNexa | null;
+  concluirTeste?: () => void;
 };
 
-export function SimuladorConfiguracaoNexa({ tela, ocupado, sujo, erro, pedido, operar, prepararTeste, aplicar, corrigir }: Props) {
+export function SimuladorConfiguracaoNexa({ tela, ocupado, sujo, erro, pedido, operar, prepararTeste, aplicar, corrigir, proximoCenario, concluirTeste }: Props) {
   const [historico, setHistorico] = useState<Mensagem[]>([]);
   const [texto, setTexto] = useState("");
   const [estado, setEstado] = useState<unknown>(null);
@@ -78,6 +80,9 @@ export function SimuladorConfiguracaoNexa({ tela, ocupado, sujo, erro, pedido, o
     if (nova) { aplicar(nova); if (!correto) corrigir(cenario); }
   }
   const atual = tela.testes.find(t => t.id === ultimoTeste && t.revisao === tela.revisao);
+  const proximo = proximoCenario && proximoCenario !== atual?.cenario
+    ? CENARIOS_NEXA.find(c => c.id === proximoCenario)
+    : null;
 
   return <section aria-label="Simulador do atendente" className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-panel-line bg-panel-card shadow-sm">
     <div className="flex items-center justify-between gap-2 border-b border-panel-line p-4"><div><h2 className="font-semibold text-panel-ink">Converse com seu atendente</h2><p className="mt-1 text-xs text-panel-sub">Veja como ele responde aos seus clientes.</p></div><button type="button" disabled={ocupado || !historico.length} className="rounded-lg px-2 py-2 text-xs font-medium text-panel-sub hover:bg-panel-bg disabled:opacity-40" onClick={() => { setHistorico([]); setEstado(null); setFontes(null); setUltimoTeste(null); }}>Nova conversa</button></div>
@@ -90,7 +95,7 @@ export function SimuladorConfiguracaoNexa({ tela, ocupado, sujo, erro, pedido, o
       {respondendo && <p role="status" className="text-xs text-panel-sub">Preparando resposta…</p>}<div ref={fim} />
     </div>
     {Array.isArray(fontes) && fontes.length > 0 && <details className="border-t border-panel-line px-4 py-3 text-xs text-panel-sub"><summary className="cursor-pointer">Informações utilizadas nesta resposta</summary><ul className="mt-2 list-inside list-disc space-y-1">{fontes.filter((f): f is string => typeof f === "string").map((f, i) => <li key={i}>{f}</li>)}</ul></details>}
-    {ultimoTeste && <div className="space-y-2 border-t border-panel-line p-4"><p className="text-xs font-medium text-panel-sub">A resposta está correta para o seu negócio?</p><div className="flex flex-wrap gap-2"><button type="button" className={`${BOTAO} ${atual?.correto === true ? "!border-emerald-500 !bg-emerald-500/10" : ""}`} disabled={ocupado || sujo} onClick={() => void revisar(true)}>Está correta</button><button type="button" className={BOTAO} disabled={ocupado || sujo} onClick={() => void revisar(false)}>Preciso corrigir</button></div></div>}
+    {ultimoTeste && <div className="space-y-2 border-t border-panel-line p-4"><p className="text-xs font-medium text-panel-sub">A resposta está correta para o seu negócio?</p><div className="flex flex-wrap gap-2"><button type="button" className={`${BOTAO} ${atual?.correto === true ? "!border-emerald-500 !bg-emerald-500/10" : ""}`} disabled={ocupado || sujo} onClick={() => void revisar(true)}>Está correta</button><button type="button" className={BOTAO} disabled={ocupado || sujo} onClick={() => void revisar(false)}>Preciso corrigir</button></div>{atual?.correto === true && (proximo ? <button type="button" className={`${PRINCIPAL} w-full`} disabled={ocupado || respondendo || sujo} onClick={() => { setCenario(proximo.id); void testar(proximo.pergunta, proximo.id, true); }}>Testar próxima resposta</button> : proximoCenario === null && concluirTeste ? <button type="button" className={`${PRINCIPAL} w-full`} disabled={ocupado || respondendo || sujo} onClick={concluirTeste}>Concluir testes</button> : null)}</div>}
     <form className="space-y-2 border-t border-panel-line p-4" onSubmit={e => { e.preventDefault(); void testar(texto); }}>{sujo && <p className="text-xs text-panel-sub">O teste aguarda o salvamento e usa suas informações mais recentes.</p>}<label className="sr-only" htmlFor="mensagem-teste-atendente">Mensagem de teste</label><textarea id="mensagem-teste-atendente" rows={2} maxLength={500} className={CAMPO} placeholder="Escreva como um cliente…" value={texto} disabled={ocupado || respondendo} onChange={e => setTexto(e.target.value)} /><button type="submit" className={`${PRINCIPAL} w-full`} disabled={ocupado || respondendo || !texto.trim()}>Enviar no teste</button></form>
   </section>;
 }
