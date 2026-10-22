@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ModalConectarWhatsApp } from "@/components/painel/modal-conectar-whatsapp";
 import { ModalSalvarConta } from "@/components/painel/modal-salvar-conta";
-import { CENARIOS_NEXA, type CenarioNexa, type ConfiguracaoNexa, type TelaConfiguracaoNexa } from "@/lib/atendente/configuracao-schema";
+import { CENARIOS_NEXA, type CenarioNexa, type ConfiguracaoNexa, type PendenciaNexa, type TelaConfiguracaoNexa } from "@/lib/atendente/configuracao-schema";
 import { BOTAO_NEXA as BOTAO, CAMPO_NEXA as CAMPO, PRINCIPAL_NEXA as PRINCIPAL, CampoNexa as Campo, PendenciasNexaContext } from "./configuracao-campos";
 import { FormularioConfiguracaoNexa } from "./configuracao-formulario";
 import { useConfiguracaoAutosave } from "./configuracao-autosalvar";
@@ -13,10 +13,10 @@ import { requisitarConfiguracaoNexa as requisitar, type FalhaConfiguracaoNexa } 
 import { SimuladorConfiguracaoNexa, type PedidoTesteNexa } from "./configuracao-simulador";
 
 const SECOES = [
-  { titulo: "Sua empresa", descricao: "Nome, apresentação e onde você atende" },
-  { titulo: "Serviços, horários e pagamento", descricao: "O que oferece e como funciona" },
-  { titulo: "Como atender", descricao: "Linguagem, agendamentos e ajuda da equipe" },
-  { titulo: "Perguntas e regras", descricao: "Respostas específicas do seu negócio" },
+  { titulo: "Empresa", descricao: "Nome, apresentação e onde você atende" },
+  { titulo: "Serviços", descricao: "Serviços, horários e pagamento" },
+  { titulo: "Atendimento", descricao: "Como seu atendente conversa e age" },
+  { titulo: "Perguntas", descricao: "Respostas e regras do negócio" },
 ] as const;
 type MetaConta = { isGuest?: boolean; empresaTelefone?: string; acesso?: string };
 type Dialogo = { tipo: "RECARREGAR" | "IMPORTAR" } | { tipo: "SAIR"; href: string };
@@ -33,10 +33,9 @@ export function ConfiguracaoDaNexa() {
   const [erro, setErro] = useState("");
   const [aviso, setAviso] = useState("");
   const [ocupado, setOcupado] = useState(false);
-  const [secao, setSecao] = useState<number | null>(0);
+  const [secao, setSecao] = useState(0);
   const [mostrarPendencias, setMostrarPendencias] = useState(false);
   const [mobileTeste, setMobileTeste] = useState(false);
-  const [telaLarga, setTelaLarga] = useState(false);
   const [pedidoTeste, setPedidoTeste] = useState<PedidoTesteNexa | null>(null);
   const [conectar, setConectar] = useState(false);
   const [salvarConta, setSalvarConta] = useState(false);
@@ -48,9 +47,9 @@ export function ConfiguracaoDaNexa() {
   const versaoStatus = useRef(0);
   const proximoPedido = useRef(0);
   const testeRef = useRef<HTMLElement>(null);
+  const focoAntesTeste = useRef<HTMLElement | null>(null);
   const dialogoRef = useRef<HTMLDivElement>(null);
   const secoesRef = useRef<(HTMLButtonElement | null)[]>([]);
-  const revisaoRef = useRef<HTMLElement>(null);
 
   const aplicar = useCallback((nova: TelaConfiguracaoNexa) => {
     atual.current.sincronizar(nova);
@@ -68,11 +67,6 @@ export function ConfiguracaoDaNexa() {
     finally { setCarregando(false); }
   }, []);
   useEffect(() => { void carregar(); void requisitar<MetaConta>("/api/atendente").then(setMetaConta).catch(() => {}); }, [carregar]);
-  useEffect(() => {
-    const media = window.matchMedia("(min-width: 1280px)");
-    const mudar = () => setTelaLarga(media.matches); mudar();
-    media.addEventListener("change", mudar); return () => media.removeEventListener("change", mudar);
-  }, []);
   useEffect(() => {
     const sair = (evento: BeforeUnloadEvent) => { if (atual.current.pendente || emOperacao.current) { evento.preventDefault(); evento.returnValue = ""; } };
     const navegar = (evento: MouseEvent) => {
@@ -92,23 +86,24 @@ export function ConfiguracaoDaNexa() {
     return () => { window.removeEventListener("beforeunload", sair); document.removeEventListener("click", navegar, true); };
   }, [router]);
   useEffect(() => {
-    const modal = dialogo ? dialogoRef.current : mobileTeste && !telaLarga ? testeRef.current : null;
+    const modal = dialogo ? dialogoRef.current : mobileTeste ? testeRef.current : null;
     if (!modal) return;
-    const anterior = document.activeElement as HTMLElement | null;
+    const anterior = !dialogo && mobileTeste ? focoAntesTeste.current : document.activeElement as HTMLElement | null;
     const overflow = document.body.style.overflow; document.body.style.overflow = "hidden";
-    const interativos = () => Array.from(modal.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex="0"]')).filter(e => e.getClientRects().length > 0);
-    interativos()[0]?.focus();
+    const interativos = () => Array.from(modal.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], summary, [tabindex="0"]')).filter(e => e.getClientRects().length > 0);
+    (modal.querySelector<HTMLElement>("[data-foco-inicial]") ?? interativos()[0])?.focus();
     const teclado = (evento: KeyboardEvent) => {
       if (evento.key === "Escape" && !emOperacao.current) { setDialogo(null); setMobileTeste(false); }
       if (evento.key !== "Tab") return;
       const itens = interativos(); const primeiro = itens[0]; const ultimo = itens[itens.length - 1];
       if (!primeiro) { evento.preventDefault(); return; }
-      if (evento.shiftKey && (document.activeElement === primeiro || !modal.contains(document.activeElement))) { evento.preventDefault(); ultimo.focus(); }
-      else if (!evento.shiftKey && (document.activeElement === ultimo || !modal.contains(document.activeElement))) { evento.preventDefault(); primeiro.focus(); }
+      const foraDaOrdem = !itens.includes(document.activeElement as HTMLElement);
+      if (evento.shiftKey && (document.activeElement === primeiro || foraDaOrdem)) { evento.preventDefault(); ultimo.focus(); }
+      else if (!evento.shiftKey && (document.activeElement === ultimo || foraDaOrdem)) { evento.preventDefault(); primeiro.focus(); }
     };
     window.addEventListener("keydown", teclado);
     return () => { document.body.style.overflow = overflow; window.removeEventListener("keydown", teclado); anterior?.focus(); };
-  }, [!!dialogo, mobileTeste, telaLarga]);
+  }, [!!dialogo, mobileTeste]);
   useEffect(() => {
     const atualizarSemInterromper = async () => {
       if (document.visibilityState !== "visible" || emOperacao.current || atual.current.pendente || !atual.current.tela) return;
@@ -136,7 +131,10 @@ export function ConfiguracaoDaNexa() {
     catch (falha) {
       const e = falha as FalhaConfiguracaoNexa; setErro(e.message); setMostrarPendencias(true);
       const base = atual.current.tela;
-      if (e.pendencias && base && !atual.current.pendente) atual.current.sincronizar({ ...base, pendencias: e.pendencias });
+      if (e.pendencias && base && !atual.current.pendente) {
+        try { aplicar(await requisitar<TelaConfiguracaoNexa>("/api/atendente/configuracao")); }
+        catch { atual.current.sincronizar({ ...base, pendencias: e.pendencias }); }
+      }
       return null;
     } finally { emOperacao.current = false; setOcupado(false); }
   }
@@ -146,7 +144,19 @@ export function ConfiguracaoDaNexa() {
   function abrirSecao(numero: number) {
     const destino = Math.min(3, Math.max(0, numero));
     setSecao(destino);
-    requestAnimationFrame(() => { const alvo = secoesRef.current[destino]; alvo?.focus({ preventScroll: true }); alvo?.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); });
+    requestAnimationFrame(() => { const alvo = secoesRef.current[destino]; alvo?.focus({ preventScroll: true }); alvo?.scrollIntoView({ block: "nearest", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); });
+  }
+  function abrirPendencia(pendencia: PendenciaNexa) {
+    if (pendencia.campo === "cadastro") { setDialogo({ tipo: "IMPORTAR" }); return; }
+    setMostrarPendencias(true); abrirSecao(pendencia.etapa);
+    requestAnimationFrame(() => {
+      const painel = document.getElementById(`secao-atendente-${Math.min(3, Math.max(0, pendencia.etapa))}`);
+      const problema = painel?.querySelector<HTMLElement>('[aria-invalid="true"], [role="alert"]');
+      let detalhe = problema?.closest("details");
+      while (detalhe) { detalhe.open = true; detalhe = detalhe.parentElement?.closest("details") ?? null; }
+      const alvo = painel?.querySelector<HTMLElement>('[aria-invalid="true"]') ?? problema?.closest("details")?.querySelector<HTMLElement>("summary") ?? painel;
+      alvo?.focus({ preventScroll: true }); alvo?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
   }
   async function conferirDados(base: TelaConfiguracaoNexa) {
     if ([0, 1, 2, 3].every(i => base.revisadas.includes(i))) return base;
@@ -158,19 +168,13 @@ export function ConfiguracaoDaNexa() {
   }
   function solicitarTeste(cenario: CenarioNexa) {
     if (emOperacao.current) return;
+    if (!mobileTeste) focoAntesTeste.current = document.activeElement as HTMLElement | null;
     setMobileTeste(true); setPedidoTeste({ cenario, seq: ++proximoPedido.current });
   }
   function corrigir(cenario: CenarioNexa) {
     setMobileTeste(false); setMostrarPendencias(true);
     abrirSecao(cenario === "HUMANO" ? 2 : cenario === "DESCONHECIDA" || cenario === "CANCELAMENTO" ? 3 : 1);
     setAviso("Ajuste a informação. Ela será salva automaticamente para você testar novamente.");
-  }
-  async function revisar(testeId: string, cenario: CenarioNexa, correto: boolean) {
-    const nova = await operar(async () => {
-      const base = await atual.current.garantirSalvo();
-      return requisitar<TelaConfiguracaoNexa>("/api/atendente/configuracao", "POST", { acao: "REVISAR_TESTE", revisao: base.revisao, testeId, correto });
-    });
-    if (nova) { aplicar(nova); if (correto) setAviso("Resposta conferida."); else corrigir(cenario); }
   }
   async function preencher() {
     if (!assistente.trim()) return;
@@ -229,7 +233,7 @@ export function ConfiguracaoDaNexa() {
 
   const canal = conexao ?? tela.conexao;
   const pendenciaCadastro = tela.pendencias.find(p => p.campo === "cadastro");
-  const faltasDados = tela.pendencias.filter(p => p.bloqueia && !p.campo.startsWith("etapa:") && !p.campo.startsWith("teste:"));
+  const faltasDados = tela.pendencias.filter(p => p.bloqueia && (p.etapa < 4 || p.campo === "cadastro") && !p.campo.startsWith("etapa:"));
   const precisaAgenda = rascunho.negocio.objetivo === "AGENDAMENTOS" || rascunho.atendimento.agendamento !== "DESLIGADO";
   const obrigatorios = CENARIOS_NEXA.filter(c => ["INFORMACOES", "HUMANO", "DESCONHECIDA", ...(precisaAgenda ? ["HORARIO"] : [])].includes(c.id));
   const atuais = pendente ? [] : tela.testes.filter(t => t.revisao === tela.revisao);
@@ -239,42 +243,65 @@ export function ConfiguracaoDaNexa() {
   const pronto = !pendente && !tela.pendencias.some(p => p.bloqueia);
   const publicado = !!tela.publicadoEm && !tela.haAlteracoes && !pendente;
   const mensagemErro = erro || autosave.erro?.message;
-  const resumo = [rascunho.negocio.nome || "Apresente sua empresa", `${rascunho.informacoes.servicos.length} itens · ${rascunho.informacoes.horariosSituacao === "CONFIRMADO" ? "horários informados" : "definir horários"}`, `${rascunho.atendimento.jeito === "ACOLHEDOR" ? "Acolhedor" : rascunho.atendimento.jeito === "DIRETO" ? "Direto" : "Descontraído"} · ${rascunho.atendimento.agendamento === "DESLIGADO" ? "sem agendar" : "com agendamento"}`, rascunho.conhecimento.itens.length ? `${rascunho.conhecimento.itens.length} ${rascunho.conhecimento.itens.length === 1 ? "resposta cadastrada" : "respostas cadastradas"}` : "Inclua as dúvidas mais comuns"];
 
-  return <div className="space-y-5 pb-8">
-    <header><h1 className="font-display text-2xl text-panel-ink sm:text-3xl">Seu atendente</h1><p className="mt-1 text-sm text-panel-sub">Configure sua empresa, teste as respostas e conecte o WhatsApp.</p></header>
-    <div className="sticky top-2 z-30 flex items-center justify-between gap-3 rounded-2xl border border-panel-line bg-panel-card px-4 py-3 shadow-sm">
-      <p role="status" aria-live="polite" className={`flex min-w-0 items-center gap-2 text-xs font-medium ${autosave.estado === "erro" ? "text-red-700" : "text-panel-sub"}`}><span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${autosave.estado === "erro" ? "bg-red-500" : pendente ? "bg-amber" : "bg-emerald-500"}`} />{autosave.estado === "erro" ? "Alterações ainda não salvas" : pendente ? "Salvando automaticamente…" : "Tudo salvo"}</p>
-      <button type="button" className={PRINCIPAL} disabled={ocupado} onClick={() => solicitarTeste(proximoTeste.id)}>Testar atendente</button>
-    </div>
-    {metaConta.isGuest && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber/40 bg-amber/10 p-4"><p className="text-xs text-panel-sub">Guarde seu acesso para continuar depois.</p><button type="button" className={BOTAO} onClick={() => setSalvarConta(true)}>Salvar meu acesso</button></div>}
-    {metaConta.acesso === "SEMANA_ACABOU" && <p className="rounded-xl border border-panel-line bg-panel-card p-4 text-sm text-panel-sub">Você pode configurar e testar. Para ativar o atendimento, <Link href="/painel/assinatura" className="font-semibold text-panel-ink underline">consulte seu plano</Link>.</p>}
+  const primeiraFalta = faltasDados[0];
+  const faltamTestes = aprovados < obrigatorios.length;
+  const conferirEstado = !primeiraFalta && !faltamTestes && canal.conectado && !pronto;
+  const emAtendimento = canal.ligado && canal.conectado && !pendenciaCadastro;
+  const tituloAcao = primeiraFalta ? "Complete esta informação" : faltamTestes ? "Confira as respostas do seu atendente" : !canal.conectado ? "Conecte o WhatsApp para começar" : conferirEstado ? "Confira a configuração atual" : canal.ligado && publicado ? "Seu atendente está em funcionamento" : "Tudo pronto para atender";
+  const descricaoAcao = primeiraFalta ? primeiraFalta.mensagem : faltamTestes ? `${aprovados} de ${obrigatorios.length} respostas conferidas por você.` : !canal.conectado ? "Use o número em que seus clientes falam com a empresa." : conferirEstado ? "Os dados mudaram. Atualize a tela antes de continuar." : canal.ligado && publicado ? "Ele segue os horários e as regras que você definiu." : "Ao ativar, ele passa a usar as informações que você conferiu.";
+  const textoAcao = primeiraFalta ? primeiraFalta.campo === "cadastro" ? "Revisar cadastro" : `Completar ${SECOES[Math.min(3, Math.max(0, primeiraFalta.etapa))].titulo.toLocaleLowerCase("pt-BR")}` : faltamTestes ? aprovados ? "Continuar testes" : "Conferir respostas" : !canal.conectado ? "Conectar WhatsApp" : conferirEstado ? "Atualizar configuração" : canal.ligado && publicado ? "Atendente ativado" : canal.ligado ? "Aplicar alterações" : "Ativar atendente";
+  const executarProximaAcao = () => {
+    if (primeiraFalta) abrirPendencia(primeiraFalta);
+    else if (faltamTestes) solicitarTeste(proximoTeste.id);
+    else if (!canal.conectado) setConectar(true);
+    else if (conferirEstado) void atualizar();
+    else void ativar();
+  };
 
-    <section aria-labelledby="whatsapp-empresa" className="overflow-hidden rounded-2xl border border-emerald-600/25 bg-panel-card shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-emerald-500/5 p-4 sm:p-5"><div className="flex items-start gap-3"><span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-xl font-bold text-white">↗</span><div><h2 id="whatsapp-empresa" className="font-semibold text-panel-ink">WhatsApp da empresa</h2><p className="mt-1 max-w-xl text-sm leading-relaxed text-panel-sub">{canal.conectado ? "Conectado. É por aqui que seu atendente responde aos clientes." : "Conecte o número em que seus clientes já falam com você."}</p><span className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${canal.conectado ? "bg-emerald-500/15 text-emerald-800" : "bg-panel-bg text-panel-sub"}`}>{canal.conectado ? "WhatsApp conectado" : "WhatsApp não conectado"}</span></div></div><button type="button" className={canal.conectado ? BOTAO : "inline-flex min-h-12 items-center justify-center rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"} disabled={ocupado} onClick={() => setConectar(true)}>{canal.conectado ? "Conferir conexão" : "Conectar WhatsApp"}</button></div>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-panel-line p-4 sm:px-5"><div><p className="text-sm font-semibold text-panel-ink">{pendenciaCadastro ? "Cadastro precisa de revisão" : canal.ligado && canal.conectado ? "Atendente ativado" : canal.ligado ? "Atendente sem conexão" : "Atendente ainda não ativado"}</p><p className="mt-1 max-w-2xl text-xs leading-relaxed text-panel-sub">{pendenciaCadastro ? "As respostas automáticas aguardam a revisão das informações alteradas em outra tela." : canal.ligado && !canal.conectado ? "Reconecte o WhatsApp para voltar a responder." : canal.ligado && !publicado ? "Usa as informações publicadas anteriormente até você aplicar as alterações." : canal.ligado ? "Responde nos horários e condições que você definiu." : "Conectar o número não ativa respostas. Confira as informações e os testes abaixo."}</p></div>{canal.ligado && <button type="button" className={BOTAO} disabled={ocupado} onClick={() => void pausar()}>Pausar atendente</button>}</div>
+  return <div className="mx-auto max-w-4xl space-y-5 pb-8">
+    <header className="flex flex-wrap items-center justify-between gap-x-5 gap-y-3">
+      <div><h1 className="font-display text-2xl text-panel-ink sm:text-3xl">Seu atendente</h1><p className="mt-1 text-sm text-panel-sub">Ensine como a sua empresa atende.</p></div>
+      <div className="flex shrink-0 flex-col-reverse items-end gap-2">
+        <p role="status" aria-live="polite" className={`flex items-center gap-2 text-xs ${autosave.estado === "erro" ? "text-red-700" : "text-panel-sub"}`}><span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${autosave.estado === "erro" ? "bg-red-500" : pendente ? "bg-amber" : "bg-emerald-500"}`} />{autosave.estado === "erro" ? "Não salvo" : pendente ? "Salvando…" : "Tudo salvo"}</p>
+        <button type="button" aria-label="Testar atendente" className={BOTAO} disabled={ocupado} onClick={() => solicitarTeste(proximoTeste.id)}>Testar</button>
+      </div>
+    </header>
+
+    <section aria-label="WhatsApp da empresa" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-panel-line bg-panel-card px-4 py-3">
+      <div className="flex min-w-0 items-center gap-3"><span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${canal.conectado ? "bg-emerald-500" : "bg-panel-sub/40"}`} /><div><h2 className="text-sm font-semibold text-panel-ink">WhatsApp da empresa</h2><p className="mt-0.5 text-xs text-panel-sub">{!canal.conectado ? canal.ligado ? "Sem conexão · atendimento interrompido" : "Ainda não conectado" : pendenciaCadastro ? "Conectado · revise o cadastro" : emAtendimento ? "Conectado · atendente ativado" : tela.publicadoEm ? "Conectado · atendimento desativado" : "Conectado · aguardando ativação"}</p></div></div>
+      <div className="flex flex-wrap items-center gap-2">{canal.ligado && <button type="button" className="min-h-10 rounded-lg px-3 text-xs font-medium text-panel-sub hover:bg-panel-bg disabled:opacity-50" disabled={ocupado} onClick={() => void pausar()}>Pausar atendente</button>}<button type="button" aria-label={canal.conectado ? "Ver conexão" : "Conectar WhatsApp"} className={`${BOTAO} !px-3 ${!canal.conectado ? "!border-emerald-600/30 !text-emerald-800" : ""}`} disabled={ocupado} onClick={() => setConectar(true)}><span className="sm:hidden">{canal.conectado ? "Ver conexão" : "Conectar"}</span><span className="hidden sm:inline">{canal.conectado ? "Ver conexão" : "Conectar WhatsApp"}</span></button></div>
     </section>
 
-    {mensagemErro && <div role="alert" className="space-y-3 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800"><p>{mensagemErro}</p><p className="text-xs">Suas alterações continuam nesta tela.</p><div className="flex flex-wrap gap-2">{autosave.erro && autosave.erro.status !== 409 && <button type="button" className={BOTAO} disabled={ocupado} onClick={() => void operar(async () => { await atual.current.tentarNovamente(); setErro(""); return true; }, false)}>Tentar salvar novamente</button>}<button type="button" className={BOTAO} disabled={ocupado || autosave.estado === "salvando"} onClick={() => setDialogo({ tipo: "RECARREGAR" })}>Recarregar dados</button></div></div>}
-    {aviso && <p role="status" className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-sm leading-relaxed text-emerald-800">{aviso}</p>}
-    {pendenciaCadastro && <aside className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber/40 bg-amber/10 p-4"><p className="max-w-2xl text-sm text-panel-sub">O cadastro foi atualizado em outra tela. Importe os dados atuais para conferir antes de ativar.</p><button type="button" className={BOTAO} disabled={ocupado} onClick={() => setDialogo({ tipo: "IMPORTAR" })}>Revisar cadastro atual</button></aside>}
+    {metaConta.isGuest && <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-panel-sub"><p>Guarde seu acesso para continuar depois.</p><button type="button" className="min-h-10 font-semibold text-panel-ink underline underline-offset-4" onClick={() => setSalvarConta(true)}>Salvar meu acesso</button></div>}
+    {metaConta.acesso === "SEMANA_ACABOU" && <p className="text-sm text-panel-sub">Você pode configurar e testar. Para ativar, <Link href="/painel/assinatura" className="font-semibold text-panel-ink underline">consulte seu plano</Link>.</p>}
+    {mensagemErro && <div role="alert" className="space-y-2 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800"><p>{mensagemErro}</p><p className="text-xs">Mantenha esta tela aberta até salvar suas alterações.</p><div className="flex flex-wrap gap-2">{autosave.erro && autosave.erro.status !== 409 && <button type="button" className={BOTAO} disabled={ocupado} onClick={() => void operar(async () => { await atual.current.tentarNovamente(); setErro(""); return true; }, false)}>Tentar salvar novamente</button>}<button type="button" className={BOTAO} disabled={ocupado || autosave.estado === "salvando"} onClick={() => setDialogo({ tipo: "RECARREGAR" })}>Recarregar dados</button></div></div>}
+    {aviso && <p role="status" className="text-sm leading-relaxed text-emerald-800">{aviso}</p>}
 
-    <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_390px]">
-      <div className="min-w-0 space-y-4">
-        <PendenciasNexaContext.Provider value={mostrarPendencias ? tela.pendencias : []}>
-          {SECOES.map((s, i) => { const faltas = faltasDados.filter(p => p.etapa === i); return <section key={s.titulo} aria-label={s.titulo} className="min-w-0"><button ref={el => { secoesRef.current[i] = el; }} type="button" aria-expanded={secao === i} aria-controls={`secao-atendente-${i}`} disabled={ocupado} onClick={() => secao === i ? setSecao(null) : abrirSecao(i)} className={`flex w-full scroll-mt-24 items-center justify-between gap-3 rounded-2xl border bg-panel-card p-4 text-left transition sm:p-5 ${secao === i ? "border-amber/70" : "border-panel-line hover:border-amber/40"}`}><span className="min-w-0"><span className="block text-sm font-semibold text-panel-ink sm:text-base">{s.titulo}</span><span className="mt-1 block text-xs leading-relaxed text-panel-sub">{resumo[i] || s.descricao}</span></span><span className="flex shrink-0 items-center gap-2">{faltas.length > 0 && <span className="rounded-full bg-amber/15 px-2 py-1 text-xs text-panel-ink">Conferir</span>}<span aria-hidden="true" className="text-lg text-panel-sub">{secao === i ? "−" : "+"}</span></span></button><div id={`secao-atendente-${i}`} hidden={secao !== i} className="mt-3 space-y-4"><fieldset disabled={ocupado} className="min-w-0 space-y-4"><legend className="sr-only">Configuração: {s.titulo}</legend><FormularioConfiguracaoNexa etapa={i} dados={rascunho} editar={editar} />{i === 0 && <details className="rounded-xl border border-panel-line bg-panel-card p-4"><summary className="cursor-pointer text-sm font-medium text-panel-ink">Prefere colar um texto sobre a empresa?</summary><div className="mt-4 space-y-3"><p className="text-xs leading-relaxed text-panel-sub">Organizamos uma proposta. Você confere as informações antes de usar.</p><Campo titulo="Texto sobre a empresa" dica="Não inclua senhas nem dados de clientes."><textarea rows={4} maxLength={6000} className={CAMPO} value={assistente} onChange={e => setAssistente(e.target.value)} placeholder={"Endereço: Rua das Flores, 10\nCorte R$ 50 — 40 minutos\nAceitamos Pix e cartão\nSeg a sex das 9h às 18h"} /></Campo><button type="button" className={BOTAO} disabled={ocupado || !assistente.trim()} onClick={() => void preencher()}>Organizar informações</button></div></details>}</fieldset></div></section>; })}
-        </PendenciasNexaContext.Provider>
-
-        <section ref={revisaoRef} aria-labelledby="conferir-atendente" className="scroll-mt-24 space-y-4 rounded-2xl border border-panel-line bg-panel-card p-4 sm:p-5">
-          <div><h2 id="conferir-atendente" className="font-semibold text-panel-ink">Pronto para atender?</h2><p className="mt-1 text-sm text-panel-sub">Confira as respostas com seus dados antes de começar.</p></div>
-          {faltasDados.length > 0 && <div className="space-y-2 rounded-xl bg-amber/10 p-3"><p className="text-xs font-semibold text-panel-ink">O que falta nas informações</p>{faltasDados.map((p, i) => <button key={`${p.campo}-${i}`} type="button" disabled={ocupado} className="flex w-full items-start justify-between gap-3 py-1 text-left text-xs leading-relaxed text-panel-ink underline-offset-4 hover:underline" onClick={() => { setMostrarPendencias(true); p.campo === "cadastro" ? setDialogo({ tipo: "IMPORTAR" }) : abrirSecao(p.etapa); }}><span>{p.mensagem}</span><span aria-hidden="true">→</span></button>)}</div>}
-          <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs font-medium text-panel-sub">{aprovados} de {obrigatorios.length} respostas conferidas</p><button type="button" className={BOTAO} disabled={ocupado} onClick={() => solicitarTeste(proximoTeste.id)}>{aprovados === obrigatorios.length ? "Testar de novo" : "Testar próxima resposta"}</button></div>
-          <div className="space-y-2">{obrigatorios.map(c => { const ultimo = ultimoTeste(c.id); return <div key={c.id} className="rounded-xl border border-panel-line p-3"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-medium text-panel-ink">{c.titulo}</p><p className="mt-1 text-xs text-panel-sub">{ultimo?.correto === true ? "Conferida por você" : ultimo?.correto === false ? "Precisa de ajuste" : ultimo ? "Confira a resposta" : "Aguardando teste"}</p></div><button type="button" className="min-h-10 rounded-lg px-3 py-2 text-xs font-semibold text-panel-ink hover:bg-panel-bg disabled:opacity-50" disabled={ocupado} onClick={() => solicitarTeste(c.id)}>Testar</button></div>{ultimo && <details open={ultimo.correto !== true} className="mt-3"><summary className="cursor-pointer text-xs text-panel-sub">Ver resposta</summary><div className="mt-3 space-y-3">{ultimo.respostas.map((r, n) => <p key={n} className="whitespace-pre-wrap text-sm leading-relaxed text-panel-ink">{r}</p>)}<div className="flex flex-wrap gap-2"><button type="button" className={BOTAO} disabled={ocupado || pendente} onClick={() => void revisar(ultimo.id, c.id, true)}>Resposta correta</button><button type="button" className={BOTAO} disabled={ocupado || pendente} onClick={() => void revisar(ultimo.id, c.id, false)}>Corrigir informação</button></div></div></details>}</div>; })}</div>
-          <div className="space-y-3 border-t border-panel-line pt-4"><p className="text-xs leading-relaxed text-panel-sub">{pendente ? "Terminando de guardar suas alterações. Você já pode pedir um teste." : !canal.conectado ? "Conecte o WhatsApp no início desta página para começar a atender." : !pronto ? "Complete os itens indicados e confirme as respostas dos testes." : canal.ligado && publicado ? "Seu atendente está usando as informações conferidas." : "Tudo conferido. Ao ativar, essas informações passam a ser usadas no atendimento."}</p>{!canal.conectado ? <button type="button" className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50" disabled={ocupado} onClick={() => setConectar(true)}>Conectar WhatsApp para atender</button> : <button type="button" className={`${PRINCIPAL} w-full`} disabled={ocupado || !pronto || canal.ligado && publicado} onClick={() => void ativar()}>{canal.ligado && publicado ? "Atendente ativado" : canal.ligado ? "Aplicar alterações no atendimento" : "Ativar atendente"}</button>}<p className="text-xs leading-relaxed text-panel-sub">As alterações são salvas automaticamente para os testes. O atendimento real só muda quando você aplica a configuração conferida.</p></div>
-        </section>
+    <div className="overflow-hidden rounded-2xl border border-panel-line bg-panel-card">
+      <div role="tablist" aria-label="Configuração do atendente" className="grid grid-cols-4 border-b border-panel-line px-1 sm:px-5">
+        {SECOES.map((s, i) => <button ref={el => { secoesRef.current[i] = el; }} id={`aba-atendente-${i}`} key={s.titulo} type="button" role="tab" aria-selected={secao === i} aria-controls={`secao-atendente-${i}`} tabIndex={secao === i ? 0 : -1} disabled={ocupado} onClick={() => setSecao(i)} onKeyDown={e => {
+          const destino = e.key === "ArrowRight" ? (i + 1) % 4 : e.key === "ArrowLeft" ? (i + 3) % 4 : e.key === "Home" ? 0 : e.key === "End" ? 3 : null;
+          if (destino !== null) { e.preventDefault(); abrirSecao(destino); }
+        }} className={`relative min-h-14 min-w-0 px-1 text-xs font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber disabled:opacity-50 sm:px-3 sm:text-sm ${secao === i ? "text-panel-ink after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-amber sm:after:inset-x-5" : "text-panel-sub hover:text-panel-ink"}`}>{s.titulo}{faltasDados.some(p => p.etapa === i && p.campo !== "cadastro") && <span className="ml-1 inline-block h-1 w-1 rounded-full bg-amber align-middle" aria-label="Informação pendente" />}</button>)}
       </div>
+      <PendenciasNexaContext.Provider value={mostrarPendencias ? tela.pendencias : []}>
+        {SECOES.map((s, i) => <div key={s.titulo} role="tabpanel" id={`secao-atendente-${i}`} aria-labelledby={`aba-atendente-${i}`} tabIndex={-1} hidden={secao !== i} className="min-w-0 px-4 py-5 outline-none sm:px-7 sm:py-6"><fieldset disabled={ocupado} className="min-w-0 space-y-6"><legend className="sr-only">{s.descricao}</legend><FormularioConfiguracaoNexa etapa={i} dados={rascunho} editar={editar} />{i === 0 && <details className="border-t border-panel-line pt-4"><summary className="min-h-7 cursor-pointer text-xs font-medium text-panel-sub">Já tem um texto sobre a empresa?</summary><div className="mt-3 space-y-3"><p className="text-xs text-panel-sub">Cole aqui. Nós organizamos uma proposta para você conferir.</p><Campo titulo="Texto sobre a empresa"><textarea rows={4} maxLength={6000} className={CAMPO} value={assistente} onChange={e => setAssistente(e.target.value)} placeholder="Descreva seus serviços, preços e como funciona o atendimento…" /></Campo><button type="button" className={BOTAO} disabled={ocupado || !assistente.trim()} onClick={() => void preencher()}>Organizar informações</button></div></details>}</fieldset></div>)}
+      </PendenciasNexaContext.Provider>
 
-      <aside ref={testeRef} role={mobileTeste && !telaLarga ? "dialog" : undefined} aria-modal={mobileTeste && !telaLarga ? true : undefined} aria-label="Teste do atendente" className={mobileTeste ? "fixed inset-0 z-[80] flex min-h-0 flex-col bg-panel-bg xl:sticky xl:inset-auto xl:top-24 xl:z-auto xl:block" : "hidden min-w-0 xl:sticky xl:top-24 xl:block"}><div className="flex shrink-0 items-center justify-between gap-3 border-b border-panel-line bg-panel-card px-4 py-3 xl:hidden"><h2 className="font-semibold">Teste do atendente</h2><button type="button" className={BOTAO} onClick={() => setMobileTeste(false)}>Voltar à configuração</button></div><div className={mobileTeste ? "min-h-0 flex-1 overflow-y-auto p-3 xl:overflow-visible xl:p-0" : ""}><SimuladorConfiguracaoNexa tela={tela} ocupado={ocupado} sujo={pendente} erro={mensagemErro || ""} pedido={pedidoTeste} operar={operar} prepararTeste={prepararTeste} aplicar={aplicar} corrigir={corrigir} /></div></aside>
+      <section aria-label="Próximo passo" className="border-t border-panel-line bg-panel-bg/40 px-4 py-4 sm:px-7 sm:py-5">
+        <div className="flex flex-wrap items-center justify-between gap-4"><div className="min-w-0 flex-1 basis-56"><h2 className="text-sm font-semibold text-panel-ink">{tituloAcao}</h2><p className="mt-1 text-xs leading-relaxed text-panel-sub">{descricaoAcao}</p></div><button type="button" className={`${PRINCIPAL} w-full sm:w-auto`} disabled={ocupado || !primeiraFalta && !faltamTestes && canal.conectado && !conferirEstado && (pendente || !pronto || canal.ligado && publicado)} onClick={executarProximaAcao}>{textoAcao}</button></div>
+        {faltasDados.length > 1 && <details className="mt-3"><summary className="min-h-7 cursor-pointer text-xs text-panel-sub">Ver o que falta ({faltasDados.length})</summary><ul className="mt-2 space-y-1">{faltasDados.map((p, i) => <li key={`${p.campo}-${i}`}><button type="button" disabled={ocupado} className="min-h-9 text-left text-xs text-panel-ink underline underline-offset-4 disabled:opacity-50" onClick={() => abrirPendencia(p)}>{p.mensagem}</button></li>)}</ul></details>}
+        {canal.ligado && !publicado && <p className="mt-3 text-xs leading-relaxed text-panel-sub">O atendimento continua com a versão anterior até você aplicar as alterações.</p>}
+        {!canal.ligado && !canal.conectado && <p className="mt-3 text-xs text-panel-sub">Conectar o WhatsApp não ativa o atendimento.</p>}
+      </section>
+    </div>
+
+    <div hidden={!mobileTeste} className="fixed inset-0 z-[80] bg-black/40 sm:flex sm:items-center sm:justify-center sm:p-6" style={!mobileTeste ? { display: "none" } : undefined}>
+      <aside ref={testeRef} role="dialog" aria-modal="true" aria-labelledby="titulo-teste-atendente" className="flex h-full min-h-0 w-full flex-col bg-panel-card shadow-xl sm:max-h-[90dvh] sm:max-w-xl sm:overflow-hidden sm:rounded-2xl">
+        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-panel-line px-4 py-3 sm:px-5"><div><h2 id="titulo-teste-atendente" data-foco-inicial tabIndex={-1} className="font-semibold text-panel-ink outline-none">Teste do atendente</h2><p className="mt-1 text-xs text-panel-sub">{aprovados} de {obrigatorios.length} respostas conferidas</p></div><button type="button" className={BOTAO} onClick={() => setMobileTeste(false)}>Voltar à configuração</button></header>
+        <div className="min-h-0 flex-1 overflow-y-auto"><SimuladorConfiguracaoNexa tela={tela} ocupado={ocupado} sujo={pendente} erro={mensagemErro || ""} pedido={pedidoTeste} operar={operar} prepararTeste={prepararTeste} aplicar={aplicar} corrigir={corrigir} proximoCenario={faltamTestes ? proximoTeste.id : null} concluirTeste={() => setMobileTeste(false)} /></div>
+      </aside>
     </div>
 
     {dialogo && <div ref={dialogoRef} role="dialog" aria-modal="true" aria-labelledby="confirmar-dados-atendente" className="fixed inset-0 z-[90] flex items-center justify-center bg-black/45 p-4"><div className="max-h-[90dvh] w-full max-w-lg space-y-4 overflow-y-auto rounded-2xl border border-panel-line bg-panel-card p-6"><h2 id="confirmar-dados-atendente" className="text-lg font-semibold text-panel-ink">{dialogo.tipo === "SAIR" ? "Sair sem guardar as alterações?" : dialogo.tipo === "IMPORTAR" ? "Usar o cadastro atualizado?" : "Recarregar a configuração?"}</h2><p className="text-sm leading-relaxed text-panel-sub">{dialogo.tipo === "SAIR" ? "Não conseguimos salvar. Se sair agora, as alterações que só estão nesta tela serão descartadas." : dialogo.tipo === "IMPORTAR" ? "O rascunho será substituído pelos dados do cadastro. Você precisará conferir as informações e testar novamente." : "Alterações ainda não salvas nesta tela serão descartadas. Os dados serão carregados novamente do servidor."}</p><div className="flex flex-wrap gap-2"><button type="button" className={PRINCIPAL} disabled={ocupado || autosave.estado === "salvando"} onClick={() => void resolverDialogo()}>{dialogo.tipo === "SAIR" ? "Descartar e sair" : dialogo.tipo === "IMPORTAR" ? "Importar e revisar" : "Recarregar e descartar alterações locais"}</button><button type="button" className={BOTAO} disabled={ocupado} onClick={() => setDialogo(null)}>Continuar aqui</button></div>{erro && <p role="alert" className="text-sm text-red-700">{erro}</p>}</div></div>}
