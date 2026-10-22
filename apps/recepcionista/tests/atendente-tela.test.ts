@@ -212,13 +212,10 @@ describe("a tela do Atendente não explica a si mesma", () => {
 
   // A coluna "auto" de uma grade cresce até o item mais largo: no celular, o
   // celular e os cartões passavam da borda da tela.
-  it("a configuração permite encolher o formulário e abre o teste sob demanda em um diálogo acessível", () => {
+  it("a configuração permite encolher o formulário e reserva as três colunas para desktop", () => {
     const configuracao = fonte("components/atendente/configuracao.tsx");
     expect(configuracao).toContain("min-w-0");
-    expect(configuracao).toContain('role="dialog" aria-modal="true" aria-labelledby="titulo-teste-atendente"');
-    expect(configuracao).toContain("hidden={!mobileTeste}");
-    expect(configuracao).toContain("setMobileTeste(true)");
-    expect(configuracao).toContain("setMobileTeste(false)");
+    expect(configuracao).toContain("xl:grid-cols-");
     expect(configuracao).not.toContain("max-w-[440px]");
   });
 });
