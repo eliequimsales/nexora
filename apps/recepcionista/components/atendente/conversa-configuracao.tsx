@@ -516,9 +516,9 @@ export function ConversaConfiguracaoDoAtendente() {
     {/* Apresentação Visual Marcante do Nex */}
     <div className="mb-4 flex flex-col sm:flex-row items-center gap-4 rounded-3xl border border-amber/30 bg-gradient-to-r from-amber/15 via-white to-emerald-500/10 p-4 sm:p-5 shadow-xs">
       <img
-        src="/nex/nex-pointing.png"
+        src="/nex/nex-avatar.png"
         alt="Nex - Atendente Oficial"
-        className="h-20 w-20 sm:h-24 sm:w-24 object-contain shrink-0 drop-shadow-md"
+        className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl object-cover shrink-0 drop-shadow-md border-2 border-emerald-500/30 shadow-md ring-2 ring-emerald-500/15"
       />
       <div className="min-w-0 text-center sm:text-left">
         <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-bold text-emerald-900">
