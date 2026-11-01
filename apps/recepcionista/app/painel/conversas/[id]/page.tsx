@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StatusBadge } from "@/components/status";
+import { AvaliacaoAtendimento } from "@/components/conversations/avaliacao-atendimento";
 
 interface MessageRow {
   id: string;
@@ -51,11 +52,6 @@ function MessageBubble({ message }: { message: MessageRow }) {
           <span>
             {new Date(message.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
           </span>
-          {!fromCustomer && (
-            <span className="text-[#53BDEB] font-bold text-[11px] tracking-tighter" title="Lido">
-              ✓✓
-            </span>
-          )}
         </div>
       </div>
     </div>
@@ -189,7 +185,7 @@ export default function ConversaPage() {
                 {nomeCliente}
               </h1>
               <p className="text-xs text-amber-deep font-semibold leading-tight">
-                {isHuman ? "Atendimento com você" : "online · Atendente Virtual 24h"}
+                {isHuman ? "Atendimento com você" : conversation.status === "WAITING_HUMAN" ? "Aguardando a equipe" : conversation.status === "FINISHED" ? "Atendimento finalizado" : "Atendimento virtual"}
               </p>
             </div>
           </div>
@@ -242,14 +238,14 @@ export default function ConversaPage() {
           {/* Aviso Criptografia / Proteção do WhatsApp */}
           <div className="my-1 text-center">
             <span className="rounded-lg bg-[#FFEECD] px-3 py-1.5 text-[11.5px] text-[#54656F] shadow-2xs font-medium inline-block max-w-md">
-              🔒 As mensagens são protegidas pela tecnologia de inteligência artificial da Nexora.
+              Histórico do atendimento da sua empresa.
             </span>
           </div>
 
           {/* Pílula de Data estilo WhatsApp */}
           <div className="my-1 text-center">
             <span className="rounded-md bg-white/90 px-3 py-0.5 text-[11px] font-semibold text-[#54656F] shadow-2xs">
-              HOJE
+              Mensagens registradas
             </span>
           </div>
 
@@ -308,6 +304,7 @@ export default function ConversaPage() {
           {error && <p className="mt-2 text-xs font-semibold text-red-600">{error}</p>}
         </div>
       </div>
+      <AvaliacaoAtendimento key={id} conversationId={id} />
     </div>
   );
 }

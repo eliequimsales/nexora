@@ -55,7 +55,8 @@ const nextConfig = {
               "font-src 'self' data:",
               // A página fala com a própria origem e com o endpoint de eventos da Meta.
               "connect-src 'self' https://connect.facebook.net https://www.facebook.com",
-              "form-action 'self'",
+              "frame-src 'self' https://www.facebook.com",
+              "form-action 'self' https://www.facebook.com/tr https://www.facebook.com/tr/",
               "base-uri 'self'",
               "frame-ancestors 'none'",
               "object-src 'none'",

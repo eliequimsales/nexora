@@ -26,6 +26,7 @@ model Company {
   leads          Lead[]
   knowledgeGaps  KnowledgeGap[]
   knowledgeItems KnowledgeItem[]
+  conversationEvaluations ConversationEvaluation[]
 
   // Base de clientes e o que roda em cima dela
   customers    Customer[]
@@ -394,10 +395,33 @@ model Conversation {
   messages     Message[]
   lead         Lead?
   atendimentos AtendenteAtendimento[]
+  evaluations ConversationEvaluation[]
 
   @@unique([companyId, customerPhone])
   @@index([companyId, status])
   @@index([companyId, updatedAt])
+}
+
+// Avaliação explícita do responsável. Finalizar ou deixar de encaminhar não é
+// prova de resolução. Novas mensagens invalidam o resultado atual, sem apagar
+// a avaliação e o contexto que a originaram.
+model ConversationEvaluation {
+  id             String @id @default(cuid())
+  companyId      String
+  company        Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  requestId      String
+  outcome        String
+  source         String @default("OWNER")
+  note           String @default("")
+  anchorMessageId String
+  anchorAt       DateTime
+  context        Json
+  createdAt      DateTime @default(now())
+
+  @@unique([companyId, requestId])
+  @@index([companyId, conversationId, createdAt])
 }
 
 model Message {

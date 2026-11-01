@@ -3,6 +3,7 @@ import type { Fatos } from "@/lib/atendente/fatos";
 import { responder, type DependenciasDoMotor, type EntradaDoMotor } from "@/lib/atendente/motor";
 import { catalogoDeRespostas, validarSelecaoDeFontes } from "@/lib/atendente/conhecimento";
 import { textoDeMidiaNaoInterpretada } from "@/lib/whatsapp/midia";
+import { ferramentasDoAtendente } from "@/lib/atendente/acoes";
 
 // Todos os dados deste arquivo são cenários fictícios; nenhuma operação externa é chamada.
 const fatos: Fatos = {
@@ -19,6 +20,128 @@ const entrada = (texto: string, extra: Partial<EntradaDoMotor> = {}): EntradaDoM
   texto, fatos, estado: null, historico: [{ role: "CUSTOMER", content: texto }], primeiraDoDia: false,
   clienteNome: null, telefone: "5511999990000", agora: new Date("2026-09-22T15:00:00-03:00"),
   contexto: "EXPEDIENTE", palavrasDoDono: [], ...extra,
+});
+const ferramentasDeConsulta = () => ferramentasDoAtendente({
+  companyId: "empresa-teste", conversaId: "conversa-teste", operacaoId: "mensagem-teste", fatos,
+  cliente: { nome: "Cliente", telefone: "5511999990000" }, agora: new Date("2026-09-22T18:00:00Z"),
+}, { agenda: { companyId: "empresa-teste", livres: async () => [], marcar: async () => ({ ok: false, motivo: "OCUPADO" }) } })
+  .filter((f) => f.function.name === "consultar_horarios");
+
+describe("descrição ensinada de um serviço", () => {
+  it("usa somente a descrição aprovada do serviço mencionado", async () => {
+    const d = dependencias();
+    d.ia.mockResolvedValueOnce({ resposta: "Texto livre descartado", transferir_humano: false, motivo_transferencia: "", nome_cliente: "", interesse: "", fontes_ids: ["servico:corte:descricao"], duvida_pendente: false });
+    const c = { ...fatos, servicos: fatos.servicos.map(s => ({ ...s, descricao: s.id === "corte" ? "Corte com acabamento na máquina e na tesoura." : "Barba com toalha quente." })) };
+    const r = await responder(entrada("Me explique sobre Corte.", { fatos: c }), d);
+    expect(r.mensagens.join(" ")).toContain("Corte com acabamento na máquina e na tesoura.");
+    expect(r.mensagens.join(" ")).not.toContain("Texto livre descartado");
+    expect(r.anotar).toBeUndefined();
+  });
+  it("recusa descrição de outro serviço mesmo quando o ID é válido no catálogo", async () => {
+    const d = dependencias();
+    d.ia.mockResolvedValueOnce({ resposta: "Barba", transferir_humano: false, motivo_transferencia: "", nome_cliente: "", interesse: "", fontes_ids: ["servico:barba:descricao"], duvida_pendente: false });
+    const c = { ...fatos, servicos: fatos.servicos.map(s => ({ ...s, descricao: s.id === "barba" ? "Barba com toalha quente." : "Corte com tesoura." })) };
+    const r = await responder(entrada("Me explique sobre Corte.", { fatos: c }), d);
+    expect(r.mensagens.join(" ")).not.toContain("Barba com toalha quente.");
+    expect(r.anotar).toBeDefined();
+  });
+});
+
+describe("chamada de ferramenta interpretada pela IA", () => {
+  it("consulta real compõe a resposta; texto livre da IA não vira confirmação", async () => {
+    const d = dependencias();
+    d.ia.mockResolvedValueOnce({ resposta: "Já reservei um horário inventado!", transferir_humano: false,
+      motivo_transferencia: "", nome_cliente: "", interesse: "", fontes_ids: [], duvida_pendente: false,
+      acao_solicitada: { acao: "consultar_horarios", servicoId: "corte", dias: ["2026-09-23"], profissional: null } });
+    const s = await responder(entrada("O que você consegue para amanhã?"), { ...d, ferramentas: ferramentasDeConsulta() });
+    expect(d.ia.mock.calls[0][0].ferramentas).toHaveLength(1);
+    expect(d.livres).toHaveBeenCalledWith(expect.objectContaining({ servico: fatos.servicos[0] }));
+    expect(d.marcar).not.toHaveBeenCalled();
+    expect(s.estado?.tipo).toBe("HORARIO");
+    expect(s.mensagens.join(" ")).not.toMatch(/já reservei|inventado/i);
+  });
+  it("não executa reserva pedida pelo modelo no caminho livre", async () => {
+    const d = dependencias();
+    d.ia.mockResolvedValueOnce({ resposta: "Reserva feita", transferir_humano: false, motivo_transferencia: "", nome_cliente: "", interesse: "",
+      acao_solicitada: { acao: "reservar_horario", servicoId: "corte", inicio: "2026-09-23T12:00:00Z", profissional: null } });
+    const s = await responder(entrada("O que você consegue para amanhã?"), { ...d, ferramentas: ferramentasDeConsulta() });
+    expect(d.marcar).not.toHaveBeenCalled(); expect(d.livres).not.toHaveBeenCalled();
+    expect(s.anotar).toBeDefined(); expect(s.mensagens.join(" ")).not.toContain("Reserva feita");
+  });
+  it("não consulta outro serviço quando o cliente foi específico", async () => {
+    const d = dependencias();
+    d.ia.mockResolvedValueOnce({ resposta: "Corte", transferir_humano: false, motivo_transferencia: "", nome_cliente: "", interesse: "",
+      acao_solicitada: { acao: "consultar_horarios", servicoId: "corte", dias: ["2026-09-23"], profissional: null } });
+    const s = await responder(entrada("Algo para alinhar a barba?"), { ...d, ferramentas: ferramentasDeConsulta() });
+    expect(d.livres).not.toHaveBeenCalled(); expect(s.anotar).toBeDefined();
+  });
+  it("não executa ferramenta que não foi disponibilizada", async () => {
+    const d = dependencias();
+    d.ia.mockResolvedValueOnce({ resposta: "Horário disponível", transferir_humano: false, motivo_transferencia: "", nome_cliente: "", interesse: "",
+      acao_solicitada: { acao: "consultar_horarios", servicoId: "corte", dias: ["2026-09-23"], profissional: null } });
+    const s = await responder(entrada("O que você consegue para amanhã?"), d);
+    expect(d.livres).not.toHaveBeenCalled(); expect(s.anotar).toBeDefined();
+  });
+});
+
+describe("pedido explícito com horário exato", () => {
+  const inicio = new Date("2026-09-23T17:00:00Z");
+  function agendaExata() {
+    const d = dependencias();
+    d.livres.mockResolvedValue([
+      { inicio: new Date("2026-09-23T12:00:00Z"), fim: new Date("2026-09-23T12:40:00Z"), profissional: null },
+      { inicio, fim: new Date(inicio.getTime() + 40 * 60_000), profissional: null },
+    ]);
+    d.marcar.mockResolvedValue({ ok: true, inicio, fim: new Date(inicio.getTime() + 40 * 60_000),
+      profissional: "Ana", appointmentId: "reserva-testada", clienteId: "cliente-testado" });
+    return d;
+  }
+  it("consulta e reserva somente o horário solicitado, quando autorizado", async () => {
+    const d = agendaExata();
+    const s = await responder(entrada("Quero marcar corte amanhã às 14h"), d);
+    expect(d.marcar).toHaveBeenCalledTimes(1);
+    expect(d.marcar).toHaveBeenCalledWith(expect.objectContaining({ inicio }));
+    expect(s.marcou?.appointmentId).toBe("reserva-testada");
+    expect(s.mensagens.join(" ")).toContain("14h");
+    expect(s.mensagens.join(" ")).not.toMatch(/às 9h/);
+  });
+  it.each(["Tem vaga para corte amanhã às 14h?", "Quero saber se pode marcar corte amanhã às 14h", "Quero marcar corte amanhã às 14h, quanto custa?",
+    "Quero marcar corte amanhã às 14h, mas depende da autorização do meu médico",
+    "Quero marcar corte amanhã às 14h somente após a confirmação da minha esposa",
+    "Quero marcar corte amanhã às 14h se eu conseguir sair do trabalho"])("consulta sem reservar quando falta autorização inequívoca: %s", async (texto) => {
+    const d = agendaExata();
+    const s = await responder(entrada(texto), d);
+    expect(d.marcar).not.toHaveBeenCalled(); expect(s.marcou).toBeUndefined();
+    expect(s.estado?.tipo).toBe("HORARIO");
+  });
+  it("não reserva um horário alternativo se o solicitado estiver ocupado", async () => {
+    const d = agendaExata();
+    d.livres.mockResolvedValue([{ inicio: new Date("2026-09-24T17:00:00Z"), fim: new Date("2026-09-24T17:40:00Z"), profissional: null }]);
+    const s = await responder(entrada("Quero marcar corte amanhã às 14h"), d);
+    expect(d.marcar).not.toHaveBeenCalled(); expect(s.marcou).toBeUndefined();
+  });
+  it("respeita autonomia desativada mesmo em um pedido explícito", async () => {
+    const d = agendaExata();
+    const s = await responder(entrada("Quero marcar corte amanhã às 14h", { fatos: { ...fatos, marcaDireto: false } }), d);
+    expect(d.marcar).not.toHaveBeenCalled(); expect(s.marcou).toBeUndefined();
+  });
+  it("não inventa um dia para reservar apenas com uma hora", async () => {
+    const d = agendaExata();
+    const s = await responder(entrada("Quero marcar corte às 14h"), d);
+    expect(d.marcar).not.toHaveBeenCalled(); expect(s.marcou).toBeUndefined();
+  });
+  it("não reserva o único serviço cadastrado quando o pedido nomeia outro", async () => {
+    const d = agendaExata();
+    const s = await responder(entrada("Quero marcar massagem amanhã às 14h", { fatos: { ...fatos, servicos: [fatos.servicos[0]] } }), d);
+    expect(d.marcar).not.toHaveBeenCalled(); expect(s.marcou).toBeUndefined();
+  });
+  it.each(["Quero marcar corte amanhã às 14h e aceita cartão?", "Quero marcar corte amanhã às 14h; onde fica?",
+    "Quero marcar corte amanhã às 14h e tem vaga amanhã para barba?"])("perguntas compostas não criam reserva nem efeito invisível: %s", async (texto) => {
+    const d = agendaExata();
+    const s = await responder(entrada(texto), d);
+    expect(d.marcar).not.toHaveBeenCalled(); expect(s.marcou).toBeUndefined();
+    expect(s.mensagens.join(" ")).not.toMatch(/está na agenda|confirmado/i);
+  });
 });
 function dependencias() {
   const deps = {

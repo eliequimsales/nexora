@@ -9,6 +9,7 @@ import { logError } from "@/lib/errors";
 import { LIMITES, limitar } from "@/lib/limites";
 import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 import { validarAtivacaoConfiguracao } from "@/lib/atendente/configuracao";
+import { validarOrigemECsrfe } from "@/lib/seguranca/origem";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,8 @@ export const dynamic = "force-dynamic";
  * Desligar é sempre possível, sem conferir nada.
  */
 export async function POST(request: Request) {
+  const origem = validarOrigemECsrfe(request, { exigirJson: true });
+  if (origem) return origem;
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 

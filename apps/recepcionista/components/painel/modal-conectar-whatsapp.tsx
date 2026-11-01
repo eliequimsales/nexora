@@ -37,6 +37,7 @@ export function ModalConectarWhatsApp({
   const [avisoCopia, setAvisoCopia] = useState("");
   const telefoneIniciado = useRef(false);
   const ultimoNumeroTentado = useRef<string | null>(null);
+  const conexaoEmCurso = useRef(false);
   const painelRef = useRef<HTMLDivElement>(null);
   const tituloRef = useRef<HTMLHeadingElement>(null);
   const telefoneRef = useRef<HTMLInputElement>(null);
@@ -136,6 +137,8 @@ export function ModalConectarWhatsApp({
   };
 
   const iniciarConexao = useCallback(async (phoneParam?: string) => {
+    if (conexaoEmCurso.current) return;
+    conexaoEmCurso.current = true;
     setCarregando(true);
     setErro("");
     try {
@@ -177,6 +180,7 @@ export function ModalConectarWhatsApp({
       setErro("Falha ao comunicar com o servidor. Verifique sua conexão e tente novamente.");
       setStatus("ERRO");
     } finally {
+      conexaoEmCurso.current = false;
       setCarregando(false);
     }
   }, []);
@@ -214,22 +218,9 @@ export function ModalConectarWhatsApp({
   };
 
   useEffect(() => {
-    if (!aberto || status === "CONECTADO" || carregando) return;
-    // Se abrir na aba QR, inicia conexão QR padrão
-    if (aba === "QR" && !qrCode) {
-      void iniciarConexao();
-      return;
-    }
-
-    // Se estiver na aba CODIGO e tiver telefone preenchido, inicia conexão automaticamente
-    if (aba === "CODIGO" && !pairingCode) {
-      const numLimpo = (telefone || telefonePadrao || "").replace(/\D/g, "");
-      if (numLimpo.length >= 10 && ultimoNumeroTentado.current !== numLimpo) {
-        ultimoNumeroTentado.current = numLimpo;
-        void iniciarConexao(numLimpo);
-      }
-    }
-  }, [aberto, aba, qrCode, pairingCode, status, carregando, telefone, telefonePadrao, iniciarConexao]);
+    if (aberto) return;
+    setErro(""); setStatus("DESLIGADO"); setPairingCode(null); setQrCode(null); setEditandoTelefone(false);
+  }, [aberto]);
 
   useEffect(() => {
     if (!aberto || status === "CONECTADO") return;
@@ -407,7 +398,7 @@ export function ModalConectarWhatsApp({
                   <button
                     type="button"
                     onClick={() => handleGerarCodigo()}
-                    disabled={carregando || !telefone.replace(/\D/g, "")}
+                    disabled={carregando || telefone.replace(/\D/g, "").length < 10}
                     className="w-full flex items-center justify-center gap-2 rounded-2xl bg-amber py-3.5 text-sm font-bold text-night hover:brightness-110 transition shadow-sm disabled:opacity-50"
                   >
                     {carregando ? (
@@ -472,6 +463,7 @@ export function ModalConectarWhatsApp({
                       onClick={() => {
                         setPairingCode(null);
                         setAba("QR");
+                        if (!qrCode) void iniciarConexao();
                       }}
                       className="text-xs text-panel-sub hover:text-panel-ink underline"
                     >

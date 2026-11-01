@@ -22,6 +22,10 @@ vi.mock("@/lib/whatsapp/envio", async (original) => ({
   ...(await original<typeof import("@/lib/whatsapp/envio")>()),
   enviarWhatsApp: vi.fn(),
 }));
+vi.mock("@/lib/whatsapp/evolution", async (original) => ({
+  ...(await original<typeof import("@/lib/whatsapp/evolution")>()),
+  mostrarDigitacaoWhatsApp: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("@/lib/billing/guarda", () => ({ estadoDaEmpresa: vi.fn() }));
 vi.mock("@/lib/atendente/uso", () => ({
   usoDoAtendente: vi.fn(),
@@ -68,6 +72,7 @@ import { estadoDaEmpresa } from "@/lib/billing/guarda";
 import { enviarEmail } from "@/lib/reengajamento/email";
 import { recordKnowledgeGap } from "@/lib/training";
 import { enviarWhatsApp } from "@/lib/whatsapp/envio";
+import { chaveDaAcao } from "@/lib/atendente/acoes";
 
 /**
  * O EXECUTOR — O CAMINHO REAL DO WHATSAPP.
@@ -330,12 +335,13 @@ function conversaCom(...mensagens: MensagemDaConversa[]) {
   db.message.findFirst.mockResolvedValue({ id: ultima.id, role: ultima.role });
 }
 
-const esperar = vi.fn(async () => {});
+const esperar = vi.fn(async (_ms: number) => {});
 const rodar = (p: Partial<Parameters<typeof atender>[0]> = {}) =>
   atender({ companyId: "c1", conversationId: "conv1", origem: "WEBHOOK", agora: AGORA, ...p }, { esperar });
 
 beforeEach(() => {
   vi.clearAllMocks();
+  esperar.mockReset().mockResolvedValue(undefined);
   db.companyProfile.findUnique.mockResolvedValue(PERFIL);
   bancoComConversa();
   db.message.create.mockResolvedValue({ id: "salva" });
@@ -359,6 +365,13 @@ beforeEach(() => {
 });
 
 describe("atender — loja fechada, pedido de horário", () => {
+  it("não envia se a equipe assumir durante a digitação", async () => {
+    conversaCom(msg("m1", "CUSTOMER", "Tem horário amanhã para corte?", new Date(AGORA.getTime() - MIN)));
+    esperar.mockImplementation(async (ms) => { if (ms >= 3000) conversaAtual.status = "HUMAN"; });
+    expect(await rodar()).toEqual({ acao: "SILENCIO", motivo: "EQUIPE_NA_CONVERSA" });
+    expect(enviarWhatsApp).not.toHaveBeenCalled();
+    expect(conversaAtual.status).toBe("HUMAN");
+  });
   it("cadastro divergente pausa a conversa antes de consultar ou confirmar dados antigos", async () => {
     (fatosDaEmpresa as Fn).mockResolvedValue({ ...FATOS, configuracaoDivergente: true });
     conversaCom(msg("m1", "CUSTOMER", "tem horário amanhã pra corte?", new Date(AGORA.getTime() - MIN)));
@@ -370,11 +383,12 @@ describe("atender — loja fechada, pedido de horário", () => {
     expect(marcarNaAgenda).not.toHaveBeenCalled();
   });
 
-  it("se apresenta, oferece três horários sem espera artificial, salva e grava o estado", async () => {
+  it("oferece três horários com espera proporcional, salva e grava o estado", async () => {
     conversaCom(msg("m1", "CUSTOMER", "tem horário amanhã pra corte?", new Date(AGORA.getTime() - MIN)));
     const r = await rodar();
 
     expect(r).toEqual({ acao: "RESPONDEU", mensagens: 1 });
+    expect(esperar.mock.calls.some(([ms]) => ms >= 3000 && ms <= 5000)).toBe(true);
     const envios = (enviarWhatsApp as Fn).mock.calls;
     expect(envios).toHaveLength(1);
     expect(envios[0][0]).toBe("nexora-c1");
@@ -656,7 +670,8 @@ describe("atender — a escolha vira marcação", () => {
       }),
     );
     expect((enviarWhatsApp as Fn).mock.calls[0][2]).toMatch(/quarta, 23\/09, às 10h30/i);
-    expect(conversaAtual.atendenteEstado).toBeNull();
+    expect(conversaAtual.atendenteEstado).not.toHaveProperty("tipo");
+    expect(conversaAtual.atendenteEstado).toHaveProperty("_memoriaAtendente.versao", 1);
     expect(registrarAtendimento).toHaveBeenCalledWith(
       expect.objectContaining({ respostas: 1, marcados: 1, valorMarcadoCents: 4500 }),
     );
@@ -678,7 +693,9 @@ describe("atender — a escolha vira marcação", () => {
 
   it("reserva usa identidade estável da mensagem para recuperação e retry", async () => {
     await rodar();
-    expect(marcarNaAgenda).toHaveBeenCalledWith(expect.objectContaining({ chaveOperacao: "c1:conv1:m2" }));
+    expect(marcarNaAgenda).toHaveBeenCalledWith(expect.objectContaining({
+      chaveOperacao: chaveDaAcao({ companyId: "c1", conversaId: "conv1", operacaoId: "m2" }, "reservar_horario"),
+    }));
   });
 
   it("reserva reutilizada pode ser confirmada sem contar novamente o valor e a marcação", async () => {

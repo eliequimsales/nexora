@@ -141,7 +141,7 @@ export default function TreinamentoPage() {
           body: JSON.stringify({ action: option.id === chosenId ? "aprovar" : "rejeitar" }),
         });
       }
-      showThanks("Obrigado! Agora sei qual é a resposta correta. 🙌");
+      showThanks("Resposta corrigida no rascunho. Confira na configuração antes de aplicar ao atendimento.");
       await load();
     } finally {
       setBusy(null);
@@ -190,7 +190,7 @@ export default function TreinamentoPage() {
         <div className="text-sm leading-relaxed text-panel-ink">
           <p className="font-semibold">Olá! Estou sempre aprendendo com você.</p>
           <p className="mt-1 text-panel-sub">
-            Quando clientes me perguntam algo que não tenho certeza, anoto abaixo para você me ensinar. O que você me ensinar, passo a responder imediatamente no WhatsApp.
+            Quando falta uma informação para responder aos clientes, ela aparece aqui. Seus ensinamentos ficam salvos para revisar e testar na configuração do atendente.
           </p>
         </div>
       </div>
@@ -198,7 +198,7 @@ export default function TreinamentoPage() {
       {error && <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       {thanks && (
         <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-medium text-emerald-800">
-          {thanks}
+          {thanks} <a href="/painel/atendente" className="ml-1 underline underline-offset-4">Conferir meu atendente</a>
         </p>
       )}
 
@@ -211,7 +211,7 @@ export default function TreinamentoPage() {
               {observations.length}
             </span>
           }
-          hint="Perguntas que você mesmo respondeu aos clientes pelo WhatsApp. Aprova com 1 toque para o atendente usar sempre, ajuste se necessário ou descarte se for uma exceção."
+          hint="Respostas dadas pela equipe viram sugestões. Confira as condições, aprove para incluir no rascunho ou descarte se foi uma exceção."
         >
           <div className="space-y-3">
             {observations.map((obs) => {

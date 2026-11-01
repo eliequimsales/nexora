@@ -5,6 +5,7 @@ const confirmado = (info: InformacaoNexa) => info.situacao === "CONFIRMADO" ? in
 
 /** Projeta somente o que foi conferido. O rascunho nunca altera a fonte publicada. */
 export function aplicarConfiguracaoAosFatos(config: ConfiguracaoNexa, base: Fatos): Fatos {
+  const materiaisExpirados = (config.materiais ?? []).filter(m => m.validoAte !== null && new Date(m.validoAte).getTime() <= Date.now());
   const servicos = config.informacoes.servicos
     .filter((s) => s.situacao === "CONFIRMADO")
     .map((s) => ({ id: s.id, nome: s.nome, descricao: s.descricao,
@@ -22,6 +23,7 @@ export function aplicarConfiguracaoAosFatos(config: ConfiguracaoNexa, base: Fato
     jeito: config.atendimento.jeito,
     marcaDireto: config.atendimento.agendamento === "DIRETO",
     agendamento: config.atendimento.agendamento,
+    gestaoReservas: config.atendimento.gestaoReservas,
     expediente: config.atendimento.quando === "APOIO_EXPEDIENTE",
     configuracaoDivergente: false,
     servicos,
@@ -33,7 +35,7 @@ export function aplicarConfiguracaoAosFatos(config: ConfiguracaoNexa, base: Fato
     pricingInfo: "",
     productsServices: servicos.map((s) => `${s.nome}${s.descricao ? `: ${s.descricao}` : ""}`).join("\n"),
     serviceRules: "",
-    perguntas: config.conhecimento.itens.filter((i) => i.situacao === "CONFIRMADO")
+    perguntas: config.conhecimento.itens.filter((i) => i.situacao === "CONFIRMADO" && !materiaisExpirados.some(m => i.id.startsWith(`${m.id}:`)))
       .map((i) => ({ question: i.pergunta, answer: i.resposta })),
     linkAgenda: config.atendimento.agendamento !== "DESLIGADO" && servicos.length && horarios.length
       ? base.linkAgenda : null,

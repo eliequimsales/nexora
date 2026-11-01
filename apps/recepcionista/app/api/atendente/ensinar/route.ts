@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionCompanyId } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { teachAnswer } from "@/lib/training";
+import { ConfiguracaoErro } from "@/lib/atendente/configuracao";
 import { logError } from "@/lib/errors";
 import { LIMITES, limitar } from "@/lib/limites";
 import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
@@ -30,27 +31,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    await prisma.knowledgeItem.create({
-      data: {
-        companyId,
-        question,
-        answer,
-        source: "TRAINING",
-        status: "APPROVED",
-        approvedAt: new Date(),
-        gapId: gapId ?? null,
-      },
-    });
-
-    if (gapId) {
-      await prisma.knowledgeGap.updateMany({
-        where: { id: gapId, companyId },
-        data: { status: "ANSWERED" },
-      });
-    }
+    await teachAnswer(companyId, { question, answer, gapId });
 
     return NextResponse.json({ ok: true, tela: await telaDoAtendente(companyId) });
   } catch (erro) {
+    if (erro instanceof ConfiguracaoErro) return NextResponse.json({ error: erro.message }, { status: erro.status });
+    if (erro instanceof Error && erro.message === "Dúvida não encontrada") return NextResponse.json({ error: erro.message }, { status: 404 });
     await logError("atendente-ensinar", erro, companyId);
     return NextResponse.json({ error: "Não consegui salvar o ensinamento agora." }, { status: 500 });
   }

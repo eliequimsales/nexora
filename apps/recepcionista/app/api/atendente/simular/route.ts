@@ -7,6 +7,9 @@ import { pedidoDeSimulacao } from "@/lib/atendente/entrada";
 import { fatosDaEmpresa, lerPalavrasDoDono, type Sobrescrita } from "@/lib/atendente/fatos";
 import { responder } from "@/lib/atendente/motor";
 import { lerEstado } from "@/lib/atendente/oferta";
+import { estadoComMemoria, lerMemoria } from "@/lib/atendente/memoria";
+import { planejarEntrega } from "@/lib/atendente/entrega";
+import { ferramentasDoAtendente } from "@/lib/atendente/acoes";
 import { lojaFechada } from "@/lib/atendente/portao";
 import { getSessionCompanyId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -55,7 +58,7 @@ export async function POST(request: Request) {
       ...(p.marcaDireto !== undefined ? { marcaDireto: p.marcaDireto } : {}),
     };
     const [base, perfil] = await Promise.all([
-      fatosDaEmpresa(companyId, sobrescrita),
+      fatosDaEmpresa(companyId, sobrescrita, p.mensagens.at(-1)?.texto ?? ""),
       prisma.companyProfile.findUnique({ where: { companyId }, select: { handoffKeywords: true } }),
     ]);
     const configuracao = p.configuracaoRevisao !== undefined ? await getConfiguracao(companyId) : null;
@@ -95,8 +98,13 @@ export async function POST(request: Request) {
         agora,
         contexto,
         palavrasDoDono: configuracao ? configuracao.rascunho.atendimento.handoffKeywords : lerPalavrasDoDono(perfil?.handoffKeywords),
+        memoria: lerMemoria(p.estado, { empresaId: companyId, conversaId: "simulador" }, fatos, agora),
+        escopoMemoria: { empresaId: companyId, conversaId: "simulador" },
       },
       {
+        ferramentas: ferramentasDoAtendente({ companyId, conversaId: "simulador", operacaoId: "teste",
+          fatos, cliente: { nome: "Cliente", telefone: "simulacao" }, agora, simulacao: true, horariosSimulados: [] }, {})
+          .filter((f) => f.function.name === "consultar_horarios"),
         livres: (q) =>
           horariosLivres({ companyId, duracaoMin: q.servico.duracaoMin, dias: q.dias, agora, profissional: q.profissional,
             ...(configuracao ? { configuracaoSimulada: { horarios: fatos.horarios, diasFechados: fatos.diasFechados } } : {}) }),
@@ -112,9 +120,9 @@ export async function POST(request: Request) {
             ...(configuracao ? { configuracaoSimulada: { horarios: fatos.horarios, diasFechados: fatos.diasFechados } } : {}),
             agora,
           }),
-        ia: async ({ systemPrompt, historico }) => {
+        ia: async ({ systemPrompt, historico, ferramentas }) => {
           if (faltando) throw new Error("Respostas livres sem configuração");
-          return generateReceptionistReply({ systemPrompt, history: historico });
+          return generateReceptionistReply({ systemPrompt, history: historico, ferramentas });
         },
       },
     );
@@ -136,8 +144,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       testeId: teste?.id ?? null,
-      mensagens: saida.mensagens,
-      estado: saida.estado,
+      mensagens: planejarEntrega(saida.mensagens, { urgente: Boolean(saida.urgente) }).bolhas.map((b) => b.texto),
+      estado: estadoComMemoria(saida.estado, saida.memoria),
       fontes: saida.fontes,
       marcou: saida.marcou
         ? { quando: quandoFalado(saida.marcou.inicio), servico: saida.marcou.servico, profissional: saida.marcou.profissional }

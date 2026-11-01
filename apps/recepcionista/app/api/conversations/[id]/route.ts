@@ -19,13 +19,13 @@ export async function GET(_request: Request, { params }: { params: { id: string 
   const conversation = await prisma.conversation.findFirst({
     where: { id: params.id, companyId },
     include: {
-      messages: { orderBy: { createdAt: "asc" }, take: 500 },
+      messages: { orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 500 },
       lead: true,
     },
   });
   if (!conversation) return NextResponse.json({ error: "Conversa não encontrada" }, { status: 404 });
 
-  return NextResponse.json({ conversation });
+  return NextResponse.json({ conversation: { ...conversation, messages: conversation.messages.reverse() } }, { headers: { "Cache-Control": "no-store" } });
 }
 
 const ACTION_MAP: Record<string, { status: ConversationStatus; note: string }> = {

@@ -3,8 +3,8 @@ import { logError } from "@/lib/errors";
 import {
   connectInstance,
   createInstance,
-  deleteInstance,
   getConnectionState,
+  isPairingCode,
   setWebhook,
 } from "./evolution";
 
@@ -18,6 +18,8 @@ export interface WhatsAppState {
   error: string | null;
 }
 
+const ERRO_RECEBIMENTO = "Não foi possível preparar o recebimento de mensagens. Tente conectar novamente.";
+
 /** Nome padrão da instância Evolution de uma empresa. */
 export function instanceNameFor(companyId: string): string {
   return `nexora-${companyId}`;
@@ -30,9 +32,14 @@ function webhookUrl(): string {
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "") ||
     "https://www.meunexora.com.br";
   if (!appUrl) throw new Error("APP_URL não configurada (necessária para o webhook do WhatsApp)");
-  const token = process.env.WEBHOOK_TOKEN;
-  const base = `${appUrl.replace(/\/+$/, "")}/api/webhook/whatsapp`;
-  return token ? `${base}?token=${encodeURIComponent(token)}` : base;
+  const token = process.env.WEBHOOK_TOKEN?.trim();
+  if (!token) throw new Error("WEBHOOK_TOKEN não configurado (necessário para receber mensagens)");
+  const url = new URL(`${appUrl.replace(/\/+$/, "")}/api/webhook/whatsapp`);
+  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.hash || url.search) {
+    throw new Error("APP_URL inválida para receber mensagens do WhatsApp");
+  }
+  url.searchParams.set("token", token);
+  return url.toString();
 }
 
 function mapState(state: string | null): WhatsAppStatus {
@@ -79,35 +86,16 @@ function toState(
 export async function connectWhatsApp(companyId: string, phone?: string): Promise<WhatsAppState> {
   const name = instanceNameFor(companyId);
   let pairingCode: string | null = null;
+  let recebimentoConfigurado = false;
 
   try {
+    const webhook = webhookUrl();
     await createInstance(name, phone);
-    try {
-      await setWebhook(name, webhookUrl());
-    } catch (whErr) {
-      await logError("whatsapp-webhook-set", whErr, companyId).catch(() => {});
-    }
-    let result = await connectInstance(name, phone);
-    pairingCode = result.pairingCode;
-
-    // Se o usuário solicitou pareamento por número (phone fornecido),
-    // mas a instância existente não retornou pairingCode (ex: foi instanciada antes no modo QR),
-    // limpamos a instância anterior e a recriamos com foco exclusivo em pareamento por número.
-    if (phone && !pairingCode && result.state !== "open") {
-      try {
-        await deleteInstance(name).catch(() => {});
-        await new Promise((resolve) => setTimeout(resolve, 600));
-        await createInstance(name, phone);
-        await setWebhook(name, webhookUrl()).catch(() => {});
-        result = await connectInstance(name, phone);
-        pairingCode = result.pairingCode;
-      } catch (errRecriar) {
-        await logError("whatsapp-recreate-pairing", errRecriar, companyId).catch(() => {});
-      }
-    }
-
-    // Garante que o webhook está configurado após a inicialização da conexão
-    setWebhook(name, webhookUrl()).catch(() => {});
+    // Sem o webhook, o telefone pode conectar sem entregar mensagens ao atendente.
+    await setWebhook(name, webhook);
+    recebimentoConfigurado = true;
+    const result = await connectInstance(name, phone);
+    pairingCode = isPairingCode(result.pairingCode) ? result.pairingCode.trim() : null;
 
     if (result.state === "open") {
       await saveState(companyId, {
@@ -117,20 +105,29 @@ export async function connectWhatsApp(companyId: string, phone?: string): Promis
         whatsappConnectedAt: new Date(),
         whatsappError: null,
       });
+      pairingCode = null;
     } else {
       const qrCode =
-        result.qrCode && result.qrCode.startsWith("data:image/") ? result.qrCode : null;
+        result.qrCode && /^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(result.qrCode)
+          ? result.qrCode : null;
+      if (!pairingCode && !qrCode) {
+        throw new Error("O WhatsApp não retornou um código ou QR válido. Tente gerar novamente sem desconectar a sessão existente.");
+      }
       await saveState(companyId, {
         whatsappInstance: name,
         whatsappStatus: "WAITING_QR",
         whatsappQrCode: qrCode,
+        whatsappConnectedAt: null,
         whatsappError: null,
       });
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    await logError("whatsapp-connect", error, companyId);
-    await saveState(companyId, { whatsappStatus: "ERROR", whatsappError: message });
+    const message = recebimentoConfigurado
+      ? error instanceof Error ? error.message : String(error)
+      : ERRO_RECEBIMENTO;
+    pairingCode = null;
+    await logError("whatsapp-connect", error, companyId).catch(() => {});
+    await saveState(companyId, { whatsappStatus: "ERROR", whatsappQrCode: null, whatsappError: message });
   }
 
   const profile = await prisma.companyProfile.findUniqueOrThrow({ where: { companyId } });
@@ -142,6 +139,9 @@ export async function refreshWhatsAppStatus(companyId: string): Promise<WhatsApp
   const profile = await prisma.companyProfile.findUniqueOrThrow({ where: { companyId } });
 
   if (!profile.whatsappInstance) return toState(profile);
+  // O estado físico "open" não comprova que a Nexora recebe mensagens. Somente
+  // uma nova conexão configurada ou um webhook autenticado supera essa falha.
+  if (profile.whatsappStatus === "ERROR" && profile.whatsappError === ERRO_RECEBIMENTO) return toState(profile);
 
   try {
     const state = await getConnectionState(profile.whatsappInstance);

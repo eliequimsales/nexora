@@ -4,6 +4,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef } from "react";
 import { capturarUtmsDaUrl } from "@/lib/analytics/utm";
 import { trackPageView } from "@/lib/analytics/pixel";
+import { idsDoPixel, pixelSemJavascript } from "@/lib/analytics/pixel-config";
 
 function MetaPixelTracker() {
   const pathname = usePathname();
@@ -24,19 +25,7 @@ function MetaPixelTracker() {
 }
 
 export function MetaPixel({ id }: { id?: string }) {
-  const pixelIds = Array.from(
-    new Set(
-      [
-        id,
-        process.env.NEXT_PUBLIC_META_PIXEL_ID,
-        "1041816645171094",
-      ]
-        .filter((val): val is string => typeof val === "string" && val.trim().length > 0)
-        .flatMap((val) => val.split(","))
-        .map((p) => p.trim())
-        .filter(Boolean)
-    )
-  );
+  const pixelIds = idsDoPixel([id, process.env.NEXT_PUBLIC_META_PIXEL_ID, "1041816645171094"]);
 
   return (
     <>
@@ -62,18 +51,7 @@ export function MetaPixel({ id }: { id?: string }) {
               `,
             }}
           />
-          <noscript>
-            {pixelIds.map((p) => (
-              <img
-                key={p}
-                height="1"
-                width="1"
-                style={{ display: "none" }}
-                src={`https://www.facebook.com/tr?id=${p}&ev=PageView&noscript=1`}
-                alt=""
-              />
-            ))}
-          </noscript>
+          <noscript dangerouslySetInnerHTML={{ __html: pixelSemJavascript(pixelIds) }} />
         </>
       )}
     </>

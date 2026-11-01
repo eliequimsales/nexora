@@ -26,6 +26,10 @@ export type PerguntaNexa = {
   id: string; pergunta: string; resposta: string;
   situacao: SituacaoInformacao; origem: OrigemInformacao;
 };
+export type MaterialNexa = {
+  id: string; nome: string; tipo: "TEXTO" | "ARQUIVO" | "AUDIO";
+  texto: string; sha256: string; importadoEm: string; validoAte: string | null;
+};
 export type ConfiguracaoNexa = {
   negocio: {
     nome: string;
@@ -48,9 +52,12 @@ export type ConfiguracaoNexa = {
     jeito: "ACOLHEDOR" | "DIRETO" | "DESCONTRAIDO";
     quando: "FORA_EXPEDIENTE" | "APOIO_EXPEDIENTE";
     agendamento: "DESLIGADO" | "LINK" | "DIRETO";
+    gestaoReservas?: { cancelar: boolean; remarcar: boolean; antecedenciaHoras: number | null };
     handoffKeywords: string[];
   };
   conhecimento: { itens: PerguntaNexa[] };
+  /** Evidência informada pelo responsável; fica no rascunho até revisão e publicação. */
+  materiais?: MaterialNexa[];
 };
 
 export type CenarioNexa = "INFORMACOES" | "HORARIO" | "HUMANO" | "DESCONHECIDA" | "MULTIPLA" | "CANCELAMENTO" | "MIDIA";

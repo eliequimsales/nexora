@@ -1,5 +1,7 @@
 import { prisma } from "./db";
 import { DEFAULT_TIMEZONE } from "./ai/prompt";
+import { getResumoResultados } from "./atendimento/avaliacao";
+import type { ResumoResultados } from "./atendimento/avaliacao-schema";
 
 export interface Reports {
   days: number;
@@ -8,6 +10,7 @@ export interface Reports {
   transferred: number;
   leads: number;
   waitingNow: number;
+  outcomes: ResumoResultados;
   topQuestions: { text: string; count: number }[];
   hourly: number[]; // 24 posições, mensagens de clientes por hora (fuso de Brasília)
 }
@@ -19,7 +22,7 @@ function normalizeQuestion(text: string): string {
 export async function getReports(companyId: string, days: number): Promise<Reports> {
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
-  const [totalConversations, aiHandled, transferred, leads, waitingNow] = await Promise.all([
+  const [totalConversations, aiHandled, transferred, leads, waitingNow, outcomes] = await Promise.all([
     prisma.conversation.count({ where: { companyId, createdAt: { gte: since } } }),
     prisma.conversation.count({
       where: { companyId, createdAt: { gte: since }, messages: { some: { role: "AI" } } },
@@ -36,6 +39,7 @@ export async function getReports(companyId: string, days: number): Promise<Repor
     }),
     prisma.lead.count({ where: { companyId, createdAt: { gte: since } } }),
     prisma.conversation.count({ where: { companyId, status: "WAITING_HUMAN" } }),
+    getResumoResultados(companyId, since),
   ]);
 
   const customerMessages = await prisma.message.findMany({
@@ -75,5 +79,5 @@ export async function getReports(companyId: string, days: number): Promise<Repor
     if (hour >= 0 && hour < 24) hourly[hour] += 1;
   }
 
-  return { days, totalConversations, aiHandled, transferred, leads, waitingNow, topQuestions, hourly };
+  return { days, totalConversations, aiHandled, transferred, leads, waitingNow, topQuestions, hourly, outcomes };
 }

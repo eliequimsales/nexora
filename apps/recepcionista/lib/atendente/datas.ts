@@ -21,6 +21,8 @@ export type PedidoDeDia = {
   periodo?: Periodo;
   /** Minutos locais a partir dos quais o cliente pode. */
   aPartirDe?: number;
+  /** Minuto local exato solicitado; sozinho não define nem confirma o dia. */
+  horaExata?: number;
 };
 
 const DIAS = ["domingo", "segunda", "terca", "quarta", "quinta", "sexta", "sabado"];
@@ -122,6 +124,27 @@ export function lerPedidoDeDia(texto: string, agora: Date): PedidoDeDia {
     const hora = Number(aPartir[1]);
     const minuto = aPartir[2] ? Number(aPartir[2]) : 0;
     if (hora <= 23 && minuto <= 59) pedido.aPartirDe = hora * 60 + minuto;
+  }
+
+  // Uma janela ("depois das 14h", "antes das 14h", "entre 14h e 16h")
+  // não é um pedido para reservar exatamente o limite dessa janela.
+  const intervalo = /\bentre\b|\bdas\s*\d{1,2}(?:h\d{0,2}|:\d{2})?\s*(?:as|ate)\s*\d/i.test(t);
+  const horas = new Set<number>();
+  let horaInvalida = false;
+  if (!intervalo) {
+    const padrao = /\b(?:as\s*)?(\d{1,2})\s*(?::\s*(\d{2})|h(?:\s*(\d{2}))?)(?![\p{L}\d:])(?!\s*\d)|\bas\s*(\d{1,2})(?!\s*[\d:h])\b/gu;
+    for (const match of t.matchAll(padrao)) {
+      const antes = t.slice(0, match.index).trimEnd();
+      if (/\b(?:depois(?: das?)?|apos(?: as?)?|a partir(?: das?)?|antes(?: das?)?|ate(?: as?)?)$/.test(antes)) continue;
+      const hora = Number(match[1] ?? match[4]);
+      const minuto = Number(match[2] ?? match[3] ?? 0);
+      if (hora > 23 || minuto > 59) { horaInvalida = true; continue; }
+      horas.add(hora * 60 + minuto);
+    }
+  }
+  if (!horaInvalida && horas.size === 1) {
+    const exata = [...horas][0];
+    if (pedido.aPartirDe === undefined || exata >= pedido.aPartirDe) pedido.horaExata = exata;
   }
 
   return pedido;

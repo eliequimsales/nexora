@@ -204,9 +204,12 @@ describe("a tela do Atendente não explica a si mesma", () => {
     });
   }
 
-  it("a página usa a configuração guiada dedicada", () => {
+  it("a página abre a configuração por conversa com teste e resumo acessíveis", () => {
     const pagina = fonte("app/painel/atendente/page.tsx");
-    expect(pagina).toContain("ConfiguracaoDaNexa");
+    expect(pagina).toContain("ConversaConfiguracaoDoAtendente");
+    const conversa = fonte("components/atendente/conversa-configuracao.tsx");
+    expect(conversa).toContain("O que já sabe");
+    expect(conversa).toContain("Testar atendimento");
     expect(pagina).not.toContain("<Celular");
   });
 

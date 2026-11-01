@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionCompanyId } from "@/lib/auth";
 import { logError } from "@/lib/errors";
 import { teachAnswer } from "@/lib/training";
+import { ConfiguracaoErro } from "@/lib/atendente/configuracao";
 import { teachSchema } from "@/lib/validation";
 import { LIMITES, limitar } from "@/lib/limites";
 import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
@@ -9,7 +10,7 @@ import { validarOrigemECsrfe } from "@/lib/seguranca/origem";
 
 export const dynamic = "force-dynamic";
 
-/** Empresa respondeu uma dúvida → item fica AGUARDANDO APROVAÇÃO (nunca direto em uso). */
+/** Resposta explícita do dono é confirmada no rascunho; a publicação ativa é preservada. */
 export async function POST(request: Request) {
   const erroOrigem = validarOrigemECsrfe(request, { exigirJson: true });
   if (erroOrigem) return erroOrigem;
@@ -34,6 +35,7 @@ export async function POST(request: Request) {
     const item = await teachAnswer(companyId, parsed.data);
     return NextResponse.json({ ok: true, item });
   } catch (error) {
+    if (error instanceof ConfiguracaoErro) return NextResponse.json({ error: error.message }, { status: error.status });
     await logError("training-teach", error, companyId);
     return NextResponse.json({ error: "Erro ao registrar o treinamento" }, { status: 500 });
   }

@@ -7,8 +7,9 @@ vi.mock("@/lib/db", () => ({ prisma: {
   service: { findMany: vi.fn(), create: vi.fn(), updateMany: vi.fn() }, knowledgeItem: { findMany: vi.fn() }, $transaction: vi.fn(),
 } }));
 import { prisma } from "@/lib/db";
+import { conversarConfiguracao } from "@/lib/atendente/conversa";
 import { confirmarTesteConfiguracao, ConfiguracaoErro, getConfiguracao, importarCadastroConfiguracao, lerConfiguracaoPublicada, pendenciasDaConfiguracao,
-  publicarConfiguracao, registrarTesteConfiguracao, salvarConfiguracao, validarAtivacaoConfiguracao, type EnvelopeConfiguracaoNexa } from "@/lib/atendente/configuracao";
+  publicarConfiguracao, registrarTesteConfiguracao, salvarConfiguracao, validarAtivacaoConfiguracao, getVersoesConfiguracao, restaurarVersaoConfiguracao, sincronizarNomeDaContaNoRascunho, type EnvelopeConfiguracaoNexa } from "@/lib/atendente/configuracao";
 
 type Fn = ReturnType<typeof vi.fn>;
 const db = prisma as unknown as { company: { findUnique: Fn; update: Fn }; companyProfile: { updateMany: Fn };
@@ -58,9 +59,9 @@ beforeEach(() => {
   db.service.findMany.mockImplementation(async ({ where }: { where: { companyId: string; active?: boolean; id?: { in?: string[] } } }) => clone(servicos.filter((s) =>
     s.companyId === where.companyId && (where.active === undefined || s.active === where.active) && (!where.id?.in || where.id.in.includes(s.id))).sort((a, b) => a.order - b.order)));
   db.service.create.mockImplementation(async ({ data }: { data: Omit<Servico, "id"> }) => { const s = { ...clone(data), id: `s-criado-${++idCriado}` }; servicos.push(s); return { id: s.id }; });
-  db.service.updateMany.mockImplementation(async ({ where, data }: { where: { companyId: string; id?: string | { notIn: string[] } }; data: Partial<Servico> }) => {
+  db.service.updateMany.mockImplementation(async ({ where, data }: { where: { companyId: string; id?: string | { notIn?: string[]; in?: string[] } }; data: Partial<Servico> }) => {
     let count = 0;
-    for (const s of servicos) if (s.companyId === where.companyId && (!where.id || (typeof where.id === "string" ? s.id === where.id : !where.id.notIn.includes(s.id)))) { Object.assign(s, clone(data)); count++; }
+    for (const s of servicos) if (s.companyId === where.companyId && (!where.id || (typeof where.id === "string" ? s.id === where.id : (!where.id.notIn || !where.id.notIn.includes(s.id)) && (!where.id.in || where.id.in.includes(s.id))))) { Object.assign(s, clone(data)); count++; }
     return { count };
   });
   db.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
@@ -69,7 +70,96 @@ beforeEach(() => {
   });
 });
 
+async function publicarServicoDeTeste() {
+  const e = envelope();
+  e.rascunho.informacoes.servicos = [{ id: "novo:corte", nome: "Corte", descricao: "", precoModo: "FIXO", precoCents: 8000,
+    duracaoMin: 30, situacao: "CONFIRMADO", origem: "MANUAL" }];
+  perfil.atendenteConfiguracao = e;
+  await publicarConfiguracao("c1", e.revisao);
+  return getConfiguracao("c1");
+}
+
+describe("edições conectadas à fonte ativa e à agenda", () => {
+  it("salvar preço atualiza snapshot e serviço real sem publicar outra edição pendente", async () => {
+    await publicarServicoDeTeste();
+    const e = clone(perfil.atendenteConfiguracao) as EnvelopeConfiguracaoNexa;
+    e.rascunho.negocio.descricao = { valor: "Descrição pendente anterior", situacao: "REVISAR", origem: "MANUAL" };
+    perfil.atendenteConfiguracao = e;
+    const c = clone(e.rascunho); c.informacoes.servicos[0].precoCents = 9500;
+    const r = await salvarConfiguracao("c1", { revisao: e.revisao, rascunho: c, etapa: 1 });
+    const ativa = lerConfiguracaoPublicada(perfil.atendenteConfiguracao)!;
+    expect(ativa.informacoes.servicos[0].precoCents).toBe(9500);
+    expect(servicos.find(s => s.id === ativa.informacoes.servicos[0].id)?.priceCents).toBe(9500);
+    expect(ativa.negocio.descricao.valor).toBe("Ajustes de roupas sob encomenda.");
+    expect(r.rascunho.negocio.descricao.situacao).toBe("REVISAR");
+    expect(r.pendencias.some(p => p.campo === "cadastro")).toBe(false);
+    expect(perfil.plantaoAtivo).toBe(false);
+  });
+
+  it("preço ensinado na conversa usa a mesma sincronização imediata", async () => {
+    const t = await publicarServicoDeTeste();
+    const r = await conversarConfiguracao("c1", { revisao: t.revisao, mensagemId: "25110d83-33c2-4573-84e9-27bfbc9b6d9d", texto: "Corte custa R$ 95", perguntaChave: null, topico: "SERVICOS" },
+      { interpretar: vi.fn(), iaDisponivel: () => false, agora: () => new Date("2026-10-28T12:00:00Z") });
+    expect(r.tela.rascunho.informacoes.servicos[0].precoCents).toBe(9500);
+    expect(lerConfiguracaoPublicada(perfil.atendenteConfiguracao)?.informacoes.servicos[0].precoCents).toBe(9500);
+    expect(servicos[0].priceCents).toBe(9500);
+  });
+
+  it("falha ao salvar desfaz também a mudança de preço na agenda", async () => {
+    const t = await publicarServicoDeTeste();
+    const original = clone(perfil.atendenteConfiguracao);
+    const c = clone(t.rascunho); c.informacoes.servicos[0].precoCents = 9900;
+    db.companyProfile.updateMany.mockResolvedValueOnce({ count: 0 });
+    await expect(salvarConfiguracao("c1", { revisao: t.revisao, rascunho: c, etapa: 1 })).rejects.toThrow("mudou enquanto");
+    expect(servicos[0].priceCents).toBe(8000);
+    expect(perfil.atendenteConfiguracao).toEqual(original);
+  });
+
+  it("remover serviço desativa somente ele e mantém as reservas e os demais serviços", async () => {
+    const t = await publicarServicoDeTeste();
+    const id = t.rascunho.informacoes.servicos[0].id;
+    servicos.push({ ...servicos[0], id: "servico-outra-empresa", companyId: "c2" });
+    const c = clone(t.rascunho); c.informacoes.servicos = [];
+    await salvarConfiguracao("c1", { revisao: t.revisao, rascunho: c, etapa: 1 });
+    expect(servicos.find(s => s.id === id)?.active).toBe(false);
+    expect(servicos.find(s => s.companyId === "c2")?.active).toBe(true);
+    expect(lerConfiguracaoPublicada(perfil.atendenteConfiguracao)?.informacoes.servicos).toEqual([]);
+  });
+});
+
 describe("rascunho separado do atendimento publicado", () => {
+  it("salvar acesso do visitante preserva o ensino e reconhece a troca autorizada do nome canônico", async () => {
+    const t = await salvarConfiguracao("c1", { revisao: 0, rascunho: config(), etapa: 0 });
+    empresa.name = "Ateliê Real";
+    await sincronizarNomeDaContaNoRascunho("c1", "Empresa antes", "Ateliê Real");
+    const atualizado = await getConfiguracao("c1");
+    expect(atualizado.rascunho).toEqual(t.rascunho); expect(atualizado.revisao).toBe(t.revisao);
+    expect(atualizado.pendencias.some(p => p.campo === "cadastro")).toBe(false);
+  });
+  it("promoção da conta não esconde outra alteração simultânea no cadastro", async () => {
+    await salvarConfiguracao("c1", { revisao: 0, rascunho: config(), etapa: 0 });
+    empresa.name = "Ateliê Real"; perfil.paymentMethods = "Alteração feita em outra tela";
+    await sincronizarNomeDaContaNoRascunho("c1", "Empresa antes", "Ateliê Real");
+    expect((await getConfiguracao("c1")).pendencias.some(p => p.campo === "cadastro")).toBe(true);
+  });
+  it("recupera versão anterior para revisão sem substituir a versão em uso", async () => {
+    const e = envelope(); const antiga = config(); antiga.informacoes.pagamento = info("Dinheiro");
+    e.publicado = { revisao: 3, em: "2026-10-26T10:00:00.000Z", rascunho: clone(e.rascunho) };
+    e.historico = [{ revisao: 1, em: "2026-10-25T10:00:00.000Z", rascunho: antiga }]; perfil.atendenteConfiguracao = clone(e);
+    const versoes = await getVersoesConfiguracao("c1"); expect(versoes.map(v => v.atual)).toEqual([true, false]);
+    const t = await restaurarVersaoConfiguracao("c1", 3, versoes[1].id);
+    expect(t.rascunho.informacoes.pagamento.valor).toBe("Dinheiro"); expect(t.revisao).toBe(4);
+    expect(t.revisadas).toEqual([]); expect(t.testes).toEqual([]);
+    expect(lerConfiguracaoPublicada(perfil.atendenteConfiguracao)).toEqual(e.publicado.rascunho);
+    expect((perfil.atendenteConfiguracao as EnvelopeConfiguracaoNexa).conversa?.mensagens.at(-1)?.texto).toContain("Recuperei uma versão anterior");
+    expect(perfil.paymentMethods).toBe("");
+  });
+  it("recusa restauração com revisão antiga ou identificador de outra empresa", async () => {
+    perfil.atendenteConfiguracao = envelope();
+    await expect(restaurarVersaoConfiguracao("c1", 2, "versao-alheia")).rejects.toMatchObject({ status: 409 });
+    await expect(restaurarVersaoConfiguracao("c1", 3, "versao-alheia")).rejects.toMatchObject({ status: 404 });
+    expect(db.companyProfile.updateMany).not.toHaveBeenCalled();
+  });
   it("não anuncia perfil legado parcialmente ativado como atendente ligado", async () => {
     perfil.plantaoAtivo = true;
     const t = await getConfiguracao("c1");
@@ -158,7 +248,7 @@ describe("rascunho separado do atendimento publicado", () => {
     expect(t.etapa).toBe(2); expect(t.revisao).toBe(4); expect(t.revisadas).toEqual([0, 1, 2, 3]); expect(t.testes).toEqual([]);
     expect(t.rascunho.conhecimento.itens[0].situacao).toBe("REVISAR");
     expect(t.pendencias).toContainEqual(expect.objectContaining({ campo: "pergunta:novo:entrega", bloqueia: true }));
-    expect(lerConfiguracaoPublicada(perfil.atendenteConfiguracao)?.atendimento.nome).toBe("Nexa");
+    expect(lerConfiguracaoPublicada(perfil.atendenteConfiguracao)?.atendimento.nome).toBe("Bia");
     expect(db.companyProfile.updateMany).toHaveBeenCalledTimes(1);
     expect((await getConfiguracao("c1")).etapa).toBe(2);
     await expect(publicarConfiguracao("c1", 4)).rejects.toMatchObject({ status: 409 });
@@ -206,12 +296,12 @@ describe("rascunho separado do atendimento publicado", () => {
     perfil.atendenteConfiguracao = e;
     expect((await salvarConfiguracao("c1", { revisao: 3, rascunho: config(), etapa: 5 })).revisao).toBe(3);
   });
-  it("editar conteúdo invalida testes e revisões, preservando a publicação anterior", async () => {
+  it("editar conteúdo confirmado invalida testes e atualiza essa informação na publicação", async () => {
     const e = envelope(); e.publicado = { revisao: 3, em: "2026-10-21", rascunho: config() }; perfil.atendenteConfiguracao = e;
     const c = config(); c.negocio.descricao.valor = "Alteração ainda não publicada";
     const t = await salvarConfiguracao("c1", { revisao: 3, rascunho: c, etapa: 0 });
     expect(t.revisao).toBe(4); expect(t.testes).toEqual([]); expect(t.revisadas).toEqual([1, 2, 3]); expect(t.haAlteracoes).toBe(true);
-    expect(lerConfiguracaoPublicada(perfil.atendenteConfiguracao)?.negocio.descricao.valor).toBe("Ajustes de roupas sob encomenda.");
+    expect(lerConfiguracaoPublicada(perfil.atendenteConfiguracao)?.negocio.descricao.valor).toBe(c.negocio.descricao.valor);
   });
   it("recusa versão antiga e escrita concorrente", async () => {
     perfil.atendenteConfiguracao = envelope();

@@ -3,6 +3,8 @@ import { Prisma } from "@nexora/recepcionista-prisma";
 import { horarioDaEmpresa, lerDiasFechados } from "@/lib/agenda/horario";
 import { horariosLivres } from "@/lib/agenda/livres";
 import { marcarNaAgenda } from "@/lib/agenda/marcacao";
+import { alterarReservaNaAgenda, listarReservasDoCliente } from "@/lib/agenda/gestao-reservas";
+import type { AlteracaoReservaConfirmada } from "./gestao-reservas";
 import { generateReceptionistReply } from "@/lib/ai/provider";
 import type { EstadoConta } from "@/lib/billing/acesso";
 import { estadoDaEmpresa } from "@/lib/billing/guarda";
@@ -14,12 +16,16 @@ import { enviarEmail } from "@/lib/reengajamento/email";
 import { recordKnowledgeGap } from "@/lib/training";
 import type { BusinessHour } from "@/lib/validation";
 import { enviarWhatsApp } from "@/lib/whatsapp/envio";
+import { mostrarDigitacaoWhatsApp } from "@/lib/whatsapp/evolution";
 import { ESPERA_DA_RAJADA_MS, MAX_RESPOSTAS_POR_DIA, TETO_CONVERSAS_MES } from "./constantes";
 import { localDe, proximaAbertura, textoDaVolta } from "./datas";
 import { fatosDaEmpresa, lerPalavrasDoDono } from "./fatos";
 import { apresentacao, primeiroNomeDoCliente, textosDoJeito } from "./jeitos";
 import { responder, type Contexto, type SaidaDoMotor } from "./motor";
 import { lerEstado } from "./oferta";
+import { estadoComMemoria, lerMemoria } from "./memoria";
+import { entregarResposta, planejarEntrega } from "./entrega";
+import { executarAcaoAtendente, ferramentasDoAtendente, type ContextoDasAcoes, type DependenciasDasAcoes } from "./acoes";
 import { acessoDoAtendente, decidirQuando, lojaFechada, type Silencio } from "./portao";
 import { atendimentoDoDia, registrarAtendimento, usoDoAtendente, type RegistroDeAtendimento } from "./uso";
 
@@ -96,6 +102,7 @@ type ExecucaoPersistida = {
     estado: Prisma.InputJsonValue | null;
     mensagens: string[];
     reserva?: { appointmentId: string | null; servico: string; inicio: string };
+    alteracao?: AlteracaoReservaConfirmada;
   };
 };
 
@@ -328,8 +335,10 @@ export async function atender(
   // reserva mesmo quando a resposta ao cliente não chegou a ser enviada.
   async function revisarExecucao(motivo: string): Promise<boolean> {
     const reserva = execucao.proposta?.reserva;
+    const alteracao = execucao.proposta?.alteracao;
     const detalhe = reserva
       ? ` Reserva confirmada: ${reserva.servico}, ${reserva.inicio}; registro ${reserva.appointmentId ?? "não informado"}.`
+      : alteracao ? ` Alteração confirmada na agenda: ${alteracao.acao}, ${alteracao.servico}, ${alteracao.inicio}; registro ${alteracao.appointmentId}.`
       : " Verifique a agenda e o histórico antes de reativar; o resultado da execução pode estar incompleto.";
     const resposta = execucao.proposta?.mensagens?.length
       ? ` Resposta preparada (entrega não confirmada): ${execucao.proposta.mensagens.join("\n\n")}` : "";
@@ -342,7 +351,7 @@ export async function atender(
       const alteradas = await tx.conversation.updateMany({
         where: { ...filtroDaExecucao(), status: atual.status, donoAssumiuEm: atual.donoAssumiuEm },
         data: {
-          atendenteEstado: reserva ? Prisma.DbNull : estadoAnterior ?? Prisma.DbNull,
+          atendenteEstado: reserva || alteracao ? Prisma.DbNull : estadoAnterior ?? Prisma.DbNull,
           ...(pausar ? { status: "WAITING_HUMAN" as const, donoAssumiuEm: agora } : {}),
         },
       });
@@ -427,21 +436,19 @@ export async function atender(
     return silencio(antesDePreparar);
   }
 
-  const fatos = await fatosDaEmpresa(p.companyId);
+  const fatos = await fatosDaEmpresa(p.companyId, {}, plano.acao === "RESPONDER" ? plano.texto : undefined);
   const t = textosDoJeito(fatos.jeito);
   const fechada = lojaFechada({ horarios: fatos.horarios, diasFechados: fatos.diasFechados, agora });
   const volta = fechada ? textoDaVolta(proximaAbertura(fatos.horarios, fatos.diasFechados, agora), agora) : null;
   const clienteNome = primeiroNomeDoCliente(conversa.customerName);
 
-  async function enviarESalvar(textos: string[]): Promise<ResultadoDoAtendimento> {
+  async function enviarESalvar(textos: string[], urgente = false): Promise<ResultadoDoAtendimento> {
     let enviadas = 0;
-    for (const texto of textos) {
-      const motivo = await conferir();
-      if (motivo) {
-        if (execucao.proposta?.reserva || enviadas) await revisarExecucao("a conversa mudou durante uma operação ou envio");
-        else await liberarExecucao();
-        return enviadas ? { acao: "RESPONDEU", mensagens: enviadas } : silencio(motivo);
-      }
+    const entrega = await entregarResposta(planejarEntrega(textos, { urgente }), {
+      podeContinuar: conferir,
+      esperar: deps.esperar,
+      presenca: (digitando, esperaMs, signal) => mostrarDigitacaoWhatsApp(instance, conversa.customerPhone, digitando, esperaMs, signal),
+      enviar: async (texto) => {
       try {
         const envio = await enviarWhatsApp(instance, conversa!.customerPhone, texto);
         if (!envio.messageId) throw new Error("O canal não confirmou o identificador do envio; resultado desconhecido");
@@ -453,6 +460,14 @@ export async function atender(
           .catch((falha) => logError("atendente-revisao-envio", falha, p.companyId));
         throw erro;
       }
+      },
+    });
+    if (entrega.acao !== "CONCLUIDA") {
+      if (execucao.proposta?.reserva || execucao.proposta?.alteracao || enviadas || entrega.acao === "PRAZO_ESGOTADO") {
+        await revisarExecucao("a conversa mudou ou a entrega foi interrompida; conferir antes de retomar");
+      } else await liberarExecucao();
+      return enviadas ? { acao: "RESPONDEU", mensagens: enviadas }
+        : silencio(entrega.acao === "INTERROMPIDA" ? entrega.motivo ?? "EM_PROCESSAMENTO" : "EM_PROCESSAMENTO");
     }
     // Só um envio confirmado pelo canal e salvo torna uma oferta visível ao próximo
     // turno. O token impede sobrescrever a execução de outra mensagem.
@@ -471,12 +486,13 @@ export async function atender(
   // uma ação que só existiu no texto do motor, e um dono que assumiu no caminho
   // não pode ter seu estado sobrescrito pela resposta que estava em preparação.
   async function persistir(estado: Prisma.InputJsonValue | typeof Prisma.DbNull, motivo?: string, equipe = false,
-    mensagens: string[] = [], reserva?: SaidaDoMotor["marcou"]) {
+    mensagens: string[] = [], reserva?: SaidaDoMotor["marcou"], alteracao?: AlteracaoReservaConfirmada) {
     execucao = { ...execucao, proposta: {
       estado: estado === Prisma.DbNull ? null : estado as Prisma.InputJsonValue,
       mensagens,
       ...(reserva ? { reserva: { appointmentId: reserva.appointmentId,
         servico: reserva.servico, inicio: reserva.inicio.toISOString() } } : {}),
+      ...(alteracao ? { alteracao } : {}),
     } };
     await prisma.$transaction(async (tx) => {
       const alteradas = await tx.conversation.updateMany({
@@ -494,6 +510,8 @@ export async function atender(
       if (motivo) await tx.message.create({
         data: { conversationId: conversa!.id, role: "SYSTEM", content: `Anotado para você: ${motivo}` },
       });
+      if (alteracao) await tx.message.create({ data: { conversationId: conversa!.id, role: "SYSTEM",
+        content: `Alteração comprovada na agenda: ${alteracao.acao === "CANCELAR" ? "cancelamento" : "remarcação"} de ${alteracao.servico}. Registro ${alteracao.appointmentId}; início anterior ${alteracao.inicioAnterior}${alteracao.acao === "REMARCAR" ? `; novo início ${alteracao.inicio}` : ""}.` } });
     });
     encaminhamentoPersistido = equipe;
   }
@@ -513,7 +531,7 @@ export async function atender(
     // A pendência ficou visível e bloqueada. A própria confirmação pode sair,
     // desde que a equipe ainda não tenha assumido nem chegue nova mensagem.
     encaminhamentoPersistido = true;
-    return enviarESalvar([[...mensagensIndependentes, aviso].join("\n\n")]);
+    return enviarESalvar([[...mensagensIndependentes, aviso].join("\n")], true);
   }
 
   const registro = (r: Omit<RegistroDeAtendimento, "companyId" | "conversationId" | "dia" | "clienteNome" | "clienteTelefone" | "foraDoHorario">) =>
@@ -566,6 +584,18 @@ export async function atender(
   }
 
   const nomeDaAgenda = nomeParaAgenda(conversa.customerName);
+  const contextoDasAcoes: ContextoDasAcoes = {
+    companyId: p.companyId, conversaId: conversa.id, operacaoId: ultima.id,
+    fatos, cliente: { nome: nomeDaAgenda ?? clienteNome ?? "Cliente", telefone: conversa.customerPhone }, agora,
+  };
+  const dependenciasDasAcoes: DependenciasDasAcoes = {
+    agenda: {
+      companyId: p.companyId,
+      livres: (q) => horariosLivres({ companyId: p.companyId, duracaoMin: q.servico.duracaoMin,
+        dias: q.dias, agora, profissional: q.profissional }),
+      marcar: (q) => marcarNaAgenda(q),
+    },
+  };
   const saida = await responder(
     {
       texto: plano.texto,
@@ -580,37 +610,61 @@ export async function atender(
       agora,
       contexto: plano.contexto,
       palavrasDoDono: lerPalavrasDoDono(perfil.handoffKeywords),
+      memoria: lerMemoria(conversa.atendenteEstado, { empresaId: p.companyId, conversaId: conversa.id }, fatos, agora),
+      escopoMemoria: { empresaId: p.companyId, conversaId: conversa.id },
     },
     {
-      livres: (q) =>
-        horariosLivres({
-          companyId: p.companyId,
-          duracaoMin: q.servico.duracaoMin,
-          dias: q.dias,
-          agora,
-          profissional: q.profissional,
-        }),
-      marcar: (q) =>
-        marcarNaAgenda({
-          companyId: p.companyId,
-          servico: q.servico,
-          inicio: q.inicio,
-          profissional: q.profissional,
-          cliente: { nome: nomeDaAgenda ?? q.cliente.nome, telefone: q.cliente.telefone },
-          origem: "ATENDENTE",
-          chaveOperacao: `${p.companyId}:${conversa.id}:${ultima.id}`,
-          agora,
-        }),
-      ia: ({ systemPrompt, historico }) => generateReceptionistReply({ systemPrompt, history: historico }),
+      gestaoReservas: {
+        listar: async () => {
+          if (await conferir()) throw new Error("Atendimento interrompido antes da consulta de reservas");
+          return listarReservasDoCliente({ companyId: p.companyId, telefone: conversa.customerPhone, agora });
+        },
+        livres: async (reserva, dias) => {
+          if (await conferir()) throw new Error("Atendimento interrompido antes da consulta de remarcação");
+          const servico = fatos.servicos.find(s => s.id === reserva.servicoId);
+          if (!servico || servico.duracaoMin * 60_000 !== Date.parse(reserva.fim) - Date.parse(reserva.inicio)) return [];
+          return horariosLivres({ companyId: p.companyId, duracaoMin: servico.duracaoMin, dias, agora, profissional: reserva.profissional, ignorarReservaId: reserva.id });
+        },
+        alterar: async (reserva, acao, novaOpcao) => {
+          if (await conferir()) return { estado: "INDISPONIVEL", motivo: "AUTORIZACAO" };
+          return alterarReservaNaAgenda({ companyId: p.companyId, conversaId: conversa.id, operacaoId: ultima.id,
+            telefone: conversa.customerPhone, acao, reserva, novaOpcao, agora });
+        },
+      },
+      ferramentas: ferramentasDoAtendente(contextoDasAcoes, dependenciasDasAcoes)
+        .filter((f) => f.function.name === "consultar_horarios"),
+      livres: async (q) => {
+        const r = await executarAcaoAtendente({ acao: "consultar_horarios", servicoId: q.servico.id,
+          dias: q.dias, profissional: q.profissional ?? null }, contextoDasAcoes, dependenciasDasAcoes);
+        if (r.estado === "CONCLUIDA" && r.acao === "consultar_horarios") return r.horarios;
+        throw new Error("Consulta da agenda não confirmada pelo adaptador autorizado");
+      },
+      marcar: async (q) => {
+        // Só chega aqui após uma escolha específica ou pedido exato e explícito,
+        // conferidos contra a disponibilidade real pelo motor.
+        const r = await executarAcaoAtendente({ acao: "reservar_horario", servicoId: q.servico.id,
+          inicio: q.inicio.toISOString(), profissional: q.profissional }, {
+          ...contextoDasAcoes, cliente: { nome: nomeDaAgenda ?? q.cliente.nome, telefone: conversa.customerPhone },
+          confirmacao: { acao: "reservar_horario", mensagemClienteId: ultima.id,
+            servicoId: q.servico.id ?? "", inicio: q.inicio.toISOString(), profissional: q.profissional },
+        }, dependenciasDasAcoes);
+        if (r.estado === "CONCLUIDA" && r.acao === "reservar_horario") return r.reserva;
+        return { ok: false, motivo: r.estado === "INDISPONIVEL" && r.motivo === "HORARIO_OCUPADO"
+          ? "OCUPADO" : "RESULTADO_DESCONHECIDO" };
+      },
+      ia: ({ systemPrompt, historico, ferramentas }) => generateReceptionistReply({ systemPrompt, history: historico, ferramentas }),
     },
   );
 
+  const estadoAtualizado = estadoComMemoria(saida.estado, saida.memoria) as Prisma.InputJsonValue | null;
   execucao = { ...execucao, proposta: {
-    estado: saida.estado ? saida.estado as Prisma.InputJsonValue : null,
+    estado: estadoAtualizado,
     mensagens: saida.mensagens,
     ...(saida.marcou ? { reserva: { appointmentId: saida.marcou.appointmentId,
       servico: saida.marcou.servico, inicio: saida.marcou.inicio.toISOString() } } : {}),
+    ...(saida.alterouReserva ? { alteracao: saida.alterouReserva } : {}),
   } };
+  const efeitoConfirmado = Boolean(saida.marcou || saida.alterouReserva);
 
   // Uma reserva confirmada permanece na agenda se o dono assumiu no caminho.
   // Sua confirmação automática também respeita a intervenção humana.
@@ -618,11 +672,11 @@ export async function atender(
   let registroPersistido = false;
   if (!impedimento) {
     try {
-      await persistir(saida.estado ? (saida.estado as Prisma.InputJsonValue) : Prisma.DbNull,
-        saida.anotar?.motivo, Boolean(saida.equipe), saida.mensagens, saida.marcou);
+      await persistir(estadoAtualizado ?? Prisma.DbNull,
+        saida.anotar?.motivo, Boolean(saida.equipe), saida.mensagens, saida.marcou, saida.alterouReserva);
       registroPersistido = true;
     } catch (erro) {
-      if (!saida.marcou) return tratarFalhaDeRegistro(erro, Boolean(saida.equipe),
+      if (!efeitoConfirmado) return tratarFalhaDeRegistro(erro, Boolean(saida.equipe),
         saida.urgente || (saida.equipe && saida.estado?.tipo === "HORARIO") ? saida.mensagens : []);
       // A confirmação da agenda continua válida mesmo que o acompanhamento
       // da conversa falhe. Nunca se descreve essa reserva como não concluída.
@@ -637,19 +691,19 @@ export async function atender(
     }
   }
   if (impedimento) {
-    if (saida.marcou || (saida.equipe && saida.estado?.tipo === "HORARIO")) {
+    if (efeitoConfirmado || (saida.equipe && saida.estado?.tipo === "HORARIO")) {
       await revisarExecucao("a conversa mudou durante a reserva; conferir o resultado antes de responder");
     } else await liberarExecucao();
-    if (!saida.marcou) return silencio(impedimento);
+    if (!efeitoConfirmado) return silencio(impedimento);
   }
 
-  const envio = impedimento ? silencio(impedimento) : await enviarESalvar(saida.mensagens);
+  const envio = impedimento ? silencio(impedimento) : await enviarESalvar(saida.mensagens, Boolean(saida.urgente));
 
   await registro({
     respostas: envio.acao === "RESPONDEU" ? 1 : 0,
     marcados: saida.marcou && !saida.marcou.reutilizada ? 1 : 0,
     valorMarcadoCents: saida.marcou && !saida.marcou.reutilizada ? saida.marcou.valorCents : 0,
-    precisaDoDono: Boolean(saida.anotar) || Boolean(impedimento && saida.marcou),
+    precisaDoDono: Boolean(saida.anotar) || Boolean(impedimento && efeitoConfirmado),
     motivo: saida.anotar?.motivo,
     urgente: saida.urgente,
   });

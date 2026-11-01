@@ -11,6 +11,7 @@ export function catalogoDeRespostas(fatos: Fatos): FonteDeResposta[] {
     if (texto?.trim()) fontes.push({ id, assunto, texto: texto.trim() });
   };
   for (const servico of fatos.servicos) {
+    incluir(`servico:${servico.id}:descricao`, `Sobre ${servico.nome}`, servico.descricao ? `${servico.nome}: ${servico.descricao}` : "");
     if (servico.precoModo === "SOB_CONSULTA") {
       incluir(`servico:${servico.id}:preco`, `Preço de ${servico.nome}`, `O valor de ${servico.nome} é sob consulta com a equipe.`);
     } else if (servico.precoCents > 0 || servico.precoModo === "FIXO") {

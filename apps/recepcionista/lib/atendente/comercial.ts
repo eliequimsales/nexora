@@ -1,6 +1,6 @@
 import type { DependenciasDoMotor, EntradaDoMotor, SaidaDoMotor } from "./motor";
 import { URL_ATIVACAO } from "./comercial-config";
-import { catalogoDeRespostas, validarSelecaoDeFontes } from "./conhecimento";
+import { catalogoDeRespostas, validarSelecaoDeFontes, type FonteDeResposta } from "./conhecimento";
 import { detectarIntencao } from "./intencao";
 import { apresentacao, cumprimento, textosDoJeito, URGENCIA, URGENCIA_CVV } from "./jeitos";
 import { isPureGreeting } from "@/lib/ai/quick-reply";
@@ -331,6 +331,30 @@ export function montarPromptComercial(e: EntradaDoMotor, ramoHistorico: Informac
 
 const PENDENCIA = "Ainda não tenho informação confirmada para responder essa parte. A equipe precisa verificar.";
 
+/** Perguntas só de preço usam o mesmo catálogo autorizado, sem pedir à IA para repetir um valor conhecido. */
+function precoDoServico(pergunta: string, fatos: EntradaDoMotor["fatos"], catalogo: FonteDeResposta[]) {
+  const generica = /^(?:e |mas )?(?:quanto (?:custa|e|fica|sai|ta|esta)|qual (?:e )?o (?:preco|valor)|precos|valores)$/.test(pergunta);
+  const alvo = generica ? null : pergunta.match(/^(?:e |mas )?(?:quanto (?:custa|e|fica|sai|ta|esta)(?: [oa])?|qual (?:e )?o (?:preco|valor)(?: d[oa]s?| de)?|(?:preco|valor) (?:d[oa]s?|de)) (.+)$/)?.[1];
+  if (!generica && !alvo) return null;
+
+  // O alvo precisa ser o nome inteiro. Uma segunda dúvida ou condição não é
+  // descartada só porque o começo da frase contém o nome de um serviço.
+  const opcoes = fatos.servicos.filter((s) => generica || [s.nome, s.nome.replace(/\s*\([^()]*\)\s*$/, "")]
+    .some((nome) => normalizarTexto(nome) === alvo));
+  if (!opcoes.length) return null;
+  if (opcoes.length > 1) {
+    const nomes = [...new Set(opcoes.map((s) => s.nome))];
+    return {
+      mensagem: nomes.length > 1 && nomes.length <= 4
+        ? `De qual opção você quer saber o valor: ${nomes.join(" ou ")}?`
+        : "De qual serviço você quer saber o valor?",
+      fontes: ["Nomes dos serviços cadastrados"],
+    };
+  }
+  const fonte = catalogo.find((f) => f.id === `servico:${opcoes[0].id}:preco`);
+  return fonte ? { mensagem: fonte.texto, fontes: [fonte.assunto] } : null;
+}
+
 export async function responderComercial(e: EntradaDoMotor, deps?: DependenciasDoMotor): Promise<SaidaDoMotor> {
   const t = normalizarTexto(e.texto);
   const ramoAtual = identificarRamo(e.texto, e.historico);
@@ -411,6 +435,8 @@ export async function responderComercial(e: EntradaDoMotor, deps?: DependenciasD
     const precos = catalogo.filter((f) => f.id === "precos");
     if (precos.length) return resultado(precos.map((f) => f.texto).join("\n"), { fontes: precos.map((f) => f.assunto) });
   }
+  const precoServico = precoDoServico(perguntaNormalizada, e.fatos, catalogo);
+  if (precoServico) return resultado(precoServico.mensagem, { fontes: precoServico.fontes });
   if (!deps?.ia || !catalogo.length) return pendencia("Informação comercial sem fonte autorizada");
 
   try {

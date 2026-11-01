@@ -32,6 +32,7 @@ function atendePeriodo(livre: Livre, pedido: PedidoDeDia): boolean {
     if (minutos < de || minutos >= ate) return false;
   }
   if (pedido.aPartirDe !== undefined && minutos < pedido.aPartirDe) return false;
+  if (pedido.horaExata !== undefined && minutos !== pedido.horaExata) return false;
   return true;
 }
 
@@ -66,7 +67,8 @@ export function escolherTres(livres: Livre[], pedido: PedidoDeDia): { opcoes: Li
   );
   if (exatos.length) return { opcoes: espalhar(exatos), noDiaPedido: true };
 
-  const depois = pedido.dia ? ordenados.filter((l) => localDe(l.inicio).data > pedido.dia!) : ordenados;
+  const depois = pedido.dia ? ordenados.filter((l) => pedido.horaExata !== undefined
+    ? localDe(l.inicio).data >= pedido.dia! : localDe(l.inicio).data > pedido.dia!) : ordenados;
   const mesmoPeriodo = depois.filter((l) => atendePeriodo(l, pedido));
   if (mesmoPeriodo.length) return { opcoes: espalhar(mesmoPeriodo), noDiaPedido: false };
 
@@ -83,7 +85,10 @@ export function formatarOpcao(n: number, livre: Livre): string {
 export type OpcaoDeServico = { n: number; servicoId: string; nome: string };
 export type OpcaoDeHorario = { n: number; inicio: string; fim: string; profissional: string | null };
 
+import { lerEstadoGestaoReserva, type EstadoGestaoReserva } from "./gestao-reservas";
+
 export type EstadoDaConversa =
+  | EstadoGestaoReserva
   | { tipo: "SERVICO"; opcoes: OpcaoDeServico[]; pedido: PedidoDeDia; criadoEm: string }
   | {
       tipo: "HORARIO";
@@ -110,6 +115,7 @@ export function lerEstado(valor: unknown, agora: Date): EstadoDaConversa | null 
   if (agora.getTime() - new Date(e.criadoEm as string).getTime() > VALIDADE_DA_OFERTA_MS) return null;
 
   if (e.tipo === "CONVITE") return { tipo: "CONVITE", criadoEm: e.criadoEm as string };
+  if (e.tipo === "GERIR_RESERVA") return lerEstadoGestaoReserva(e);
 
   if (e.tipo === "SERVICO" && Array.isArray(e.opcoes)) {
     const opcoes = e.opcoes.filter(
@@ -143,7 +149,7 @@ export function lerEstado(valor: unknown, agora: Date): EstadoDaConversa | null 
 
 /** As opções no formato que `detectarIntencao` usa para ler "2" ou "o das 11". */
 export function opcoesParaEscolha(estado: EstadoDaConversa | null): { n: number; minutos: number }[] {
-  if (!estado || estado.tipo === "CONVITE") return [];
+  if (!estado || estado.tipo === "CONVITE" || estado.tipo === "GERIR_RESERVA") return [];
   if (estado.tipo === "SERVICO") return estado.opcoes.map((o) => ({ n: o.n, minutos: -1 }));
   return estado.opcoes.map((o) => ({ n: o.n, minutos: localDe(new Date(o.inicio)).minutos }));
 }

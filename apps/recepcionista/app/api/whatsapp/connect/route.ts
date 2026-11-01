@@ -5,6 +5,7 @@ import { exigirAcesso } from "@/lib/billing/guarda";
 import { rateLimit, TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
 import { connectWhatsApp } from "@/lib/whatsapp/instance";
 import { validarOrigemECsrfe } from "@/lib/seguranca/origem";
+import { logError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -38,6 +39,7 @@ export async function POST(request: Request) {
 
   if (phone) {
     const limpo = phone.replace(/\D/g, "");
+    if (limpo.length < 10 || limpo.length > 15) return NextResponse.json({ error: "Informe o DDD e o número completo do WhatsApp da empresa." }, { status: 400 });
     if (limpo.length >= 10) {
       await prisma.company.update({
         where: { id: companyId },
@@ -57,8 +59,10 @@ export async function POST(request: Request) {
 
   const state = await connectWhatsApp(companyId, phone);
   if (state.status === "ERROR") {
+    await logError("whatsapp-conexao", state.error ?? "Canal indisponível", companyId);
+    const mensagem = "Não foi possível conectar ao WhatsApp agora. Tente novamente em instantes. Se continuar, fale com o suporte da Nexora.";
     return NextResponse.json(
-      { error: state.error ?? "Falha ao conectar com o servidor de WhatsApp", state },
+      { error: mensagem, state: { ...state, error: mensagem } },
       { status: 502 },
     );
   }

@@ -15,7 +15,7 @@ export function configuracaoExemplo(): ConfiguracaoNexa {
       servicos: [{ id: "servico1", nome: "Revisão", descricao: "Revisão de bicicleta", precoModo: "FIXO", precoCents: 9900,
         duracaoMin: 45, situacao: "CONFIRMADO", origem: "MANUAL" }],
     },
-    atendimento: { nome: "Nexa", jeito: "DIRETO", quando: "APOIO_EXPEDIENTE", agendamento: "DIRETO", handoffKeywords: ["gerente"] },
+    atendimento: { nome: "Nexa", jeito: "DIRETO", quando: "APOIO_EXPEDIENTE", agendamento: "DIRETO", gestaoReservas: { cancelar: false, remarcar: false, antecedenciaHoras: null }, handoffKeywords: ["gerente"] },
     conhecimento: { itens: [{ id: "novo:estacionamento", pergunta: "Tem estacionamento?", resposta: "Não há estacionamento próprio.", situacao: "CONFIRMADO", origem: "MANUAL" }] },
   };
 }

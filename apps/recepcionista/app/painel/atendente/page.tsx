@@ -1,5 +1,5 @@
-import { ConfiguracaoDaNexa } from "@/components/atendente/configuracao";
+import { ConversaConfiguracaoDoAtendente } from "@/components/atendente/conversa-configuracao";
 
 export default function PaginaDoAtendente() {
-  return <ConfiguracaoDaNexa />;
+  return <ConversaConfiguracaoDoAtendente />;
 }

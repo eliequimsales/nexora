@@ -74,6 +74,9 @@ describe("cabeçalhos de resposta de segurança (next.config.mjs)", () => {
     // Conexões e formulários restritos à própria origem (impede envio de dados roubados)
     expect(csp).toContain("connect-src 'self'");
     expect(csp).toContain("form-action 'self'");
+    expect(csp).toContain("frame-src 'self' https://www.facebook.com");
+    expect(csp).toContain("form-action 'self' https://www.facebook.com/tr https://www.facebook.com/tr/");
+    expect(csp).not.toContain("form-action *");
     expect(csp).toContain("base-uri 'self'");
 
     // Força HTTPS

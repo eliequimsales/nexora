@@ -10,6 +10,7 @@ import { lerJeito, type Jeito } from "./jeitos";
 import { ehContaComercialNexora } from "./comercial-config";
 import { aplicarConfiguracaoAosFatos } from "./configuracao-fatos";
 import { cadastroDivergeDaPublicacao, lerConfiguracaoPublicada } from "./configuracao";
+import { selecionarConhecimentoRelevante } from "./recuperacao-conhecimento";
 
 /**
  * OS FATOS DA EMPRESA — A ÚNICA FONTE DO ATENDENTE VIRTUAL.
@@ -39,6 +40,8 @@ export type Fatos = {
   marcaDireto: boolean;
   /** Ausente nas contas antigas. Configurações revisadas têm autonomia explícita. */
   agendamento?: "DESLIGADO" | "LINK" | "DIRETO";
+  /** Autorização independente da permissão de criar novas reservas. */
+  gestaoReservas?: { cancelar: boolean; remarcar: boolean; antecedenciaHoras: number | null };
   configuracaoDivergente?: boolean;
   expediente: boolean;
   servicos: ServicoDoAtendente[];
@@ -67,7 +70,7 @@ function lerPerguntas(valor: unknown): Faq[] {
   );
 }
 
-export async function fatosDaEmpresa(companyId: string, sobrescrever: Sobrescrita = {}): Promise<Fatos> {
+export async function fatosDaEmpresa(companyId: string, sobrescrever: Sobrescrita = {}, pergunta?: string): Promise<Fatos> {
   const [empresa, servicos, equipe, treinamento] = await Promise.all([
     prisma.company.findUnique({
       where: { id: companyId },
@@ -103,7 +106,7 @@ export async function fatosDaEmpresa(companyId: string, sobrescrever: Sobrescrit
       select: { id: true, name: true, priceCents: true, durationMin: true },
     }),
     listarProfissionais(companyId),
-    getApprovedKnowledge(companyId),
+    getApprovedKnowledge(companyId, 50, pergunta),
   ]);
 
   const perfil = empresa?.profile;
@@ -143,7 +146,7 @@ export async function fatosDaEmpresa(companyId: string, sobrescrever: Sobrescrit
       empresa: empresa?.name ?? "", perfil: perfil ?? {}, servicos,
     }),
   } : base;
-  return { ...fatos, ...sobrescrever };
+  return { ...fatos, perguntas: selecionarConhecimentoRelevante(fatos.perguntas, pergunta, 50), ...sobrescrever };
 }
 
 /** As palavras que o dono cadastrou para ser chamado ("gerente", "orçamento"). */

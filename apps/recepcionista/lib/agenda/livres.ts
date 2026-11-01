@@ -96,6 +96,8 @@ export async function horariosLivres(p: {
   profissional?: string | null;
   /** Somente o simulador passa o expediente do rascunho salvo pelo responsável. */
   configuracaoSimulada?: { horarios: Horario[]; diasFechados: string[] };
+  /** Somente gestão autorizada passa a reserva do próprio titular a ser movida. */
+  ignorarReservaId?: string;
 }): Promise<Livre[]> {
   if (p.dias.length === 0) return [];
   const [perfil, equipe] = await Promise.all([
@@ -115,6 +117,7 @@ export async function horariosLivres(p: {
   const agendamentos = await prisma.appointment.findMany({
     where: {
       companyId: p.companyId,
+      ...(p.ignorarReservaId ? { id: { not: p.ignorarReservaId } } : {}),
       status: { in: ["MARCADO", "CONFIRMADO"] },
       startsAt: { gte: inicio, lt: fim },
     },

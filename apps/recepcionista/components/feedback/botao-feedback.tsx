@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { ModalFeedback } from "./modal-feedback";
 
 type BotaoFeedbackProps = {
@@ -15,10 +16,16 @@ export function BotaoFeedback({
   nomePadrao,
 }: BotaoFeedbackProps) {
   const [aberto, setAberto] = useState(false);
+  const configurando = usePathname() === "/painel/atendente";
+  useEffect(() => {
+    const abrir = () => setAberto(true);
+    window.addEventListener("nexora:abrir-feedback", abrir);
+    return () => window.removeEventListener("nexora:abrir-feedback", abrir);
+  }, []);
 
   return (
     <>
-      <div className="fixed bottom-20 right-4 sm:bottom-5 sm:right-5 z-40">
+      <div className={`${configurando ? "hidden sm:block" : ""} fixed bottom-20 right-4 sm:bottom-5 sm:right-5 z-40`}>
         <button
           type="button"
           onClick={() => setAberto(true)}

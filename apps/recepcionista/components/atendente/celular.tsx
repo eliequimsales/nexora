@@ -109,7 +109,7 @@ export function Celular({
 
   // Estados do modo CLIENTE
   const [teste, setTeste] = useState<MensagemCliente[] | null>(null);
-  const [estadoCliente, setEstadoCliente] = useState<{ tipo?: string } | null>(null);
+  const [estadoCliente, setEstadoCliente] = useState<{ tipo?: string; _memoriaAtendente?: unknown } | null>(null);
 
   // Estados do modo ENSINO
   const primeiraMsgEnsino = useMemo(() => {
@@ -307,7 +307,9 @@ export function Celular({
     setDigitando(true);
 
     const intencaoMudouAssunto = /pre[çc]o|valor|custa|quanto|hor[aá]rio|onde fica|endere[çc]o/i.test(limpo);
-    const estadoEfetivo = intencaoMudouAssunto && !/^\d+$/.test(limpo) ? null : estadoCliente;
+    const estadoEfetivo = intencaoMudouAssunto && !/^\d+$/.test(limpo)
+      ? estadoCliente?._memoriaAtendente ? { _memoriaAtendente: estadoCliente._memoriaAtendente } : null
+      : estadoCliente;
 
     try {
       const r = await fetch("/api/atendente/simular", {

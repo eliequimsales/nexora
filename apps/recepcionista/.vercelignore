@@ -1,0 +1,17 @@
+# Somente o código da aplicação deve entrar no pacote de publicação.
+node_modules/
+.next/
+.git/
+.vercel/
+**/.env*
+output/
+artifacts/
+.playwright-cli/
+scripts/
+tests/
+docs/
+evolution/
+*.log
+*.tsbuildinfo
+*.backup
+*backup*.json

@@ -69,12 +69,27 @@ function extrairHorarios(linha: string): HorarioNexa[] {
   return dias.map((day) => ({ day, open, close, closed: false }));
 }
 
-function duracaoInformada(trecho: string): number | null {
-  if (/\d+[,.]\d+\s*(?:horas?|h|minutos?|min)\b/i.test(trecho)) return null;
-  const minutos = trecho.match(/(?<![\d,.:])\b(\d{1,4})\s*(?:minutos?|min)\b/i);
+export function duracaoInformada(trecho: string): number | null {
+  const t = normalizar(trecho).replace(/\buma hora\b/g, "1 hora").replace(/\bduas horas\b/g, "2 horas");
+  // Um intervalo de expediente ou uma duração variável não prova a duração do serviço.
+  if (/\b(?:aproximad[oa]|cerca de|entre|ate|depende|variavel|talvez|das|nao)\b/.test(t)
+    || /\d{1,2}(?:h\d{0,2}|:\d{2})?\s*(?:as|ate|a)\s*\d{1,2}(?:h|:|\b)/.test(t)
+    || /\d+[,.]\d+\s*(?:horas?|h|minutos?|min)\b/i.test(t)) return null;
+  if (/\bmeia hora\b/.test(t)) return 30;
+  const meia = t.match(/(?<![\d,.:])\b(\d{1,2})\s*horas?\s+e\s+meia\b/);
+  if (meia) { const n = Number(meia[1]) * 60 + 30; return n <= 1440 ? n : null; }
+  const compacto = t.match(/(?<![\d,.:])\b(\d{1,2})h(\d{2})\b/);
+  if (compacto) { const h = Number(compacto[1]); const m = Number(compacto[2]); return m < 60 && h * 60 + m >= 1 && h * 60 + m <= 1440 ? h * 60 + m : null; }
+  const composto = t.match(/(?<![\d,.:])\b(\d{1,2})\s*(?:horas?|h)\s*(?:e\s+)?(\d{1,2})\s*(?:minutos?|min)\b/);
+  if (composto) { const n = Number(composto[1]) * 60 + Number(composto[2]); return Number(composto[2]) < 60 && n >= 1 && n <= 1440 ? n : null; }
+  const horas = t.match(/(?<![\d,.:])\b(\d{1,2})\s*(?:horas?|h)\b/);
+  const minutos = t.match(/(?<![\d,.:])\b(\d{1,4})\s*(?:minutos?|min)\b/);
+  if (horas && minutos) return null;
+  if (horas) {
+    if (/^\s*(?:e|ou)\b/.test(t.slice((horas.index ?? 0) + horas[0].length))) return null;
+    const n = Number(horas[1]) * 60; return n >= 1 && n <= 1440 ? n : null;
+  }
   if (minutos) { const n = Number(minutos[1]); return n >= 1 && n <= 1440 ? n : null; }
-  const horas = trecho.match(/(?<![\d,.:])\b(\d{1,2})\s*(?:horas?|h)\b(?:\s*(\d{1,2})\s*(?:minutos?|min))?/i);
-  if (horas) { const n = Number(horas[1]) * 60 + Number(horas[2] || 0); return n >= 1 && n <= 1440 ? n : null; }
   return null;
 }
 

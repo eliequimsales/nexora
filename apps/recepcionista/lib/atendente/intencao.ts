@@ -52,13 +52,15 @@ export type ContextoDaIntencao = {
   /** As palavras que o dono cadastrou para ser chamado. */
   palavrasDoDono: string[];
   /** A escolha pendente na conversa, se houver. */
-  estado: "SERVICO" | "HORARIO" | "CONVITE" | null;
+  estado: "SERVICO" | "HORARIO" | "CONVITE" | "GERIR_RESERVA" | null;
   /** As opções numeradas oferecidas; nos horários, `minutos` é a hora local. */
   opcoes?: { n: number; minutos: number }[];
   agora: Date;
   historico?: { role: string; content: string }[];
   /** Serviço já escolhido por uma operação determinística da conversa. */
   servicoAtualId?: string;
+  /** Preferência validada e persistida; só resolve referências curtas/inequívocas. */
+  servicoMemoriaId?: string;
 };
 
 const URGENCIA =
@@ -150,7 +152,10 @@ function servicosDoContexto(texto: string, ctx: ContextoDaIntencao): string[] {
   const referencia = /\b(?:(?:esse|este|desse|deste|nesse|neste|aquele|daquele|o mesmo) (?:servico|procedimento|atendimento)|dele|dela|disso|isso)\b/.test(atual);
   const perguntaCurta = /^(?:e )?(?:qual (?:e )?(?:o )?(?:preco|valor|duracao)|quanto (?:custa|fica|sai|dura)|quanto tempo(?: (?:leva|demora|dura))?)[?! .]*$/;
   const pedidoCurtoDeAgenda = /^(?:e )?(?:tem (?:algum )?(?:horario|vaga)|(?:quero|posso) (?:agendar|marcar))(?:(?: para| pra| na| no| de| a)? (?:hoje|amanha|depois de amanha|segunda(?:-feira)?|terca(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|sabado|domingo|manha|tarde|noite))*[?! .]*$/;
-  if (!referencia && !perguntaCurta.test(atual) && !pedidoCurtoDeAgenda.test(atual)) return [];
+  const encaixeCurto = /^(?:e )?(?:consegue|pode|conseguem|podem) (?:me )?encaixar[?! .]*$/;
+  const dataCurta = /^(?:(?:para|pra|as|para as) )?(?:hoje|amanha|depois de amanha|\d{1,2}(?:[:h]\d{0,2})?)(?: (?:de |a |pela )?(?:manha|tarde|noite))?[?! .]*$/;
+  if (!referencia && !perguntaCurta.test(atual) && !pedidoCurtoDeAgenda.test(atual) && !encaixeCurto.test(atual) && !dataCurta.test(atual)) return [];
+  if (ctx.servicoMemoriaId && ctx.servicos.some((s) => s.id === ctx.servicoMemoriaId)) return [ctx.servicoMemoriaId];
   const atualConfiavel = ctx.servicoAtualId && ctx.servicos.some((s) => s.id === ctx.servicoAtualId) ? [ctx.servicoAtualId] : [];
 
   const historico = [...(ctx.historico ?? [])];
@@ -255,7 +260,7 @@ export function detectarIntencao(texto: string, ctx: ContextoDaIntencao): Intenc
     return { ...base, tipo: "FUNCIONAMENTO" };
   }
 
-  const citouDia = Boolean(pedido.dia || pedido.periodo || pedido.aPartirDe !== undefined);
+  const citouDia = Boolean(pedido.dia || pedido.periodo || pedido.aPartirDe !== undefined || pedido.horaExata !== undefined);
   const pedidoPositivo = t.replace(/\bnao (?:quero|preciso|vou|desejo) (?:agendar|marcar)(?: agora)?\b/g, "");
   if (HORARIO.test(pedidoPositivo) || (citouDia && (servicoId || profissional)) || (citouDia && atualizado.split(" ").length <= 3)) {
     return { ...base, tipo: "HORARIO" };

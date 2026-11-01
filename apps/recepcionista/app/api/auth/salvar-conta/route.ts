@@ -8,6 +8,7 @@ import { respostaDeLimite, type Politica } from "@/lib/limites";
 import { abrirVerificacao, VALIDADE_HORAS } from "@/lib/auth/verificacao";
 import { enviarEmail } from "@/lib/reengajamento/email";
 import { validarOrigemECsrfe } from "@/lib/seguranca/origem";
+import { sincronizarNomeDaContaNoRascunho } from "@/lib/atendente/configuracao";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
     // Garante no servidor que apenas contas temporárias (guest) podem usar esta rota
     const atual = await prisma.company.findUnique({
       where: { id: companyId },
-      select: { email: true, sessaoEpoca: true },
+      select: { email: true, name: true, sessaoEpoca: true },
     });
     if (!atual) {
       return NextResponse.json({ error: "Conta não encontrada" }, { status: 404 });
@@ -110,6 +111,10 @@ export async function POST(request: Request) {
       );
     }
 
+    if (name && atual.name) {
+      try { await sincronizarNomeDaContaNoRascunho(companyId, atual.name, name.trim()); }
+      catch (erro) { await logError("salvar-conta-rascunho", erro, companyId); }
+    }
     const atualizada = await prisma.company.findUniqueOrThrow({
       where: { id: companyId },
       select: { id: true, sessaoEpoca: true },

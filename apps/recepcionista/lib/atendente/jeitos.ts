@@ -239,8 +239,73 @@ const DESCONTRAIDO: Textos = {
 
 const TEXTOS: Record<Jeito, Textos> = { ACOLHEDOR, DIRETO, DESCONTRAIDO };
 
-export function textosDoJeito(jeito: Jeito): Textos {
-  return TEXTOS[jeito];
+type TextosVariaveis = Pick<Textos, "saudacao" | "preco" | "agradecimento">;
+
+/** Só a forma muda. Dados fornecidos e textos de ações continuam sob controle do motor. */
+const VARIACOES: Record<Jeito, readonly [TextosVariaveis, TextosVariaveis]> = {
+  ACOLHEDOR: [
+    {
+      saudacao: (p) => `${p.cumprimento}${comNome(p.cliente)}! ${p.apresentacao}.`,
+      preco: (p) => `O valor de ${p.servico} é ${p.preco}${p.duracao ? `. Duração: ${p.duracao}` : ""}.`,
+      agradecimento: "Por nada! Se precisar, estou por aqui.",
+    },
+    {
+      saudacao: (p) => `Olá${comNome(p.cliente)}! ${p.apresentacao}.`,
+      preco: (p) => `${p.servico} custa ${p.preco}${p.duracao ? `, com duração de ${p.duracao}` : ""}.`,
+      agradecimento: "Disponha! Qualquer coisa, é só chamar.",
+    },
+  ],
+  DIRETO: [
+    {
+      saudacao: (p) => `Olá${comNome(p.cliente)}. ${p.apresentacao}.`,
+      preco: (p) => `${p.servico} custa ${p.preco}${p.duracao ? `. Duração: ${p.duracao}` : ""}.`,
+      agradecimento: "Disponha. Estou por aqui.",
+    },
+    {
+      saudacao: (p) => `${p.cumprimento}${comNome(p.cliente)}! ${p.apresentacao}.`,
+      preco: (p) => `Valor de ${p.servico}: ${p.preco}${p.duracao ? `. Duração: ${p.duracao}` : ""}.`,
+      agradecimento: "Por nada. Se precisar, é só chamar.",
+    },
+  ],
+  DESCONTRAIDO: [
+    {
+      saudacao: (p) => `Olá${comNome(p.cliente)}! ${p.apresentacao}.`,
+      preco: (p) => `O valor de ${p.servico} é ${p.preco}${p.duracao ? ` e a duração é de ${p.duracao}` : ""}.`,
+      agradecimento: "Imagina! Se precisar, é só chamar.",
+    },
+    {
+      saudacao: (p) => `${p.cumprimento}${comNome(p.cliente)}! ${p.apresentacao} 😄`,
+      preco: (p) => `${p.servico} fica em ${p.preco}${p.duracao ? `, com duração de ${p.duracao}` : ""}.`,
+      agradecimento: "Por nada! Estou por aqui.",
+    },
+  ],
+};
+
+export interface OpcoesDoJeito {
+  /** Contador ou hash estável do motor; não usa aleatoriedade nem altera fatos. */
+  variacao?: number;
+  /** Contextos delicados mantêm os mesmos dados e omitem emojis de todas as peças. */
+  semEmoji?: boolean;
+}
+
+function removerEmoji(texto: string): string {
+  return texto.replace(/[ \t]*\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier}|\u200D\p{Extended_Pictographic})*/gu, "").trimEnd();
+}
+
+export function textosDoJeito(jeito: Jeito, opcoes: OpcoesDoJeito = {}): Textos {
+  const numero = typeof opcoes.variacao === "number" && Number.isFinite(opcoes.variacao) ? Math.trunc(opcoes.variacao) : 0;
+  const indice = ((numero % 3) + 3) % 3;
+  const textos = indice === 0 ? TEXTOS[jeito] : { ...TEXTOS[jeito], ...VARIACOES[jeito][indice - 1] };
+  if (!opcoes.semEmoji) return textos;
+
+  // Estas são as únicas peças com emojis. Nunca muda o objeto compartilhado.
+  return {
+    ...textos,
+    saudacao: (p) => removerEmoji(textos.saudacao(p)),
+    confirmacao: (p) => removerEmoji(textos.confirmacao(p)),
+    conviteLink: (p) => removerEmoji(textos.conviteLink(p)),
+    agradecimento: removerEmoji(textos.agradecimento),
+  };
 }
 
 /**

@@ -28,6 +28,7 @@ function resumoHorarios(horarios: ConfiguracaoNexa["informacoes"]["horarios"]) {
 }
 type Props = {
   etapa: number;
+  secaoInformacoes?: "SERVICOS" | "FUNCIONAMENTO";
   dados: ConfiguracaoNexa;
   editar: <K extends keyof ConfiguracaoNexa>(secao: K, dados: Partial<ConfiguracaoNexa[K]>) => void;
 };
@@ -47,7 +48,7 @@ function AssuntosDaEquipe({ assuntos, mudar }: { assuntos: string[]; mudar: (ass
   }} /></Campo>;
 }
 
-export function FormularioConfiguracaoNexa({ etapa, dados: d, editar }: Props) {
+export function FormularioConfiguracaoNexa({ etapa, secaoInformacoes, dados: d, editar }: Props) {
   const [novaData, setNovaData] = useState("");
   const usaAgenda = d.negocio.objetivo === "AGENDAMENTOS" || d.atendimento.agendamento !== "DESLIGADO";
   const precisaApresentacao = !d.informacoes.servicos.some(s => s.situacao === "CONFIRMADO") && !d.conhecimento.itens.some(p => p.situacao === "CONFIRMADO" && p.pergunta.trim() && p.resposta.trim());
@@ -75,11 +76,11 @@ export function FormularioConfiguracaoNexa({ etapa, dados: d, editar }: Props) {
     const enderecoObrigatorio = d.negocio.modalidade === "PRESENCIAL" || d.negocio.modalidade === "HIBRIDO";
     const campoEndereco = <Informacao campo="informacoes.endereco" titulo={enderecoObrigatorio ? "Endereço de atendimento" : "Endereço presencial (se houver)"} dica={enderecoObrigatorio ? "Inclua número e complemento." : undefined} valor={d.informacoes.endereco} multiline mudar={endereco => editar("informacoes", { endereco })} />;
     return <>
-      <Cartao titulo="Local e pagamento">
+      {secaoInformacoes !== "SERVICOS" && <Cartao titulo="Local e pagamento">
         {enderecoObrigatorio ? campoEndereco : <Detalhes titulo="Endereço presencial (opcional)" aberto={d.informacoes.endereco.situacao === "REVISAR"} campo="informacoes.endereco">{campoEndereco}</Detalhes>}
         <Detalhes titulo="Formas de pagamento (opcional)" aberto={d.informacoes.pagamento.situacao === "REVISAR"} campo="informacoes.pagamento"><Informacao campo="informacoes.pagamento" titulo="Formas de pagamento" dica="Ex.: Pix e cartão." valor={d.informacoes.pagamento} multiline mudar={pagamento => editar("informacoes", { pagamento })} /></Detalhes>
-      </Cartao>
-      <Cartao titulo="Horário do seu negócio">
+      </Cartao>}
+      {secaoInformacoes !== "SERVICOS" && <Cartao titulo="Horário do seu negócio">
         {completos && <dl className="space-y-2">{resumoHorarios(d.informacoes.horarios).map(g => <div key={g.dia} className="flex flex-wrap justify-between gap-x-4 gap-y-1 text-sm"><dt className="text-panel-sub">{g.dia}</dt><dd className="font-medium text-panel-ink">{g.horario}</dd></div>)}</dl>}
         <Detalhes titulo={completos ? "Alterar horários" : "Preencher os horários da semana"} aberto={!completos || d.informacoes.horariosSituacao === "REVISAR"} campo="informacoes.horarios">
         <div className="space-y-2"><button type="button" className={BOTAO} disabled={!podeRepetir} onClick={() => {
@@ -106,8 +107,8 @@ export function FormularioConfiguracaoNexa({ etapa, dados: d, editar }: Props) {
             editar("informacoes", { diasFechados: [...d.informacoes.diasFechados, novaData].sort() }); setNovaData("");
           }}>Adicionar data</button></div>
         </Detalhes>
-      </Cartao>
-      <Cartao titulo="Serviços e produtos" descricao={usaAgenda ? "Para agendar, informe a duração de cada serviço." : undefined}>
+      </Cartao>}
+      {secaoInformacoes !== "FUNCIONAMENTO" && <Cartao titulo="Serviços e produtos" descricao={usaAgenda ? "Para agendar, informe a duração de cada serviço." : undefined}>
         {!d.informacoes.servicos.length && <p className="text-sm text-panel-sub">Adicione o que sua empresa oferece. O preço pode ficar sob consulta.</p>}
         {d.informacoes.servicos.map((s, i) => {
           const mudar = (novo: Partial<typeof s>) => editar("informacoes", { servicos: d.informacoes.servicos.map(v => v.id === s.id ? { ...v, ...novo, origem: "MANUAL" } : v) });
@@ -116,7 +117,7 @@ export function FormularioConfiguracaoNexa({ etapa, dados: d, editar }: Props) {
             if (valor === "") mudar({ duracaoMin: null });
             else if (/^\d+$/.test(valor) && Number.isInteger(Number(valor)) && Number(valor) >= 1 && Number(valor) <= 1440) mudar({ duracaoMin: Number(valor) });
           }} /></Campo>;
-          return <div className="space-y-3 border-t border-panel-line py-4 first:border-t-0" key={s.id}>
+          const campos = <>
             <div className="flex flex-wrap items-center justify-between gap-2"><p className="min-w-0 break-words text-sm font-semibold">{s.nome.trim() || `Novo serviço ou produto`}</p><button type="button" className="rounded-lg px-2 py-2 text-xs font-medium text-red-700 hover:bg-red-50" onClick={() => editar("informacoes", { servicos: d.informacoes.servicos.filter(v => v.id !== s.id) })}>Remover item</button></div>
             <Campo titulo="Nome do serviço ou produto" campo={[`informacoes.servicos.${i}.nome`, `servico:${s.id}:nome`]}><input className={CAMPO} maxLength={140} value={s.nome} onChange={e => mudar({ nome: e.target.value })} /></Campo>
             <div className="grid gap-3 sm:grid-cols-2"><Campo titulo="Preço"><select className={CAMPO} value={s.precoModo} onChange={e => mudar({ precoModo: e.target.value as typeof s.precoModo, ...(e.target.value === "SOB_CONSULTA" ? { precoCents: null } : {}) })}><option value="SOB_CONSULTA">Sob consulta</option><option value="FIXO">Valor definido</option></select></Campo>
@@ -129,11 +130,12 @@ export function FormularioConfiguracaoNexa({ etapa, dados: d, editar }: Props) {
             <Detalhes titulo="Descrição e outros detalhes (opcional)" aberto={s.situacao === "REVISAR" && !!s.descricao} campo={[`informacoes.servicos.${i}.descricao`, `informacoes.servicos.${i}.duracaoMin`, `servico:${s.id}:duracao`]}><Campo titulo="Descrição (opcional)" campo={`informacoes.servicos.${i}.descricao`}><textarea className={CAMPO} rows={2} maxLength={1500} value={s.descricao} onChange={e => mudar({ descricao: e.target.value })} /></Campo>{!usaAgenda && duracao}</Detalhes>
             <AvisoCampo campo={`servico:${s.id}`} />
             <Revisao titulo={`Serviço ou produto ${i + 1}`} valor={s.situacao} confirmavel={s.nome.trim().length >= 2 && (s.precoModo !== "FIXO" || s.precoCents !== null) && (!usaAgenda || !!s.duracaoMin)} confirmarTexto={s.origem === "MANUAL" ? "Usar este item" : "Confirmar serviço ou produto"} mudar={situacao => mudar({ situacao })} />
-          </div>;
+          </>;
+          return secaoInformacoes === "SERVICOS" ? <details key={s.id} open={s.situacao === "REVISAR" || !s.nome.trim()} className="rounded-xl border border-panel-line px-3 py-3"><summary className="cursor-pointer text-sm font-semibold leading-relaxed text-panel-ink marker:text-panel-sub">{s.nome.trim() || "Novo serviço ou produto"}<span className="ml-2 text-xs font-normal text-panel-sub">{s.precoModo === "SOB_CONSULTA" ? "Sob consulta" : s.precoCents !== null ? (s.precoCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "Informe o preço"}</span></summary><div className="mt-4 space-y-3">{campos}</div></details> : <div className="space-y-3 border-t border-panel-line py-4 first:border-t-0" key={s.id}>{campos}</div>;
         })}
         <button type="button" className={BOTAO} onClick={() => editar("informacoes", { servicos: [...d.informacoes.servicos, { id: `novo:${crypto.randomUUID()}`, nome: "", descricao: "", precoModo: "SOB_CONSULTA", precoCents: null, duracaoMin: null, situacao: "REVISAR", origem: "MANUAL" }] })}>Adicionar serviço ou produto</button>
         <AvisoCampo campo="informacoes.servicos" />
-      </Cartao>
+      </Cartao>}
     </>;
   }
 
@@ -156,6 +158,12 @@ export function FormularioConfiguracaoNexa({ etapa, dados: d, editar }: Props) {
       }} opcoes={[{ valor: "DESLIGADO", titulo: "Chamar a equipe", descricao: "Recebe o pedido e deixa a reserva com uma pessoa." }, { valor: "LINK", titulo: "Enviar o link da agenda", descricao: "O cliente escolhe e conclui o agendamento pelo link." }, { valor: "DIRETO", titulo: "Agendar pela conversa", descricao: "Consulta horários e só confirma após registrar a reserva." }]} />
       {usaAgenda && <p className="text-xs leading-relaxed text-panel-sub">A agenda usa os serviços, as durações e os horários informados.</p>}
       <AvisoCampo campo="atendimento.agendamento" />
+      {d.atendimento.agendamento === "DIRETO" && <Detalhes titulo="Remarcação e cancelamento" campo="atendimento.gestaoReservas">
+        <p className="text-xs leading-relaxed text-panel-sub">O próprio cliente precisa pedir e confirmar. As permissões abaixo são independentes da criação de reservas.</p>
+        <div className="mt-3 space-y-3">{(["remarcar", "cancelar"] as const).map(acao => <label key={acao} className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={d.atendimento.gestaoReservas?.[acao] ?? false} onChange={e => editar("atendimento", { gestaoReservas: { cancelar: false, remarcar: false, antecedenciaHoras: null, ...d.atendimento.gestaoReservas, [acao]: e.target.checked } })} />{acao === "remarcar" ? "Pode remarcar reservas" : "Pode cancelar reservas"}</label>)}
+        {(d.atendimento.gestaoReservas?.cancelar || d.atendimento.gestaoReservas?.remarcar) && <Campo titulo="Antecedência mínima em horas" campo="atendimento.antecedenciaHoras" dica="Informe 0 para permitir até o início da reserva. Em branco, as alterações ficam com a equipe."><input className={CAMPO} type="number" min="0" max="8760" step="1" value={d.atendimento.gestaoReservas.antecedenciaHoras ?? ""} onChange={e => editar("atendimento", { gestaoReservas: { ...d.atendimento.gestaoReservas!, antecedenciaHoras: e.target.value === "" ? null : Number(e.target.value) } })} /></Campo>}
+        </div>
+      </Detalhes>}
       <Detalhes titulo="Assuntos exclusivos da equipe (opcional)" campo="atendimento.handoffKeywords"><AssuntosDaEquipe assuntos={d.atendimento.handoffKeywords} mudar={handoffKeywords => editar("atendimento", { handoffKeywords })} /></Detalhes>
       <p className="text-xs leading-relaxed text-panel-sub">O cliente pode pedir uma pessoa a qualquer momento.</p>
     </Cartao>

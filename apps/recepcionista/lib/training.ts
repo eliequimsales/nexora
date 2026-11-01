@@ -1,7 +1,10 @@
-import type { CompanyProfile, KnowledgeItem } from "@nexora/recepcionista-prisma";
+import { Prisma, type CompanyProfile, type KnowledgeItem } from "@nexora/recepcionista-prisma";
 import { prisma } from "./db";
 import { logError } from "./errors";
 import { getTemplatesForSegments, type SegmentTopic } from "./segments";
+import { sincronizarConhecimentoNoRascunho } from "./atendente/conhecimento-configuracao";
+import { getResumoResultados } from "./atendimento/avaliacao";
+import { selecionarConhecimentoRelevante } from "./atendente/recuperacao-conhecimento";
 
 /** Lê o Json de áreas de atuação com segurança. */
 export function asSegments(value: unknown): string[] {
@@ -123,7 +126,7 @@ export interface DiaryInput {
 export function buildDiary(input: DiaryInput): string[] {
   const lines: string[] = [];
   lines.push(
-    `Nesta semana participei de ${input.totalConversations} atendimento${input.totalConversations === 1 ? "" : "s"}: resolvi ${input.resolvedByAttendant} e precisei da equipe em ${input.sentToTeam}.`,
+    `Nesta semana foram iniciados ${input.totalConversations} atendimentos. Nessas conversas, o responsável confirmou ${input.resolvedByAttendant} resolvida${input.resolvedByAttendant === 1 ? "" : "s"} pelo atendente sem intervenção. ${input.sentToTeam} tiveram encaminhamento ou participação da equipe.`,
   );
   if (input.learnedThisWeek.length) {
     lines.push(
@@ -202,14 +205,15 @@ export async function recordTeamObservation(
 }
 
 /** Conhecimento aprovado — a ÚNICA fonte extra que entra no prompt. */
-export async function getApprovedKnowledge(companyId: string, take = 50): Promise<Faq[]> {
+export async function getApprovedKnowledge(companyId: string, take = 50, pergunta?: string): Promise<Faq[]> {
   const items = await prisma.knowledgeItem.findMany({
     where: { companyId, status: "APPROVED" },
     orderBy: { approvedAt: "desc" },
-    take,
     select: { question: true, answer: true },
   });
-  return items.map((i) => ({ question: i.question, answer: i.answer }));
+  // A limitação é aplicada depois de recuperar por relevância, para uma resposta
+  // antiga continuar acessível mesmo quando há mais de cinquenta aprovações.
+  return selecionarConhecimentoRelevante(items, pergunta, take);
 }
 
 // ——— Reunião de treinamento ———
@@ -229,6 +233,7 @@ export async function getTrainingReport(companyId: string) {
     approvedCount,
     learnedThisWeek,
     profile,
+    resultados,
   ] = await Promise.all([
     prisma.conversation.count({ where: { companyId, createdAt: { gte: since } } }),
     prisma.conversation.count({
@@ -266,10 +271,11 @@ export async function getTrainingReport(companyId: string) {
       take: 10,
     }),
     prisma.companyProfile.findUniqueOrThrow({ where: { companyId } }),
+    getResumoResultados(companyId, since),
   ]);
 
   const openGaps = await prisma.knowledgeGap.count({ where: { companyId, status: "OPEN" } });
-  const resolvedByAttendant = Math.max(0, totalConversations - sentToTeam);
+  const resolvedByAttendant = resultados.resolvedByAttendant;
   const score = computeKnowledgeScore(profile, approvedCount, openGaps);
   const diary = buildDiary({
     learnedThisWeek,
@@ -293,7 +299,7 @@ export async function getTrainingReport(companyId: string) {
   }
 
   return {
-    stats: { totalConversations, resolvedByAttendant, sentToTeam },
+    stats: { totalConversations, resolvedByAttendant, sentToTeam, resultados },
     topGaps,
     approvedItems,
     pendingItems,
@@ -313,34 +319,22 @@ export async function teachAnswer(
   companyId: string,
   input: { gapId?: string; question: string; answer: string },
 ): Promise<KnowledgeItem> {
-  if (input.gapId) {
-    const gap = await prisma.knowledgeGap.findFirst({ where: { id: input.gapId, companyId } });
-    if (!gap) throw new Error("Dúvida não encontrada");
-  }
-
   const question = input.question.trim().slice(0, MAX_QUESTION_LENGTH);
   const answer = input.answer.trim().slice(0, MAX_ANSWER_LENGTH);
+  if (!question || !answer) throw new Error("Escreva a pergunta e a resposta.");
 
-  const item = await prisma.knowledgeItem.create({
-    data: {
-      companyId,
-      question,
-      answer,
-      source: "TRAINING",
-      status: "APPROVED",
-      approvedAt: new Date(),
-      gapId: input.gapId ?? null,
-    },
-  });
-
-  if (input.gapId) {
-    await prisma.knowledgeGap.updateMany({
-      where: { id: input.gapId, companyId },
-      data: { status: "ANSWERED" },
+  return prisma.$transaction(async (db) => {
+    if (input.gapId) {
+      const gap = await db.knowledgeGap.findFirst({ where: { id: input.gapId, companyId } });
+      if (!gap) throw new Error("Dúvida não encontrada");
+    }
+    const item = await db.knowledgeItem.create({
+      data: { companyId, question, answer, source: "TRAINING", status: "APPROVED", approvedAt: new Date(), gapId: input.gapId ?? null },
     });
-  }
-
-  return item;
+    await sincronizarConhecimentoNoRascunho(db, companyId, item, "APROVAR");
+    if (input.gapId) await db.knowledgeGap.updateMany({ where: { id: input.gapId, companyId }, data: { status: "ANSWERED" } });
+    return item;
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
 /** Aprovar (com edição opcional) ou rejeitar um item. Só APPROVED entra em uso. */
@@ -350,32 +344,32 @@ export async function reviewKnowledgeItem(
   action: "aprovar" | "rejeitar",
   edits?: { question?: string; answer?: string },
 ): Promise<void> {
-  const item = await prisma.knowledgeItem.findFirst({ where: { id: itemId, companyId } });
-  if (!item) throw new Error("Item não encontrado");
+  await prisma.$transaction(async (db) => {
+    const item = await db.knowledgeItem.findFirst({ where: { id: itemId, companyId } });
+    if (!item) throw new Error("Item não encontrado");
+    if (action === "rejeitar") {
+      await db.knowledgeItem.update({ where: { id: item.id }, data: { status: "REJECTED" } });
+      await sincronizarConhecimentoNoRascunho(db, companyId, item, "REMOVER");
+      return;
+    }
+    const question = (edits?.question?.trim() || item.question).slice(0, MAX_QUESTION_LENGTH);
+    const answer = (edits?.answer?.trim() || item.answer).slice(0, MAX_ANSWER_LENGTH);
+    if (!question || !answer) throw new Error("Escreva a pergunta e a resposta.");
+    const aprovado = await db.knowledgeItem.update({ where: { id: item.id },
+      data: { status: "APPROVED", approvedAt: new Date(), question, answer } });
+    await sincronizarConhecimentoNoRascunho(db, companyId, aprovado, "APROVAR");
+    if (item.gapId) await db.knowledgeGap.updateMany({ where: { id: item.gapId, companyId }, data: { status: "ANSWERED" } });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+}
 
-  if (action === "rejeitar") {
-    await prisma.knowledgeItem.update({ where: { id: item.id }, data: { status: "REJECTED" } });
-    return;
-  }
-
-  let finalQuestion = edits?.question?.trim() || item.question;
-  let finalAnswer = edits?.answer?.trim() || item.answer;
-
-  await prisma.knowledgeItem.update({
-    where: { id: item.id },
-    data: {
-      status: "APPROVED",
-      approvedAt: new Date(),
-      question: finalQuestion.slice(0, MAX_QUESTION_LENGTH),
-      answer: finalAnswer.slice(0, MAX_ANSWER_LENGTH),
-    },
-  });
-
-  if (item.gapId) {
-    await prisma.knowledgeGap
-      .update({ where: { id: item.gapId }, data: { status: "ANSWERED" } })
-      .catch(() => {});
-  }
+/** Excluir no treinamento retira do rascunho, sem alterar a publicação ativa. */
+export async function deleteKnowledgeItem(companyId: string, itemId: string): Promise<void> {
+  await prisma.$transaction(async (db) => {
+    const item = await db.knowledgeItem.findFirst({ where: { id: itemId, companyId } });
+    if (!item) return;
+    await db.knowledgeItem.deleteMany({ where: { id: itemId, companyId } });
+    await sincronizarConhecimentoNoRascunho(db, companyId, item, "REMOVER");
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
 /** Empresa marcou a dúvida como irrelevante — sai da fila de treinamento. */

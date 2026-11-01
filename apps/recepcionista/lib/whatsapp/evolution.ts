@@ -18,6 +18,7 @@ const webhookSchema = z
     data: z.object({
       key: z.object({
         remoteJid: z.string(),
+        remoteJidAlt: z.string().nullish(),
         fromMe: z.boolean().optional(),
         id: z.string().optional(),
       }),
@@ -37,6 +38,22 @@ const webhookSchema = z
   .passthrough();
 
 const MAX_TEXT_LENGTH = 4000;
+
+/** Um LID identifica o contato, mas seus dígitos não são um telefone. */
+function telefoneDoContato(key: { remoteJid: string; remoteJidAlt?: string | null }): string | null {
+  const telefoneDoJid = (jid: string | null | undefined) =>
+    typeof jid === "string" ? /^([0-9]{8,15})(?::[0-9]+)?@s\.whatsapp\.net$/.exec(jid)?.[1] ?? null : null;
+  const principal = telefoneDoJid(key.remoteJid);
+  const alternativo = telefoneDoJid(key.remoteJidAlt);
+  if (principal) {
+    // Dois telefones diferentes não comprovam quem é o interlocutor.
+    return alternativo && alternativo !== principal ? null : principal;
+  }
+  // Não permite que um PN alternativo transforme grupo, status ou broadcast
+  // em conversa individual. O fallback é exclusivo do endereço LID do mesmo par.
+  if (!/^[0-9]+(?::[0-9]+)?@lid$/.test(key.remoteJid)) return null;
+  return alternativo;
+}
 
 function objeto(valor: unknown): Record<string, unknown> | null {
   return valor !== null && typeof valor === "object" && !Array.isArray(valor)
@@ -95,11 +112,8 @@ export function parseWebhookPayload(payload: unknown): IncomingWhatsAppMessage |
 
   if (data.key.fromMe) return null;
 
-  const jid = data.key.remoteJid;
-  if (!jid.endsWith("@s.whatsapp.net")) return null; // ignora grupos e broadcast
-
-  const phone = jid.split("@")[0].replace(/\D/g, "");
-  if (phone.length < 8) return null;
+  const phone = telefoneDoContato(data.key);
+  if (!phone) return null;
 
   const text = textoRecebido(data.message);
   if (!text) return null;
@@ -149,11 +163,8 @@ export function parseMensagemDoDono(payload: unknown): MensagemDoDono | null {
   if (event.toLowerCase().replace(/_/g, ".") !== "messages.upsert") return null;
   if (!data.key.fromMe) return null;
 
-  const jid = data.key.remoteJid;
-  if (!jid.endsWith("@s.whatsapp.net")) return null; // grupos e listas de transmissão
-
-  const phone = jid.split("@")[0].replace(/\D/g, "");
-  if (phone.length < 8) return null;
+  const phone = telefoneDoContato(data.key);
+  if (!phone) return null;
 
   const rawText = data.message?.conversation ?? data.message?.extendedTextMessage?.text ?? "";
   const text = rawText.trim().slice(0, MAX_TEXT_LENGTH) || null;
@@ -173,8 +184,13 @@ const DEFAULT_EVOLUTION_URL = "https://evolution-api-latest-1-mqkm.onrender.com"
 const DEFAULT_EVOLUTION_KEY = "nexora-secret-key-2026";
 
 function evolutionConfig(): { baseUrl: string; apiKey: string } {
-  let baseUrl = process.env.EVOLUTION_API_URL?.trim();
-  let apiKey = process.env.EVOLUTION_API_KEY?.trim();
+  const aliasUrl = process.env.EVOLUTION_API_URl?.trim();
+  const aliasKey = process.env.EVOLUTION_API_KEy?.trim();
+  // Compatibilidade com o par cadastrado em produção. Credenciais incompletas
+  // nunca se combinam com outro endereço ou chave de configuração.
+  const usarAliases = Boolean(aliasUrl && aliasKey);
+  let baseUrl = usarAliases ? aliasUrl : process.env.EVOLUTION_API_URL?.trim();
+  let apiKey = usarAliases ? aliasKey : process.env.EVOLUTION_API_KEY?.trim();
 
   // Em produção, se a variável na Vercel ainda apontar para a Railway desativada (que responde 404),
   // ou se não foi definida no ambiente da Vercel, redireciona de forma resiliente para a Evolution no Render.
@@ -200,12 +216,13 @@ function evolutionConfig(): { baseUrl: string; apiKey: string } {
   return { baseUrl: baseUrl.replace(/\/+$/, ""), apiKey };
 }
 
-async function evoFetch(path: string, init?: { method?: string; body?: unknown }): Promise<unknown> {
+async function evoFetch(path: string, init?: { method?: string; body?: unknown; signal?: AbortSignal }): Promise<unknown> {
   const { baseUrl, apiKey } = evolutionConfig();
   const res = await fetch(`${baseUrl}${path}`, {
     method: init?.method ?? "GET",
     headers: { "Content-Type": "application/json", apikey: apiKey },
     body: init?.body !== undefined ? JSON.stringify(init.body) : undefined,
+    ...(init?.signal ? { signal: init.signal } : {}),
   });
 
   const text = await res.text().catch(() => "");
@@ -248,6 +265,21 @@ export async function sendWhatsAppText(
     body: { number: phone, text, ...(opcoes?.atrasoMs ? { delay: opcoes.atrasoMs } : {}) },
   });
   return { messageId: idDoEnvio(resposta) };
+}
+
+/**
+ * Indicador transitório do canal, sem enviar texto nem confirmar uma entrega.
+ * A espera da resposta fica no executor para permitir intervenção da equipe.
+ * O chamador limita o prazo e trata falhas deste recurso opcional.
+ */
+export async function mostrarDigitacaoWhatsApp(instance: string, phone: string, digitando: boolean,
+  esperaMs = 0, signal?: AbortSignal): Promise<void> {
+  await evoFetch(`/chat/sendPresence/${encodeURIComponent(instance)}`, {
+    method: "POST",
+    body: { number: phone, presence: digitando ? "composing" : "paused",
+      delay: digitando ? Math.min(5_000, Math.max(0, Math.round(esperaMs))) : 0 },
+    signal,
+  });
 }
 
 /**
@@ -307,17 +339,9 @@ export async function createInstance(instance: string, phone?: string): Promise<
       // Ignora erro de verificação
     }
 
-    // Se estiver em estado quebrado, tenta remover e recriar limpa uma única vez
-    try {
-      await deleteInstance(instance).catch(() => {});
-      await evoFetch("/instance/create", {
-        method: "POST",
-        body: payload,
-      });
-      return;
-    } catch {
-      throw error;
-    }
+    // Uma falha de consulta não comprova sessão quebrada. Preserva a instância
+    // existente; uma nova tentativa nunca deve desconectar o telefone sozinha.
+    throw error;
   }
 }
 
@@ -363,6 +387,7 @@ export async function connectInstance(
     pairingCode?: string;
     qrcode?: { base64?: string };
     instance?: { state?: string };
+    state?: string;
   };
 
   const qrCode = data.base64 ?? data.qrcode?.base64 ?? null;
@@ -373,7 +398,7 @@ export async function connectInstance(
     : null;
   const pairingCode = rawPairing ? rawPairing.replace(/[^A-Za-z0-9-]/g, "").toUpperCase() : null;
 
-  return { qrCode, pairingCode, state: data.instance?.state ?? null };
+  return { qrCode, pairingCode, state: data.instance?.state ?? data.state ?? null };
 }
 
 const WEBHOOK_EVENTS = ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED"];

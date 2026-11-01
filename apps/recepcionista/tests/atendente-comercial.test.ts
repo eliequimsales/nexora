@@ -4,6 +4,9 @@ import { identificarRamo, identificarRamoNoHistorico, montarPromptComercial } fr
 import { ID_CONTA_MESTRE_PADRAO, ehContaComercialNexora } from "@/lib/atendente/comercial-config";
 import type { Fatos } from "@/lib/atendente/fatos";
 import type { ReceptionistReply } from "@/lib/ai/provider";
+import { aplicarConfiguracaoAosFatos } from "@/lib/atendente/configuracao-fatos";
+import { configuracaoExemplo } from "./fixtures/configuracao-nexa";
+import type { ServicoNexa } from "@/lib/atendente/configuracao-schema";
 
 const FATOS: Fatos = {
   empresa: "Nexora", nome: "Sofia", jeito: "ACOLHEDOR", marcaDireto: false, expediente: true,
@@ -199,6 +202,130 @@ describe("Atendimento comercial sustentado em fatos", () => {
     expect(p).toContain('"id":"descricao"');
     expect(p).toContain("contexto não confiável");
     expect(p).not.toMatch(/40%|97\/mês|perfeitamente|integração nativa com Google Agenda|em total conformidade/);
+  });
+});
+
+describe("Preço dos serviços conferidos na configuração comercial", () => {
+  const mensal: ServicoNexa = {
+    id: "plano-mensal", nome: "Plano Atendente 24h (Mensal)", descricao: "Atendimento pelo WhatsApp",
+    precoModo: "FIXO", precoCents: 9700, duracaoMin: null, situacao: "CONFIRMADO", origem: "MANUAL",
+  };
+  const anual: ServicoNexa = {
+    ...mensal, id: "plano-anual", nome: "Plano Atendente 24h (Anual)", precoCents: 97000,
+  };
+  function projetados(servicos: ServicoNexa[] = [mensal,
+    { ...mensal, id: "plano-completo", nome: "Plano Completo", precoCents: 19700, situacao: "REVISAR" },
+    { ...mensal, id: "demonstracao", nome: "Demonstração de 7 dias", precoModo: "SOB_CONSULTA", precoCents: null, situacao: "REVISAR" },
+  ]) {
+    const configuracao = configuracaoExemplo();
+    configuracao.negocio.nome = "Nexora";
+    configuracao.informacoes.servicos = servicos;
+    configuracao.conhecimento.itens = [];
+    return aplicarConfiguracaoAosFatos(configuracao, FATOS);
+  }
+
+  it.each([
+    "Qual é o valor do Plano Atendente 24h?", "Quanto custa?", "Quanto é?",
+    "Oi! Quanto custa o Plano Atendente 24h (Mensal), por favor?",
+    "Preço do Plano Atendente 24h", "Quanto sai o Plano Atendente 24h?",
+  ])("responde com a fonte do único serviço conferido, sem IA: %s", async (pergunta) => {
+    const fatos = projetados();
+    expect(fatos.pricingInfo).toBe("");
+    const d = dependencias();
+    const r = await responder(entrada(pergunta, { fatos }), d);
+    expect(texto(r)).toBe("Plano Atendente 24h (Mensal) custa R$ 97,00.");
+    expect(r.fontes).toEqual(["Preço de Plano Atendente 24h (Mensal)"]);
+    expect(r.anotar).toBeUndefined();
+    expect(d.ia).not.toHaveBeenCalled();
+    expect(texto(r)).not.toMatch(/197|7 dias|ilimitad|grátis|teste grátis/i);
+  });
+
+  it("conserva a prioridade das condições comerciais cadastradas", async () => {
+    const d = dependencias();
+    const r = await responder(entrada("Quanto custa?", { fatos: { ...projetados(), pricingInfo: "A equipe confirma condições para contratos anuais." } }), d);
+    expect(texto(r)).toBe("A equipe confirma condições para contratos anuais.");
+    expect(d.ia).not.toHaveBeenCalled();
+  });
+
+  it.each(["Quanto custa?", "Qual é o valor do Plano Atendente 24h?"])("esclarece mensal ou anual sem escolher o primeiro: %s", async (pergunta) => {
+    const d = dependencias();
+    const r = await responder(entrada(pergunta, { fatos: projetados([mensal, anual]) }), d);
+    expect(texto(r)).toContain(mensal.nome);
+    expect(texto(r)).toContain(anual.nome);
+    expect(texto(r)).toMatch(/De qual opção.*\?$/);
+    expect(texto(r)).not.toContain("R$");
+    expect(d.ia).not.toHaveBeenCalled();
+  });
+
+  it.each([[mensal, "R$ 97,00"], [anual, "R$ 970,00"]] as const)("usa o qualificador explícito de %j", async (servico, preco) => {
+    const d = dependencias();
+    const r = await responder(entrada(`Qual é o valor do ${servico.nome}?`, { fatos: projetados([mensal, anual]) }), d);
+    expect(texto(r)).toBe(`${servico.nome} custa ${preco}.`);
+    expect(d.ia).not.toHaveBeenCalled();
+  });
+
+  it("mantém o valor sob consulta sem converter a falta de valor em zero", async () => {
+    const d = dependencias();
+    const r = await responder(entrada("Quanto custa?", { fatos: projetados([{ ...mensal, precoModo: "SOB_CONSULTA", precoCents: null }]) }), d);
+    expect(texto(r)).toBe("O valor de Plano Atendente 24h (Mensal) é sob consulta com a equipe.");
+    expect(texto(r)).not.toContain("R$");
+    expect(d.ia).not.toHaveBeenCalled();
+  });
+
+  it("não usa zero legado sem preço fixo explicitamente cadastrado", async () => {
+    const d = dependencias();
+    const fatos = { ...FATOS, servicos: [{ id: "legado", nome: "Plano", precoCents: 0, duracaoMin: 0 }] };
+    const r = await responder(entrada("Quanto custa?", { fatos }), d);
+    expect(texto(r)).toContain("não tenho informação confirmada");
+    expect(texto(r)).not.toMatch(/R\$|grátis|gratuito/);
+  });
+
+  it("não substitui um serviço desconhecido pelo único preço conhecido", async () => {
+    const r = await responder(entrada("Qual é o valor do Plano Empresarial?", { fatos: projetados() }), dependencias());
+    expect(texto(r)).toContain("não tenho informação confirmada");
+    expect(texto(r)).not.toContain("R$");
+  });
+
+  it.each([
+    "Qual é o valor do Plano Atendente 24h e tem garantia?",
+    "Qual é o valor do Plano Atendente 24h com desconto?",
+    "Qual é o valor do Plano Atendente 24h por mês?",
+    "Quanto custa depois?", "Qual é a mensalidade?",
+  ])("não cobre outra condição só com o preço: %s", async (pergunta) => {
+    const d = dependencias();
+    const r = await responder(entrada(pergunta, { fatos: projetados() }), d);
+    expect(texto(r)).toContain("não tenho informação confirmada");
+    expect(d.ia).toHaveBeenCalledTimes(1);
+    expect(r.anotar).toBeDefined();
+  });
+
+  it("preserva o encaminhamento de reembolso antes de consultar um preço", async () => {
+    const d = dependencias();
+    const r = await responder(entrada("Quanto custa o Plano Atendente 24h e como funciona o reembolso?", { fatos: projetados() }), d);
+    expect(r.equipe).toBe(true);
+    expect(r.anotar).toBeDefined();
+    expect(texto(r)).not.toContain("R$");
+    expect(d.ia).not.toHaveBeenCalled();
+  });
+
+  it("considera também o serviço sem preço ao esclarecer uma pergunta genérica", async () => {
+    const fatos = projetados([mensal]);
+    fatos.servicos.push({ id: "consultoria", nome: "Consultoria", precoCents: 0, duracaoMin: 0 });
+    const d = dependencias();
+    const r = await responder(entrada("Quanto custa?", { fatos }), d);
+    expect(texto(r)).toContain("Consultoria");
+    expect(texto(r)).toContain(mensal.nome);
+    expect(texto(r)).not.toContain("R$");
+    expect(d.ia).not.toHaveBeenCalled();
+  });
+
+  it("nomes duplicados não selecionam um dos valores por ordem de cadastro", async () => {
+    const fatos = projetados([mensal, { ...mensal, id: "outro-mensal", precoCents: 19700 }]);
+    const d = dependencias();
+    const r = await responder(entrada("Qual é o valor do Plano Atendente 24h?", { fatos }), d);
+    expect(texto(r)).toBe("De qual serviço você quer saber o valor?");
+    expect(texto(r)).not.toContain("R$");
+    expect(d.ia).not.toHaveBeenCalled();
   });
 });
 

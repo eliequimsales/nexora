@@ -5,6 +5,9 @@ import { prisma } from "@/lib/db";
 import { horarioCadastrado, lerDiasFechados } from "@/lib/agenda/horario";
 import { lerJeito } from "./jeitos";
 import type { CenarioNexa, ConfiguracaoNexa, InformacaoNexa, PendenciaNexa, TelaConfiguracaoNexa, TesteNexa } from "./configuracao-schema";
+import type { EstadoConversaConfiguracao } from "./conversa-schema";
+import { manterEsclarecimento } from "./conversa-schema";
+import { projetarAlteracoesDaConfiguracao } from "./configuracao-sincronizacao";
 
 export { aplicarConfiguracaoAosFatos as fatosDoRascunho } from "./configuracao-fatos";
 
@@ -35,9 +38,15 @@ export const configuracaoNexaSchema: z.ZodType<ConfiguracaoNexa> = z.object({
   atendimento: z.object({
     nome: texto(80), jeito: z.enum(["ACOLHEDOR", "DIRETO", "DESCONTRAIDO"]),
     quando: z.enum(["FORA_EXPEDIENTE", "APOIO_EXPEDIENTE"]), agendamento: z.enum(["DESLIGADO", "LINK", "DIRETO"]),
+    gestaoReservas: z.object({ cancelar: z.boolean(), remarcar: z.boolean(), antecedenciaHoras: z.number().int().min(0).max(8760).nullable() }).strict().optional(),
     handoffKeywords: z.array(texto(80).min(1)).max(30),
   }).strict(),
   conhecimento: z.object({ itens: z.array(z.object({ id, pergunta: texto(500), resposta: texto(3000), situacao, origem }).strict()).max(150) }).strict(),
+  materiais: z.array(z.object({
+    id, nome: texto(180).min(1), tipo: z.enum(["TEXTO", "ARQUIVO", "AUDIO"]),
+    texto: texto(6000).min(1), sha256: z.string().regex(/^[a-f0-9]{64}$/),
+    importadoEm: z.string().datetime(), validoAte: z.string().datetime().nullable(),
+  }).strict()).max(20).optional(),
 }).strict();
 
 export const salvarConfiguracaoSchema = z.object({
@@ -51,13 +60,24 @@ export const salvarConfiguracaoSchema = z.object({
 const cenarioSchema = z.enum(["INFORMACOES", "HORARIO", "HUMANO", "DESCONHECIDA", "MULTIPLA", "CANCELAMENTO", "MIDIA"]);
 const testeSchema = z.object({ id, cenario: cenarioSchema, revisao: z.number().int().min(0), em: z.string(),
   pergunta: texto(3000), respostas: z.array(texto(5000)).min(1).max(12), correto: z.boolean().nullable() });
+const publicacaoSchema = z.object({ revisao: z.number().int().min(0), em: z.string(), rascunho: configuracaoNexaSchema });
 const envelopeSchema = z.object({
   versao: z.literal(1), revisao: z.number().int().min(0), rascunho: configuracaoNexaSchema,
   etapa: z.number().int().min(0).max(5), revisadas: z.array(z.number().int().min(0).max(5)), testes: z.array(testeSchema).max(40),
-  publicado: z.object({ revisao: z.number().int().min(0), em: z.string(), rascunho: configuracaoNexaSchema }).nullable(),
+  publicado: publicacaoSchema.nullable(),
+  historico: z.array(publicacaoSchema).max(5).optional(),
   // Somente o servidor grava a base importada. Permite revisar um cadastro
   // externo sem confundir a importação com autorização para sobrescrever outro.
   cadastroBase: z.string().optional(),
+  conversa: z.object({
+    mensagens: z.array(z.object({ id: texto(160).min(1), de: z.enum(["dono", "atendente"]), texto: texto(6000), em: z.string().datetime(), topico: z.enum(["EMPRESA", "SERVICOS", "FUNCIONAMENTO", "ATENDIMENTO", "REGRAS"]).nullable().optional() }).strict()).max(80),
+    ignoradas: z.array(texto(300)).max(150), ultimaPergunta: texto(300).nullable(),
+    perguntaPendente: z.object({ chave: texto(300).min(1), texto: texto(1000).min(1), sugestoes: z.array(texto(160)).max(4) }).strict().nullable().optional(),
+    perguntaSuspensa: z.boolean().optional(),
+    topicoAtual: z.enum(["EMPRESA", "SERVICOS", "FUNCIONAMENTO", "ATENDIMENTO", "REGRAS"]).nullable().optional(),
+    camposAdiados: z.array(texto(300)).max(150).optional(),
+    memoriaSemantica: z.object({ servicoEmFocoId: texto(160).nullable(), categorias: z.array(texto(140)).max(40), listaServicosConcluida: z.boolean() }).strict().optional(),
+  }).strict().optional(),
 });
 export type EnvelopeConfiguracaoNexa = z.infer<typeof envelopeSchema>;
 
@@ -169,7 +189,7 @@ export function pendenciasDaConfiguracao(e: EnvelopeConfiguracaoNexa): Pendencia
   const c = e.rascunho;
   const p: PendenciaNexa[] = [];
   const falta = (campo: string, mensagem: string, etapa: number, bloqueia = true) => p.push({ campo, mensagem, etapa, bloqueia });
-  if (c.negocio.nome.length < 2) falta("negocio.nome", "Informe o nome do negócio.", 0);
+  if (c.negocio.nome.length < 2 || c.negocio.nome.trim().toLocaleLowerCase("pt-BR") === "minha empresa") falta("negocio.nome", "Informe o nome do negócio.", 0);
   if (c.negocio.segmento.length < 2) falta("negocio.segmento", "Informe a área de atuação.", 0);
   if (c.atendimento.nome.length < 2) falta("atendimento.nome", "Informe como o atendente se apresenta.", 2);
   const conferir = (i: InformacaoNexa, campo: string, label: string, etapa: number, obrigatorio = false) => {
@@ -184,6 +204,7 @@ export function pendenciasDaConfiguracao(e: EnvelopeConfiguracaoNexa): Pendencia
   const agenda = c.negocio.objetivo === "AGENDAMENTOS" || c.atendimento.agendamento !== "DESLIGADO";
   if (c.negocio.objetivo !== "AGENDAMENTOS" && c.atendimento.agendamento !== "DESLIGADO") falta("atendimento.agendamento", "Escolha o objetivo de agendamentos para autorizar a agenda.", 2);
   if (c.negocio.objetivo === "AGENDAMENTOS" && c.atendimento.agendamento === "DESLIGADO") falta("atendimento.agendamento", "Defina se o atendente envia o link ou confirma na agenda.", 2);
+  if (c.atendimento.agendamento === "DIRETO" && (c.atendimento.gestaoReservas?.cancelar || c.atendimento.gestaoReservas?.remarcar) && c.atendimento.gestaoReservas.antecedenciaHoras === null) falta("atendimento.antecedenciaHoras", "Informe a antecedência mínima para remarcar ou cancelar. Use 0 se não houver prazo mínimo.", 2);
   const h = c.informacoes.horarios;
   const hora = /^([01]\d|2[0-3]):[0-5]\d$/;
   const horariosValidos = h.length === 7 && new Set(h.map((d) => d.day)).size === 7 && h.every((d) => d.closed || hora.test(d.open) && hora.test(d.close) && d.open < d.close);
@@ -245,6 +266,60 @@ function tela(carregado: Awaited<ReturnType<typeof carregar>>): TelaConfiguracao
 
 export async function getConfiguracao(companyId: string): Promise<TelaConfiguracaoNexa> { return tela(await carregar(companyId)); }
 
+/** Promoção do visitante muda o nome canônico, preservando o ensino já salvo. */
+export async function sincronizarNomeDaContaNoRascunho(companyId: string, nomeAnterior: string, nomeNovo: string): Promise<void> {
+  const l = await carregar(companyId); const e = l.envelope;
+  if (!l.original || e.publicado || l.empresa.name !== nomeNovo || !e.cadastroBase) return;
+  const atual = cadastroAtual(l);
+  if (e.cadastroBase !== assinaturaCadastro({ ...atual, empresa: nomeAnterior })) return;
+  const alterou = e.rascunho.negocio.nome !== nomeNovo;
+  const novo: EnvelopeConfiguracaoNexa = { ...e, cadastroBase: assinaturaCadastro(atual),
+    rascunho: { ...e.rascunho, negocio: { ...e.rascunho.negocio, nome: nomeNovo } },
+    revisao: e.revisao + (alterou ? 1 : 0), revisadas: alterou ? e.revisadas.filter(v => v !== 0) : e.revisadas,
+    testes: alterou ? [] : e.testes };
+  await gravar(companyId, l.original, novo);
+}
+
+const conversaVazia = (): EstadoConversaConfiguracao => ({ mensagens: [], ignoradas: [], ultimaPergunta: null });
+export async function getContextoConversaConfiguracao(companyId: string): Promise<{ tela: TelaConfiguracaoNexa; conversa: EstadoConversaConfiguracao }> {
+  const l = await carregar(companyId);
+  return { tela: tela(l), conversa: l.envelope.conversa ?? conversaVazia() };
+}
+
+/** Uma mensagem, seu rascunho e a resposta são gravados juntos. Repetir o recibo não reaplica alterações. */
+export async function salvarTurnoConversaConfiguracao(companyId: string,
+  input: { revisao: number; mensagemId: string; texto: string },
+  processar: (rascunho: ConfiguracaoNexa, conversa: EstadoConversaConfiguracao) => Promise<{
+    rascunho: ConfiguracaoNexa; conversa: EstadoConversaConfiguracao; alteracoes: string[]; aviso?: string; revisarInformacoes: boolean;
+  }>,
+): Promise<{ tela: TelaConfiguracaoNexa; conversa: EstadoConversaConfiguracao; alteracoes: string[]; aviso?: string }> {
+  const l = await carregar(companyId); const e = l.envelope; const conversa = e.conversa ?? conversaVazia();
+  const recibo = conversa.mensagens.find(m => m.de === "dono" && m.id === input.mensagemId);
+  if (recibo) {
+    if (recibo.texto !== input.texto) throw new ConfiguracaoErro("Esta mensagem já foi salva com outro conteúdo. Reenvie usando uma nova mensagem.", 409);
+    return { tela: tela(l), conversa, alteracoes: [] };
+  }
+  conferirRevisao(e, input.revisao);
+  if (cadastroMudou(l)) throw new ConfiguracaoErro("O cadastro foi alterado em outra área. Recarregue e revise os dados antes de continuar.", 409);
+  const resultado = await processar(structuredClone(e.rascunho), structuredClone(conversa));
+  const c = configuracaoNexaSchema.parse(resultado.rascunho); conferirIds(c, e.rascunho);
+  const alterado = !mesmo(e.rascunho, c);
+  const blocos = ["negocio", "informacoes", "atendimento", "conhecimento"] as const;
+  const alteradas = new Set(blocos.flatMap((bloco, etapa) => mesmo(e.rascunho[bloco], c[bloco]) ? [] : [etapa]));
+  const novo: EnvelopeConfiguracaoNexa = {
+    ...e, rascunho: c, conversa: resultado.conversa, revisao: e.revisao + (alterado ? 1 : 0),
+    revisadas: e.revisadas.filter(etapa => etapa < 4 ? !alteradas.has(etapa) : !alterado), testes: alterado ? [] : e.testes,
+  };
+  // As informações efetivamente respondidas/confirmadas podem ser conferidas juntas;
+  // respostas pendentes, dados ambíguos e os testes continuam bloqueando publicação.
+  if (resultado.revisarInformacoes && !pendenciasDaConfiguracao(novo).some(p => p.etapa < 4 && !p.campo.startsWith("etapa:"))) {
+    novo.revisadas = [...new Set([...novo.revisadas, 0, 1, 2, 3])].sort(); novo.etapa = 4;
+  }
+  const validado = envelopeSchema.parse(novo);
+  const gravado = await gravarEvolucaoDaConfiguracao(companyId, l, validado);
+  return { tela: tela(gravado), conversa: gravado.envelope.conversa!, alteracoes: resultado.alteracoes, ...(resultado.aviso ? { aviso: resultado.aviso } : {}) };
+}
+
 function conferirRevisao(e: EnvelopeConfiguracaoNexa, revisao: number) {
   if (e.revisao !== revisao) throw new ConfiguracaoErro("A configuração foi alterada em outra tela. Recarregue para revisar a versão mais recente.");
 }
@@ -265,6 +340,71 @@ async function gravar(companyId: string, original: unknown, e: EnvelopeConfigura
   if (escrita.count !== 1) throw new ConfiguracaoErro("A configuração mudou enquanto você salvava. Recarregue para continuar.");
 }
 
+/** Uma edição confirmada atualiza somente seu delta na versão ativa e na agenda, atomicamente. */
+async function gravarEvolucaoDaConfiguracao(companyId: string, l: Awaited<ReturnType<typeof carregar>>, novo: EnvelopeConfiguracaoNexa) {
+  const anterior = l.envelope.publicado;
+  if (!anterior || mesmo(l.envelope.rascunho, novo.rascunho)) {
+    await gravar(companyId, l.original, novo);
+    return { ...l, envelope: novo };
+  }
+  const ativa = projetarAlteracoesDaConfiguracao(l.envelope.rascunho, novo.rascunho, anterior.rascunho);
+  if (mesmo(ativa, anterior.rascunho)) {
+    await gravar(companyId, l.original, novo);
+    return { ...l, envelope: novo };
+  }
+  return prisma.$transaction(async tx => {
+    const mapaIds = new Map<string, string>();
+    for (let order = 0; order < ativa.informacoes.servicos.length; order++) {
+      const s = ativa.informacoes.servicos[order];
+      const antes = anterior.rascunho.informacoes.servicos.find(v => v.id === s.id);
+      if (mesmo(antes, s)) continue;
+      if (s.situacao !== "CONFIRMADO") {
+        if (antes?.situacao === "CONFIRMADO" && !s.id.startsWith("novo:")) await tx.service.updateMany({ where: { companyId, id: s.id }, data: { active: false } });
+        continue;
+      }
+      const data = { name: s.nome, priceCents: s.precoModo === "FIXO" ? s.precoCents ?? 0 : 0,
+        durationMin: s.duracaoMin ?? 0, active: true, suggested: false, order };
+      if (s.id.startsWith("novo:")) {
+        const id = (await tx.service.create({ data: { companyId, ...data }, select: { id: true } })).id;
+        mapaIds.set(s.id, id); s.id = id;
+      } else {
+        const escrita = await tx.service.updateMany({ where: { companyId, id: s.id }, data });
+        if (escrita.count !== 1) throw new ConfiguracaoErro("Este serviço mudou em outra área. Recarregue para conferir.", 409);
+      }
+    }
+    const ids = new Set(ativa.informacoes.servicos.map(s => s.id));
+    const removidos = anterior.rascunho.informacoes.servicos.filter(s => !ids.has(s.id) && !s.id.startsWith("novo:"));
+    if (removidos.length) await tx.service.updateMany({ where: { companyId, id: { in: removidos.map(s => s.id) } }, data: { active: false } });
+    for (const s of novo.rascunho.informacoes.servicos) s.id = mapaIds.get(s.id) ?? s.id;
+    if (novo.conversa && mapaIds.size) {
+      const remapear = (chave: string) => { for (const [antes, depois] of mapaIds) chave = chave.replace(`servico:${antes}:`, `servico:${depois}:`); return chave; };
+      if (novo.conversa.perguntaPendente) novo.conversa.perguntaPendente.chave = remapear(novo.conversa.perguntaPendente.chave);
+      if (novo.conversa.ultimaPergunta) novo.conversa.ultimaPergunta = remapear(novo.conversa.ultimaPergunta);
+      novo.conversa.ignoradas = novo.conversa.ignoradas.map(remapear);
+      if (novo.conversa.memoriaSemantica?.servicoEmFocoId) novo.conversa.memoriaSemantica.servicoEmFocoId = mapaIds.get(novo.conversa.memoriaSemantica.servicoEmFocoId) ?? novo.conversa.memoriaSemantica.servicoEmFocoId;
+    }
+    const previa = cadastroDaPublicacao(anterior.rascunho).perfil;
+    const proxima = cadastroDaPublicacao(ativa).perfil;
+    const extra: Prisma.CompanyProfileUpdateManyMutationInput = {};
+    for (const chave of Object.keys(proxima) as (keyof typeof proxima)[]) {
+      if (!mesmo(previa[chave], proxima[chave])) Object.assign(extra, { [chave]: proxima[chave] });
+    }
+    if (!mesmo(anterior.rascunho.informacoes.diasFechados, ativa.informacoes.diasFechados)) {
+      const antes = anterior.rascunho.informacoes.diasFechados;
+      const depois = ativa.informacoes.diasFechados;
+      const retirados = new Set(antes.filter(d => !depois.includes(d)));
+      ativa.informacoes.diasFechados = [...new Set([...lerDiasFechados(l.perfil.diasFechados).filter(d => !retirados.has(d)), ...depois.filter(d => !antes.includes(d))])].sort();
+      extra.diasFechados = ativa.informacoes.diasFechados;
+    }
+    if (anterior.rascunho.negocio.nome !== ativa.negocio.nome) await tx.company.update({ where: { id: companyId }, data: { name: ativa.negocio.nome } });
+    novo.publicado = { revisao: novo.revisao, em: new Date().toISOString(), rascunho: ativa };
+    novo.historico = [...(l.envelope.historico ?? []), anterior].slice(-5);
+    novo.cadastroBase = undefined;
+    await gravar(companyId, l.original, envelopeSchema.parse(novo), tx, extra);
+    return carregar(companyId, tx);
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+}
+
 export async function salvarConfiguracao(companyId: string, entrada: z.infer<typeof salvarConfiguracaoSchema>): Promise<TelaConfiguracaoNexa> {
   const input = salvarConfiguracaoSchema.parse(entrada);
   const l = await carregar(companyId); const e = l.envelope;
@@ -274,6 +414,8 @@ export async function salvarConfiguracao(companyId: string, entrada: z.infer<typ
   const alteradas = new Set(blocos.flatMap((bloco, etapa) => mesmo(e.rascunho[bloco], input.rascunho[bloco]) ? [] : [etapa]));
   const novo: EnvelopeConfiguracaoNexa = { ...e, rascunho: input.rascunho, etapa: input.concluirEtapa ? Math.min(5, input.etapa + 1) : input.etapa,
     revisao: e.revisao + (alterado ? 1 : 0), revisadas: e.revisadas.filter((etapa) => etapa < 4 ? !alteradas.has(etapa) : !alterado), testes: alterado ? [] : e.testes };
+  if (novo.conversa) novo.conversa = { ...novo.conversa,
+    perguntaPendente: manterEsclarecimento(novo.conversa.perguntaPendente, e.rascunho, input.rascunho, novo.conversa.ignoradas) };
   const concluidas = input.concluirEtapas ?? (input.concluirEtapa ? [input.etapa] : []);
   if (concluidas.length) novo.revisadas = [...new Set([...novo.revisadas, ...concluidas])].sort();
   const grupo = input.concluirEtapas;
@@ -281,8 +423,7 @@ export async function salvarConfiguracao(companyId: string, entrada: z.infer<typ
     p.bloqueia && grupo.includes(p.etapa) && !p.campo.startsWith("etapa:"))) {
     novo.etapa = Math.min(...grupo);
   }
-  await gravar(companyId, l.original, novo);
-  return tela({ ...l, envelope: novo });
+  return tela(await gravarEvolucaoDaConfiguracao(companyId, l, novo));
 }
 
 export async function registrarTesteConfiguracao(companyId: string, input: { revisao: number; cenario: CenarioNexa; pergunta: string; respostas: string[] }): Promise<TesteNexa> {
@@ -375,7 +516,8 @@ export async function publicarConfiguracao(companyId: string, revisao: number): 
     }
     await tx.service.updateMany({ where: { companyId, ...(idsAtivos.length ? { id: { notIn: idsAtivos } } : {}) }, data: { active: false } });
     const em = new Date().toISOString();
-    const novo: EnvelopeConfiguracaoNexa = { ...e, cadastroBase: undefined, rascunho: c, publicado: { revisao, em, rascunho: structuredClone(c) } };
+    const historico = [...(e.historico ?? []), ...(e.publicado ? [e.publicado] : [])].slice(-5);
+    const novo: EnvelopeConfiguracaoNexa = { ...e, cadastroBase: undefined, historico, rascunho: c, publicado: { revisao, em, rascunho: structuredClone(c) } };
     const valor = (i: InformacaoNexa) => i.situacao === "CONFIRMADO" ? i.valor : "";
     await tx.company.update({ where: { id: companyId }, data: { name: c.negocio.nome } });
     await gravar(companyId, l.original, novo, tx, {
@@ -388,6 +530,30 @@ export async function publicarConfiguracao(companyId: string, revisao: number): 
     });
     return tela(await carregar(companyId, tx));
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+}
+
+export type VersaoDoAtendente = { id: string; revisao: number; em: string; empresa: string; atual: boolean };
+const idDaVersao = (p: EnvelopeConfiguracaoNexa["publicado"] & {}) => `${p.revisao}@${p.em}`;
+
+/** Histórico limitado das publicações, sempre isolado pela sessão da empresa. */
+export async function getVersoesConfiguracao(companyId: string): Promise<VersaoDoAtendente[]> {
+  const { envelope: e } = await carregar(companyId);
+  return [...(e.publicado ? [e.publicado] : []), ...(e.historico ?? []).slice().reverse()]
+    .map(p => ({ id: idDaVersao(p), revisao: p.revisao, em: p.em, empresa: p.rascunho.negocio.nome, atual: p === e.publicado }));
+}
+
+/** Restauração prepara um novo rascunho. Exige nova revisão e testes antes de aplicar. */
+export async function restaurarVersaoConfiguracao(companyId: string, revisao: number, versaoId: string): Promise<TelaConfiguracaoNexa> {
+  const l = await carregar(companyId); const e = l.envelope; conferirRevisao(e, revisao);
+  const versao = e.historico?.find(p => idDaVersao(p) === versaoId);
+  if (!versao) throw new ConfiguracaoErro("Essa versão não está disponível para esta empresa. Recarregue o histórico.", 404);
+  const novo: EnvelopeConfiguracaoNexa = { ...e, revisao: e.revisao + 1, rascunho: structuredClone(versao.rascunho),
+    etapa: 0, revisadas: [], testes: [], conversa: { mensagens: [...(e.conversa?.mensagens ?? []), {
+      id: `restauracao:${randomUUID()}`, de: "atendente" as const, em: new Date().toISOString(),
+      texto: "Recuperei uma versão anterior para revisão. Ela substitui o rascunho; a versão em uso continua atendendo. Confira as informações e teste novamente antes de aplicar.",
+    }].slice(-80), ignoradas: [], ultimaPergunta: null } };
+  await gravar(companyId, l.original, novo);
+  return tela({ ...l, envelope: novo });
 }
 
 /** Não liga atendimento; a rota de ativação confere esta lista antes da escrita. */

@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { ConfiguracaoNexa } from "@/lib/atendente/configuracao-schema";
-import { centavosInformados, proporPreenchimento } from "@/lib/atendente/preenchimento";
+import { centavosInformados, duracaoInformada, proporPreenchimento } from "@/lib/atendente/preenchimento";
+
+describe("duração explicitamente informada", () => {
+  it.each([["uma hora e meia", 90], ["1 hora e 30 minutos", 90], ["1h30", 90], ["duas horas", 120], ["meia hora", 30], ["45 minutos", 45], ["1 hora 15 minutos", 75]] as const)("interpreta %s como %s minutos", (texto, minutos) => {
+    expect(duracaoInformada(texto)).toBe(minutos);
+  });
+  it.each(["das 9h às 18h", "1,5 horas", "entre 30 e 60 minutos", "até 45 minutos", "1 hora e 90 minutos", "uma hora e trinta minutos", "não dura 30 minutos", "1h ou 2h"])("não transforma duração ambígua em um número fixo: %s", texto => {
+    expect(duracaoInformada(texto)).toBeNull();
+  });
+});
 
 const vazio = (): ConfiguracaoNexa => ({
   negocio: { nome: "Negócio", segmento: "", modalidade: "PRESENCIAL", objetivo: "DUVIDAS", regiao: info(), descricao: info() },

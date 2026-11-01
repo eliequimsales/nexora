@@ -9,6 +9,7 @@ import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
 import { LIMITES, limitar } from "@/lib/limites";
 import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
+import { validarOrigemECsrfe } from "@/lib/seguranca/origem";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,8 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+  const origem = validarOrigemECsrfe(request, { exigirJson: true });
+  if (origem) return origem;
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 

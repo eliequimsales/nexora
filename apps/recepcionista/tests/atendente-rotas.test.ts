@@ -16,6 +16,9 @@ vi.mock("@/lib/limites", async (original) => ({
   limitar: vi.fn(() => true),
 }));
 vi.mock("@/lib/errors", () => ({ logError: vi.fn() }));
+vi.mock("@/lib/training", async (original) => ({
+  ...(await original<typeof import("@/lib/training")>()), teachAnswer: vi.fn(),
+}));
 vi.mock("@/lib/billing/guarda", () => ({ exigirAcesso: vi.fn(async () => null) }));
 vi.mock("@/lib/atendente/tela", () => ({ telaDoAtendente: vi.fn(async () => ({ tela: "atualizada" })) }));
 vi.mock("@/lib/atendente/configuracao", async (original) => ({
@@ -55,6 +58,7 @@ import type { Fatos } from "@/lib/atendente/fatos";
 import { fatosDaEmpresa } from "@/lib/atendente/fatos";
 import { telaDoAtendente } from "@/lib/atendente/tela";
 import { getSessionCompanyId } from "@/lib/auth";
+import { teachAnswer } from "@/lib/training";
 import { exigirAcesso } from "@/lib/billing/guarda";
 import { prisma } from "@/lib/db";
 import { limitar } from "@/lib/limites";
@@ -357,7 +361,7 @@ describe("POST /api/atendente/simular — o motor de verdade, sem enviar e sem m
 
   it("testa o nome e o jeito antes de salvar", async () => {
     await SIMULAR(pedido({ mensagens: [{ de: "cliente", texto: "oi" }], nome: "Duda", jeito: "DESCONTRAIDO", marcaDireto: false }));
-    expect(fatosDaEmpresa).toHaveBeenCalledWith("c1", { nome: "Duda", jeito: "DESCONTRAIDO", marcaDireto: false });
+    expect(fatosDaEmpresa).toHaveBeenCalledWith("c1", { nome: "Duda", jeito: "DESCONTRAIDO", marcaDireto: false }, "oi");
   });
 
   it("sem a configuração das respostas livres, avisa sem jargão e sem nome de variável", async () => {
@@ -406,7 +410,7 @@ describe("POST /api/atendente/simular — o motor de verdade, sem enviar e sem m
 });
 
 describe("POST /api/atendente/ensinar", () => {
-  it("grava resposta aprovada e conclui a dúvida", async () => {
+  it("envia o ensinamento à gravação transacional que sincroniza o rascunho", async () => {
     const r = await ENSINAR(
       new Request("http://localhost/api/atendente/ensinar", {
         method: "POST",
@@ -419,18 +423,10 @@ describe("POST /api/atendente/ensinar", () => {
       }),
     );
     expect(r.status).toBe(200);
-    expect(db.knowledgeItem.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        companyId: "c1",
+    expect(teachAnswer).toHaveBeenCalledWith("c1", {
         question: "Vocês fazem clareamento?",
         answer: "Sim, fazemos com hora marcada.",
-        status: "APPROVED",
         gapId: "gap1",
-      }),
-    });
-    expect(db.knowledgeGap.updateMany).toHaveBeenCalledWith({
-      where: { id: "gap1", companyId: "c1" },
-      data: { status: "ANSWERED" },
     });
   });
 

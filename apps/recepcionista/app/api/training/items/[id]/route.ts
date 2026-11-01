@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getSessionCompanyId } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 import { logError } from "@/lib/errors";
-import { reviewKnowledgeItem } from "@/lib/training";
+import { deleteKnowledgeItem, reviewKnowledgeItem } from "@/lib/training";
+import { ConfiguracaoErro } from "@/lib/atendente/configuracao";
+import { validarOrigemECsrfe } from "@/lib/seguranca/origem";
 import { reviewItemSchema } from "@/lib/validation";
 import { LIMITES, limitar } from "@/lib/limites";
 import { TOO_MANY_ATTEMPTS } from "@/lib/rate-limit";
@@ -11,6 +12,8 @@ export const dynamic = "force-dynamic";
 
 /** Aprovar (com edição opcional) ou rejeitar um conhecimento sugerido. */
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  const erroOrigem = validarOrigemECsrfe(request, { exigirJson: true });
+  if (erroOrigem) return erroOrigem;
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
@@ -29,6 +32,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     });
     return NextResponse.json({ ok: true });
   } catch (error) {
+    if (error instanceof ConfiguracaoErro) return NextResponse.json({ error: error.message }, { status: error.status });
     await logError("training-review", error, companyId);
     return NextResponse.json({ error: "Erro ao salvar a decisão" }, { status: 500 });
   }
@@ -36,6 +40,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
 /** Excluir um item de conhecimento já ensinado. */
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+  const erroOrigem = validarOrigemECsrfe(request);
+  if (erroOrigem) return erroOrigem;
   const companyId = await getSessionCompanyId();
   if (!companyId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
@@ -44,11 +50,10 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   }
 
   try {
-    await prisma.knowledgeItem.deleteMany({
-      where: { id: params.id, companyId },
-    });
+    await deleteKnowledgeItem(companyId, params.id);
     return NextResponse.json({ ok: true });
   } catch (error) {
+    if (error instanceof ConfiguracaoErro) return NextResponse.json({ error: error.message }, { status: error.status });
     await logError("training-delete", error, companyId);
     return NextResponse.json({ error: "Erro ao excluir o conhecimento" }, { status: 500 });
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ResumoResultados } from "@/lib/atendimento/avaliacao-schema";
 
 interface Reports {
   days: number;
@@ -9,6 +10,7 @@ interface Reports {
   transferred: number;
   leads: number;
   waitingNow: number;
+  outcomes: ResumoResultados;
   topQuestions: { text: string; count: number }[];
   hourly: number[];
 }
@@ -65,12 +67,28 @@ export default function RelatoriosPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <StatCard label="Total de conversas" value={reports.totalConversations} />
+        <StatCard label="Conversas iniciadas no período" value={reports.totalConversations} />
         <StatCard label="Respondidas pelo Atendente" value={reports.aiHandled} accent />
         <StatCard label="Encaminhadas à equipe" value={reports.transferred} />
         <StatCard label="Oportunidades capturadas" value={reports.leads} accent />
         <StatCard label="Aguardando equipe agora" value={reports.waitingNow} />
       </div>
+
+      <section className="rounded-2xl border border-panel-line bg-panel-card p-5">
+        <h2 className="font-display text-lg font-semibold">Resultado dos atendimentos</h2>
+        <p className="mt-1 text-sm text-panel-sub">Avaliações atuais, registradas pelo responsável, das conversas iniciadas neste período. Uma resposta enviada ou um atendimento finalizado não comprovam resolução. Novas mensagens pedem nova avaliação.</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard label="Resolvidas sem intervenção, confirmadas" value={reports.outcomes.resolvedByAttendant} accent />
+          <StatCard label="Resolvidas pela equipe" value={reports.outcomes.resolvedByTeam} />
+          <StatCard label="Precisam de correção" value={reports.outcomes.needsCorrection} />
+          <StatCard label="O responsável precisou assumir" value={reports.outcomes.takenOver} />
+          <StatCard label="Retorno ou novas mensagens" value={reports.outcomes.reopened} />
+          <StatCard label="Resultado ainda desconhecido" value={reports.outcomes.unknown} />
+          <StatCard label="Sem avaliação" value={reports.outcomes.awaitingReview} />
+          <StatCard label="Avaliações atuais" value={reports.outcomes.reviewed} />
+        </div>
+        <p className="mt-3 text-xs text-panel-sub">Abra uma conversa em Clientes para registrar o resultado. Retorno com novas mensagens não é classificado automaticamente como erro do atendente.</p>
+      </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-2xl border border-panel-line bg-panel-card p-6">

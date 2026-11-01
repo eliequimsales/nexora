@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { StatusBadge, STATUS_LABEL } from "@/components/status";
 import { CartaoDaNoite } from "@/components/painel/cartao-da-noite";
 
@@ -15,6 +15,22 @@ interface ConversationRow {
 }
 
 const FILTERS = ["", "AI", "WAITING_HUMAN", "HUMAN", "FINISHED"] as const;
+
+function respostaDeConversasValida(data: unknown): data is { conversations: ConversationRow[]; counts: Record<string, number> } {
+  if (!data || typeof data !== "object") return false;
+  const resposta = data as { conversations?: unknown; counts?: unknown };
+  if (!Array.isArray(resposta.conversations) || !resposta.counts || typeof resposta.counts !== "object" || Array.isArray(resposta.counts)) return false;
+  if (!Object.values(resposta.counts).every((count) => typeof count === "number" && Number.isInteger(count) && count >= 0)) return false;
+  return resposta.conversations.every((item: unknown) => {
+    if (!item || typeof item !== "object") return false;
+    const conversa = item as Partial<ConversationRow>;
+    return typeof conversa.id === "string" && typeof conversa.customerPhone === "string"
+      && (conversa.customerName === null || typeof conversa.customerName === "string")
+      && typeof conversa.status === "string" && typeof conversa.updatedAt === "string" && Number.isFinite(Date.parse(conversa.updatedAt))
+      && (conversa.lastMessage === null || (typeof conversa.lastMessage === "object"
+        && typeof conversa.lastMessage?.role === "string" && typeof conversa.lastMessage?.content === "string"));
+  });
+}
 
 function formatTime(iso: string): string {
   const date = new Date(iso);
@@ -31,16 +47,44 @@ export default function ConversasPage() {
   const [filter, setFilter] = useState<string>("");
   const [busca, setBusca] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [falha, setFalha] = useState<"SESSAO" | "CARREGAMENTO" | null>(null);
+  const pedidoAtual = useRef(0);
+  const consultaEmCurso = useRef<string | null>(null);
 
   const load = useCallback(async () => {
+    // O polling não inicia outra consulta do mesmo filtro enquanto espera a atual.
+    if (consultaEmCurso.current === filter) return;
+    consultaEmCurso.current = filter;
+    const pedido = ++pedidoAtual.current;
+    const controle = new AbortController();
+    const timeout = setTimeout(() => controle.abort(), 20_000);
     try {
-      const res = await fetch(`/api/conversations${filter ? `?status=${filter}` : ""}`);
-      if (!res.ok) return;
-      const data = await res.json();
+      const res = await fetch(`/api/conversations${filter ? `?status=${filter}` : ""}`, { signal: controle.signal });
+      if (pedido !== pedidoAtual.current) return;
+      if (res.status === 401) {
+        setConversations([]);
+        setCounts({});
+        setFalha("SESSAO");
+        return;
+      }
+      if (!res.ok) throw new Error("Falha ao carregar conversas");
+      const data: unknown = await res.json();
+      if (pedido !== pedidoAtual.current) return;
+      if (!respostaDeConversasValida(data)) throw new Error("Resposta de conversas inválida");
       setConversations(data.conversations);
       setCounts(data.counts);
+      setFalha(null);
+    } catch {
+      if (pedido !== pedidoAtual.current) return;
+      setConversations([]);
+      setCounts({});
+      setFalha("CARREGAMENTO");
     } finally {
-      setLoading(false);
+      clearTimeout(timeout);
+      if (pedido === pedidoAtual.current) {
+        consultaEmCurso.current = null;
+        setLoading(false);
+      }
     }
   }, [filter]);
 
@@ -48,7 +92,11 @@ export default function ConversasPage() {
     setLoading(true);
     load();
     const interval = setInterval(load, 10_000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      pedidoAtual.current++;
+      consultaEmCurso.current = null;
+    };
   }, [load]);
 
   const waiting = counts.WAITING_HUMAN ?? 0;
@@ -143,6 +191,21 @@ export default function ConversasPage() {
           <div className="p-12 text-center text-sm text-[#667781]">
             <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-amber border-t-transparent mb-2" />
             <p>Carregando conversas do WhatsApp...</p>
+          </div>
+        ) : falha ? (
+          <div role="alert" className="p-12 text-center">
+            <p className="font-semibold text-[#111B21]">
+              {falha === "SESSAO" ? "Sua sessão terminou. Entre novamente para ver suas conversas." : "Não consegui carregar suas conversas agora."}
+            </p>
+            {falha === "SESSAO" ? (
+              <Link href="/login?next=%2Fpainel%2Fconversas" className="mt-4 inline-flex min-h-10 items-center rounded-xl bg-amber px-4 text-sm font-semibold text-night">
+                Entrar novamente
+              </Link>
+            ) : (
+              <button type="button" onClick={() => { setLoading(true); void load(); }} className="mt-4 min-h-10 rounded-xl bg-amber px-4 text-sm font-semibold text-night">
+                Tentar novamente
+              </button>
+            )}
           </div>
         ) : filtradas.length === 0 ? (
           <div className="p-12 text-center">
