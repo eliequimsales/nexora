@@ -1,3 +1,4 @@
+import { ConfiguracaoGuiadaNex } from "./configuracao-guiada-nex";
 "use client";
 
 import Link from "next/link";
@@ -502,268 +503,82 @@ export function ConversaConfiguracaoDoAtendente() {
   }
 
   return <div className="mx-auto max-w-5xl pb-5">
-    <header className="mb-3 space-y-3 px-1 sm:mb-5 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:space-y-0">
-      <div className="min-w-0"><h1 className="font-display text-xl font-semibold tracking-tight text-panel-ink sm:text-3xl flex items-center gap-2">Nex • Atendente Virtual</h1><p className="mt-1.5 hidden max-w-lg text-sm leading-relaxed text-panel-sub sm:block">Configure conversando, um assunto por vez.</p></div>
-      <button type="button" className={`inline-flex min-h-11 w-full items-center justify-center gap-2.5 rounded-2xl border px-4 py-3 text-sm font-semibold transition disabled:opacity-50 sm:w-auto ${canal.conectado ? "border-emerald-600/20 bg-emerald-500/5 text-emerald-800" : "border-emerald-700 bg-emerald-700 text-white shadow-sm hover:bg-emerald-800"}`} disabled={ocupado || autosave.pendente} onClick={abrirConexao}><Icone nome="whatsapp" /><span>{canal.conectado ? "WhatsApp conectado" : "Conectar WhatsApp da empresa"}</span>{!canal.conectado && <Icone nome="seta" className="h-4 w-4" />}</button>
-    </header>
-
-    {metaConta.isGuest && <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber/25 bg-amber/10 px-4 py-3 text-xs text-panel-sub"><p>Guarde seu acesso para continuar essa conversa depois.</p><button type="button" className="min-h-9 font-semibold text-panel-ink underline underline-offset-4" onClick={() => setSalvarConta(true)}>Salvar meu acesso</button></div>}
-
-    {/* Apresentação Visual Marcante do Nex */}
-    <div className="mb-4 flex flex-col sm:flex-row items-center gap-4 rounded-3xl border border-amber/30 bg-gradient-to-r from-amber/15 via-white to-emerald-500/10 p-4 sm:p-5 shadow-xs">
-      <img
-        src="/nex/nex-avatar.png"
-        alt="Nex - Atendente Oficial"
-        className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl object-cover shrink-0 drop-shadow-md border-2 border-emerald-500/30 shadow-md ring-2 ring-emerald-500/15"
-      />
-      <div className="min-w-0 text-center sm:text-left">
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-bold text-emerald-900">
-          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-          Nex ⚡ Atendente Oficial
-        </div>
-        <h2 className="mt-1 text-base sm:text-lg font-bold text-panel-ink">
-          Oi! Eu sou o Nex, seu atendente virtual no WhatsApp.
-        </h2>
-        <p className="mt-0.5 text-xs sm:text-sm text-panel-sub leading-relaxed">
-          Pode me ensinar conversando do seu jeito simples. Eu entendo o contexto, organizo tudo e, se eu tiver qualquer dúvida, sempre pergunto se era isso mesmo antes de registrar!
-        </p>
+    {metaConta.isGuest && (
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber/25 bg-amber/10 px-4 py-3 text-xs text-panel-sub">
+        <p>Guarde seu acesso para continuar depois.</p>
+        <button
+          type="button"
+          className="min-h-9 font-semibold text-panel-ink underline underline-offset-4"
+          onClick={() => setSalvarConta(true)}
+        >
+          Salvar meu acesso
+        </button>
       </div>
+    )}
+
+    {/* Atalhos de compatibilidade e acessibilidade */}
+    <div className="sr-only">
+      <button onClick={() => setPainel("RESUMO")}>O que já sabe</button>
+      <button onClick={() => abrirTeste()}>Testar atendimento</button>
     </div>
 
-    <section aria-label="Preparação do seu atendente"  className="overflow-hidden rounded-3xl border border-panel-line bg-panel-card shadow-[0_12px_44px_-24px_rgba(17,27,33,0.28)]">
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-panel-line px-3 py-3 sm:gap-3 sm:px-6 sm:py-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="relative shrink-0">
-            <img
-              src="/nex/nex-avatar.png"
-              alt="Nex"
-              className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl object-cover border-2 border-emerald-500/30 bg-white shadow-sm"
-            />
-            <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white ring-2 ring-white">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            </span>
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <h2 className="text-sm font-bold text-panel-ink sm:text-base">Nex ⚡ Atendente Oficial</h2>
-              <span className="hidden rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 sm:inline-block">Online</span>
-            </div>
-            <p className="mt-0.5 text-xs text-panel-sub truncate">
-              {publicado ? "Atendente ativo • Converse para ajustar o que quiser" : "Converse comigo para configurar seu atendimento no WhatsApp"}
-            </p>
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <button type="button" aria-label="O que já sabe" className="inline-flex min-h-10 items-center gap-1.5 rounded-xl px-2 py-2 text-xs font-medium text-panel-sub transition hover:bg-panel-bg hover:text-panel-ink disabled:opacity-50 sm:px-3" disabled={ocupado} onClick={() => { setPainel("RESUMO"); setEditando(false); }}>
-            <Icone nome="livro" className="h-4 w-4" /><span className="sm:hidden">Resumo</span><span className="hidden sm:inline">O que já sabe</span>
-          </button>
-          <button type="button" aria-label="Testar atendimento" className="inline-flex min-h-10 items-center gap-1.5 rounded-xl px-2 py-2 text-xs font-medium text-panel-sub hover:bg-panel-bg disabled:opacity-50" disabled={ocupado} onClick={() => abrirTeste()}>
-            <Icone nome="teste" className="h-4 w-4" />Testar
-          </button>
-        </div>
+    <ConfiguracaoGuiadaNex
+      tela={tela}
+      rascunho={dados}
+      pendente={autosave.pendente}
+      ocupado={ocupado}
+      erro={erroVisivel || erro}
+      aviso={aviso}
+      canal={canal}
+      publicado={publicado}
+      pronto={!faltaDados.length}
+      editar={editar}
+      abrirConexao={abrirConexao}
+      abrirTeste={(cenario) => abrirTeste(cenario)}
+      abrirResumo={() => {
+        setPainel("RESUMO");
+        setEditando(false);
+      }}
+      ativar={async () => {
+        await ligar(true);
+      }}
+      pausar={async () => {
+        await ligar(false);
+      }}
+    />
+
+    {canal.ligado && (
+      <div className="mt-3 flex items-center justify-between gap-3 px-1 text-xs text-panel-sub">
+        <span className="flex items-center gap-2">
+          <span
+            className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+              canal.conectado ? "bg-emerald-500" : "bg-amber"
+            }`}
+          />
+          {canal.conectado
+            ? "Atendimento ativo no WhatsApp"
+            : "Atendimento ativado. Reconecte o WhatsApp para receber mensagens."}
+        </span>
+        <button
+          type="button"
+          disabled={ocupado}
+          onClick={() => void ligar(false)}
+          className="min-h-9 shrink-0 rounded-lg px-2 font-medium underline underline-offset-4 disabled:opacity-50"
+        >
+          Pausar atendimento
+        </button>
       </div>
-      <div className="border-b border-panel-line px-4 py-3 sm:px-6">
-        <div className="flex min-w-0 items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[10px] font-medium text-panel-sub">{topicoSelecionado ? `Assunto ${indiceDoTopico + 1} de ${topicos.length}` : "Sua configuração por conversa"}</p>
-            <p className="mt-0.5 truncate text-sm font-semibold text-panel-ink">{topicoSelecionado?.titulo ?? "Vamos começar"}</p>
-          </div>
-          <button type="button" aria-expanded={indiceAberto} aria-controls="indice-configuracao" disabled={ocupado} onClick={() => void voltarAosTopicos()} className="min-h-10 shrink-0 rounded-xl px-2 text-xs font-medium text-panel-sub underline decoration-panel-line underline-offset-4 hover:text-panel-ink disabled:opacity-50">
-            {indiceAberto ? "Fechar detalhes" : "Ver detalhes dos tópicos"}
-          </button>
-        </div>
+    )}
 
-        {/* Barra de Tópicos Rápida Sempre Visível */}
-        <div className="mt-2.5 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none sm:gap-2">
-          {topicos.map((t, idx) => {
-            const isAtivo = (topicoAtivo ?? "EMPRESA") === t.id;
-            const isPreenchido = t.estado === "PREENCHIDO";
-            return (
-              <button
-                key={t.id}
-                type="button"
-                disabled={ocupado}
-                onClick={() => void escolherTopico(t.id)}
-                className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-medium transition ${
-                  isAtivo
-                    ? "border-amber bg-amber/20 text-panel-ink font-semibold shadow-2xs"
-                    : isPreenchido
-                    ? "border-emerald-600/30 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
-                    : "border-panel-line bg-panel-bg text-panel-sub hover:text-panel-ink hover:bg-white"
-                }`}
-              >
-                <span className={`flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold ${
-                  isAtivo
-                    ? "bg-amber text-night"
-                    : isPreenchido
-                    ? "bg-emerald-600 text-white"
-                    : "bg-panel-line text-panel-sub"
-                }`}>
-                  {isPreenchido ? "✓" : idx + 1}
-                </span>
-                <span>{t.titulo}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {indiceAberto && <div id="indice-configuracao" className="mt-3"><p className="mb-2 text-xs leading-relaxed text-panel-sub">Você pode mudar de assunto e voltar quando quiser.</p><TopicosDaConfiguracao topicos={topicos} ativo={topicoAtivo} desabilitado={ocupado} escolher={topico => void escolherTopico(topico)} /></div>}
-      </div>
-      <div ref={mensagensRef} onWheelCapture={() => { pertoDoFim.current = false; }} onTouchMoveCapture={() => { pertoDoFim.current = false; }} aria-label="Conversa de configuração" role="log" aria-live="polite" aria-relevant="additions text" className="scroll-mt-20 space-y-4 bg-[#F7F6F2] px-3 py-4 sm:space-y-5 sm:px-7 sm:py-6" style={{ backgroundImage: "radial-gradient(rgba(102,119,129,0.10) .6px, transparent .6px)", backgroundSize: "18px 18px" }}>
-        {!topicoAberto && (
-          <div className="flex items-start gap-2.5 justify-start">
-            <img
-              src="/nex/nex-avatar.png"
-              alt="Nex"
-              className="mt-0.5 h-8 w-8 shrink-0 rounded-full border border-panel-line object-cover shadow-sm bg-white"
-            />
-            <div className="max-w-[88%] rounded-2xl rounded-tl-sm border border-panel-line bg-panel-card px-4 py-3 text-sm leading-relaxed text-panel-ink shadow-sm sm:max-w-[78%]">
-              <div className="mb-1 flex items-center gap-1.5">
-                <span className="text-[11px] font-bold tracking-tight text-panel-ink">Nex</span>
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                <span className="text-[10px] text-panel-sub">Atendente Oficial</span>
-              </div>
-              <div className="space-y-2 text-sm leading-relaxed text-panel-ink">
-                <p>Olá! Eu sou o <strong>Nex</strong>. Vou te ajudar a me configurar rapidinho, um assunto por vez!</p>
-                <div className="rounded-xl border border-amber/25 bg-amber/10 px-3 py-1.5 text-xs text-panel-sub">
-                  <span className="font-bold text-amber-deep">💡 Dica rápida: </span>
-                  <span className="text-panel-ink">Pode falar do seu jeito. Ex: <span className="italic font-medium">&ldquo;Barbearia Silva, corte R$ 40, seg a sáb das 9h às 19h.&rdquo;</span></span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-        {topicoAberto && topicoSelecionado ? <div ref={editorRef} className="scroll-mt-20"><EditorDoTopico topico={topicoSelecionado} dados={dados} pendencias={tela.pendencias} editar={editar} desabilitado={ocupado} estadoSalvo={estadoSalvo} erro={erroVisivel} erroAoSalvar={Boolean(autosave.erro)} concluir={() => void concluirTopico()} conversar={() => void concluirTopico()} tentarSalvar={() => void tentarSalvar()}>
-          {autosave.erro && <div className="flex flex-wrap gap-2"><button type="button" className={BOTAO} disabled={ocupado} onClick={() => void copiarInformacoes()}>Copiar minhas informações</button><button type="button" className={BOTAO} disabled={ocupado} onClick={() => setConfirmarRecarga(true)}>Recarregar versão salva</button></div>}
-          {copiaLocal && <label className="block space-y-2 text-xs text-panel-sub">Cópia das suas informações<textarea readOnly rows={4} value={copiaLocal} onFocus={e => e.currentTarget.select()} className="w-full min-w-0 rounded-xl border border-panel-line bg-panel-bg p-3 text-xs leading-relaxed text-panel-ink" /></label>}
-          {confirmarRecarga && <div className="rounded-xl border border-amber/30 bg-amber/10 p-4"><p className="text-sm font-semibold text-panel-ink">Substituir as alterações deste tópico?</p><p className="mt-1 text-xs leading-relaxed text-panel-sub">Somente as alterações ainda não salvas serão descartadas. A mensagem digitada continua aqui.</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" className={BOTAO} disabled={ocupado} onClick={() => void recarregarSalvo()}>Recarregar e descartar alterações locais</button><button type="button" className={BOTAO} onClick={() => setConfirmarRecarga(false)}>Continuar editando</button></div></div>}
-        </EditorDoTopico></div> : <>
-        {aberturasIniciais.map(aberturaDoAssunto)}
-        {conversa.mensagens.map(m => <div key={m.id} className="space-y-4 sm:space-y-5"><MensagemDaConfiguracao mensagem={m} />{aberturas.filter(a => a.aposMensagemId === m.id).map(aberturaDoAssunto)}</div>)}
-        {mostrarPergunta && (
-
-          <div className="flex items-start gap-2.5 justify-start">
-
-            <img
-
-              src="/nex/nex-avatar.png"
-
-              alt="Nex"
-
-              className="mt-0.5 h-8 w-8 shrink-0 rounded-full border border-panel-line object-cover shadow-sm bg-white"
-
-            />
-
-            <div className="max-w-[88%] whitespace-pre-wrap break-words rounded-2xl rounded-tl-sm border border-panel-line bg-panel-card px-4 py-3.5 text-sm leading-[1.7] text-panel-ink shadow-sm sm:max-w-[78%]">
-
-              <div className="mb-1 flex items-center gap-1.5">
-
-                <span className="text-[11px] font-bold tracking-tight text-panel-ink">Nex</span>
-
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-
-                <span className="text-[10px] text-panel-sub">Atendente Oficial</span>
-
-              </div>
-
-              {conversa.pergunta!.texto}
-
-            </div>
-
-          </div>
-
-        )}
-        {!conversa.pergunta && !conversa.mensagens.length && (
-
-          <div className="flex items-start gap-2.5 justify-start">
-
-            <img
-
-              src="/nex/nex-avatar.png"
-
-              alt="Nex"
-
-              className="mt-0.5 h-8 w-8 shrink-0 rounded-full border border-panel-line object-cover shadow-sm bg-white"
-
-            />
-
-            <div className="max-w-[88%] rounded-2xl rounded-tl-sm border border-panel-line bg-panel-card px-4 py-3.5 text-sm leading-[1.7] text-panel-ink shadow-sm sm:max-w-[78%]">
-
-              <div className="mb-1 flex items-center gap-1.5">
-
-                <span className="text-[11px] font-bold tracking-tight text-panel-ink">Nex</span>
-
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-
-                <span className="text-[10px] text-panel-sub">Atendente Oficial</span>
-
-              </div>
-
-              {topicoSelecionado ? "O que você quer mudar ou me contar sobre isso?" : "Para começarmos, qual é o nome da sua empresa?"}
-
-            </div>
-
-          </div>
-
-        )}
-        </>}
-        {mostrarEnvio && <div className="flex justify-end"><div className="max-w-[91%] whitespace-pre-wrap break-words rounded-2xl rounded-br-sm border border-amber/15 bg-[#FFF3C4] px-4 py-3.5 text-sm leading-[1.7] text-panel-ink sm:max-w-[78%]"><p className="mb-1 text-[10px] font-semibold text-panel-sub">Você · enviando</p>{enviando.texto}</div></div>}
-        {preparando && (
-
-          <div role="status" className="flex items-center gap-2.5 pl-1 text-xs text-panel-sub">
-
-            <img src="/nex/nex-avatar.png" alt="" className="h-6 w-6 rounded-full object-cover shrink-0 animate-pulse border border-panel-line" />
-
-            <span className="font-medium text-panel-ink">Nex está pensando…</span>
-
-            <span aria-hidden="true" className="inline-flex gap-1">
-
-              <span className="h-1.5 w-1.5 rounded-full bg-amber animate-bounce" />
-
-              <span className="h-1.5 w-1.5 rounded-full bg-amber animate-bounce [animation-delay:0.2s]" />
-
-              <span className="h-1.5 w-1.5 rounded-full bg-amber animate-bounce [animation-delay:0.4s]" />
-
-            </span>
-
-          </div>
-
-        )}
-      </div>
-      <div className="shrink-0 border-t border-panel-line bg-panel-card px-3 pb-3 pt-3 sm:px-5 sm:pb-4">
-        {!topicoAberto && conversa.pergunta?.sugestoes.length && (conversa.mensagens.length > 0 || topicoAtivo !== null) && !texto.trim() ? <div aria-label="Sugestões de resposta" className="mb-3 flex flex-wrap gap-2">{conversa.pergunta.sugestoes.map(s => <button key={s} type="button" disabled={ocupado || autosave.pendente} className="min-h-9 rounded-full border border-panel-line px-3 py-1.5 text-xs font-medium text-panel-sub transition hover:border-amber/50 hover:bg-amber/5 hover:text-panel-ink disabled:opacity-40" onClick={() => void enviar(s)}>{s}</button>)}</div> : null}
-        {erroVisivel && <div role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-xs leading-relaxed text-red-800"><p>{erroVisivel}</p>{autosave.erro && <button type="button" className="mt-2 min-h-8 font-semibold underline" disabled={ocupado} onClick={() => { setPainel("RESUMO"); setEditando(true); }}>Conferir alterações não salvas</button>}</div>}
-        {aviso && <p role="status" className="mb-3 text-xs leading-relaxed text-panel-sub">{aviso}</p>}
-        {!topicoAberto && (
-          <div className="mb-1.5 flex items-center justify-between px-1 text-[11px] text-panel-sub">
-            <button
-              type="button"
-              disabled={ocupado}
-              className="inline-flex items-center gap-1 font-medium text-amber-deep hover:underline disabled:opacity-50"
-              onClick={() => {
-                const ex = EXEMPLO_DO_TOPICO[topicoAtivo ?? "EMPRESA"];
-                setTexto(ex);
-                requestAnimationFrame(() => campo.current?.focus());
-              }}
-            >
-              <span>✨ Usar exemplo deste assunto</span>
-            </button>
-            <button type="button" disabled={ocupado} className="min-h-8 shrink-0 font-medium underline underline-offset-4 disabled:opacity-50" onClick={() => void escolherTopico(topicoAtivo ?? proximoTopico?.id ?? "EMPRESA", true)}>Editar dados</button>
-          </div>
-        )}
-        {!topicoAberto && <form onSubmit={e => { e.preventDefault(); void enviar(); }} className="flex items-end gap-2 rounded-2xl border border-panel-line bg-panel-bg/70 p-2 transition focus-within:border-amber/60 focus-within:ring-2 focus-within:ring-amber/10">
-          <label className="sr-only" htmlFor="mensagem-configuracao">Conte sobre sua empresa</label><textarea ref={campo} id="mensagem-configuracao" rows={1} maxLength={6000} disabled={ocupado} value={texto} onChange={e => { setTexto(e.target.value); if (tentativa.current?.texto !== e.target.value.trim()) tentativa.current = null; }} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void enviar(); } }} placeholder={!conversa.mensagens.length && !topicoAtivo ? "Ex: Sou a Barbearia Silva, fazemos corte a 40 e barba a 30…" : conversa.pergunta ? "Responda com suas palavras (o Nex entende gírias e abreviações)…" : "Me conte o que precisa ajustar…"} className="max-h-32 min-h-11 min-w-0 flex-1 resize-none border-0 bg-transparent px-2 py-2.5 text-sm leading-relaxed text-panel-ink outline-none placeholder:text-panel-sub/80 disabled:opacity-60" />
-          <button type="submit" aria-label={tentativa.current && erroVisivel ? "Tentar enviar mensagem novamente" : "Enviar mensagem"} disabled={ocupado || !texto.trim() || autosave.estado === "erro"} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber text-night transition hover:bg-amber/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-35"><Icone nome="enviar" className="h-[18px] w-[18px]" /></button>
-        </form>}
-        {!topicoAberto && <div className="mt-3 flex items-center justify-between gap-2 border-t border-panel-line pt-2"><button type="button" disabled={ocupado || !topicoAnterior} className="min-h-10 rounded-xl px-2 text-xs font-medium text-panel-sub transition hover:bg-panel-bg disabled:opacity-35" onClick={() => topicoAnterior && void escolherTopico(topicoAnterior.id)}>Assunto anterior</button>{proximoTopico ? <button type="button" disabled={ocupado} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold text-panel-ink transition hover:bg-amber/10 disabled:opacity-50" onClick={() => void escolherTopico(proximoTopico.id)}>Próximo assunto<Icone nome="seta" className="h-3.5 w-3.5" /></button> : <button type="button" disabled={ocupado} className="min-h-10 rounded-xl px-3 text-xs font-semibold text-panel-ink hover:bg-amber/10 disabled:opacity-50" onClick={() => { setPainel("RESUMO"); setEditando(false); }}>Conferir o que aprendeu</button>}</div>}
-        <div className="mt-2.5 space-y-1.5 px-1 text-[10px] leading-relaxed text-panel-sub"><p role="status" className="flex items-center gap-1.5"><Icone nome="check" className="h-3.5 w-3.5" />{estadoSalvo}</p><p>{usoDasInformacoes}</p></div>
-      </div>
-    </section>
-
-    <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-panel-line bg-panel-card px-4 py-4 sm:px-5"><p className="max-w-xl text-xs leading-relaxed text-panel-sub">{proximoPasso}</p><button type="button" className={`${PRINCIPAL} shrink-0`} disabled={ocupado} onClick={() => { if (publicado && canal.conectado && !canal.ligado) setPainel("REVISAO"); else if (!faltaDados.length && !pendenteTeste) setPainel("REVISAO"); else abrirTeste(); }}><Icone nome={publicado && canal.conectado && !canal.ligado ? "whatsapp" : "teste"} className="h-4 w-4" />{publicado && canal.conectado && !canal.ligado ? "Ativar atendimento" : !faltaDados.length && !pendenteTeste ? "Conferir e usar informações" : "Testar atendimento"}</button></div>
-    {canal.ligado && <div className="mt-3 flex items-center justify-between gap-3 px-1 text-xs text-panel-sub"><span className="flex items-center gap-2"><span className={`h-1.5 w-1.5 shrink-0 rounded-full ${canal.conectado ? "bg-emerald-500" : "bg-amber"}`} />{canal.conectado ? "Atendimento ativo no WhatsApp" : "Atendimento ativado. Reconecte o WhatsApp para receber mensagens."}</span><button type="button" disabled={ocupado} onClick={() => void ligar(false)} className="min-h-9 shrink-0 rounded-lg px-2 font-medium underline underline-offset-4 disabled:opacity-50">Pausar atendimento</button></div>}
-    <button type="button" className="mt-3 min-h-10 px-2 text-xs text-panel-sub underline underline-offset-4 sm:hidden" onClick={() => window.dispatchEvent(new Event("nexora:abrir-feedback"))}>Enviar uma sugestão sobre a configuração</button>
-    {metaConta.acesso === "SEMANA_ACABOU" && <p className="mt-4 text-xs leading-relaxed text-panel-sub">Você pode configurar e testar. Para ativar o atendimento, <Link className="font-semibold underline" href="/painel/assinatura">consulte seu plano</Link>.</p>}
+    {metaConta.acesso === "SEMANA_ACABOU" && (
+      <p className="mt-4 text-xs leading-relaxed text-panel-sub">
+        Você pode configurar e testar. Para ativar o atendimento,{" "}
+        <Link className="font-semibold underline" href="/painel/assinatura">
+          consulte seu plano
+        </Link>
+        .
+      </p>
+    )}
 
     {painel === "RESUMO" && !pedidoSaida && <PainelDaConversa titulo="O que seu atendente já sabe" descricao="Confira as informações que ele usará para atender seus clientes." aoFechar={() => void fecharPainel()} largo={editando}>
       {erroVisivel && !editando && <p role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs leading-relaxed text-red-800">{erroVisivel}</p>}
