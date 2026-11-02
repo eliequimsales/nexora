@@ -4,6 +4,8 @@
   "private": true,
   "description": "Nexora — IA que recupera clientes perdidos automaticamente",
   "scripts": {
+    "build": "pnpm --filter recepcionista build",
+    "build:recepcionista": "pnpm --filter recepcionista build",
     "dev:api": "pnpm --filter api dev",
     "dev:web": "pnpm --filter web dev",
     "dev:app": "pnpm --filter app dev",

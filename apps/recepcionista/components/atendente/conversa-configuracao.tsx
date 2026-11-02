@@ -199,7 +199,11 @@ export function ConversaConfiguracaoDoAtendente() {
   }, [registrarAbertura]);
   const carregar = useCallback(async () => {
     setCarregando(true); setErro("");
-    try { await atualizarConversa(); }
+    try {
+      const telaInicial = await requisitar<TelaConfiguracaoNexa>("/api/atendente/configuracao");
+      autosaveRef.current.iniciar(telaInicial);
+      void atualizarConversa().catch(() => {});
+    }
     catch (e) { setErro((e as Error).message); }
     finally { setCarregando(false); }
   }, [atualizarConversa]);
@@ -449,11 +453,11 @@ export function ConversaConfiguracaoDoAtendente() {
 
   const tela = autosave.tela;
   const dados = autosave.rascunho;
-  if (!tela || !dados || !conversa) return <div className="mx-auto max-w-5xl py-4"><h1 className="font-display text-2xl text-panel-ink">Seu atendente</h1><div className="mt-6 rounded-3xl border border-panel-line bg-panel-card p-8 sm:p-12">{carregando ? <p role="status" className="text-sm text-panel-sub">Preparando sua conversa…</p> : <div role="alert"><p className="text-sm text-panel-ink">{erro || "Não consegui abrir a configuração agora."}</p><button type="button" className={`${BOTAO} mt-4`} onClick={() => void carregar()}>Tentar novamente</button></div>}</div></div>;
+  if (!tela || !dados) return <div className="mx-auto max-w-5xl py-4"><h1 className="font-display text-2xl text-panel-ink">Seu atendente</h1><div className="mt-6 rounded-3xl border border-panel-line bg-panel-card p-8 sm:p-12">{carregando ? <p role="status" className="text-sm text-panel-sub">Preparando seu atendente…</p> : <div role="alert"><p className="text-sm text-panel-ink">{erro || "Não consegui abrir a configuração agora."}</p><button type="button" className={`${BOTAO} mt-4`} onClick={() => void carregar()}>Tentar novamente</button></div>}</div></div>;
 
   const canal = tela.conexao;
   const topicos = resumirTopicosConfiguracao(dados, tela.pendencias).map(topico =>
-    !autosave.pendente && conversa.tela.revisao === tela.revisao
+    !autosave.pendente && conversa && conversa.tela.revisao === tela.revisao
       ? conversa.topicos?.find(salvo => salvo.id === topico.id) ?? topico
       : topico);
   const topicoSelecionado = topicos.find(t => t.id === topicoAtivo);
@@ -471,11 +475,11 @@ export function ConversaConfiguracaoDoAtendente() {
   const publicado = Boolean(tela.publicadoEm && !tela.haAlteracoes && !autosave.pendente);
   const erroVisivel = erro || autosave.erro?.message;
   const aberturasIniciais = aberturas.filter(a => !a.aposMensagemId);
-  const ultimoAtendente = [...conversa.mensagens].reverse().find(m => m.de === "atendente");
-  const mostrarPergunta = conversa.pergunta && chavePerguntaVisivel(conversa) !== null && !ultimoAtendente?.texto.includes(conversa.pergunta.texto);
+  const ultimoAtendente = conversa?.mensagens ? [...conversa.mensagens].reverse().find(m => m.de === "atendente") : null;
+  const mostrarPergunta = Boolean(conversa?.pergunta && chavePerguntaVisivel(conversa) !== null && !ultimoAtendente?.texto.includes(conversa.pergunta.texto));
   const preparando = Boolean(enviando);
-  const mostrarEnvio = enviando && !conversa.mensagens.some(m => m.id === enviando.id);
-  const estadoSalvo = autosave.erro ? "Há alterações sem salvar" : ocupado || autosave.pendente ? "Salvando…" : tentativa.current && erroVisivel ? "Mensagem ainda não confirmada" : "Conversa salva";
+  const mostrarEnvio = Boolean(enviando && !(conversa?.mensagens ?? []).some(m => m.id === enviando.id));
+  const estadoSalvo = autosave.erro ? "Há alterações sem salvar" : ocupado || autosave.pendente ? "Salvando…" : tentativa.current && erroVisivel ? "Mensagem ainda não confirmada" : "Configuração salva";
   const usoDasInformacoes = temInformacoesEmUso
     ? "Informações confirmadas atualizam seu atendente. O que falta esclarecer continua para revisão."
     : "Suas informações ficam salvas para revisão. Confira e teste antes de ativar o atendimento.";
