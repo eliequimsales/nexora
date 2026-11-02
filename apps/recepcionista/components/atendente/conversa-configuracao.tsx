@@ -158,7 +158,7 @@ export function ConversaConfiguracaoDoAtendente() {
   const topicoRef = useRef<TopicoConfiguracao | null>(null);
   const cargaConversa = useRef(0);
   const atualizarAposSalvar = useRef(false);
-  const historicoInicialIds = useRef<Set<string> | null>(null);
+  const carregouInicial = useRef(false);
   const ultimaMensagemVista = useRef<string | null>(null);
   const [conectar, setConectar] = useState(false);
   const [salvarConta, setSalvarConta] = useState(false);
@@ -186,8 +186,8 @@ export function ConversaConfiguracaoDoAtendente() {
     const carga = ++cargaConversa.current;
     const nova = await requisitar<RespostaConversaConfiguracao>(endpointConversa(alvo));
     if (carga === cargaConversa.current && alvo === topicoRef.current && autosaveRef.current.sincronizar(nova.tela)) {
-      const primeiraCarga = historicoInicialIds.current === null;
-      if (primeiraCarga) historicoInicialIds.current = new Set(nova.mensagens.map(m => m.id));
+      const primeiraCarga = !carregouInicial.current;
+      if (primeiraCarga) carregouInicial.current = true;
       const efetivo = nova.topicoAtual !== undefined ? nova.topicoAtual : alvo;
       if (efetivo && (primeiraCarga || efetivo !== topicoRef.current)) registrarAbertura(efetivo, nova.mensagens.at(-1)?.id ?? null);
       topicoRef.current = efetivo; setTopicoAtivo(efetivo);
@@ -240,7 +240,7 @@ export function ConversaConfiguracaoDoAtendente() {
     const ultima = conversa?.mensagens.at(-1)?.id ?? null;
     const mudou = ultima !== ultimaMensagemVista.current;
     ultimaMensagemVista.current = ultima;
-    if (!mudou || !pertoDoFim.current || topicoAberto || !ultima || historicoInicialIds.current?.has(ultima)) return;
+    if (!mudou || !pertoDoFim.current || topicoAberto || !ultima) return;
     campo.current?.scrollIntoView({ block: "nearest", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }, [conversa?.mensagens, conversa?.pergunta?.texto, enviando, topicoAberto]);
   useEffect(() => {
@@ -271,9 +271,7 @@ export function ConversaConfiguracaoDoAtendente() {
   function chavePerguntaVisivel(estado: RespostaConversaConfiguracao | null) {
     const pergunta = estado?.pergunta;
     if (!pergunta) return null;
-    const visivel = topicoRef.current !== null || pergunta.chave.startsWith("esclarecimento:")
-      || estado.mensagens.some(m => !historicoInicialIds.current?.has(m.id));
-    return visivel ? pergunta.chave : null;
+    return pergunta.chave;
   }
 
   async function enviar(mensagem = texto) {
@@ -471,10 +469,8 @@ export function ConversaConfiguracaoDoAtendente() {
   const temInformacoesEmUso = Boolean(tela.publicadoEm);
   const publicado = Boolean(tela.publicadoEm && !tela.haAlteracoes && !autosave.pendente);
   const erroVisivel = erro || autosave.erro?.message;
-  const mensagensAnteriores = conversa.mensagens.filter(m => historicoInicialIds.current?.has(m.id));
-  const mensagensDaVisita = conversa.mensagens.filter(m => !historicoInicialIds.current?.has(m.id));
-  const aberturasIniciais = aberturas.filter(a => !a.aposMensagemId || historicoInicialIds.current?.has(a.aposMensagemId));
-  const ultimoAtendente = [...mensagensDaVisita].reverse().find(m => m.de === "atendente");
+  const aberturasIniciais = aberturas.filter(a => !a.aposMensagemId);
+  const ultimoAtendente = [...conversa.mensagens].reverse().find(m => m.de === "atendente");
   const mostrarPergunta = conversa.pergunta && chavePerguntaVisivel(conversa) !== null && !ultimoAtendente?.texto.includes(conversa.pergunta.texto);
   const preparando = Boolean(enviando);
   const mostrarEnvio = enviando && !conversa.mensagens.some(m => m.id === enviando.id);
@@ -660,9 +656,8 @@ export function ConversaConfiguracaoDoAtendente() {
           {copiaLocal && <label className="block space-y-2 text-xs text-panel-sub">Cópia das suas informações<textarea readOnly rows={4} value={copiaLocal} onFocus={e => e.currentTarget.select()} className="w-full min-w-0 rounded-xl border border-panel-line bg-panel-bg p-3 text-xs leading-relaxed text-panel-ink" /></label>}
           {confirmarRecarga && <div className="rounded-xl border border-amber/30 bg-amber/10 p-4"><p className="text-sm font-semibold text-panel-ink">Substituir as alterações deste tópico?</p><p className="mt-1 text-xs leading-relaxed text-panel-sub">Somente as alterações ainda não salvas serão descartadas. A mensagem digitada continua aqui.</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" className={BOTAO} disabled={ocupado} onClick={() => void recarregarSalvo()}>Recarregar e descartar alterações locais</button><button type="button" className={BOTAO} onClick={() => setConfirmarRecarga(false)}>Continuar editando</button></div></div>}
         </EditorDoTopico></div> : <>
-        {mensagensAnteriores.length > 0 && <details className="rounded-2xl border border-panel-line bg-panel-card px-4 py-3" aria-live="off"><summary className="cursor-pointer text-xs font-medium text-panel-sub marker:text-panel-sub">Ver conversa anterior</summary><div className="mt-4 space-y-4">{mensagensAnteriores.map(m => <MensagemDaConfiguracao key={m.id} mensagem={m} />)}</div></details>}
         {aberturasIniciais.map(aberturaDoAssunto)}
-        {mensagensDaVisita.map(m => <div key={m.id} className="space-y-4 sm:space-y-5"><MensagemDaConfiguracao mensagem={m} />{aberturas.filter(a => a.aposMensagemId === m.id).map(aberturaDoAssunto)}</div>)}
+        {conversa.mensagens.map(m => <div key={m.id} className="space-y-4 sm:space-y-5"><MensagemDaConfiguracao mensagem={m} />{aberturas.filter(a => a.aposMensagemId === m.id).map(aberturaDoAssunto)}</div>)}
         {mostrarPergunta && (
 
           <div className="flex items-start gap-2.5 justify-start">
@@ -696,7 +691,7 @@ export function ConversaConfiguracaoDoAtendente() {
           </div>
 
         )}
-        {!conversa.pergunta && !mensagensDaVisita.length && (
+        {!conversa.pergunta && !conversa.mensagens.length && (
 
           <div className="flex items-start gap-2.5 justify-start">
 
@@ -754,7 +749,7 @@ export function ConversaConfiguracaoDoAtendente() {
         )}
       </div>
       <div className="shrink-0 border-t border-panel-line bg-panel-card px-3 pb-3 pt-3 sm:px-5 sm:pb-4">
-        {!topicoAberto && conversa.pergunta?.sugestoes.length && (mensagensDaVisita.length > 0 || topicoAtivo !== null) && !texto.trim() ? <div aria-label="Sugestões de resposta" className="mb-3 flex flex-wrap gap-2">{conversa.pergunta.sugestoes.map(s => <button key={s} type="button" disabled={ocupado || autosave.pendente} className="min-h-9 rounded-full border border-panel-line px-3 py-1.5 text-xs font-medium text-panel-sub transition hover:border-amber/50 hover:bg-amber/5 hover:text-panel-ink disabled:opacity-40" onClick={() => void enviar(s)}>{s}</button>)}</div> : null}
+        {!topicoAberto && conversa.pergunta?.sugestoes.length && (conversa.mensagens.length > 0 || topicoAtivo !== null) && !texto.trim() ? <div aria-label="Sugestões de resposta" className="mb-3 flex flex-wrap gap-2">{conversa.pergunta.sugestoes.map(s => <button key={s} type="button" disabled={ocupado || autosave.pendente} className="min-h-9 rounded-full border border-panel-line px-3 py-1.5 text-xs font-medium text-panel-sub transition hover:border-amber/50 hover:bg-amber/5 hover:text-panel-ink disabled:opacity-40" onClick={() => void enviar(s)}>{s}</button>)}</div> : null}
         {erroVisivel && <div role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-xs leading-relaxed text-red-800"><p>{erroVisivel}</p>{autosave.erro && <button type="button" className="mt-2 min-h-8 font-semibold underline" disabled={ocupado} onClick={() => { setPainel("RESUMO"); setEditando(true); }}>Conferir alterações não salvas</button>}</div>}
         {aviso && <p role="status" className="mb-3 text-xs leading-relaxed text-panel-sub">{aviso}</p>}
         {!topicoAberto && (
@@ -775,7 +770,7 @@ export function ConversaConfiguracaoDoAtendente() {
           </div>
         )}
         {!topicoAberto && <form onSubmit={e => { e.preventDefault(); void enviar(); }} className="flex items-end gap-2 rounded-2xl border border-panel-line bg-panel-bg/70 p-2 transition focus-within:border-amber/60 focus-within:ring-2 focus-within:ring-amber/10">
-          <label className="sr-only" htmlFor="mensagem-configuracao">Conte sobre sua empresa</label><textarea ref={campo} id="mensagem-configuracao" rows={1} maxLength={6000} disabled={ocupado} value={texto} onChange={e => { setTexto(e.target.value); if (tentativa.current?.texto !== e.target.value.trim()) tentativa.current = null; }} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void enviar(); } }} placeholder={!mensagensDaVisita.length && !topicoAtivo ? "Ex: Sou a Barbearia Silva, fazemos corte a 40 e barba a 30…" : conversa.pergunta ? "Responda com suas palavras (o Nex entende gírias e abreviações)…" : "Me conte o que precisa ajustar…"} className="max-h-32 min-h-11 min-w-0 flex-1 resize-none border-0 bg-transparent px-2 py-2.5 text-sm leading-relaxed text-panel-ink outline-none placeholder:text-panel-sub/80 disabled:opacity-60" />
+          <label className="sr-only" htmlFor="mensagem-configuracao">Conte sobre sua empresa</label><textarea ref={campo} id="mensagem-configuracao" rows={1} maxLength={6000} disabled={ocupado} value={texto} onChange={e => { setTexto(e.target.value); if (tentativa.current?.texto !== e.target.value.trim()) tentativa.current = null; }} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void enviar(); } }} placeholder={!conversa.mensagens.length && !topicoAtivo ? "Ex: Sou a Barbearia Silva, fazemos corte a 40 e barba a 30…" : conversa.pergunta ? "Responda com suas palavras (o Nex entende gírias e abreviações)…" : "Me conte o que precisa ajustar…"} className="max-h-32 min-h-11 min-w-0 flex-1 resize-none border-0 bg-transparent px-2 py-2.5 text-sm leading-relaxed text-panel-ink outline-none placeholder:text-panel-sub/80 disabled:opacity-60" />
           <button type="submit" aria-label={tentativa.current && erroVisivel ? "Tentar enviar mensagem novamente" : "Enviar mensagem"} disabled={ocupado || !texto.trim() || autosave.estado === "erro"} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber text-night transition hover:bg-amber/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-35"><Icone nome="enviar" className="h-[18px] w-[18px]" /></button>
         </form>}
         {!topicoAberto && <div className="mt-3 flex items-center justify-between gap-2 border-t border-panel-line pt-2"><button type="button" disabled={ocupado || !topicoAnterior} className="min-h-10 rounded-xl px-2 text-xs font-medium text-panel-sub transition hover:bg-panel-bg disabled:opacity-35" onClick={() => topicoAnterior && void escolherTopico(topicoAnterior.id)}>Assunto anterior</button>{proximoTopico ? <button type="button" disabled={ocupado} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold text-panel-ink transition hover:bg-amber/10 disabled:opacity-50" onClick={() => void escolherTopico(proximoTopico.id)}>Próximo assunto<Icone nome="seta" className="h-3.5 w-3.5" /></button> : <button type="button" disabled={ocupado} className="min-h-10 rounded-xl px-3 text-xs font-semibold text-panel-ink hover:bg-amber/10 disabled:opacity-50" onClick={() => { setPainel("RESUMO"); setEditando(false); }}>Conferir o que aprendeu</button>}</div>}
