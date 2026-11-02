@@ -1,6 +1,6 @@
-import { ConfiguracaoGuiadaNex } from "./configuracao-guiada-nex";
 "use client";
 
+import { ConfiguracaoGuiadaNex } from "./configuracao-guiada-nex";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
