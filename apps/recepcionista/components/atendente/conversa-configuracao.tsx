@@ -617,36 +617,18 @@ export function ConversaConfiguracaoDoAtendente() {
               alt="Nex"
               className="mt-0.5 h-8 w-8 shrink-0 rounded-full border border-panel-line object-cover shadow-sm bg-white"
             />
-            <div className="max-w-[88%] rounded-2xl rounded-tl-sm border border-panel-line bg-panel-card px-4 py-3.5 text-sm leading-[1.7] text-panel-ink shadow-sm sm:max-w-[78%]">
+            <div className="max-w-[88%] rounded-2xl rounded-tl-sm border border-panel-line bg-panel-card px-4 py-3 text-sm leading-relaxed text-panel-ink shadow-sm sm:max-w-[78%]">
               <div className="mb-1 flex items-center gap-1.5">
                 <span className="text-[11px] font-bold tracking-tight text-panel-ink">Nex</span>
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
                 <span className="text-[10px] text-panel-sub">Atendente Oficial</span>
               </div>
-              <div className="space-y-2.5">
-
-                <p>Olá! Eu sou o <strong>Nex</strong>, seu novo atendente virtual. Vou te ajudar a me configurar rapidinho, um assunto por vez!</p>
-
-                <div className="rounded-xl border border-amber/30 bg-amber/10 p-3 text-xs leading-relaxed text-panel-ink">
-
-                  <p className="font-semibold text-amber-950 mb-1">💡 Exemplo de como você pode me ensinar:</p>
-
-                  <p className="text-panel-sub">Você pode mandar tudo em uma única mensagem ou aos poucos. Veja este exemplo:</p>
-
-                  <p className="mt-1.5 font-medium italic text-panel-ink bg-white/70 p-2.5 rounded-lg border border-amber/20 shadow-xs">
-
-                    “Sou a Barbearia Silva, fazemos corte a R$ 40 e barba a R$ 30 (cabelo varia pelo tamanho). Atendemos de seg a sáb das 9h às 19h na Rua das Flores, 123. Aceitamos Pix e cartão.”
-
-                  </p>
-
-                  <p className="mt-1.5 text-[11px] text-panel-sub">
-
-                    Não se preocupe com termos formais: pode falar do seu jeito, com gírias ou abreviações. <strong>E se eu tiver qualquer dúvida, sempre pergunto se era isso mesmo antes de salvar!</strong>
-
-                  </p>
-
+              <div className="space-y-2 text-sm leading-relaxed text-panel-ink">
+                <p>Olá! Eu sou o <strong>Nex</strong>. Vou te ajudar a me configurar rapidinho, um assunto por vez!</p>
+                <div className="rounded-xl border border-amber/25 bg-amber/10 px-3 py-1.5 text-xs text-panel-sub">
+                  <span className="font-bold text-amber-deep">💡 Dica rápida: </span>
+                  <span className="text-panel-ink">Pode falar do seu jeito. Ex: <span className="italic font-medium">&ldquo;Barbearia Silva, corte R$ 40, seg a sáb das 9h às 19h.&rdquo;</span></span>
                 </div>
-
               </div>
             </div>
           </div>
