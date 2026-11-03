@@ -1,5 +1,7 @@
 "use client";
 
+import { SimuladorWhatsAppCelular } from "./simulador-whatsapp-celular";
+
 import { useState } from "react";
 import type {
   ConfiguracaoNexa,
@@ -1180,62 +1182,33 @@ export function ConfiguracaoGuiadaNex({
               </p>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Card 1: Teste ao Vivo */}
-              <div className="flex flex-col justify-between rounded-2xl border border-panel-line bg-panel-bg/40 p-5">
-                <div>
-                  <div className="flex items-center gap-2 text-sm font-bold text-panel-ink">
-                    <span>📱</span>
-                    <span>Simulador do WhatsApp em Tempo Real</span>
-                  </div>
+            <div className="grid gap-8 lg:grid-cols-12 items-start">
+              {/* Card 1: Simulador do WhatsApp em Smartphone Realista */}
+              <div className="lg:col-span-7 flex flex-col items-center">
+                <div className="w-full mb-3 text-center sm:text-left">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-900">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Simulador do WhatsApp em Tempo Real
+                  </span>
                   <p className="mt-1 text-xs text-panel-sub">
-                    Envie perguntas de teste para conferir como o Nex responde com base no que você configurou.
+                    Experimente uma conversa real no WhatsApp para ver o Nex atendendo seus clientes com base no que você acabou de configurar.
                   </p>
-
-                  <div className="mt-4 space-y-2">
-                    <p className="text-[11px] font-bold text-panel-ink">
-                      Perguntas rápidas para testar:
-                    </p>
-                    <div className="flex flex-col gap-1.5">
-                      <button
-                        type="button"
-                        className="rounded-xl border border-panel-line bg-panel-card px-3 py-2 text-left text-xs font-medium text-panel-ink hover:border-amber"
-                        onClick={() => abrirTeste("INFORMACOES")}
-                      >
-                        💬 &ldquo;Quais são os serviços e valores de vocês?&rdquo;
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-xl border border-panel-line bg-panel-card px-3 py-2 text-left text-xs font-medium text-panel-ink hover:border-amber"
-                        onClick={() => abrirTeste("INFORMACOES")}
-                      >
-                        📍 &ldquo;Qual o horário de atendimento e endereço?&rdquo;
-                      </button>
-                      {usaAgenda && (
-                        <button
-                          type="button"
-                          className="rounded-xl border border-panel-line bg-panel-card px-3 py-2 text-left text-xs font-medium text-panel-ink hover:border-amber"
-                          onClick={() => abrirTeste("HORARIO")}
-                        >
-                          📅 &ldquo;Quero agendar um horário para amanhã&rdquo;
-                        </button>
-                      )}
-                    </div>
-                  </div>
                 </div>
 
-                <button
-                  type="button"
-                  className={`${PRINCIPAL} mt-5 w-full text-center`}
-                  onClick={() => abrirTeste()}
-                >
-                  Abrir Simulador Completo
-                </button>
+                <SimuladorWhatsAppCelular
+                  nomeEmpresa={d.negocio.nome || "Minha Empresa"}
+                  nomeAtendente={d.atendimento.nome || "Nex"}
+                  tela={tela}
+                  ocupado={ocupado}
+                  sujo={pendente}
+                  erro={erro}
+                  mostrarControlesExternos={true}
+                />
               </div>
 
-              {/* Card 2: Conexão do WhatsApp */}
-              <div className="flex flex-col justify-between rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5">
-                <div>
+              {/* Card 2: Conexão do WhatsApp & Ativação */}
+              <div className="lg:col-span-5 flex flex-col gap-4">
+                <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5 shadow-xs">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-sm font-bold text-panel-ink">
                       <span>🟢</span>
@@ -1266,28 +1239,46 @@ export function ConfiguracaoGuiadaNex({
                         : "Pausado (aguardando você ativar)"}
                     </span>
                   </div>
-                </div>
 
-                <div className="mt-5 space-y-2">
-                  <button
-                    type="button"
-                    className="w-full inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-emerald-700"
-                    onClick={abrirConexao}
-                  >
-                    💬 {canal.conectado ? "Conferir Conexão WhatsApp" : "Conectar WhatsApp via QR Code"}
-                  </button>
-
-                  {canal.conectado && (
+                  <div className="mt-5 space-y-2">
                     <button
                       type="button"
-                      className="w-full inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-panel-line bg-panel-card px-4 py-2 text-xs font-bold text-panel-ink hover:bg-panel-bg"
-                      onClick={() => (canal.ligado ? pausar() : ativar())}
-                      disabled={ocupado}
+                      className="w-full inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 transition"
+                      onClick={abrirConexao}
                     >
-                      {canal.ligado ? "Pausar Atendente" : "Ativar Atendente no WhatsApp"}
+                      💬 {canal.conectado ? "Conferir Conexão WhatsApp" : "Conectar WhatsApp via QR Code"}
                     </button>
-                  )}
+
+                    {canal.conectado && (
+                      <button
+                        type="button"
+                        className="w-full inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-panel-line bg-panel-card px-4 py-2 text-xs font-bold text-panel-ink hover:bg-panel-bg transition"
+                        onClick={() => (canal.ligado ? pausar() : ativar())}
+                        disabled={ocupado}
+                      >
+                        {canal.ligado ? "Pausar Atendente" : "Ativar Atendente no WhatsApp"}
+                      </button>
+                    )}
+                  </div>
                 </div>
+
+                <div className="rounded-2xl border border-panel-line bg-panel-card p-4 text-xs text-panel-sub space-y-2 shadow-2xs">
+                  <div className="flex items-center gap-2 font-bold text-panel-ink">
+                    <span>💡</span>
+                    <span>Como funciona a simulação:</span>
+                  </div>
+                  <p className="leading-relaxed">
+                    O simulador ao lado é 100% seguro: nenhuma mensagem é enviada para clientes reais. Ele utiliza em tempo real seus serviços, horários e jeito de atender cadastrados.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className={`${BOTAO} w-full text-center`}
+                  onClick={() => abrirTeste()}
+                >
+                  🔍 Abrir Teste em Janela Cheia
+                </button>
               </div>
             </div>
           </section>
