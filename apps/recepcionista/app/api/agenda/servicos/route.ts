@@ -56,6 +56,46 @@ export async function POST(request: Request) {
       priceCents: parsed.data.precoCents,
     });
 
+    // Sincroniza de volta para a configuração do atendente Nex
+    if (prisma.companyProfile?.findUnique && prisma.companyProfile?.updateMany) {
+      try {
+        const perfil = await prisma.companyProfile.findUnique({
+          where: { companyId },
+          select: { atendenteConfiguracao: true },
+        });
+        if (perfil?.atendenteConfiguracao) {
+          const configJson = structuredClone(perfil.atendenteConfiguracao) as any;
+          if (configJson?.rascunho?.informacoes?.servicos) {
+            const jaExiste = configJson.rascunho.informacoes.servicos.some(
+              (s: any) => s.id === servico.id || s.nome.toLowerCase().trim() === servico.name.toLowerCase().trim()
+            );
+            if (!jaExiste) {
+              const novoItem = {
+                id: servico.id,
+                nome: servico.name,
+                descricao: "",
+                precoModo: (servico.priceCents ?? 0) > 0 ? "FIXO" : "SOB_CONSULTA",
+                precoCents: (servico.priceCents ?? 0) > 0 ? servico.priceCents : null,
+                duracaoMin: servico.durationMin > 0 ? servico.durationMin : 30,
+                situacao: "CONFIRMADO",
+                origem: "MANUAL",
+              };
+              configJson.rascunho.informacoes.servicos.push(novoItem);
+              if (configJson.publicado?.rascunho?.informacoes?.servicos) {
+                configJson.publicado.rascunho.informacoes.servicos.push(structuredClone(novoItem));
+              }
+              await prisma.companyProfile.updateMany({
+                where: { companyId },
+                data: { atendenteConfiguracao: configJson },
+              });
+            }
+          }
+        }
+      } catch {
+        // Silencioso para não bloquear a criação do serviço na agenda
+      }
+    }
+
     return NextResponse.json({ ok: true, servico }, { status: 201 });
   } catch (error) {
     await logError("agenda-servicos-post", error, companyId);

@@ -1760,14 +1760,66 @@ export default function PaginaAgenda() {
               )}
 
               <div>
-                <label className="block text-xs font-bold text-panel-ink mb-1">
-                  Serviço (opcional)
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-panel-ink">
+                    Serviço (opcional)
+                  </label>
+                  {formServicoNome && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormServicoId("");
+                        setFormServicoNome("");
+                      }}
+                      className="text-[11px] text-panel-sub hover:text-amber transition font-medium"
+                    >
+                      Limpar seleção
+                    </button>
+                  )}
+                </div>
+
+                {servicos.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {servicos.map((s) => {
+                      const selecionado =
+                        formServicoNome.toLowerCase().trim() === s.name.toLowerCase().trim();
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => {
+                            setFormServicoId(s.id);
+                            setFormServicoNome(s.name);
+                          }}
+                          className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition border ${
+                            selecionado
+                              ? "bg-amber text-night border-amber shadow-2xs font-bold"
+                              : "bg-panel-bg text-panel-ink border-panel-line hover:border-amber/60 hover:bg-amber-soft/20"
+                          }`}
+                        >
+                          {s.name} {s.priceCents > 0 ? `(${formatarEmReais(s.priceCents)})` : ""}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
                 <input
                   type="text"
-                  placeholder="Nome do serviço (ex: Corte, Consulta...)"
+                  placeholder="Nome do serviço (ou clique em um dos serviços acima)..."
                   value={formServicoNome}
-                  onChange={(e) => setFormServicoNome(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormServicoNome(val);
+                    const correspondente = servicos.find(
+                      (s) => s.name.toLowerCase().trim() === val.toLowerCase().trim()
+                    );
+                    if (correspondente) {
+                      setFormServicoId(correspondente.id);
+                    } else {
+                      setFormServicoId("");
+                    }
+                  }}
                   className="w-full rounded-xl border border-panel-line bg-white px-3.5 py-2.5 text-xs text-panel-ink placeholder:text-panel-sub/50 focus:border-amber focus:ring-1 focus:ring-amber shadow-2xs outline-none"
                 />
               </div>

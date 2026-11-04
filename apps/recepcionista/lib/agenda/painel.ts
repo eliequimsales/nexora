@@ -651,7 +651,7 @@ export async function listarServicos(companyId: string) {
     })
     .catch(() => {});
 
-  return prisma.service.findMany({
+  let servicosDb = await prisma.service.findMany({
     where: {
       companyId,
       active: true,
@@ -665,6 +665,79 @@ export async function listarServicos(companyId: string) {
       priceCents: true,
     },
   });
+
+  // Sincronização automática com a configuração do Nex:
+  // Se houver serviços cadastrados no atendente que ainda não estão em prisma.service,
+  // sincroniza imediatamente para que a agenda nunca fique desatualizada.
+  if (prisma.companyProfile?.findUnique && prisma.service?.create) {
+    try {
+      const perfil = await prisma.companyProfile.findUnique({
+        where: { companyId },
+        select: { atendenteConfiguracao: true },
+      });
+      const configJson = perfil?.atendenteConfiguracao as Record<string, unknown> | null;
+      const rascunho = (configJson as { rascunho?: { informacoes?: { servicos?: unknown[] } } })?.rascunho;
+      const publicado = (configJson as { publicado?: { rascunho?: { informacoes?: { servicos?: unknown[] } } } })?.publicado?.rascunho;
+      const servicosConfig = rascunho?.informacoes?.servicos || publicado?.informacoes?.servicos || [];
+
+      if (Array.isArray(servicosConfig) && servicosConfig.length > 0) {
+        const nomesAtivos = new Set(servicosDb.map((s) => s.name.toLowerCase().trim()));
+        let sincronizou = false;
+
+        for (let i = 0; i < servicosConfig.length; i++) {
+          const sc = servicosConfig[i] as {
+            nome?: string;
+            duracaoMin?: number | null;
+            precoCents?: number | null;
+            precoModo?: string;
+            situacao?: string;
+          };
+          if (!sc?.nome || typeof sc.nome !== "string" || sc.nome.trim().length < 2) continue;
+          if (sc.situacao && sc.situacao !== "CONFIRMADO") continue;
+          const nomeLimpo = sc.nome.trim();
+
+          if (!nomesAtivos.has(nomeLimpo.toLowerCase())) {
+            const duracao = sc.duracaoMin && Number(sc.duracaoMin) > 0 ? Number(sc.duracaoMin) : 30;
+            const preco = sc.precoModo === "FIXO" && sc.precoCents ? Number(sc.precoCents) : 0;
+            await prisma.service.create({
+              data: {
+                companyId,
+                name: nomeLimpo,
+                durationMin: duracao,
+                priceCents: preco,
+                active: true,
+                suggested: false,
+                order: i,
+              },
+            });
+            nomesAtivos.add(nomeLimpo.toLowerCase());
+            sincronizou = true;
+          }
+        }
+
+        if (sincronizou) {
+          servicosDb = await prisma.service.findMany({
+            where: {
+              companyId,
+              active: true,
+              NOT: { name: { contains: "lavagem de cabelo", mode: "insensitive" } },
+            },
+            orderBy: { order: "asc" },
+            select: {
+              id: true,
+              name: true,
+              durationMin: true,
+              priceCents: true,
+            },
+          });
+        }
+      }
+    } catch {
+      // Silencioso para não bloquear a listagem de serviços
+    }
+  }
+
+  return servicosDb;
 }
 
 /**

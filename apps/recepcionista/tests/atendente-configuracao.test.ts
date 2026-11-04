@@ -125,6 +125,23 @@ describe("edições conectadas à fonte ativa e à agenda", () => {
     expect(servicos.find(s => s.companyId === "c2")?.active).toBe(true);
     expect(lerConfiguracaoPublicada(perfil.atendenteConfiguracao)?.informacoes.servicos).toEqual([]);
   });
+
+  it("cadastrar serviço no rascunho vincula automaticamente à agenda mesmo antes de publicar", async () => {
+    const e = envelope();
+    e.publicado = null; // Ainda em configuração / rascunho
+    perfil.atendenteConfiguracao = e;
+    const c = clone(e.rascunho);
+    c.informacoes.servicos = [
+      { id: "novo:corte-degrade", nome: "Corte Degradê", descricao: "", precoModo: "FIXO", precoCents: 5500, duracaoMin: 45, situacao: "CONFIRMADO", origem: "MANUAL" }
+    ];
+    const r = await salvarConfiguracao("c1", { revisao: e.revisao, rascunho: c, etapa: 1 });
+    expect(r.rascunho.informacoes.servicos[0].nome).toBe("Corte Degradê");
+    expect(servicos).toHaveLength(1);
+    expect(servicos[0].name).toBe("Corte Degradê");
+    expect(servicos[0].priceCents).toBe(5500);
+    expect(servicos[0].durationMin).toBe(45);
+    expect(servicos[0].active).toBe(true);
+  });
 });
 
 describe("rascunho separado do atendimento publicado", () => {

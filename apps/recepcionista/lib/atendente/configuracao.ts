@@ -343,7 +343,56 @@ async function gravar(companyId: string, original: unknown, e: EnvelopeConfigura
 /** Uma edição confirmada atualiza somente seu delta na versão ativa e na agenda, atomicamente. */
 async function gravarEvolucaoDaConfiguracao(companyId: string, l: Awaited<ReturnType<typeof carregar>>, novo: EnvelopeConfiguracaoNexa) {
   const anterior = l.envelope.publicado;
-  if (!anterior || mesmo(l.envelope.rascunho, novo.rascunho)) {
+  if (!anterior) {
+    const servicosMudaram = !mesmo(l.envelope.rascunho.informacoes.servicos, novo.rascunho.informacoes.servicos);
+    const temServicosValidos = novo.rascunho.informacoes.servicos.some(s => s.situacao === "CONFIRMADO" && s.nome.trim().length >= 2);
+    if (servicosMudaram && temServicosValidos && typeof prisma.service?.create === "function") {
+      const executar = typeof prisma.$transaction === "function"
+        ? (fn: (tx: Prisma.TransactionClient) => Promise<unknown>) => prisma.$transaction(fn, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
+        : (fn: (tx: Prisma.TransactionClient) => Promise<unknown>) => fn(prisma as unknown as Prisma.TransactionClient);
+
+      return (await executar(async (tx) => {
+        const mapaIds = new Map<string, string>();
+        for (let order = 0; order < novo.rascunho.informacoes.servicos.length; order++) {
+          const s = novo.rascunho.informacoes.servicos[order];
+          if (s.nome.trim().length < 2 || s.situacao !== "CONFIRMADO") continue;
+          const data = {
+            name: s.nome.trim(),
+            priceCents: s.precoModo === "FIXO" ? s.precoCents ?? 0 : 0,
+            durationMin: s.duracaoMin && s.duracaoMin > 0 ? s.duracaoMin : 30,
+            active: true,
+            suggested: false,
+            order,
+          };
+          if (s.id.startsWith("novo:")) {
+            if (tx.service?.create) {
+              const id = (await tx.service.create({ data: { companyId, ...data }, select: { id: true } })).id;
+              mapaIds.set(s.id, id);
+              s.id = id;
+            }
+          } else if (tx.service?.updateMany) {
+            const escrita = await tx.service.updateMany({ where: { companyId, id: s.id }, data });
+            if (escrita.count === 0 && tx.service?.create) {
+              const created = await tx.service.create({ data: { id: s.id, companyId, ...data }, select: { id: true } });
+              mapaIds.set(s.id, created.id);
+              s.id = created.id;
+            }
+          }
+        }
+        const idsAtuais = new Set(novo.rascunho.informacoes.servicos.map(s => s.id));
+        const removidos = l.envelope.rascunho.informacoes.servicos.filter(s => !idsAtuais.has(s.id) && !s.id.startsWith("novo:"));
+        if (removidos.length && tx.service?.updateMany) {
+          await tx.service.updateMany({ where: { companyId, id: { in: removidos.map(s => s.id) } }, data: { active: false } });
+        }
+        for (const s of novo.rascunho.informacoes.servicos) s.id = mapaIds.get(s.id) ?? s.id;
+        await gravar(companyId, l.original, envelopeSchema.parse(novo), tx);
+        return carregar(companyId, tx);
+      })) as Awaited<ReturnType<typeof carregar>>;
+    }
+    await gravar(companyId, l.original, novo);
+    return { ...l, envelope: novo };
+  }
+  if (mesmo(l.envelope.rascunho, novo.rascunho)) {
     await gravar(companyId, l.original, novo);
     return { ...l, envelope: novo };
   }
@@ -363,13 +412,18 @@ async function gravarEvolucaoDaConfiguracao(companyId: string, l: Awaited<Return
         continue;
       }
       const data = { name: s.nome, priceCents: s.precoModo === "FIXO" ? s.precoCents ?? 0 : 0,
-        durationMin: s.duracaoMin ?? 0, active: true, suggested: false, order };
+        durationMin: s.duracaoMin && s.duracaoMin > 0 ? s.duracaoMin : 30, active: true, suggested: false, order };
       if (s.id.startsWith("novo:")) {
         const id = (await tx.service.create({ data: { companyId, ...data }, select: { id: true } })).id;
         mapaIds.set(s.id, id); s.id = id;
       } else {
         const escrita = await tx.service.updateMany({ where: { companyId, id: s.id }, data });
-        if (escrita.count !== 1) throw new ConfiguracaoErro("Este serviço mudou em outra área. Recarregue para conferir.", 409);
+        if (escrita.count === 0) {
+          const created = await tx.service.create({ data: { id: s.id, companyId, ...data }, select: { id: true } });
+          mapaIds.set(s.id, created.id); s.id = created.id;
+        } else if (escrita.count !== 1) {
+          throw new ConfiguracaoErro("Este serviço mudou em outra área. Recarregue para conferir.", 409);
+        }
       }
     }
     const ids = new Set(ativa.informacoes.servicos.map(s => s.id));

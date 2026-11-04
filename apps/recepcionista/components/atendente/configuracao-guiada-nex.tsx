@@ -587,6 +587,13 @@ export function ConfiguracaoGuiadaNex({
               </button>
             </div>
 
+            <div className="mb-4 flex items-center gap-2.5 rounded-2xl bg-amber-soft/40 border border-amber/30 px-3.5 py-2.5 text-xs text-panel-ink shadow-2xs">
+              <span className="text-base leading-none">⚡</span>
+              <div>
+                <strong className="font-bold text-night">Vinculado à Agenda:</strong> Qualquer serviço cadastrado ou alterado aqui fica automaticamente disponível na sua <strong>Agenda</strong> para agendamentos.
+              </div>
+            </div>
+
             {d.informacoes.servicos.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-panel-line p-8 text-center">
                 <p className="text-sm font-semibold text-panel-ink">
