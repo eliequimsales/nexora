@@ -48,6 +48,25 @@ describe("computeKnowledgeScore", () => {
     const score = computeKnowledgeScore({ ...fullProfile, pricingInfo: "" }, 0, 0);
     expect(score.areas.find((a) => a.label === "Preços")?.pct).toBe(0);
   });
+
+  it("não quebra quando campos do perfil forem nulos ou indefinidos", () => {
+    const score = computeKnowledgeScore(
+      {
+        description: null as any,
+        address: undefined as any,
+        productsServices: null as any,
+        pricingInfo: null as any,
+        paymentMethods: null as any,
+        serviceRules: null as any,
+        businessHours: null,
+        faqs: null,
+      },
+      0,
+      0,
+    );
+    expect(score.overall).toBe(0);
+    expect(score.areas).toHaveLength(8);
+  });
 });
 
 describe("findInconsistencies", () => {

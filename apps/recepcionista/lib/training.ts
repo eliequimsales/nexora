@@ -53,24 +53,29 @@ export interface KnowledgeScore {
  * itens aprovados − lacunas em aberto.
  */
 export function computeKnowledgeScore(
-  profile: Pick<
-    CompanyProfile,
-    "description" | "address" | "productsServices" | "pricingInfo" | "paymentMethods" | "serviceRules"
-  > & { businessHours: unknown; faqs: unknown },
+  profile:
+    | (Partial<
+        Pick<
+          CompanyProfile,
+          "description" | "address" | "productsServices" | "pricingInfo" | "paymentMethods" | "serviceRules"
+        >
+      > & { businessHours?: unknown; faqs?: unknown })
+    | null
+    | undefined,
   approvedCount: number,
   openGaps: number,
 ): KnowledgeScore {
-  const hours = Array.isArray(profile.businessHours) ? (profile.businessHours as BusinessHour[]) : [];
-  const faqs = Array.isArray(profile.faqs) ? (profile.faqs as Faq[]) : [];
+  const hours = Array.isArray(profile?.businessHours) ? (profile.businessHours as BusinessHour[]) : [];
+  const faqs = Array.isArray(profile?.faqs) ? (profile.faqs as Faq[]) : [];
 
   const areas: KnowledgeArea[] = [
-    { label: "Sobre a empresa", pct: profile.description.trim() ? 100 : 0 },
+    { label: "Sobre a empresa", pct: (profile?.description ?? "").trim() ? 100 : 0 },
     { label: "Horários", pct: hours.length > 0 ? 100 : 0 },
-    { label: "Endereço", pct: profile.address.trim() ? 100 : 0 },
-    { label: "Produtos e serviços", pct: profile.productsServices.trim() ? 100 : 0 },
-    { label: "Preços", pct: profile.pricingInfo.trim() ? 100 : 0 },
-    { label: "Pagamentos", pct: profile.paymentMethods.trim() ? 100 : 0 },
-    { label: "Regras de atendimento", pct: profile.serviceRules.trim() ? 100 : 0 },
+    { label: "Endereço", pct: (profile?.address ?? "").trim() ? 100 : 0 },
+    { label: "Produtos e serviços", pct: (profile?.productsServices ?? "").trim() ? 100 : 0 },
+    { label: "Preços", pct: (profile?.pricingInfo ?? "").trim() ? 100 : 0 },
+    { label: "Pagamentos", pct: (profile?.paymentMethods ?? "").trim() ? 100 : 0 },
+    { label: "Regras de atendimento", pct: (profile?.serviceRules ?? "").trim() ? 100 : 0 },
     {
       label: "Dúvidas treinadas",
       pct: faqs.length + approvedCount >= 5 ? 100 : Math.round(((faqs.length + approvedCount) / 5) * 100),
@@ -232,7 +237,7 @@ export async function getTrainingReport(companyId: string) {
     observations,
     approvedCount,
     learnedThisWeek,
-    profile,
+    profileRecord,
     resultados,
   ] = await Promise.all([
     prisma.conversation.count({ where: { companyId, createdAt: { gte: since } } }),
@@ -270,9 +275,22 @@ export async function getTrainingReport(companyId: string) {
       select: { question: true },
       take: 10,
     }),
-    prisma.companyProfile.findUniqueOrThrow({ where: { companyId } }),
+    prisma.companyProfile.findUnique({ where: { companyId } }),
     getResumoResultados(companyId, since),
   ]);
+
+  const profile = profileRecord ?? {
+    description: "",
+    address: "",
+    productsServices: "",
+    pricingInfo: "",
+    paymentMethods: "",
+    serviceRules: "",
+    businessHours: [],
+    faqs: [],
+    segments: [],
+    interviewStartedAt: null,
+  };
 
   const openGaps = await prisma.knowledgeGap.count({ where: { companyId, status: "OPEN" } });
   const resolvedByAttendant = resultados.resolvedByAttendant;

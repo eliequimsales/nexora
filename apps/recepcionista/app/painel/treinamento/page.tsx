@@ -205,12 +205,21 @@ export default function TreinamentoPage() {
   }
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/training");
-    if (res.ok) {
-      setReport(await res.json());
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("duvidas-atualizadas"));
+    try {
+      const res = await fetch("/api/training");
+      if (res.ok) {
+        const data = await res.json();
+        setReport(data);
+        setError("");
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("duvidas-atualizadas"));
+        }
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? "Não foi possível carregar as informações do treinamento.");
       }
+    } catch {
+      setError("Erro de conexão ao carregar o treinamento. Verifique sua conexão e tente novamente.");
     }
   }, []);
 
@@ -243,6 +252,37 @@ export default function TreinamentoPage() {
   }
 
   if (!report) {
+    if (error) {
+      return (
+        <div className="mx-auto max-w-5xl py-8 space-y-4">
+          <div className="rounded-3xl border border-red-200 bg-red-50/80 p-8 sm:p-12 text-center shadow-xs">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-100 text-red-600">
+              <IconeTreinamento nome="alerta" className="h-7 w-7" />
+            </div>
+            <p className="mt-4 text-base font-bold text-red-900">Não foi possível carregar o treinamento</p>
+            <p className="mt-1 text-xs sm:text-sm text-red-700 max-w-md mx-auto">{error}</p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => load()}
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-2xl bg-amber px-5 py-2.5 text-xs font-bold text-night shadow-xs hover:bg-amber-deep transition cursor-pointer"
+              >
+                <IconeTreinamento nome="raio" className="h-4 w-4" />
+                <span>Tentar novamente</span>
+              </button>
+              <Link
+                href="/painel/atendente"
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-2xl border border-panel-line bg-white px-4 py-2.5 text-xs font-semibold text-panel-ink shadow-2xs hover:border-amber transition"
+              >
+                <IconeTreinamento nome="conversa" className="h-4 w-4 text-emerald-600" />
+                <span>Configurar Atendente</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="mx-auto max-w-5xl py-8">
         <div className="rounded-3xl border border-panel-line bg-panel-card p-12 text-center shadow-xs">
@@ -256,7 +296,15 @@ export default function TreinamentoPage() {
     );
   }
 
-  const { topGaps, approvedItems = [], observations = [], inconsistencies = [], interview, diary, stats } = report;
+  const {
+    topGaps = [],
+    approvedItems = [],
+    observations = [],
+    inconsistencies = [],
+    interview = null,
+    diary = [],
+    stats = { totalConversations: 0, resolvedByAttendant: 0, sentToTeam: 0 },
+  } = report;
 
   const itensAprovadosFiltrados = useMemo(() => {
     if (!filtroBusca.trim()) return approvedItems;
