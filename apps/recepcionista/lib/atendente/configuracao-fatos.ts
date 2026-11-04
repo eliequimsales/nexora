@@ -7,14 +7,17 @@ const confirmado = (info: InformacaoNexa) => info.situacao === "CONFIRMADO" ? in
 export function aplicarConfiguracaoAosFatos(config: ConfiguracaoNexa, base: Fatos): Fatos {
   const materiaisExpirados = (config.materiais ?? []).filter(m => m.validoAte !== null && new Date(m.validoAte).getTime() <= Date.now());
   const servicos = config.informacoes.servicos
-    .filter((s) => s.situacao === "CONFIRMADO")
+    .filter((s) => (s.situacao === "CONFIRMADO" || s.situacao === "REVISAR") && s.nome.trim().length > 0)
     .map((s) => ({ id: s.id, nome: s.nome, descricao: s.descricao,
       precoModo: s.precoModo, precoCents: s.precoModo === "FIXO" ? s.precoCents ?? 0 : 0,
       duracaoMin: s.duracaoMin ?? 0 }));
-  const horarios = config.informacoes.horariosSituacao === "CONFIRMADO" ? config.informacoes.horarios : [];
-  const descricao = [confirmado(config.negocio.descricao),
+  const horarios = ((config.informacoes.horariosSituacao === "CONFIRMADO" || config.informacoes.horariosSituacao === "REVISAR") && config.informacoes.horarios.length > 0)
+    ? config.informacoes.horarios
+    : base.horarios;
+  const descricao = [
+    confirmado(config.negocio.descricao) || config.negocio.descricao.valor.trim(),
     config.negocio.modalidade === "ONLINE" ? "Atendimento online." : "",
-    confirmado(config.negocio.regiao) ? `Região atendida: ${confirmado(config.negocio.regiao)}.` : "",
+    (confirmado(config.negocio.regiao) || config.negocio.regiao.valor.trim()) ? `Região atendida: ${confirmado(config.negocio.regiao) || config.negocio.regiao.valor.trim()}.` : "",
   ].filter(Boolean).join("\n");
   return {
     ...base,
@@ -29,8 +32,8 @@ export function aplicarConfiguracaoAosFatos(config: ConfiguracaoNexa, base: Fato
     servicos,
     horarios,
     diasFechados: config.informacoes.diasFechados,
-    endereco: confirmado(config.informacoes.endereco),
-    pagamento: confirmado(config.informacoes.pagamento),
+    endereco: confirmado(config.informacoes.endereco) || config.informacoes.endereco.valor.trim() || base.endereco,
+    pagamento: confirmado(config.informacoes.pagamento) || config.informacoes.pagamento.valor.trim() || base.pagamento,
     descricao,
     pricingInfo: "",
     productsServices: servicos.map((s) => `${s.nome}${s.descricao ? `: ${s.descricao}` : ""}`).join("\n"),

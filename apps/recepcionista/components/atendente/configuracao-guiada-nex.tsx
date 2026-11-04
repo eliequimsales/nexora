@@ -1086,6 +1086,82 @@ export function ConfiguracaoGuiadaNex({
                 />
               </div>
 
+              {/* Resgate Ativo de Clientes Sumidos (Pós-Venda Automático do Nex) */}
+              <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-panel-bg/20 to-amber/10 p-4 sm:p-5 shadow-2xs space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-600 text-xs text-white">
+                        🔄
+                      </span>
+                      <h4 className="text-sm font-bold text-panel-ink">
+                        Resgate de Clientes Sumidos (Pós-Venda Automático)
+                      </h4>
+                    </div>
+                    <p className="mt-1 text-xs text-panel-sub max-w-xl">
+                      O Nex analisa a frequência de retorno dos seus clientes e envia convites amigáveis para quem não agendar há mais tempo que o habitual, trazendo o cliente de volta e preenchendo sua agenda.
+                    </p>
+                  </div>
+
+                  <label className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-white px-3 py-2 text-xs font-bold text-emerald-900 shadow-2xs cursor-pointer hover:bg-emerald-50 transition shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={d.atendimento.posVenda?.reativacaoAtiva ?? true}
+                      onChange={(e) =>
+                        editar("atendimento", {
+                          posVenda: {
+                            reativacaoAtiva: e.target.checked,
+                            diasInativo: d.atendimento.posVenda?.diasInativo ?? 30,
+                            mensagemPersonalizada: d.atendimento.posVenda?.mensagemPersonalizada ?? "",
+                          },
+                        })
+                      }
+                      className="h-4 w-4 rounded accent-emerald-600"
+                    />
+                    <span>Ativar Resgate Automático</span>
+                  </label>
+                </div>
+
+                {(d.atendimento.posVenda?.reativacaoAtiva ?? true) && (
+                  <div className="grid gap-3 pt-3 sm:grid-cols-2 border-t border-emerald-500/20">
+                    <div>
+                      <label className="block text-xs font-bold text-panel-ink mb-1">
+                        Avisar quando o cliente não agendar por mais de:
+                      </label>
+                      <select
+                        className={CAMPO}
+                        value={d.atendimento.posVenda?.diasInativo ?? 30}
+                        onChange={(e) =>
+                          editar("atendimento", {
+                            posVenda: {
+                              reativacaoAtiva: true,
+                              diasInativo: Number(e.target.value) || 30,
+                              mensagemPersonalizada: d.atendimento.posVenda?.mensagemPersonalizada ?? "",
+                            },
+                          })
+                        }
+                      >
+                        <option value={20}>20 dias (ideal para barbearias e estética rápida)</option>
+                        <option value={30}>30 dias (recomendado para a maioria dos negócios)</option>
+                        <option value={45}>45 dias (consultórios e clínicas)</option>
+                        <option value={60}>60 dias (serviços de ciclo longo)</option>
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setPassoAtivo(5)}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-600 bg-white px-4 py-2.5 text-xs font-bold text-emerald-800 shadow-2xs hover:bg-emerald-50 transition cursor-pointer"
+                      >
+                        <span>📱 Testar Resgate no WhatsApp Agora</span>
+                        <span className="text-xs">→</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Dúvidas Frequentes e Regras */}
               <div className="border-t border-panel-line pt-4">
                 <div className="flex items-center justify-between mb-3">

@@ -40,6 +40,11 @@ export const configuracaoNexaSchema: z.ZodType<ConfiguracaoNexa> = z.object({
     quando: z.enum(["FORA_EXPEDIENTE", "APOIO_EXPEDIENTE"]), agendamento: z.enum(["DESLIGADO", "LINK", "DIRETO"]),
     gestaoReservas: z.object({ cancelar: z.boolean(), remarcar: z.boolean(), antecedenciaHoras: z.number().int().min(0).max(8760).nullable() }).strict().optional(),
     handoffKeywords: z.array(texto(80).min(1)).max(30),
+    posVenda: z.object({
+      reativacaoAtiva: z.boolean(),
+      diasInativo: z.number().int().min(5).max(180),
+      mensagemPersonalizada: texto(500).optional(),
+    }).strict().optional(),
   }).strict(),
   conhecimento: z.object({ itens: z.array(z.object({ id, pergunta: texto(500), resposta: texto(3000), situacao, origem }).strict()).max(150) }).strict(),
   materiais: z.array(z.object({
@@ -181,7 +186,8 @@ async function carregar(companyId: string, db: Prisma.TransactionClient = prisma
         precoCents: s.priceCents > 0 ? s.priceCents : null, duracaoMin: s.durationMin > 0 ? s.durationMin : null, situacao: "REVISAR", origem: "CADASTRO" })) },
     atendimento: { nome: perfil.atendenteNome, jeito: lerJeito(perfil.atendenteJeito), quando: perfil.atendenteExpediente ? "APOIO_EXPEDIENTE" : "FORA_EXPEDIENTE",
       agendamento: servicos.length ? perfil.atendenteMarca ? "DIRETO" : "LINK" : "DESLIGADO",
-      handoffKeywords: Array.isArray(perfil.handoffKeywords) ? perfil.handoffKeywords.filter((s): s is string => typeof s === "string") : [] },
+      handoffKeywords: Array.isArray(perfil.handoffKeywords) ? perfil.handoffKeywords.filter((s): s is string => typeof s === "string") : [],
+      posVenda: { reativacaoAtiva: true, diasInativo: 30 } },
     conhecimento: { itens: perguntas.map((f) => ({ ...f, situacao: "REVISAR", origem: "CADASTRO" })) },
   };
   return { empresa, perfil, servicos, original: perfil.atendenteConfiguracao,

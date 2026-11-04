@@ -61,10 +61,7 @@ export async function POST(request: Request) {
       fatosDaEmpresa(companyId, sobrescrita, p.mensagens.at(-1)?.texto ?? ""),
       prisma.companyProfile.findUnique({ where: { companyId }, select: { handoffKeywords: true } }),
     ]);
-    const configuracao = p.configuracaoRevisao !== undefined ? await getConfiguracao(companyId) : null;
-    if (configuracao && configuracao.revisao !== p.configuracaoRevisao) {
-      return NextResponse.json({ error: "A configuração mudou. Salve ou recarregue os ajustes antes de testar." }, { status: 409 });
-    }
+    const configuracao = await getConfiguracao(companyId);
     const fatos = configuracao ? fatosDoRascunho(configuracao.rascunho, {
       ...base,
       linkAgenda: base.linkAgenda ?? (process.env.APP_URL

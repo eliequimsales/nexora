@@ -524,4 +524,15 @@ describe("publicação atômica e isolamento de empresa", () => {
     perfil.paymentMethods = "Pagamento alterado fora da configuração";
     expect((await getConfiguracao("c1")).pendencias).toContainEqual(expect.objectContaining({ campo: "cadastro" }));
   });
+
+  it("permite salvar e manter posVenda no rascunho de atendimento", async () => {
+    const c = config();
+    c.atendimento.posVenda = { reativacaoAtiva: true, diasInativo: 45, mensagemPersonalizada: "Sentimos sua falta!" };
+    const saved = await salvarConfiguracao("c1", { revisao: 0, rascunho: c, etapa: 2 });
+    expect(saved.rascunho.atendimento.posVenda).toEqual({
+      reativacaoAtiva: true,
+      diasInativo: 45,
+      mensagemPersonalizada: "Sentimos sua falta!",
+    });
+  });
 });

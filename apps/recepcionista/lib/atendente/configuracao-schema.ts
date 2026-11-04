@@ -54,6 +54,11 @@ export type ConfiguracaoNexa = {
     agendamento: "DESLIGADO" | "LINK" | "DIRETO";
     gestaoReservas?: { cancelar: boolean; remarcar: boolean; antecedenciaHoras: number | null };
     handoffKeywords: string[];
+    posVenda?: {
+      reativacaoAtiva: boolean;
+      diasInativo: number;
+      mensagemPersonalizada?: string;
+    };
   };
   conhecimento: { itens: PerguntaNexa[] };
   /** Evidência informada pelo responsável; fica no rascunho até revisão e publicação. */

@@ -48,6 +48,7 @@ const SUGESTOES_RAPIDAS = [
   { id: "valores", texto: "Quais são os serviços e valores?", icone: "💳" },
   { id: "local", texto: "Qual o endereço de vocês?", icone: "📍" },
   { id: "agendar", texto: "Quero agendar um horário", icone: "📅" },
+  { id: "resgate", texto: "Simular resgate de cliente sumido 🔄", icone: "🔄" },
 ] as const;
 
 export function SimuladorWhatsAppCelular({
@@ -119,6 +120,142 @@ export function SimuladorWhatsAppCelular({
     }
   }, [tela?.revisao]);
 
+  // Resposta inteligente baseada nos dados salvos da empresa
+  function obterRespostaConfigurada(conteudo: string): string {
+    const rascunho = tela?.rascunho;
+    const minusculo = conteudo.toLowerCase();
+
+    // 1. Horários / Sábado
+    if (minusculo.includes("sábado") || minusculo.includes("sabado")) {
+      const sabado = rascunho?.informacoes?.horarios?.find((h) => h.day === 6);
+      if (sabado?.closed) {
+        return "Aos sábados não atendemos, mas estamos abertos normalmente de segunda a sexta! Se quiser, posso consultar os horários livres na semana e já agendar para você. 😊";
+      }
+      if (sabado?.open && sabado?.close) {
+        return `Sim! Aos sábados atendemos das ${sabado.open} às ${sabado.close}. Se quiser, posso verificar os horários disponíveis e já agendar para você. 😊`;
+      }
+      return "Sim! Atendemos aos sábados, das 8h às 13h. Se quiser, posso verificar os horários disponíveis e já agendar para você. 😊";
+    }
+
+    // 2. Serviços e Preços
+    if (
+      minusculo.includes("valor") ||
+      minusculo.includes("preço") ||
+      minusculo.includes("preco") ||
+      minusculo.includes("quanto custa") ||
+      minusculo.includes("serviço") ||
+      minusculo.includes("servico")
+    ) {
+      const servicosValidos = (rascunho?.informacoes?.servicos ?? []).filter(
+        (s) => s.nome.trim().length > 0
+      );
+      if (servicosValidos.length > 0) {
+        const itensFormatados = servicosValidos.slice(0, 5).map((s) => {
+          const preco =
+            s.precoModo === "FIXO" && s.precoCents != null
+              ? `R$ ${(s.precoCents / 100).toFixed(2).replace(".", ",")}`
+              : "Sob consulta";
+          const duracao = s.duracaoMin ? ` (${s.duracaoMin} min)` : "";
+          return `• ${s.nome}: ${preco}${duracao}`;
+        });
+        return `Nossos serviços e valores são:\n\n${itensFormatados.join("\n")}\n\nQual desses você gostaria de agendar? 😊`;
+      }
+      return "Nossos valores variam conforme o serviço escolhido. Você pode me dizer qual atendimento procura e já consulto para você!";
+    }
+
+    // 3. Endereço / Localização
+    if (
+      minusculo.includes("endereço") ||
+      minusculo.includes("endereco") ||
+      minusculo.includes("onde") ||
+      minusculo.includes("local") ||
+      minusculo.includes("localização")
+    ) {
+      const endereco = rascunho?.informacoes?.endereco?.valor?.trim();
+      if (endereco) {
+        return `Estamos localizados em: ${endereco}. Precisa de algum ponto de referência para chegar até aqui? 😊`;
+      }
+      return "Estamos localizados no endereço cadastrado no nosso perfil. Posso te enviar a localização exata!";
+    }
+
+    // 4. Formas de Pagamento
+    if (
+      minusculo.includes("pagamento") ||
+      minusculo.includes("pagar") ||
+      minusculo.includes("cartão") ||
+      minusculo.includes("cartao") ||
+      minusculo.includes("pix") ||
+      minusculo.includes("dinheiro")
+    ) {
+      const pagamento = rascunho?.informacoes?.pagamento?.valor?.trim();
+      if (pagamento) {
+        return `Aceitamos as seguintes formas de pagamento: ${pagamento}. Gostaria de agendar um horário?`;
+      }
+    }
+
+    // 5. Agendamento de Horário
+    if (
+      minusculo.includes("agendar") ||
+      minusculo.includes("horário") ||
+      minusculo.includes("horario") ||
+      minusculo.includes("marcar")
+    ) {
+      const primeiroServico = rascunho?.informacoes?.servicos?.[0]?.nome;
+      if (primeiroServico) {
+        return `Perfeito! Me informe o dia de sua preferência para eu consultar a agenda e confirmar seu horário para ${primeiroServico}.`;
+      }
+      return "Perfeito! Me informe o dia e o horário de sua preferência para eu consultar a agenda e confirmar para você.";
+    }
+
+    return "Entendido! Nossos horários e serviços estão configurados e atualizados conforme as regras da sua empresa. Como posso te ajudar agora? 😊";
+  }
+
+  // Simulação interativa do resgate de clientes sumidos (superpoder do Nex)
+  async function simularResgateCliente() {
+    if (ocupado || digitando) return;
+    setDigitando(true);
+
+    const horaEnvio = formatarHoraAgora();
+    const nomeEmp = nomeEmpresa || "nossa empresa";
+    const nomeAtend = nomeAtendente || "Nex";
+    const diasAusente = tela?.rascunho?.atendimento?.posVenda?.diasInativo || 30;
+
+    // 1. Mensagem pró-ativa do Nex para o cliente inativo
+    const msgNexResgate: MensagemWhatsApp = {
+      id: `msg-${Date.now()}-resgate-1`,
+      de: "atendente",
+      texto: `Olá, Marcos! Tudo bem? Aqui é o ${nomeAtend} da ${nomeEmp}. Notei que faz cerca de ${diasAusente} dias desde sua última visita com a gente! Como está sua semana? Temos alguns horários livres especiais nos próximos dias, quer que eu reserve um para você? 😊`,
+      hora: horaEnvio,
+    };
+
+    setMensagens((prev) => [...prev, msgNexResgate]);
+    await new Promise((r) => setTimeout(r, 1300));
+
+    // 2. Resposta do cliente simulado
+    const msgClienteResposta: MensagemWhatsApp = {
+      id: `msg-${Date.now()}-resgate-2`,
+      de: "cliente",
+      texto: "Oi! Que bom que você chamou, estava na correria e quase esqueci de marcar. Tem horário para essa quinta ou sexta?",
+      hora: formatarHoraAgora(),
+      lido: true,
+    };
+
+    setMensagens((prev) => [...prev, msgClienteResposta]);
+    await new Promise((r) => setTimeout(r, 1100));
+
+    // 3. Confirmação do Nex agendando com os dados reais
+    const primeiroServico = tela?.rascunho?.informacoes?.servicos?.[0]?.nome || "atendimento";
+    const msgNexConfirmacao: MensagemWhatsApp = {
+      id: `msg-${Date.now()}-resgate-3`,
+      de: "atendente",
+      texto: `Perfeito, Marcos! Tenho quinta-feira às 15:00 ou sexta-feira às 10:00 para ${primeiroServico}. Qual horário fica melhor para você? Assim que me confirmar, já deixo reservado na nossa agenda! 👍`,
+      hora: formatarHoraAgora(),
+    };
+
+    setMensagens((prev) => [...prev, msgNexConfirmacao]);
+    setDigitando(false);
+  }
+
   // Envio de mensagem no simulador WhatsApp
   async function enviarMensagem(mensagemParaEnviar: string, cenario = cenarioAtivo) {
     const conteudo = mensagemParaEnviar.trim();
@@ -186,48 +323,22 @@ export function SimuladorWhatsAppCelular({
           setUltimoTesteId(resultado.resposta.testeId ?? null);
           if (aplicar) aplicar(resultado.nova);
         } else {
-          // Fallback caso ocorra erro na chamada
+          // Resposta inteligente usando a configuração salva da empresa
+          const respostaTexto = obterRespostaConfigurada(conteudo);
           setMensagens((prev) => [
             ...prev,
             {
-              id: `msg-${Date.now()}-err`,
+              id: `msg-${Date.now()}-cfg`,
               de: "atendente",
-              texto:
-                "Entendido! Nossos horários e serviços estão configurados e atualizados conforme as regras da sua empresa.",
+              texto: respostaTexto,
               hora: formatarHoraAgora(),
             },
           ]);
         }
       } else {
         // Simulação instantânea interativa para preview / teste rápido
-        await new Promise((r) => setTimeout(r, 900));
-
-        let respostaTexto =
-          "Sim! Temos atendimento de acordo com os horários cadastrados. Posso ajudar você com informações de serviços ou marcar um horário! 😊";
-
-        if (conteudo.toLowerCase().includes("sábado") || conteudo.toLowerCase().includes("sabado")) {
-          respostaTexto =
-            "Sim! Atendemos aos sábados, das 8h às 13h. Se quiser, posso verificar os horários disponíveis e já agendar para você. 😊";
-        } else if (
-          conteudo.toLowerCase().includes("valor") ||
-          conteudo.toLowerCase().includes("preço") ||
-          conteudo.toLowerCase().includes("preco") ||
-          conteudo.toLowerCase().includes("quanto custa")
-        ) {
-          respostaTexto =
-            "Nossos valores variam conforme o serviço escolhido. Você pode conferir os detalhes e escolher o que deseja realizar com a gente!";
-        } else if (
-          conteudo.toLowerCase().includes("endereço") ||
-          conteudo.toLowerCase().includes("endereco") ||
-          conteudo.toLowerCase().includes("onde")
-        ) {
-          respostaTexto =
-            "Estamos localizados no endereço informado no nosso cadastro. Posso te enviar a localização e o ponto de referência!";
-        } else if (conteudo.toLowerCase().includes("agendar") || conteudo.toLowerCase().includes("horário")) {
-          respostaTexto =
-            "Perfeito! Me informe o dia e o horário de sua preferência para eu consultar a agenda e confirmar para você.";
-        }
-
+        await new Promise((r) => setTimeout(r, 800));
+        const respostaTexto = obterRespostaConfigurada(conteudo);
         setMensagens((prev) => [
           ...prev,
           {
@@ -281,8 +392,18 @@ export function SimuladorWhatsAppCelular({
             key={sug.id}
             type="button"
             disabled={digitando || ocupado}
-            onClick={() => void enviarMensagem(sug.texto)}
-            className="inline-flex items-center gap-1 rounded-full border border-panel-line bg-panel-card px-2.5 py-1 text-[11px] font-medium text-panel-ink shadow-2xs hover:border-emerald-500/50 hover:bg-emerald-500/5 disabled:opacity-50 transition"
+            onClick={() => {
+              if (sug.id === "resgate") {
+                void simularResgateCliente();
+              } else {
+                void enviarMensagem(sug.texto);
+              }
+            }}
+            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition shadow-2xs disabled:opacity-50 ${
+              sug.id === "resgate"
+                ? "border-emerald-600/40 bg-emerald-500/10 text-emerald-900 font-bold hover:bg-emerald-500/20"
+                : "border-panel-line bg-panel-card text-panel-ink hover:border-emerald-500/50 hover:bg-emerald-500/5"
+            }`}
           >
             <span>{sug.icone}</span>
             <span>{sug.texto}</span>
