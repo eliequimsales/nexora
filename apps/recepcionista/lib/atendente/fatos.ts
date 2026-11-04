@@ -9,7 +9,7 @@ import type { BusinessHour, Faq } from "@/lib/validation";
 import { lerJeito, type Jeito } from "./jeitos";
 import { ehContaComercialNexora } from "./comercial-config";
 import { aplicarConfiguracaoAosFatos } from "./configuracao-fatos";
-import { cadastroDivergeDaPublicacao, lerConfiguracaoPublicada } from "./configuracao";
+import { cadastroDivergeDaPublicacao, lerConfiguracaoPublicada, lerConfiguracaoAtiva } from "./configuracao";
 import { selecionarConhecimentoRelevante } from "./recuperacao-conhecimento";
 
 /**
@@ -134,17 +134,17 @@ export async function fatosDaEmpresa(companyId: string, sobrescrever: Sobrescrit
       ? `${appUrl}/agendar/${empresa?.slug || companyId}` : null,
     comercial: ehContaComercialNexora(companyId),
   };
-  const publicada = lerConfiguracaoPublicada(perfil?.atendenteConfiguracao);
-  const fatos = publicada ? {
-    ...aplicarConfiguracaoAosFatos(publicada, {
+  const configuracaoAtiva = lerConfiguracaoAtiva(perfil?.atendenteConfiguracao);
+  const fatos = configuracaoAtiva ? {
+    ...aplicarConfiguracaoAosFatos(configuracaoAtiva, {
     ...base,
     linkAgenda: appUrl ? `${appUrl}/agendar/${empresa?.slug || companyId}` : null,
     }),
     // Bloqueios de datas são operacionais: mudanças na Agenda valem de imediato.
     diasFechados: base.diasFechados,
-    configuracaoDivergente: cadastroDivergeDaPublicacao(publicada, {
+    configuracaoDivergente: Boolean(perfil?.atendenteConfiguracao && lerConfiguracaoPublicada(perfil?.atendenteConfiguracao) && cadastroDivergeDaPublicacao(configuracaoAtiva, {
       empresa: empresa?.name ?? "", perfil: perfil ?? {}, servicos,
-    }),
+    })),
   } : base;
   return { ...fatos, perguntas: selecionarConhecimentoRelevante(fatos.perguntas, pergunta, 50), ...sobrescrever };
 }

@@ -112,6 +112,40 @@ describe("fatosDaEmpresa", () => {
     expect((await fatosDaEmpresa("c1")).linkAgenda).toBeNull();
   });
 
+  it("carrega imediatamente as configurações do rascunho ativo antes de publicar", async () => {
+    const c = configuracaoExemplo();
+    const perfil = {
+      ...PERFIL,
+      atendenteConfiguracao: {
+        versao: 1,
+        revisao: 1,
+        etapa: 2,
+        revisadas: [0, 1],
+        testes: [],
+        rascunho: {
+          ...c,
+          negocio: { ...c.negocio, nome: "Estúdio de Beleza da Ana" },
+          atendimento: { ...c.atendimento, nome: "Ana", jeito: "ACOLHEDOR" as const },
+          informacoes: {
+            ...c.informacoes,
+            endereco: { valor: "Av. Paulista, 1000", situacao: "CONFIRMADO" as const, origem: "MANUAL" as const },
+            pagamento: { valor: "Pix e Cartão", situacao: "CONFIRMADO" as const, origem: "MANUAL" as const },
+          },
+        },
+        publicado: null,
+      },
+    };
+    db.company.findUnique.mockResolvedValue({ name: "Nome Legado", slug: "estudio-ana", profile: perfil });
+    db.companyProfile.findUnique.mockResolvedValue(perfil);
+    const f = await fatosDaEmpresa("c1");
+    expect(f.empresa).toBe("Estúdio de Beleza da Ana");
+    expect(f.nome).toBe("Ana");
+    expect(f.jeito).toBe("ACOLHEDOR");
+    expect(f.endereco).toBe("Av. Paulista, 1000");
+    expect(f.pagamento).toBe("Pix e Cartão");
+    expect(f.configuracaoDivergente).toBe(false);
+  });
+
   it("publicação usa somente conhecimento revisado e respeita bloqueios atuais da Agenda", async () => {
     const c = configuracaoExemplo();
     const perfil = { ...PERFIL, atendenteNome: c.atendimento.nome, atendenteJeito: c.atendimento.jeito,

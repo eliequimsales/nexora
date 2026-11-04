@@ -14,6 +14,7 @@ import {
   CAMPO_NEXA as CAMPO,
   PRINCIPAL_NEXA as PRINCIPAL,
 } from "./configuracao-campos";
+import type { OperarConfiguracaoNexa } from "./configuracao-requisicao";
 
 const DIAS = [
   "Domingo",
@@ -31,7 +32,7 @@ const PASSOS = [
   { id: 2, nome: "Serviços & Preços", icone: "💼", descricao: "O que você oferece" },
   { id: 3, nome: "Dias & Horários", icone: "⏰", descricao: "Quando está aberto" },
   { id: 4, nome: "Jeito de Atender", icone: "💬", descricao: "Personalidade e regras" },
-  { id: 5, nome: "Teste & WhatsApp", icone: "🚀", descricao: "Testar e colocar no ar" },
+  { id: 5, nome: "Teste no WhatsApp", icone: "📱", descricao: "Simulador ao vivo e ativação" },
 ] as const;
 
 const MENTOR_NEX = {
@@ -81,6 +82,9 @@ type Props = {
   abrirResumo: () => void;
   ativar: () => Promise<void>;
   pausar: () => Promise<void>;
+  operar?: OperarConfiguracaoNexa;
+  prepararTeste?: () => Promise<TelaConfiguracaoNexa | null>;
+  aplicar?: (tela: TelaConfiguracaoNexa) => void;
 };
 
 export function ConfiguracaoGuiadaNex({
@@ -99,6 +103,9 @@ export function ConfiguracaoGuiadaNex({
   abrirResumo,
   ativar,
   pausar,
+  operar,
+  prepararTeste,
+  aplicar,
 }: Props) {
   const [passoAtivo, setPassoAtivo] = useState<number>(1);
   const [novaData, setNovaData] = useState("");
@@ -252,10 +259,21 @@ export function ConfiguracaoGuiadaNex({
           </button>
           <button
             type="button"
+            className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3.5 py-2 text-xs font-bold text-emerald-900 hover:bg-emerald-500/20 transition shadow-2xs"
+            onClick={() => {
+              setPassoAtivo(5);
+              setVisaoCompleta(false);
+            }}
+          >
+            <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>📱 Testar no WhatsApp</span>
+          </button>
+          <button
+            type="button"
             className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-panel-line bg-panel-bg px-3 py-2 text-xs font-semibold text-panel-ink hover:bg-white"
             onClick={() => abrirTeste()}
           >
-            ▶️ Testar atendimento
+            ▶️ Abrir em Janela
           </button>
           <button
             type="button"
@@ -1210,6 +1228,9 @@ export function ConfiguracaoGuiadaNex({
                   sujo={pendente}
                   erro={erro}
                   mostrarControlesExternos={true}
+                  operar={operar}
+                  prepararTeste={prepararTeste}
+                  aplicar={aplicar}
                 />
               </div>
 
@@ -1327,6 +1348,23 @@ export function ConfiguracaoGuiadaNex({
           </div>
         </footer>
       )}
+
+      {/* Botão flutuante para acessar o Simulador do WhatsApp a qualquer momento */}
+      <div className="fixed bottom-5 right-5 z-40 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setPassoAtivo(5);
+            setVisaoCompleta(false);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          className="inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-xl transition hover:bg-emerald-700 hover:scale-105 active:scale-95"
+          title="Ver o Nex atendendo no WhatsApp agora"
+        >
+          <span className="flex h-2.5 w-2.5 rounded-full bg-white animate-pulse" />
+          <span>📱 Simulador WhatsApp</span>
+        </button>
+      </div>
     </div>
   );
 }

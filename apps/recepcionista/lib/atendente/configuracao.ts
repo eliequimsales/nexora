@@ -97,6 +97,11 @@ export function lerConfiguracaoPublicada(valor: unknown): ConfiguracaoNexa | nul
   return lerEnvelopeConfiguracao(valor)?.publicado?.rascunho ?? null;
 }
 
+export function lerConfiguracaoAtiva(valor: unknown): ConfiguracaoNexa | null {
+  const env = lerEnvelopeConfiguracao(valor);
+  return env?.rascunho ?? env?.publicado?.rascunho ?? null;
+}
+
 function informacao(valor: unknown): InformacaoNexa {
   const v = typeof valor === "string" ? valor.trim() : "";
   return { valor: v, situacao: v ? "REVISAR" : "NAO_INFORMADO", origem: "CADASTRO" };

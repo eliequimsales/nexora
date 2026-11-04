@@ -14,6 +14,7 @@ import { useConfiguracaoAutosave } from "./configuracao-autosalvar";
 import { FormularioConfiguracaoNexa } from "./configuracao-formulario";
 import { requisitarConfiguracaoNexa as requisitar, type FalhaConfiguracaoNexa } from "./configuracao-requisicao";
 import { SimuladorConfiguracaoNexa, type PedidoTesteNexa } from "./configuracao-simulador";
+import { SimuladorWhatsAppCelular } from "./simulador-whatsapp-celular";
 import { VersoesDoAtendente } from "./configuracao-versoes";
 import { ImportarMaterialDoAtendente } from "./importar-material";
 import { EditorDoTopico, TopicosDaConfiguracao } from "./configuracao-por-topicos";
@@ -546,6 +547,9 @@ export function ConversaConfiguracaoDoAtendente() {
       ativar={async () => {
         await ligar(true);
       }}
+      operar={operar}
+      prepararTeste={prepararTeste}
+      aplicar={aplicar}
       pausar={async () => {
         await ligar(false);
       }}
@@ -595,7 +599,7 @@ export function ConversaConfiguracaoDoAtendente() {
     </PainelDaConversa>}
 
     {painel === "TESTE" && !pedidoSaida && <PainelDaConversa titulo="Veja como seu atendente responde" descricao="Escreva como um cliente. O teste usa suas informações salvas." aoFechar={() => void fecharPainel()} largo><div className="space-y-4 flex flex-col items-center">
-      <SimuladorConfiguracaoNexa tela={tela} ocupado={ocupado} sujo={autosave.pendente} erro={erroVisivel || ""} pedido={pedidoTeste} operar={operar} prepararTeste={prepararTeste} aplicar={aplicar} corrigir={() => { setPainel(null); setAviso("Conte na conversa o que precisa mudar. Depois, teste a resposta novamente."); requestAnimationFrame(() => campo.current?.focus({ preventScroll: true })); }} proximoCenario={pendenteTeste?.id ?? null} concluirTeste={() => setPainel("REVISAO")} nomeEmpresa={dados.negocio.nome || "Minha Empresa"} nomeAtendente={dados.atendimento.nome || "Nex"} />
+      <SimuladorWhatsAppCelular mostrarControlesExternos={true} tela={tela} ocupado={ocupado} sujo={autosave.pendente} erro={erroVisivel || ""} pedido={pedidoTeste} operar={operar} prepararTeste={prepararTeste} aplicar={aplicar} corrigir={() => { setPainel(null); setAviso("Conte na conversa o que precisa mudar. Depois, teste a resposta novamente."); requestAnimationFrame(() => campo.current?.focus({ preventScroll: true })); }} proximoCenario={pendenteTeste?.id ?? null} concluirTeste={() => setPainel("REVISAO")} nomeEmpresa={dados.negocio.nome || "Minha Empresa"} nomeAtendente={dados.atendimento.nome || "Nex"} />
       {!conferido && <div className="rounded-2xl border border-panel-line p-4 w-full max-w-[390px]"><p className="text-xs leading-relaxed text-panel-sub">Antes de usar com clientes, confira também as informações da sua empresa.</p><button type="button" className={`${BOTAO} mt-3 w-full`} disabled={ocupado} onClick={() => { setPainel("RESUMO"); setEditando(false); }}>Conferir informações</button></div>}
       {pendenteTeste && <button type="button" className={`${BOTAO} w-full max-w-[390px]`} disabled={ocupado} onClick={() => abrirTeste(pendenteTeste.id)}>Conferir: {pendenteTeste.titulo.toLocaleLowerCase("pt-BR")}</button>}
     </div></PainelDaConversa>}
