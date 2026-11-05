@@ -286,77 +286,67 @@ export function ConfiguracaoGuiadaNex({
         </div>
       )}
 
-      {/* Barra de Progresso e Seleção dos 5 Passos (Stepper) */}
-      <nav
-        aria-label="Passos da configuração"
-        className="rounded-2xl border border-panel-line bg-panel-card p-3 shadow-xs"
-      >
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-          {PASSOS.map((p) => {
-            const isAtivo = passoAtivo === p.id;
-            const isConcluido = passoAtivo > p.id;
-            return (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => {
-                  setPassoAtivo(p.id);
-                  setVisaoCompleta(false);
-                }}
-                className={`flex flex-col items-start gap-1 rounded-xl border p-2.5 text-left transition sm:p-3 ${
-                  isAtivo
-                    ? "border-amber bg-amber/15 shadow-xs ring-1 ring-amber/50"
-                    : isConcluido
-                    ? "border-emerald-600/25 bg-emerald-50/50 hover:bg-emerald-50"
-                    : "border-panel-line bg-panel-bg/40 hover:bg-panel-bg text-panel-sub"
-                }`}
-              >
-                <div className="flex w-full items-center justify-between text-xs">
-                  <span className="font-bold">Passo {p.id}</span>
-                  <span>{isConcluido ? "✓" : p.icone}</span>
-                </div>
-                <span className="text-xs font-bold leading-tight text-panel-ink sm:text-sm">
-                  {p.nome}
-                </span>
-                <span className="hidden text-[10px] text-panel-sub sm:block">
-                  {p.descricao}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="mt-3 flex items-center justify-between border-t border-panel-line pt-2 text-[11px] text-panel-sub">
-          <span>Passo {passoAtivo} de 5 selecionado</span>
-          <button
-            type="button"
-            className="text-amber-900 underline underline-offset-2 hover:text-amber"
-            onClick={() => setVisaoCompleta(!visaoCompleta)}
-          >
-            {visaoCompleta ? "Voltar ao modo passo a passo" : "Ver todas as seções juntas"}
-          </button>
-        </div>
-      </nav>
-
-      {/* Banner de Orientação do Nex Mentor */}
-      <div className="relative overflow-hidden rounded-3xl border border-amber/30 bg-gradient-to-r from-amber/15 via-white to-emerald-500/10 p-4 shadow-sm sm:p-6">
-        <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center">
-          <div className="relative shrink-0">
+      {/* Banner Unificado do Nex com Orientação e Seletor Compacto de Passos */}
+      <div className="relative overflow-hidden rounded-3xl border border-amber/30 bg-gradient-to-r from-amber/15 via-white to-emerald-500/10 p-4 shadow-xs sm:p-5">
+        <div className="flex items-start gap-3.5 sm:gap-5">
+          <div className="relative shrink-0 pt-0.5">
             <img
               src={mentor.pose}
               alt="Nex Guia"
-              className="h-24 w-24 rounded-2xl object-contain drop-shadow-md sm:h-28 sm:w-28"
+              className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl object-contain drop-shadow-md bg-white/60 p-1 border border-amber/20"
             />
           </div>
-          <div className="min-w-0 text-center sm:text-left">
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-900">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              Nex orienta você no Passo {passoAtivo}
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-0.5 text-xs font-bold text-emerald-900">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Nex orienta você no Passo {passoAtivo} de 5</span>
+                <span className="opacity-75">• {PASSOS[passoAtivo - 1]?.nome}</span>
+              </div>
+
+              <button
+                type="button"
+                className="text-[11px] font-medium text-amber-900 underline underline-offset-2 hover:text-amber-deep transition"
+                onClick={() => setVisaoCompleta(!visaoCompleta)}
+              >
+                {visaoCompleta ? "Modo passo a passo" : "Ver todas as seções"}
+              </button>
             </div>
-            <h2 className="mt-2 text-base font-bold text-panel-ink sm:text-lg">
+
+            <h2 className="mt-1.5 text-sm sm:text-base font-bold text-panel-ink leading-snug">
               &ldquo;{mentor.fala}&rdquo;
             </h2>
-            <p className="mt-1 text-xs text-panel-sub">{mentor.dica}</p>
+            <p className="mt-0.5 text-xs text-panel-sub leading-relaxed">{mentor.dica}</p>
+
+            {/* Seletor Compacto de Passos em Linha Única (Ultra responsivo e sem rolagem excessiva) */}
+            <div className="mt-3 flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+              {PASSOS.map((p) => {
+                const isAtivo = passoAtivo === p.id;
+                const isConcluido = passoAtivo > p.id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      setPassoAtivo(p.id);
+                      setVisaoCompleta(false);
+                    }}
+                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-semibold transition ${
+                      isAtivo
+                        ? "bg-amber text-night font-bold shadow-2xs ring-1 ring-amber-deep/40"
+                        : isConcluido
+                        ? "bg-emerald-100/80 text-emerald-800 hover:bg-emerald-100"
+                        : "bg-white/80 text-panel-sub hover:bg-white hover:text-panel-ink border border-panel-line/70"
+                    }`}
+                    title={`Ir para o Passo ${p.id}: ${p.nome}`}
+                  >
+                    <span className="text-[11px]">{isConcluido ? "✓" : p.icone}</span>
+                    <span>Passo {p.id}</span>
+                    <span className="hidden md:inline text-[11px] opacity-80">• {p.nome}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
