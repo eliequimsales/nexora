@@ -1424,23 +1424,6 @@ export function ConfiguracaoGuiadaNex({
           </div>
         </footer>
       )}
-
-      {/* Botão flutuante para acessar o Simulador do WhatsApp a qualquer momento */}
-      <div className="fixed bottom-5 right-5 z-40 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => {
-            setPassoAtivo(5);
-            setVisaoCompleta(false);
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }}
-          className="inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-xl transition hover:bg-emerald-700 hover:scale-105 active:scale-95"
-          title="Ver o Nex atendendo no WhatsApp agora"
-        >
-          <span className="flex h-2.5 w-2.5 rounded-full bg-white animate-pulse" />
-          <span>📱 Simulador WhatsApp</span>
-        </button>
-      </div>
     </div>
   );
 }
