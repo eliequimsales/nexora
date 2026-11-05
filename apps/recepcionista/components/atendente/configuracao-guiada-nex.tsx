@@ -252,31 +252,6 @@ export function ConfiguracaoGuiadaNex({
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-panel-line bg-panel-bg px-3 py-2 text-xs font-semibold text-panel-ink hover:bg-white"
-            onClick={abrirResumo}
-          >
-            📋 O que já sabe
-          </button>
-          <button
-            type="button"
-            className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3.5 py-2 text-xs font-bold text-emerald-900 hover:bg-emerald-500/20 transition shadow-2xs"
-            onClick={() => {
-              setPassoAtivo(5);
-              setVisaoCompleta(false);
-            }}
-          >
-            <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>📱 Testar no WhatsApp</span>
-          </button>
-          <button
-            type="button"
-            className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-panel-line bg-panel-bg px-3 py-2 text-xs font-semibold text-panel-ink hover:bg-white"
-            onClick={() => abrirTeste()}
-          >
-            ▶️ Abrir em Janela
-          </button>
-          <button
-            type="button"
             className={`inline-flex min-h-10 items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition ${
               canal.conectado
                 ? "border border-emerald-600/30 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
