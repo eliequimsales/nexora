@@ -296,29 +296,38 @@ export default function TreinamentoPage() {
     );
   }
 
-  const {
-    topGaps = [],
-    approvedItems = [],
-    observations = [],
-    inconsistencies = [],
-    interview = null,
-    diary = [],
-    stats = { totalConversations: 0, resolvedByAttendant: 0, sentToTeam: 0 },
-  } = report;
+  const topGaps = Array.isArray(report?.topGaps) ? report.topGaps : [];
+  const approvedItems = Array.isArray(report?.approvedItems) ? report.approvedItems : [];
+  const observations = Array.isArray(report?.observations) ? report.observations : [];
+  const inconsistencies = Array.isArray(report?.inconsistencies) ? report.inconsistencies : [];
+  const diary = Array.isArray(report?.diary) ? report.diary : [];
+  const interview =
+    report?.interview && Array.isArray(report.interview.topics) && report.interview.topics.length > 0
+      ? report.interview
+      : null;
+  const stats = {
+    totalConversations: Number(report?.stats?.totalConversations) || 0,
+    resolvedByAttendant: Number(report?.stats?.resolvedByAttendant) || 0,
+    sentToTeam: Number(report?.stats?.sentToTeam) || 0,
+  };
 
   const itensAprovadosFiltrados = useMemo(() => {
     if (!filtroBusca.trim()) return approvedItems;
     const termo = filtroBusca.toLowerCase().trim();
     return approvedItems.filter(
       (item) =>
-        item.question.toLowerCase().includes(termo) ||
-        item.answer.toLowerCase().includes(termo),
+        (item?.question && String(item.question).toLowerCase().includes(termo)) ||
+        (item?.answer && String(item.answer).toLowerCase().includes(termo)),
     );
   }, [approvedItems, filtroBusca]);
 
   async function beginInterview() {
-    if (!interview) return;
-    const topics = interview.topics.map((t) => t.topic).filter((t) => !excludedTopics.has(t));
+    if (!interview || !Array.isArray(interview.topics)) return;
+    const topics = interview.topics
+      .filter((t) => t && t.topic)
+      .map((t) => t.topic)
+      .filter((t) => !excludedTopics.has(t));
+    if (topics.length === 0) return;
     await call(
       "/api/training/interview",
       "POST",
@@ -348,7 +357,7 @@ export default function TreinamentoPage() {
 
   const taxaResolucao =
     stats.totalConversations > 0
-      ? Math.round((stats.resolvedByAttendant / stats.totalConversations) * 100)
+      ? Math.min(100, Math.max(0, Math.round((stats.resolvedByAttendant / stats.totalConversations) * 100)))
       : 100;
 
   return (
@@ -1079,7 +1088,7 @@ export default function TreinamentoPage() {
       )}
 
       {/* SEÇÃO 5: Entrevista de integração inicial */}
-      {interview && (
+      {interview && Array.isArray(interview.topics) && interview.topics.length > 0 && (
         <CardPainel
           id="secao-entrevista"
           titulo="Entrevista de integração inicial"
@@ -1128,9 +1137,10 @@ export default function TreinamentoPage() {
         >
           <div className="space-y-3">
             {diary.map((line, index) => {
-              const isResumoAtendimentos = line.includes("atendimentos");
-              const isAprendizado = line.includes("Aprendi") || line.includes("treinamento novo");
-              const isDuvidas = line.includes("preciso aprender") || line.includes("dúvidas em aberto");
+              const safeLine = typeof line === "string" ? line : String(line ?? "");
+              const isResumoAtendimentos = safeLine.includes("atendimentos");
+              const isAprendizado = safeLine.includes("Aprendi") || safeLine.includes("treinamento novo");
+              const isDuvidas = safeLine.includes("preciso aprender") || safeLine.includes("dúvidas em aberto");
 
               return (
                 <div
@@ -1158,7 +1168,7 @@ export default function TreinamentoPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs sm:text-sm leading-relaxed text-panel-ink font-medium">
-                      {line}
+                      {safeLine}
                     </p>
                   </div>
                 </div>

@@ -153,6 +153,27 @@ const topicsSchema = z.object({
     .max(15),
 });
 
+/** Normaliza com segurança tópicos de templates em qualquer formato armazenado no banco ou IA. (puro) */
+export function normalizeSegmentTopics(raw: unknown): SegmentTopic[] {
+  if (Array.isArray(raw)) {
+    return raw
+      .map((t) => {
+        if (!t || typeof t !== "object") return null;
+        const item = t as Record<string, unknown>;
+        const topic = String(item.topic || item.assunto || "").trim();
+        const question = String(item.question || item.pergunta || "").trim();
+        return topic && question ? { topic, question } : null;
+      })
+      .filter((t): t is SegmentTopic => t !== null);
+  }
+  if (raw && typeof raw === "object") {
+    const obj = raw as Record<string, unknown>;
+    if (Array.isArray(obj.topicos)) return normalizeSegmentTopics(obj.topicos);
+    if (Array.isArray(obj.topics)) return normalizeSegmentTopics(obj.topics);
+  }
+  return [];
+}
+
 export function parseSegmentTopics(raw: string): SegmentTopic[] {
   const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
   const start = cleaned.indexOf("{");
@@ -190,11 +211,13 @@ export async function suggestSegments(
 }
 
 /** Combina os tópicos de vários templates, sem duplicar assuntos. (puro) */
-export function mergeTopics(lists: SegmentTopic[][], cap = 18): SegmentTopic[] {
+export function mergeTopics(lists: (SegmentTopic[] | unknown)[], cap = 18): SegmentTopic[] {
   const seen = new Set<string>();
   const merged: SegmentTopic[] = [];
   for (const list of lists) {
-    for (const item of list) {
+    const safeList = Array.isArray(list) ? list : normalizeSegmentTopics(list);
+    for (const item of safeList) {
+      if (!item || !item.question) continue;
       const key = normalizeQuestionKey(item.question);
       if (!key || seen.has(key)) continue;
       seen.add(key);
@@ -233,7 +256,7 @@ export async function getOrCreateTemplate(
 
   const existing = await prisma.segmentTemplate.findUnique({ where: { slug } });
   if (existing) {
-    return { slug, name: existing.name, topics: existing.topics as unknown as SegmentTopic[] };
+    return { slug, name: existing.name, topics: normalizeSegmentTopics(existing.topics) };
   }
 
   const seed = SEED_TEMPLATES[slug];

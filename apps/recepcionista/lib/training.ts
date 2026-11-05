@@ -312,20 +312,40 @@ export async function getTrainingReport(companyId: string) {
   let interview: { segmentName: string; topics: SegmentTopic[] } | null = null;
   const segments = asSegments(profile.segments);
   if (segments.length && !profile.interviewStartedAt) {
-    const combined = await getTemplatesForSegments(segments);
-    if (combined) interview = { segmentName: combined.names.join(" + "), topics: combined.topics };
+    try {
+      const combined = await getTemplatesForSegments(segments);
+      if (combined && Array.isArray(combined.topics)) {
+        interview = { segmentName: combined.names.join(" + "), topics: combined.topics };
+      }
+    } catch (err) {
+      await logError("training-interview-templates", err, companyId);
+    }
   }
 
   return {
-    stats: { totalConversations, resolvedByAttendant, sentToTeam, resultados },
-    topGaps,
-    approvedItems,
-    pendingItems,
-    observations: observations.filter((o) => !conflictedIds.has(o.id)).slice(0, 10),
-    inconsistencies,
+    stats: {
+      totalConversations: totalConversations ?? 0,
+      resolvedByAttendant: resolvedByAttendant ?? 0,
+      sentToTeam: sentToTeam ?? 0,
+      resultados: resultados ?? {
+        reviewed: 0,
+        resolvedByAttendant: 0,
+        resolvedByTeam: 0,
+        needsCorrection: 0,
+        takenOver: 0,
+        unknown: 0,
+        reopened: 0,
+        awaitingReview: 0,
+      },
+    },
+    topGaps: Array.isArray(topGaps) ? topGaps : [],
+    approvedItems: Array.isArray(approvedItems) ? approvedItems : [],
+    pendingItems: Array.isArray(pendingItems) ? pendingItems : [],
+    observations: Array.isArray(observations) ? observations.filter((o) => !conflictedIds.has(o.id)).slice(0, 10) : [],
+    inconsistencies: Array.isArray(inconsistencies) ? inconsistencies : [],
     interview,
-    score,
-    diary,
+    score: score ?? { overall: 0, areas: [], openGaps: 0 },
+    diary: Array.isArray(diary) ? diary : [],
   };
 }
 

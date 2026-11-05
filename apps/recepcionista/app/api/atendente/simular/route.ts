@@ -62,7 +62,10 @@ export async function POST(request: Request) {
       prisma.companyProfile.findUnique({ where: { companyId }, select: { handoffKeywords: true } }),
     ]);
     const configuracao = await getConfiguracao(companyId);
-    const fatos = configuracao ? fatosDoRascunho(configuracao.rascunho, {
+    if (p.configuracaoRevisao !== undefined && configuracao && configuracao.revisao !== p.configuracaoRevisao) {
+      return NextResponse.json({ error: "A configuração mudou. Salve ou recarregue os ajustes antes de testar." }, { status: 409 });
+    }
+    const fatos = configuracao?.rascunho ? fatosDoRascunho(configuracao.rascunho, {
       ...base,
       linkAgenda: base.linkAgenda ?? (process.env.APP_URL
         ? `${process.env.APP_URL.replace(/\/+$/, "")}/agendar/${companyId}` : null),
@@ -94,7 +97,7 @@ export async function POST(request: Request) {
         fatos,
         agora,
         contexto,
-        palavrasDoDono: configuracao ? configuracao.rascunho.atendimento.handoffKeywords : lerPalavrasDoDono(perfil?.handoffKeywords),
+        palavrasDoDono: configuracao?.rascunho ? configuracao.rascunho.atendimento.handoffKeywords : lerPalavrasDoDono(perfil?.handoffKeywords),
         memoria: lerMemoria(p.estado, { empresaId: companyId, conversaId: "simulador" }, fatos, agora),
         escopoMemoria: { empresaId: companyId, conversaId: "simulador" },
       },
@@ -127,7 +130,7 @@ export async function POST(request: Request) {
     await prisma.companyProfile.update({ where: { companyId }, data: { atendenteTestadoEm: agora } });
 
     // Perguntas artificiais de revisão não poluem as lacunas dos clientes reais.
-    if (saida.anotar && !configuracao) {
+    if (saida.anotar && (!configuracao || !p.cenario)) {
       const perguntaParaAprender = saida.anotar.pergunta || (pendentes.length > 0 ? pendentes[pendentes.length - 1] : null);
       if (perguntaParaAprender && perguntaParaAprender.trim().length >= 4) {
         await recordKnowledgeGap(companyId, perguntaParaAprender, saida.anotar.motivo || "Pergunta feita no simulador");

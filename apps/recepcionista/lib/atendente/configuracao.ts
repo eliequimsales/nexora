@@ -9,7 +9,7 @@ import type { EstadoConversaConfiguracao } from "./conversa-schema";
 import { manterEsclarecimento } from "./conversa-schema";
 import { projetarAlteracoesDaConfiguracao } from "./configuracao-sincronizacao";
 
-export { aplicarConfiguracaoAosFatos as fatosDoRascunho } from "./configuracao-fatos";
+export { aplicarConfiguracaoAosFatos, fatosDoRascunho } from "./configuracao-fatos";
 
 const situacao = z.enum(["CONFIRMADO", "REVISAR", "NAO_INFORMADO", "NAO_APLICA"]);
 const origem = z.enum(["CADASTRO", "MANUAL", "ASSISTENTE"]);
