@@ -13,7 +13,7 @@ import { logError } from "@/lib/errors";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { respostaDeLimite } from "@/lib/limites";
 import { extrairProfissional, gerarTextoLembrete, listarProfissionais } from "@/lib/agenda/painel";
-import { lerConfiguracaoPublicada } from "@/lib/atendente/configuracao";
+import { lerConfiguracaoAtiva, lerConfiguracaoPublicada } from "@/lib/atendente/configuracao";
 
 export const dynamic = "force-dynamic";
 
@@ -107,7 +107,7 @@ export async function GET(
     const serviceId = url.searchParams.get("serviceId");
     const profissionalFiltro = url.searchParams.get("profissional")?.trim();
 
-    const configurado = !!lerConfiguracaoPublicada(negocio.profile?.atendenteConfiguracao);
+    const configurado = !!(lerConfiguracaoAtiva(negocio.profile?.atendenteConfiguracao) || lerConfiguracaoPublicada(negocio.profile?.atendenteConfiguracao));
     const agendaveis = negocio.services.filter((s) => s.durationMin > 0);
     const servicosDisponiveis = agendaveis.length ? agendaveis
       : !configurado && !negocio.services.length
@@ -289,7 +289,7 @@ export async function POST(
       return NextResponse.json({ error: "Página não encontrada" }, { status: 404 });
     }
 
-    const configurado = !!lerConfiguracaoPublicada(negocio.profile?.atendenteConfiguracao);
+    const configurado = !!(lerConfiguracaoAtiva(negocio.profile?.atendenteConfiguracao) || lerConfiguracaoPublicada(negocio.profile?.atendenteConfiguracao));
     const agendaveis = negocio.services.filter((s) => s.durationMin > 0);
     const servicosDisponiveis = agendaveis.length ? agendaveis
       : !configurado && !negocio.services.length

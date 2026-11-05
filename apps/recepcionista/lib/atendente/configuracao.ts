@@ -356,7 +356,7 @@ async function gravarEvolucaoDaConfiguracao(companyId: string, l: Awaited<Return
   const anterior = l.envelope.publicado;
   if (!anterior) {
     const servicosMudaram = !mesmo(l.envelope.rascunho.informacoes.servicos, novo.rascunho.informacoes.servicos);
-    const temServicosValidos = novo.rascunho.informacoes.servicos.some(s => s.situacao === "CONFIRMADO" && s.nome.trim().length >= 2);
+    const temServicosValidos = novo.rascunho.informacoes.servicos.some(s => (s.situacao === "CONFIRMADO" || s.situacao === "REVISAR") && s.nome.trim().length >= 2);
     if (servicosMudaram && temServicosValidos && typeof prisma.service?.create === "function") {
       const executar = typeof prisma.$transaction === "function"
         ? (fn: (tx: Prisma.TransactionClient) => Promise<unknown>) => prisma.$transaction(fn, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
@@ -366,7 +366,7 @@ async function gravarEvolucaoDaConfiguracao(companyId: string, l: Awaited<Return
         const mapaIds = new Map<string, string>();
         for (let order = 0; order < novo.rascunho.informacoes.servicos.length; order++) {
           const s = novo.rascunho.informacoes.servicos[order];
-          if (s.nome.trim().length < 2 || s.situacao !== "CONFIRMADO") continue;
+          if (s.nome.trim().length < 2 || (s.situacao !== "CONFIRMADO" && s.situacao !== "REVISAR")) continue;
           const data = {
             name: s.nome.trim(),
             priceCents: s.precoModo === "FIXO" ? s.precoCents ?? 0 : 0,

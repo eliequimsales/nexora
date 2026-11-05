@@ -693,7 +693,7 @@ export async function listarServicos(companyId: string) {
             situacao?: string;
           };
           if (!sc?.nome || typeof sc.nome !== "string" || sc.nome.trim().length < 2) continue;
-          if (sc.situacao && sc.situacao !== "CONFIRMADO") continue;
+          if (sc.situacao && sc.situacao !== "CONFIRMADO" && sc.situacao !== "REVISAR") continue;
           const nomeLimpo = sc.nome.trim();
 
           if (!nomesAtivos.has(nomeLimpo.toLowerCase())) {
@@ -712,6 +712,17 @@ export async function listarServicos(companyId: string) {
             });
             nomesAtivos.add(nomeLimpo.toLowerCase());
             sincronizou = true;
+          } else {
+            const existente = servicosDb.find((s) => s.name.toLowerCase().trim() === nomeLimpo.toLowerCase());
+            const duracao = sc.duracaoMin && Number(sc.duracaoMin) > 0 ? Number(sc.duracaoMin) : 30;
+            const preco = sc.precoModo === "FIXO" && sc.precoCents ? Number(sc.precoCents) : 0;
+            if (existente && (existente.durationMin !== duracao || existente.priceCents !== preco)) {
+              await prisma.service.update({
+                where: { id: existente.id },
+                data: { durationMin: duracao, priceCents: preco, active: true },
+              });
+              sincronizou = true;
+            }
           }
         }
 

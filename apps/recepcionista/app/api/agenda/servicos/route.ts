@@ -140,6 +140,39 @@ export async function PUT(request: Request) {
       },
     });
 
+    if (prisma.companyProfile?.findUnique && prisma.companyProfile?.updateMany) {
+      try {
+        const perfil = await prisma.companyProfile.findUnique({
+          where: { companyId },
+          select: { atendenteConfiguracao: true },
+        });
+        if (perfil?.atendenteConfiguracao) {
+          const configJson = structuredClone(perfil.atendenteConfiguracao) as any;
+          const atualizarLista = (lista: any[]) => {
+            if (!Array.isArray(lista)) return;
+            for (const item of lista) {
+              if (item.id === id) {
+                if (nome) item.nome = nome;
+                if (duracaoMin !== undefined) item.duracaoMin = duracaoMin;
+                if (precoCents !== undefined) {
+                  item.precoCents = precoCents;
+                  item.precoModo = precoCents > 0 ? "FIXO" : "SOB_CONSULTA";
+                }
+              }
+            }
+          };
+          atualizarLista(configJson?.rascunho?.informacoes?.servicos);
+          atualizarLista(configJson?.publicado?.rascunho?.informacoes?.servicos);
+          await prisma.companyProfile.updateMany({
+            where: { companyId },
+            data: { atendenteConfiguracao: configJson },
+          });
+        }
+      } catch {
+        // silencioso
+      }
+    }
+
     return NextResponse.json({ ok: true });
   } catch (error) {
     await logError("agenda-servicos-put", error, companyId);
@@ -164,6 +197,34 @@ export async function DELETE(request: Request) {
       where: { id, companyId },
       data: { active: false },
     });
+
+    if (prisma.companyProfile?.findUnique && prisma.companyProfile?.updateMany) {
+      try {
+        const perfil = await prisma.companyProfile.findUnique({
+          where: { companyId },
+          select: { atendenteConfiguracao: true },
+        });
+        if (perfil?.atendenteConfiguracao) {
+          const configJson = structuredClone(perfil.atendenteConfiguracao) as any;
+          if (Array.isArray(configJson?.rascunho?.informacoes?.servicos)) {
+            configJson.rascunho.informacoes.servicos = configJson.rascunho.informacoes.servicos.filter(
+              (s: any) => s.id !== id,
+            );
+          }
+          if (Array.isArray(configJson?.publicado?.rascunho?.informacoes?.servicos)) {
+            configJson.publicado.rascunho.informacoes.servicos = configJson.publicado.rascunho.informacoes.servicos.filter(
+              (s: any) => s.id !== id,
+            );
+          }
+          await prisma.companyProfile.updateMany({
+            where: { companyId },
+            data: { atendenteConfiguracao: configJson },
+          });
+        }
+      } catch {
+        // silencioso
+      }
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {
