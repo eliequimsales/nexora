@@ -35,34 +35,6 @@ const PASSOS = [
   { id: 5, nome: "Teste no WhatsApp", icone: "📱", descricao: "Simulador ao vivo e ativação" },
 ] as const;
 
-const MENTOR_NEX = {
-  1: {
-    pose: "/nex/nex_boas_vindas.png",
-    fala: "Olá! Sou o Nex, seu atendente virtual. Vamos começar: qual é o nome da sua empresa e o que vocês oferecem? Assim eu me apresento com autoridade aos seus clientes no WhatsApp.",
-    dica: "Dica: Você pode preencher de forma simples. Suas alterações são salvas automaticamente.",
-  },
-  2: {
-    pose: "/nex/nex_checklist.png",
-    fala: "Aqui nós cadastramos o que você oferece aos seus clientes. Quando alguém perguntar 'quanto custa?' ou 'vocês fazem tal serviço?' no WhatsApp, eu respondo na hora!",
-    dica: "Dica: Se o preço varia, escolha 'Sob consulta'. Se usa agendamentos, informe a duração em minutos.",
-  },
-  3: {
-    pose: "/nex/nex_agendamento.png",
-    fala: "Quais são os dias e horários em que você atende? Assim eu sei quando sua empresa está aberta e marco horários de agendamento apenas nos momentos certos.",
-    dica: "Dica: Use o botão de horário comercial para preencher a semana inteira com apenas um clique!",
-  },
-  4: {
-    pose: "/nex/nex_headset_atendimento.png",
-    fala: "Como você prefere que eu converse com seu público? Escolha o tom de voz e como vamos lidar com formas de pagamento e pedidos de agendamento.",
-    dica: "Dica: Você pode mudar o tom de conversa a qualquer momento depois.",
-  },
-  5: {
-    pose: "/nex/nex_whatsapp.png",
-    fala: "Sensacional! Suas informações estão salvas. Mande uma mensagem de teste para ver como eu respondo no WhatsApp e, em seguida, conecte o número da sua empresa!",
-    dica: "Dica: Quando o WhatsApp for conectado, eu já posso começar a atender seus clientes conforme as suas regras.",
-  },
-} as const;
-
 type Props = {
   tela: TelaConfiguracaoNexa;
   rascunho: ConfiguracaoNexa;
@@ -114,8 +86,6 @@ export function ConfiguracaoGuiadaNex({
   const usaAgenda =
     d.negocio.objetivo === "AGENDAMENTOS" ||
     d.atendimento.agendamento !== "DESLIGADO";
-
-  const mentor = MENTOR_NEX[passoAtivo as keyof typeof MENTOR_NEX] || MENTOR_NEX[1];
 
   // Helpers de Horário
   function mudarHorarios(horarios: HorarioNexa[]) {
@@ -208,61 +178,103 @@ export function ConfiguracaoGuiadaNex({
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 pb-12">
-      {/* Header com Status e Ações Rápidas */}
-      <header className="flex flex-col gap-3 rounded-3xl border border-panel-line bg-panel-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <img
-              src="/nex/nex-avatar.png"
-              alt="Nex"
-              className="h-12 w-12 rounded-2xl border-2 border-emerald-500/30 bg-white object-cover shadow-sm"
-            />
-            <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white ring-2 ring-white">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
-            </span>
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-bold text-panel-ink sm:text-lg">
-                Configuração do Nex
-              </h1>
-              <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
-                Atendente Virtual
+      {/* Top Header Unificado: Nex + Status + Conectar WhatsApp + Navegação dos Passos */}
+      <header className="rounded-3xl border border-panel-line bg-panel-card p-4 sm:p-5 shadow-sm space-y-3.5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="relative shrink-0">
+              <img
+                src="/nex/nex-avatar.png"
+                alt="Nex"
+                className="h-11 w-11 rounded-2xl border-2 border-emerald-500/30 bg-white object-cover shadow-2xs"
+              />
+              <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white ring-2 ring-white">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
               </span>
             </div>
-            <p className="flex items-center gap-2 text-xs text-panel-sub">
-              <span
-                className={`inline-block h-2 w-2 rounded-full ${
-                  pendente
-                    ? "bg-amber animate-ping"
-                    : erro
-                    ? "bg-red-500"
-                    : "bg-emerald-500"
-                }`}
-              />
-              {pendente
-                ? "Salvando alterações automaticamente…"
-                : erro
-                ? "Erro ao salvar"
-                : "Tudo salvo com segurança"}
-            </p>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-base font-bold text-panel-ink sm:text-lg">
+                  Configuração do Nex
+                </h1>
+                <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
+                  Atendente Virtual
+                </span>
+              </div>
+              <p className="flex items-center gap-2 text-xs text-panel-sub">
+                <span
+                  className={`inline-block h-2 w-2 rounded-full ${
+                    pendente
+                      ? "bg-amber animate-ping"
+                      : erro
+                      ? "bg-red-500"
+                      : "bg-emerald-500"
+                  }`}
+                />
+                {pendente
+                  ? "Salvando alterações..."
+                  : erro
+                  ? "Erro ao salvar"
+                  : "Tudo salvo com segurança"}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition cursor-pointer ${
+                canal.conectado
+                  ? "border border-emerald-600/30 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                  : "bg-emerald-600 text-white shadow-sm hover:bg-emerald-700"
+              }`}
+              onClick={abrirConexao}
+            >
+              <span>💬</span>
+              <span>
+                {canal.conectado ? "WhatsApp conectado" : "Conectar WhatsApp"}
+              </span>
+            </button>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Seletor Compacto dos 5 Passos e Alternador de Visão */}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-panel-line/70 pt-3">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+            {PASSOS.map((p) => {
+              const isAtivo = passoAtivo === p.id;
+              const isConcluido = passoAtivo > p.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => {
+                    setPassoAtivo(p.id);
+                    setVisaoCompleta(false);
+                  }}
+                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-semibold transition cursor-pointer ${
+                    isAtivo
+                      ? "bg-amber text-night font-bold shadow-2xs ring-1 ring-amber-deep/40"
+                      : isConcluido
+                      ? "bg-emerald-100/80 text-emerald-800 hover:bg-emerald-100"
+                      : "bg-white/80 text-panel-sub hover:bg-white hover:text-panel-ink border border-panel-line/70"
+                  }`}
+                  title={`Passo ${p.id}: ${p.nome}`}
+                >
+                  <span className="text-[11px]">{isConcluido ? "✓" : p.icone}</span>
+                  <span>Passo {p.id}</span>
+                  <span className="hidden sm:inline text-[11px] opacity-80">• {p.nome}</span>
+                </button>
+              );
+            })}
+          </div>
+
           <button
             type="button"
-            className={`inline-flex min-h-10 items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition ${
-              canal.conectado
-                ? "border border-emerald-600/30 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
-                : "bg-emerald-600 text-white shadow-sm hover:bg-emerald-700"
-            }`}
-            onClick={abrirConexao}
+            className="text-[11px] font-medium text-panel-sub underline underline-offset-2 hover:text-panel-ink transition cursor-pointer"
+            onClick={() => setVisaoCompleta(!visaoCompleta)}
           >
-            <span>💬</span>
-            <span>
-              {canal.conectado ? "WhatsApp conectado" : "Conectar WhatsApp"}
-            </span>
+            {visaoCompleta ? "Modo passo a passo" : "Ver todas as seções"}
           </button>
         </div>
       </header>
@@ -286,71 +298,6 @@ export function ConfiguracaoGuiadaNex({
         </div>
       )}
 
-      {/* Banner Unificado do Nex com Orientação e Seletor Compacto de Passos */}
-      <div className="relative overflow-hidden rounded-3xl border border-amber/30 bg-gradient-to-r from-amber/15 via-white to-emerald-500/10 p-4 shadow-xs sm:p-5">
-        <div className="flex items-start gap-3.5 sm:gap-5">
-          <div className="relative shrink-0 pt-0.5">
-            <img
-              src={mentor.pose}
-              alt="Nex Guia"
-              className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl object-contain drop-shadow-md bg-white/60 p-1 border border-amber/20"
-            />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-0.5 text-xs font-bold text-emerald-900">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Nex orienta você no Passo {passoAtivo} de 5</span>
-                <span className="opacity-75">• {PASSOS[passoAtivo - 1]?.nome}</span>
-              </div>
-
-              <button
-                type="button"
-                className="text-[11px] font-medium text-amber-900 underline underline-offset-2 hover:text-amber-deep transition"
-                onClick={() => setVisaoCompleta(!visaoCompleta)}
-              >
-                {visaoCompleta ? "Modo passo a passo" : "Ver todas as seções"}
-              </button>
-            </div>
-
-            <h2 className="mt-1.5 text-sm sm:text-base font-bold text-panel-ink leading-snug">
-              &ldquo;{mentor.fala}&rdquo;
-            </h2>
-            <p className="mt-0.5 text-xs text-panel-sub leading-relaxed">{mentor.dica}</p>
-
-            {/* Seletor Compacto de Passos em Linha Única (Ultra responsivo e sem rolagem excessiva) */}
-            <div className="mt-3 flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
-              {PASSOS.map((p) => {
-                const isAtivo = passoAtivo === p.id;
-                const isConcluido = passoAtivo > p.id;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => {
-                      setPassoAtivo(p.id);
-                      setVisaoCompleta(false);
-                    }}
-                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-semibold transition ${
-                      isAtivo
-                        ? "bg-amber text-night font-bold shadow-2xs ring-1 ring-amber-deep/40"
-                        : isConcluido
-                        ? "bg-emerald-100/80 text-emerald-800 hover:bg-emerald-100"
-                        : "bg-white/80 text-panel-sub hover:bg-white hover:text-panel-ink border border-panel-line/70"
-                    }`}
-                    title={`Ir para o Passo ${p.id}: ${p.nome}`}
-                  >
-                    <span className="text-[11px]">{isConcluido ? "✓" : p.icone}</span>
-                    <span>Passo {p.id}</span>
-                    <span className="hidden md:inline text-[11px] opacity-80">• {p.nome}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* CONTEÚDO PRINCIPAL: Renderiza o Passo Ativo (ou Todos se visaoCompleta) */}
       <div className="space-y-6">
         {/* ==================== PASSO 1: SUA EMPRESA ==================== */}
@@ -360,9 +307,6 @@ export function ConfiguracaoGuiadaNex({
             className="rounded-3xl border border-panel-line bg-panel-card p-5 shadow-xs sm:p-6"
           >
             <div className="mb-4 border-b border-panel-line pb-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-amber-deep">
-                Passo 1
-              </span>
               <h3
                 id="titulo-passo-1"
                 className="text-lg font-bold text-panel-ink"
@@ -479,9 +423,6 @@ export function ConfiguracaoGuiadaNex({
                       })
                     }
                   />
-                  <span className="text-[11px] text-panel-sub">
-                    Quando o cliente perguntar onde fica ou pedir a localização, o Nex informa este endereço.
-                  </span>
                 </label>
               )}
 
@@ -547,9 +488,6 @@ export function ConfiguracaoGuiadaNex({
           >
             <div className="mb-4 flex flex-col justify-between gap-2 border-b border-panel-line pb-3 sm:flex-row sm:items-center">
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-deep">
-                  Passo 2
-                </span>
                 <h3
                   id="titulo-passo-2"
                   className="text-lg font-bold text-panel-ink"
@@ -570,20 +508,10 @@ export function ConfiguracaoGuiadaNex({
               </button>
             </div>
 
-            <div className="mb-4 flex items-center gap-2.5 rounded-2xl bg-amber-soft/40 border border-amber/30 px-3.5 py-2.5 text-xs text-panel-ink shadow-2xs">
-              <span className="text-base leading-none">⚡</span>
-              <div>
-                <strong className="font-bold text-night">Vinculado à Agenda:</strong> Qualquer serviço cadastrado ou alterado aqui fica automaticamente disponível na sua <strong>Agenda</strong> para agendamentos.
-              </div>
-            </div>
-
             {d.informacoes.servicos.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-panel-line p-8 text-center">
                 <p className="text-sm font-semibold text-panel-ink">
                   Nenhum serviço cadastrado ainda.
-                </p>
-                <p className="mt-1 text-xs text-panel-sub">
-                  Clique no botão abaixo para adicionar seus serviços, preços e durações.
                 </p>
                 <button
                   type="button"
@@ -737,9 +665,6 @@ export function ConfiguracaoGuiadaNex({
           >
             <div className="mb-4 flex flex-col justify-between gap-2 border-b border-panel-line pb-3 sm:flex-row sm:items-center">
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-deep">
-                  Passo 3
-                </span>
                 <h3
                   id="titulo-passo-3"
                   className="text-lg font-bold text-panel-ink"
@@ -906,9 +831,6 @@ export function ConfiguracaoGuiadaNex({
             className="rounded-3xl border border-panel-line bg-panel-card p-5 shadow-xs sm:p-6"
           >
             <div className="mb-4 border-b border-panel-line pb-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-amber-deep">
-                Passo 4
-              </span>
               <h3
                 id="titulo-passo-4"
                 className="text-lg font-bold text-panel-ink"
@@ -1063,8 +985,8 @@ export function ConfiguracaoGuiadaNex({
                         Resgate de Clientes Sumidos (Pós-Venda Automático)
                       </h4>
                     </div>
-                    <p className="mt-1 text-xs text-panel-sub max-w-xl">
-                      O Nex analisa a frequência de retorno dos seus clientes e envia convites amigáveis para quem não agendar há mais tempo que o habitual, trazendo o cliente de volta e preenchendo sua agenda.
+                    <p className="mt-0.5 text-xs text-panel-sub max-w-xl">
+                      Avisa clientes que não agendam há algum tempo para voltarem à empresa.
                     </p>
                   </div>
 
@@ -1134,9 +1056,6 @@ export function ConfiguracaoGuiadaNex({
                     <h4 className="text-xs font-bold text-panel-ink">
                       Perguntas Frequentes & Regras Específicas (opcional)
                     </h4>
-                    <p className="text-[11px] text-panel-sub">
-                      Ensine regras específicas como atrasos, estacionamento ou cancelamentos.
-                    </p>
                   </div>
                   <button
                     type="button"
@@ -1234,9 +1153,6 @@ export function ConfiguracaoGuiadaNex({
             className="rounded-3xl border border-panel-line bg-panel-card p-5 shadow-xs sm:p-6"
           >
             <div className="mb-4 border-b border-panel-line pb-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-amber-deep">
-                Passo 5
-              </span>
               <h3
                 id="titulo-passo-5"
                 className="text-lg font-bold text-panel-ink"
@@ -1256,9 +1172,6 @@ export function ConfiguracaoGuiadaNex({
                     <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
                     Simulador do WhatsApp em Tempo Real
                   </span>
-                  <p className="mt-1 text-xs text-panel-sub">
-                    Experimente uma conversa real no WhatsApp para ver o Nex atendendo seus clientes com base no que você acabou de configurar.
-                  </p>
                 </div>
 
                 <SimuladorWhatsAppCelular
@@ -1329,16 +1242,6 @@ export function ConfiguracaoGuiadaNex({
                       </button>
                     )}
                   </div>
-                </div>
-
-                <div className="rounded-2xl border border-panel-line bg-panel-card p-4 text-xs text-panel-sub space-y-2 shadow-2xs">
-                  <div className="flex items-center gap-2 font-bold text-panel-ink">
-                    <span>💡</span>
-                    <span>Como funciona a simulação:</span>
-                  </div>
-                  <p className="leading-relaxed">
-                    O simulador ao lado é 100% seguro: nenhuma mensagem é enviada para clientes reais. Ele utiliza em tempo real seus serviços, horários e jeito de atender cadastrados.
-                  </p>
                 </div>
 
                 <button

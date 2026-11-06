@@ -89,12 +89,12 @@ export function CabecalhoPainel({
                   <span>Novo contato</span>
                 </Link>
                 <Link
-                  href="/painel/treinamento"
+                  href="/painel/atendente"
                   onClick={() => setMenuAberto(false)}
                   className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#F0F2F5] transition"
                 >
-                  <span>🔄</span>
-                  <span>Ensinar atendente</span>
+                  <span>🤖</span>
+                  <span>Atendente Virtual</span>
                 </Link>
                 <Link
                   href="/painel/agenda"

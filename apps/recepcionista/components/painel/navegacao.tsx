@@ -106,7 +106,7 @@ function estaAtivo(href: string, pathname: string): boolean {
 
 export function PainelNavDesktop({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
-  const initialTreinamento = items.find((i) => i.href === "/painel/treinamento")?.badge;
+  const initialTreinamento = items.find((i) => i.href === "/painel/atendente" || i.href === "/painel/treinamento")?.badge;
   const liveBadge = useTreinamentoBadge(initialTreinamento);
 
   return (
@@ -114,7 +114,7 @@ export function PainelNavDesktop({ items }: { items: NavItem[] }) {
       <div className="flex items-center gap-1.5 rounded-xl border border-panel-line/80 bg-white p-1 shadow-2xs">
         {items.map((item) => {
           const ativo = estaAtivo(item.href, pathname);
-          const badge = item.href === "/painel/treinamento" ? liveBadge : (item.badge ?? 0);
+          const badge = (item.href === "/painel/atendente" || item.href === "/painel/treinamento") ? liveBadge : (item.badge ?? 0);
           return (
             <Link
               key={item.href}
@@ -150,11 +150,11 @@ export function PainelNavDesktop({ items }: { items: NavItem[] }) {
 
 export function PainelNavMobile({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
-  const initialTreinamento = items.find((i) => i.href === "/painel/treinamento")?.badge;
+  const initialTreinamento = items.find((i) => i.href === "/painel/atendente" || i.href === "/painel/treinamento")?.badge;
   const liveBadge = useTreinamentoBadge(initialTreinamento);
 
   const rotuloCurto = (href: string, label: string) => {
-    if (href.includes("atendente")) return "Conversas";
+    if (href.includes("atendente")) return "Atendente";
     if (href.includes("treinamento")) return "Ensinar Atendente";
     if (href.includes("clientes")) return "Clientes";
     if (href.includes("agenda")) return "Agenda";
@@ -167,10 +167,10 @@ export function PainelNavMobile({ items }: { items: NavItem[] }) {
       aria-label="Navegação móvel oficial estilo WhatsApp"
       className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#E9EDEF] bg-white/98 backdrop-blur-lg px-1 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:hidden shadow-[0_-2px_15px_rgba(0,0,0,0.05)]"
     >
-      <div className="grid grid-cols-5 items-center justify-around">
+      <div className={`grid ${items.length === 4 ? "grid-cols-4" : "grid-cols-5"} items-center justify-around`}>
         {items.map((item) => {
           const ativo = estaAtivo(item.href, pathname);
-          const badge = item.href === "/painel/treinamento" ? liveBadge : (item.badge ?? 0);
+          const badge = (item.href === "/painel/atendente" || item.href === "/painel/treinamento") ? liveBadge : (item.badge ?? 0);
           return (
             <Link
               key={item.href}

@@ -5,19 +5,14 @@ import { describe, expect, it } from "vitest";
 /**
  * O MENU DO PAINEL É O FLUXO DE VALOR, NÃO O ÍNDICE DO SISTEMA.
  *
- * Oito abas faziam a tela parecer um ERP: quem entra procura o que fazer HOJE e
- * encontra sete caminhos que não geram dinheiro. Ficam cinco, na ordem do que o
- * dono precisa: a Onda (única tela que gera receita), a prova do que voltou, a
- * base, o WhatsApp e a conta.
- *
- * As telas retiradas continuam existindo e acessíveis por link direto. Tirar do
- * menu é decisão de navegação; apagar a rota seria outra coisa, e este teste
- * existe para que ninguém confunda as duas.
+ * Menu enxuto e unificado com quatro itens essenciais:
+ * 1. Atendente Virtual (Configuração + Ensinar em um só lugar)
+ * 2. Meus clientes
+ * 3. Agenda
+ * 4. Planos
  */
 
 const RAIZ = join(__dirname, "..");
-// Sem os comentários: o layout EXPLICA por que "Meu Atendente" virou "WhatsApp",
-// e um guarda que lê o texto cru reprovaria a própria explicação.
 const semComentarios = (s: string) =>
   s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 const layout = semComentarios(readFileSync(join(RAIZ, "app/painel/layout.tsx"), "utf8"));
@@ -27,14 +22,13 @@ const NAV = [...layout.matchAll(/\{\s*href:\s*"([^"]+)",\s*label:\s*"([^"]+)"\s*
 );
 
 describe("o menu do painel", () => {
-  it("tem exatamente cinco itens", () => {
-    expect(NAV).toHaveLength(5);
+  it("tem exatamente quatro itens", () => {
+    expect(NAV).toHaveLength(4);
   });
 
   it("segue a ordem do fluxo de valor", () => {
     expect(NAV.map((i) => i.href)).toEqual([
       "/painel/atendente",
-      "/painel/treinamento",
       "/painel/clientes/importar",
       "/painel/agenda",
       "/painel/assinatura",
@@ -43,10 +37,6 @@ describe("o menu do painel", () => {
 
   it("o Atendente se chama pelo que é", () => {
     expect(NAV.find((i) => i.href === "/painel/atendente")?.label).toBe("Atendente Virtual");
-  });
-
-  it("a aba de ensinar se chama Ensinar Atendente", () => {
-    expect(NAV.find((i) => i.href === "/painel/treinamento")?.label).toBe("Ensinar Atendente");
   });
 
   it("a aba de agenda se chama Agenda", () => {
@@ -64,6 +54,7 @@ describe("o menu do painel", () => {
       "/painel/relatorios",
       "/painel/configuracoes",
       "/painel/livro-caixa",
+      "/painel/treinamento",
     ]) {
       expect(NAV.map((i) => i.href), fora).not.toContain(fora);
     }
