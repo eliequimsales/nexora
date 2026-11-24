@@ -503,18 +503,25 @@ export function DemoAtendente({
           <div className="flex items-center justify-between border-b border-[#2A3942]/50 bg-[#202C33] px-3 py-2.5 shadow-sm">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="relative shrink-0">
-                <div
-                  className={`flex h-10 w-10 items-center justify-center rounded-full text-base font-bold text-white shadow-inner ${configAtual.corAvatar}`}
-                >
-                  {configAtual.avatarLetra}
-                </div>
+                <img
+                  src="/nex/nex-avatar.png"
+                  alt="Nex — Atendente Virtual"
+                  width={40}
+                  height={40}
+                  className="h-10 w-10 rounded-full object-cover border border-white/20 shadow-inner"
+                />
                 <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#202C33] bg-[#25D366]" />
               </div>
 
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-bold text-[#E9EDEF]">
-                  {configAtual.nomeEmpresa}
-                </p>
+                <div className="flex items-center gap-1.5">
+                  <p className="truncate text-sm font-bold text-[#E9EDEF]">
+                    {configAtual.nomeEmpresa}
+                  </p>
+                  <span className="rounded bg-[#00A884]/25 px-1.5 py-0.5 text-[9px] font-bold text-[#25D366] shrink-0">
+                    Nex IA
+                  </span>
+                </div>
                 <p className="flex items-center gap-1.5 text-[11px] leading-none">
                   {digitando ? (
                     <span className="font-semibold text-[#25D366] animate-pulse">
